@@ -42,48 +42,68 @@
   .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .small{font-size:12px;}
 
-  #app{display:flex;min-height:100vh;}
+  #app{display:flex;flex-direction:column;min-height:100vh;}
 
-  /* ---------- Rail (left) ---------- */
-  #rail{
-    width:340px;flex-shrink:0;display:flex;flex-direction:column;
-    height:100vh;position:sticky;top:0;
-    border-right:1px solid var(--rule);
-    background:var(--paper);
+  /* ---------- Topbar ---------- */
+  #topbar{
+    position:sticky;top:0;z-index:10;background:var(--paper);
+    border-bottom:1px solid var(--rule);padding:18px 32px 14px;
   }
-  .rail-head{padding:22px 20px 12px;flex-shrink:0;}
+  .topbar-row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
   .app-title{font-size:19px;letter-spacing:0.01em;}
-  .app-tagline{color:var(--stone);font-size:12px;margin:2px 0 16px;}
-  .btn-block{width:100%;}
+  .app-tagline{color:var(--stone);font-size:12px;margin:2px 0 0;}
+  .topbar-row2{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:14px;}
+  .cal-nav{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .cal-nav .btn-ghost{padding:6px 11px;font-size:14px;}
+  .cal-label{font-size:14px;min-width:92px;text-align:center;display:inline-block;}
   #search-input{
-    width:100%;margin-top:12px;padding:8px 10px;border:1px solid var(--rule);
+    flex:1 1 200px;min-width:160px;padding:8px 10px;border:1px solid var(--rule);
     border-radius:3px;background:var(--surface);color:var(--ink);font:inherit;
   }
-  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
   .chip{
     font-size:12px;padding:4px 10px;border:1px solid var(--rule);border-radius:12px;
     background:none;cursor:pointer;color:var(--ink-soft);font-family:inherit;
   }
   .chip.active{background:var(--ink);color:var(--surface);border-color:var(--ink);}
+  .topbar-row3{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;}
 
-  #rail-list{flex:1;overflow-y:auto;padding:6px 12px;}
+  #main-content{flex:1;padding:24px 32px 100px;max-width:1120px;width:100%;margin:0 auto;}
   .empty-hint{color:var(--stone);font-size:13px;padding:16px 8px;}
 
-  .race-card{
-    display:flex;flex-direction:column;gap:5px;padding:12px 12px;margin-bottom:2px;
-    border-radius:3px;cursor:pointer;border:1px solid transparent;
+  /* ---------- Calendar ---------- */
+  #calendar{margin-bottom:8px;}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .cal-weekdays span{font-size:12px;color:var(--stone);text-align:center;padding:2px 0;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-cell{
+    min-height:96px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);
+    padding:6px 6px 4px;display:flex;flex-direction:column;gap:3px;
   }
-  .race-card:hover{background:rgba(22,35,28,0.04);}
-  .race-card.active{background:var(--surface);border-color:var(--rule);}
-  .race-card-top{display:flex;justify-content:space-between;align-items:center;}
-  .race-card-name{font-weight:500;font-size:14px;}
-  .race-card-meta{color:var(--ink-soft);}
-  .spark{width:100%;height:20px;color:var(--trail);display:block;}
+  .cal-cell.muted{background:transparent;border-color:transparent;}
+  .cal-cell.muted .cal-daynum{color:var(--stone);}
+  .cal-cell.today{border-color:var(--trail);border-width:1.5px;}
+  .cal-daynum{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+  .cal-cell.today .cal-daynum{color:var(--trail);font-weight:600;}
+  .cal-chip{
+    display:block;width:100%;text-align:left;border:none;border-left:3px solid currentColor;
+    background:rgba(22,35,28,0.05);border-radius:2px;padding:2px 5px;font:inherit;
+    font-size:11px;color:var(--ink);cursor:pointer;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .cal-chip.status-registered,.cal-chip.status-completed{color:var(--trail);}
+  .cal-chip.status-considering,.cal-chip.status-lottery_pending{color:var(--contour);}
+  .cal-chip.status-dns,.cal-chip.status-dnf{color:var(--flag);}
+  .cal-chip.selected{background:var(--ink);color:var(--surface)!important;border-left-color:var(--surface);}
+  .cal-more{font-size:11px;color:var(--stone);padding:1px 5px;}
 
-  .rail-foot{
-    padding:14px 20px;border-top:1px solid var(--rule);display:flex;gap:16px;
-    flex-shrink:0;flex-wrap:wrap;
-  }
+  /* ---------- Progress block ---------- */
+  .progress-block{margin:16px 0 22px;}
+  .progress-label{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin-bottom:6px;}
+  .progress-label .mono{color:var(--ink);}
+  .progress-track{height:8px;border-radius:4px;background:var(--rule);overflow:hidden;}
+  .progress-fill{height:100%;background:var(--trail);border-radius:4px;}
+  .progress-fill.urgent{background:var(--flag);}
 
   /* ---------- Stamp badge ---------- */
   .stamp{
@@ -112,9 +132,10 @@
   .btn-text{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:12px;padding:0;}
   .btn-text.danger{color:var(--flag);}
 
-  /* ---------- Detail (right) ---------- */
-  #detail{flex:1;padding:40px 48px 100px;overflow-y:auto;height:100vh;max-width:920px;}
-  .empty-state{padding:60px 0;color:var(--ink-soft);}
+  /* ---------- Detail ---------- */
+  #detail{padding-top:32px;border-top:1px solid var(--rule);margin-top:28px;}
+  #detail:empty{display:none;}
+  .empty-state{padding:40px 0;color:var(--ink-soft);}
   .empty-state p{margin-bottom:16px;}
 
   .detail-header{padding-bottom:22px;margin-bottom:6px;border-bottom:2px solid var(--ink);}
@@ -176,10 +197,15 @@
   .create-actions{display:flex;gap:10px;margin-top:8px;}
 
   @media (max-width:860px){
-    #app{flex-direction:column;}
-    #rail{width:100%;height:auto;position:relative;border-right:none;border-bottom:1px solid var(--rule);}
-    #rail-list{max-height:40vh;}
-    #detail{height:auto;padding:28px 20px 80px;}
+    #topbar{padding:16px 18px 12px;}
+    #main-content{padding:18px 18px 80px;}
+    .cal-cell{min-height:64px;padding:4px 4px 3px;}
+    .cal-weekdays span{font-size:10px;}
+    .cal-chip{font-size:10px;}
+  }
+  @media (max-width:520px){
+    .cal-cell{min-height:auto;}
+    .cal-daynum{font-size:11px;}
   }
 
   /* ---------- Import modal ---------- */
@@ -212,11 +238,21 @@
 </head>
 <body>
 <div id="app">
-  <aside id="rail">
-    <div class="rail-head">
-      <h1 class="app-title">賽事紀錄</h1>
-      <p class="app-tagline">從報名到終點的完整紀錄</p>
-      <button id="btn-new" class="btn-primary btn-block">+ 新增賽事</button>
+  <header id="topbar">
+    <div class="topbar-row1">
+      <div class="topbar-brand">
+        <h1 class="app-title">賽事紀錄</h1>
+        <p class="app-tagline">從報名到終點的完整紀錄</p>
+      </div>
+      <button id="btn-new" class="btn-primary">+ 新增賽事</button>
+    </div>
+    <div class="topbar-row2">
+      <div class="cal-nav">
+        <button id="cal-prev" class="btn-ghost" aria-label="上個月">‹</button>
+        <span id="cal-label" class="cal-label mono"></span>
+        <button id="cal-next" class="btn-ghost" aria-label="下個月">›</button>
+        <button id="cal-today" class="btn-ghost">今天</button>
+      </div>
       <input id="search-input" type="search" placeholder="搜尋賽事名稱、城市…">
       <div id="filter-chips" class="chips">
         <button class="chip active" data-status="all">全部</button>
@@ -228,14 +264,16 @@
         <button class="chip" data-status="dnf">DNF</button>
       </div>
     </div>
-    <div id="rail-list"></div>
-    <div class="rail-foot">
+    <div class="topbar-row3">
       <button id="btn-import" class="btn-text">匯入 Excel</button>
       <button id="btn-export" class="btn-text">匯出 JSON</button>
       <button id="btn-clear" class="btn-text danger">清除全部資料</button>
     </div>
-  </aside>
-  <main id="detail"></main>
+  </header>
+  <main id="main-content">
+    <section id="calendar"></section>
+    <section id="detail"></section>
+  </main>
 </div>
 <input type="file" id="import-file-input" accept=".xlsx,.xls" style="display:none">
 <div id="import-modal" class="modal-overlay" hidden></div>
@@ -440,6 +478,32 @@ function countdownLabel(race){
   if(d===0) return '今天出發';
   return `已過 ${Math.abs(d)} 天`;
 }
+function adaptiveCountdown(d){
+  if(d==null) return '尚未設定日期';
+  if(d<0) return `已過 ${Math.abs(d)} 天`;
+  if(d===0) return '就是今天';
+  if(d>=60) return `還有約 ${Math.round(d/30)} 個月`;
+  if(d>=14) return `還有 ${Math.round(d/7)} 週`;
+  return `還有 ${d} 天`;
+}
+const PROGRESS_WINDOW_DAYS=180;
+function progressPct(d){
+  if(d==null) return null;
+  if(d<=0) return 100;
+  if(d>=PROGRESS_WINDOW_DAYS) return 0;
+  return Math.round((1-d/PROGRESS_WINDOW_DAYS)*100);
+}
+function progressBlockHtml(race){
+  if(['completed','dns','dnf'].includes(race.status)) return '';
+  const d=daysDiff(race.schedule&&race.schedule.raceDate);
+  if(d==null) return '';
+  const pct=progressPct(d);
+  const urgent=d>=0&&d<=7;
+  return `<div class="progress-block">
+    <div class="progress-label"><span>${adaptiveCountdown(d)}</span><span class="mono">${race.schedule.raceDate}</span></div>
+    <div class="progress-track"><div class="progress-fill${urgent?' urgent':''}" style="width:${pct}%"></div></div>
+  </div>`;
+}
 function sparklineSvg(race){
   const pts=(race.checkpoints||[]).filter(c=>c.elevationM!=null&&c.distanceKm!=null).sort((a,b)=>a.distanceKm-b.distanceKm);
   if(pts.length<2) return '';
@@ -480,7 +544,9 @@ function emptyRace(name,sportType,status,raceDate){
 /* ============================================================
    狀態與儲存
    ============================================================ */
-const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',confirmDelete:false};
+const today0=new Date();
+const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',confirmDelete:false,
+  calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth()};
 let currentRace=null;
 const STORAGE_KEY='races-v1';
 // window.storage 只存在於 Claude 內建的 artifact 預覽環境；獨立架站（如 GitHub Pages）
@@ -571,33 +637,69 @@ function renderGoals(race){
 /* ============================================================
    主畫面渲染
    ============================================================ */
-const railListEl=document.getElementById('rail-list');
+const calendarEl=document.getElementById('calendar');
+const calLabelEl=document.getElementById('cal-label');
 const detailEl=document.getElementById('detail');
 const filterChipsEl=document.getElementById('filter-chips');
 const searchInputEl=document.getElementById('search-input');
+const WEEKDAY_LABELS=['日','一','二','三','四','五','六'];
+const MONTH_LABEL_FMT=(y,m)=>`${y} 年 ${m+1} 月`;
 
-function renderRail(){
+function filteredRaces(){
   const q=state.searchQuery.trim().toLowerCase();
-  const filtered=state.races.filter(r=>{
+  return state.races.filter(r=>{
     if(state.filterStatus!=='all'&&r.status!==state.filterStatus) return false;
     if(q){
       const hay=`${r.name} ${r.alias} ${(r.location&&r.location.city)||''}`.toLowerCase();
       if(!hay.includes(q)) return false;
     }
     return true;
-  }).sort((a,b)=>(a.schedule.raceDate||'9999').localeCompare(b.schedule.raceDate||'9999'));
+  });
+}
+function buildRacesByDate(races){
+  const map={};
+  races.forEach(r=>{
+    const d=r.schedule&&r.schedule.raceDate;
+    if(!d) return;
+    (map[d]=map[d]||[]).push(r);
+  });
+  return map;
+}
 
-  railListEl.innerHTML=filtered.map(r=>`
-    <div class="race-card ${r.id===state.selectedId?'active':''}" data-id="${r.id}">
-      <div class="race-card-top">
-        <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
-        <span class="mono small">${sportLabel(r.sportType)}</span>
-      </div>
-      <div class="race-card-name">${escapeHtml(r.name)||'(未命名賽事)'}</div>
-      <div class="race-card-meta mono small">${r.schedule.raceDate||'—'} ・ ${countdownLabel(r)}</div>
-      ${sparklineSvg(r)}
-    </div>
-  `).join('')||`<p class="empty-hint">尚無符合條件的賽事</p>`;
+function renderCalendar(){
+  const y=state.calendarYear,m=state.calendarMonth;
+  calLabelEl.textContent=MONTH_LABEL_FMT(y,m);
+  const racesByDate=buildRacesByDate(filteredRaces());
+  const todayISOStr=todayISO();
+
+  const firstOfMonth=new Date(y,m,1);
+  const startOffset=firstOfMonth.getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const daysInPrevMonth=new Date(y,m,0).getDate();
+  const totalCells=Math.ceil((startOffset+daysInMonth)/7)*7;
+
+  const cells=[];
+  for(let i=0;i<totalCells;i++){
+    const dayNum=i-startOffset+1;
+    let cellY=y,cellM=m,cellD=dayNum,muted=false;
+    if(dayNum<1){cellM=m-1;cellD=daysInPrevMonth+dayNum;muted=true;if(cellM<0){cellM=11;cellY=y-1;}}
+    else if(dayNum>daysInMonth){cellD=dayNum-daysInMonth;cellM=m+1;muted=true;if(cellM>11){cellM=0;cellY=y+1;}}
+    const iso=`${cellY}-${String(cellM+1).padStart(2,'0')}-${String(cellD).padStart(2,'0')}`;
+    const dayRaces=racesByDate[iso]||[];
+    const isToday=iso===todayISOStr;
+    const shown=dayRaces.slice(0,3);
+    const extra=dayRaces.length-shown.length;
+    cells.push(`<div class="cal-cell${muted?' muted':''}${isToday?' today':''}">
+      <span class="cal-daynum">${cellD}</span>
+      ${shown.map(r=>`<button type="button" class="cal-chip status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" title="${escapeHtml(r.name)}">${escapeHtml(r.name)||'(未命名賽事)'}</button>`).join('')}
+      ${extra>0?`<span class="cal-more">+${extra}</span>`:''}
+    </div>`);
+  }
+
+  calendarEl.innerHTML=`
+    <div class="cal-weekdays">${WEEKDAY_LABELS.map(w=>`<span>${w}</span>`).join('')}</div>
+    <div class="cal-grid">${cells.join('')}</div>
+  `;
 }
 
 function detailHeaderHtml(race){
@@ -609,6 +711,8 @@ function detailHeaderHtml(race){
     </div>
     <h1>${escapeHtml(race.name)||'(未命名賽事)'} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
     <div class="dh-meta mono">${race.schedule.raceDate||'尚未設定日期'} ・ ${countdownLabel(race)}${chip}</div>
+    ${sparklineSvg(race)}
+    ${progressBlockHtml(race)}
   </header>`;
 }
 
@@ -663,7 +767,7 @@ function updateDetailHeaderBits(){
 
 function emptyStateHtml(){
   return `<div class="empty-state">
-    <p>選擇左側賽事查看詳細紀錄，或建立一場新賽事。</p>
+    <p>點選上方行事曆中的賽事查看詳細紀錄，或建立一場新賽事。</p>
     <button class="btn-primary" data-action="start-create">+ 新增賽事</button>
   </div>`;
 }
@@ -682,28 +786,49 @@ function renderCreateForm(){
   </div>`;
 }
 
-function renderAll(){renderRail();renderDetail();}
+function renderAll(){renderCalendar();renderDetail();}
+function scrollDetailIntoView(){
+  if(typeof detailEl.scrollIntoView==='function') detailEl.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function selectRace(id,{scroll}={scroll:true}){
+  state.selectedId=id;state.creating=false;state.confirmDelete=false;
+  renderAll();
+  if(scroll) scrollDetailIntoView();
+}
 
 /* ============================================================
    事件處理
    ============================================================ */
-function startCreate(){state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();}
+function startCreate(){state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();}
 
 document.getElementById('btn-new').addEventListener('click',startCreate);
 
-searchInputEl.addEventListener('input',e=>{state.searchQuery=e.target.value;renderRail();});
+searchInputEl.addEventListener('input',e=>{state.searchQuery=e.target.value;renderCalendar();});
 
 filterChipsEl.addEventListener('click',e=>{
   const chip=e.target.closest('.chip');if(!chip) return;
   state.filterStatus=chip.dataset.status;
   [...filterChipsEl.children].forEach(c=>c.classList.toggle('active',c===chip));
-  renderRail();
+  renderCalendar();
 });
 
-railListEl.addEventListener('click',e=>{
-  const card=e.target.closest('.race-card');if(!card) return;
-  state.selectedId=card.dataset.id;state.creating=false;state.confirmDelete=false;
-  renderAll();
+calendarEl.addEventListener('click',e=>{
+  const chip=e.target.closest('.cal-chip');if(!chip) return;
+  selectRace(chip.dataset.id);
+});
+
+function shiftCalendarMonth(delta){
+  let m=state.calendarMonth+delta,y=state.calendarYear;
+  if(m<0){m=11;y--;} else if(m>11){m=0;y++;}
+  state.calendarMonth=m;state.calendarYear=y;
+  renderCalendar();
+}
+document.getElementById('cal-prev').addEventListener('click',()=>shiftCalendarMonth(-1));
+document.getElementById('cal-next').addEventListener('click',()=>shiftCalendarMonth(1));
+document.getElementById('cal-today').addEventListener('click',()=>{
+  const t=new Date();
+  state.calendarYear=t.getFullYear();state.calendarMonth=t.getMonth();
+  renderCalendar();
 });
 
 document.getElementById('btn-export').addEventListener('click',()=>{
@@ -735,8 +860,12 @@ detailEl.addEventListener('change',e=>{
   else value=t.value;
   setPath(currentRace,path,value);
   currentRace.updatedAt=new Date().toISOString();
+  if(path==='schedule.raceDate'&&value){
+    const d=new Date(value+'T00:00:00');
+    if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
+  }
   persist();
-  renderRail();
+  renderCalendar();
   if(path==='status'){renderDetail();}else{updateDetailHeaderBits();}
 });
 
@@ -779,6 +908,10 @@ detailEl.addEventListener('click',e=>{
     const race=emptyRace(name,sportType,status,raceDate);
     state.races.push(race);
     state.selectedId=race.id;state.creating=false;
+    if(raceDate){
+      const d=new Date(raceDate+'T00:00:00');
+      if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
+    }
     persist();renderAll();return;
   }
 });
