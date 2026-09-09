@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>賽事紀錄</title>
+<script>
+(function(){
+  try{
+    var t=localStorage.getItem('theme-pref-v1');
+    if(!t){ t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
 <link rel="apple-touch-icon" href="data:image/png;base64,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">
 <link rel="icon" type="image/png" sizes="192x192" href="data:image/png;base64,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">
 <link rel="icon" type="image/png" sizes="512x512" href="data:image/png;base64,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AAAgFAEAAKEIAAAIRQAAQCgCAABCEQAAEIoAAIBQBAAAhCIAACAUAQAAoQgAAAhFAABAKAIAAEIRAAAQigAAgFAEAACEIgAAIBQBAAChCAAACEUAAEAoAgAAQhEAABCKAACAUAQAAIQiAAAgFAEAAKEIAAAIRQAAQCgCAABCEQAAEIoAAIBQBAAAhCIAACAUAQAAoQgAAAhFAABAKAIAAEIRAAAQigAAgFAEAACEIgAAIBQBAAChCAAACEUAAEAoAgAAQhEAABCKAACAUAQAAIQiAAAgFAEAAKEIAAAIRQAAQCgCAABCEQAAEIoAAIBQBAAAhCIAACAUAQAAoQgAAAhFAABAKAIAAEIRAAAQigAAgFAEAACEIgAAIBQBAAChCAAACEUAAEAoAgAAQhEAABCKAACAUAQAAIQiAAAgFAEAAKEIAAAIRQAAQCgCAABCEQAAEIoAAIBQBAAAhCIAACAUAQAAoQgAAAhFAABAKAIAAEIRAAAQigAAgFAEAACEIgAAIBQBAAChCAAACEUAAEAoAgAAQhEAABCKAACAUAQAAIQiAAAgFAEAAKEIAAAIRQAAQCgCAABCEQAAEIoAAIBQBAAAhCIAACAUAQAAoQgAAAhFAABAKAIAAEIRAAAQigAAgFAEAACEIgAAIBQBAAChCAAACEUAAEAoAgAAQhEAABCKAACAUAQAAIQiAAAgFAEAAKEIAAAIRQAAQCgCAABCEQAAEIoAAIBQBAAAhCIAACAUAQAAoQgAAAhFAABAKAIAAEIRAAAQigAAgFAEAACEIgAAIBQBAAChCAAACEUAAEAoAgAAQv0/VjMEYgSrbygAAAAASUVORK5CYII=">
@@ -27,7 +36,23 @@
     --contour:#3A5A8C;
     --flag:#B8451F;
     --stone:#8B8D82;
+    --gold:#B08D2E;
   }
+  [data-theme="dark"]{
+    --paper:#12161A;
+    --surface:#1E232A;
+    --ink:#EDEEE9;
+    --ink-soft:#9BA3A0;
+    --rule:#2A3038;
+    --trail:#4C9A72;
+    --contour:#7B9FD1;
+    --flag:#E07850;
+    --stone:#6B7178;
+    --gold:#D9B15C;
+  }
+  [data-theme="dark"] .empty-state-icons,
+  [data-theme="dark"] .sport-icon-wrap{color:var(--trail);}
+  [data-theme="dark"] .row-remove{color:var(--stone);}
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -123,6 +148,24 @@
   .cal-list-item.selected .stamp{filter:brightness(1.6);}
   .cal-list-name{font-size:15px;color:var(--ink);}
 
+  /* ---------- Career summary ---------- */
+  .career-summary{display:flex;gap:28px;flex-wrap:wrap;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--rule);}
+  .career-stat{display:flex;flex-direction:column;gap:2px;}
+  .career-stat-value{font-size:23px;font-weight:700;}
+  .career-stat-label{font-size:12px;color:var(--stone);}
+
+  /* ---------- Results dashboard ---------- */
+  .results-dashboard{border:1px solid var(--rule);border-radius:4px;padding:22px;margin-bottom:22px;background:var(--surface);}
+  .results-dashboard.is-pb{border-color:var(--gold);}
+  .results-dashboard-main{display:flex;align-items:baseline;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
+  .results-big-time{font-size:44px;font-weight:700;letter-spacing:-0.01em;}
+  .pb-badge{display:inline-block;padding:3px 11px;border:1.5px solid var(--gold);color:var(--gold);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
+  .results-badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:16px;}
+  .results-badge{display:flex;flex-direction:column;gap:3px;padding:9px 11px;background:var(--paper);border-radius:3px;}
+  .results-badge-label{font-size:11px;color:var(--stone);}
+  .results-badge-value{font-size:16px;font-weight:600;}
+  .results-dashboard-actions{display:flex;flex-wrap:wrap;gap:10px;}
+
   /* ---------- Progress block ---------- */
   .progress-block{margin:16px 0 22px;}
   .progress-label{display:flex;justify-content:space-between;font-size:15px;color:var(--ink-soft);margin-bottom:6px;}
@@ -153,6 +196,8 @@
     padding:6px 12px;font:inherit;font-size:14px;
   }
   .btn-ghost:hover{border-color:var(--ink);}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;padding:6px;width:34px;height:34px;}
+  .icon-btn svg{width:18px;height:18px;display:block;}
   .btn-ghost.danger{color:var(--flag);border-color:var(--rule);}
   .btn-ghost.danger:hover{border-color:var(--flag);}
   .btn-text{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:14px;padding:0;}
@@ -287,6 +332,7 @@
   .series-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);background:var(--paper);white-space:nowrap;}
   .series-table td{padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;}
   .series-table tr.current{background:rgba(46,107,73,0.08);}
+  .series-table td.pb-time{color:var(--gold);font-weight:700;}
 
   /* ---------- Equipment templates ---------- */
   .template-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
@@ -318,6 +364,7 @@
         <p class="app-tagline">從報名到終點的完整紀錄</p>
       </div>
       <div class="topbar-actions">
+        <button id="btn-theme-toggle" class="btn-ghost icon-btn" aria-label="切換深色模式" title="切換深色模式"></button>
         <div id="auth-area" class="auth-area"></div>
         <button id="btn-new" class="btn-primary">+ 新增賽事</button>
       </div>
@@ -330,15 +377,7 @@
         <button id="cal-today" class="btn-ghost">今天</button>
       </div>
       <input id="search-input" type="search" placeholder="搜尋賽事名稱、城市…">
-      <div id="filter-chips" class="chips">
-        <button class="chip active" data-status="all">全部</button>
-        <button class="chip" data-status="registered">已報名</button>
-        <button class="chip" data-status="lottery_pending">抽籤中</button>
-        <button class="chip" data-status="considering">考慮中</button>
-        <button class="chip" data-status="completed">已完賽</button>
-        <button class="chip" data-status="dns">DNS</button>
-        <button class="chip" data-status="dnf">DNF</button>
-      </div>
+      <div id="filter-chips" class="chips"></div>
     </div>
     <div class="topbar-row3">
       <button id="btn-import" class="btn-text">匯入 Excel</button>
@@ -932,7 +971,7 @@ function renderSeriesComparison(race){
                 <td class="mono">${year}${r.id===race.id?'（本場）':''}</td>
                 <td class="mono">${r.schedule.raceDate||'—'}</td>
                 <td><span class="stamp status-${r.status}">${statusLabel(r.status)}</span></td>
-                <td class="mono">${t!=null?secToHMS(t):'—'}${isPb?' ⭐':''}</td>
+                <td class="mono${isPb?' pb-time':''}">${t!=null?secToHMS(t):'—'}${isPb?' <span class="pb-badge">PB</span>':''}</td>
                 <td class="mono">${rate!=null?rate+'%':'—'}</td>
               </tr>`;
             }).join('')}
@@ -941,6 +980,130 @@ function renderSeriesComparison(race){
       </div>
     </div>
   </details>`;
+}
+
+function renderResultsDashboard(race){
+  if(race.status!=='completed'||race.results.chipTimeSeconds==null) return '';
+  const t=race.results.chipTimeSeconds;
+  const isPb=!!race.results.isPb;
+  const pace=race.route.distanceKm?formatPace(t/race.route.distanceKm):null;
+  const badges=[];
+  if(pace) badges.push(['配速',pace+'/km']);
+  if(race.results.overallRank!=null) badges.push(['總排名次',race.results.overallRank+(race.results.overallParticipants?`／${race.results.overallParticipants}`:'')]);
+  if(race.results.ageGroupRank!=null) badges.push(['分組名次',race.results.ageGroupRank+(race.results.ageGroupParticipants?`／${race.results.ageGroupParticipants}`:'')]);
+  if(race.performanceData.avgHr!=null) badges.push(['平均心率',race.performanceData.avgHr+' bpm']);
+  if(race.route.elevationGainM!=null) badges.push(['總爬升',race.route.elevationGainM+' 公尺']);
+  return `<div class="results-dashboard${isPb?' is-pb':''}">
+    <div class="results-dashboard-main">
+      <div class="results-big-time mono">${secToHMS(t)}</div>
+      ${isPb?'<span class="pb-badge">個人最佳 PB</span>':''}
+    </div>
+    ${badges.length?`<div class="results-badge-grid">${badges.map(([label,val])=>`<div class="results-badge"><span class="results-badge-label">${label}</span><span class="results-badge-value mono">${escapeHtml(String(val))}</span></div>`).join('')}</div>`:''}
+    <div class="results-dashboard-actions">
+      <button type="button" class="btn-ghost" data-action="generate-share-image">產生分享圖</button>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   分享圖產生（Canvas，純前端，不上傳任何資料）
+   ============================================================ */
+function canvasWrapText(ctx,text,x,y,maxWidth,lineHeight,maxLines){
+  const chars=Array.from(text||'');
+  let line='',curY=y,lines=0;
+  for(let i=0;i<chars.length;i++){
+    const testLine=line+chars[i];
+    if(ctx.measureText(testLine).width>maxWidth&&line){
+      ctx.fillText(line,x,curY);
+      line=chars[i];curY+=lineHeight;lines++;
+      if(maxLines&&lines>=maxLines-1){
+        const rest=chars.slice(i+1).join('');
+        line+= rest ? '…' : '';
+        break;
+      }
+    }else{
+      line=testLine;
+    }
+  }
+  ctx.fillText(line,x,curY);
+  return curY;
+}
+async function buildShareCanvas(race){
+  try{ await document.fonts.ready; }catch(e){}
+  const W=1080,H=1080;
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const isPb=!!race.results.isPb;
+
+  ctx.fillStyle='#16231C';
+  ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='#EEF0EF';ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(80,150);ctx.lineTo(170,80);ctx.lineTo(215,115);ctx.lineTo(280,55);
+  ctx.stroke();
+  ctx.fillStyle='#B8451F';
+  ctx.beginPath();ctx.arc(280,55,11,0,Math.PI*2);ctx.fill();
+
+  ctx.fillStyle='#9BA3A0';
+  ctx.font='28px "Noto Sans TC",sans-serif';
+  ctx.fillText('賽事紀錄',80,210);
+
+  ctx.fillStyle='#EDEEE9';
+  ctx.font='bold 52px "Noto Sans TC",sans-serif';
+  const nameEndY=canvasWrapText(ctx,race.name||'(未命名賽事)',80,300,W-160,64,2);
+
+  ctx.fillStyle='#9BA3A0';
+  ctx.font='30px "IBM Plex Mono",monospace';
+  ctx.fillText(race.schedule.raceDate||'',80,nameEndY+60);
+
+  const timeY=nameEndY+190;
+  ctx.fillStyle=isPb?'#D9B15C':'#EDEEE9';
+  ctx.font='bold 128px "IBM Plex Mono",monospace';
+  ctx.fillText(secToHMS(race.results.chipTimeSeconds||0),80,timeY);
+  if(isPb){
+    ctx.strokeStyle='#D9B15C';ctx.fillStyle='none';ctx.lineWidth=2;
+    ctx.font='bold 28px "Noto Sans TC",sans-serif';
+    ctx.fillStyle='#D9B15C';
+    ctx.fillText('個人最佳 PB',80,timeY+50);
+  }
+
+  const pace=race.route.distanceKm?formatPace(race.results.chipTimeSeconds/race.route.distanceKm):null;
+  const badges=[];
+  if(pace) badges.push(['配速',pace+'/km']);
+  if(race.route.distanceKm) badges.push(['距離',race.route.distanceKm+' 公里']);
+  if(race.route.elevationGainM!=null) badges.push(['總爬升',race.route.elevationGainM+' 公尺']);
+  if(race.results.overallRank!=null) badges.push(['總排名次',String(race.results.overallRank)]);
+
+  const badgeY=timeY+(isPb?110:70);
+  const colW=(W-160)/Math.max(badges.length,1);
+  badges.forEach((b,i)=>{
+    const bx=80+i*colW;
+    ctx.fillStyle='#6B7178';
+    ctx.font='24px "Noto Sans TC",sans-serif';
+    ctx.fillText(b[0],bx,badgeY);
+    ctx.fillStyle='#EDEEE9';
+    ctx.font='bold 34px "IBM Plex Mono",monospace';
+    ctx.fillText(b[1],bx,badgeY+42);
+  });
+
+  ctx.fillStyle='#4C9A72';
+  ctx.font='24px "Noto Sans TC",sans-serif';
+  ctx.fillText(sportLabel(race.sportType),80,H-70);
+
+  return canvas;
+}
+async function downloadShareImage(race){
+  const canvas=await buildShareCanvas(race);
+  canvas.toBlob(blob=>{
+    if(!blob) return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=(race.name||'race').replace(/[\\/:*?"<>|]/g,'')+'-分享圖.png';
+    a.click();
+    URL.revokeObjectURL(url);
+  },'image/png');
 }
 
 /* ============================================================
@@ -954,10 +1117,49 @@ const searchInputEl=document.getElementById('search-input');
 const WEEKDAY_LABELS=['日','一','二','三','四','五','六'];
 const MONTH_LABEL_FMT=(y,m)=>`${y} 年 ${m+1} 月`;
 
+const FILTER_CHIPS=[
+  {value:'all',label:'全部'},
+  {value:'upcoming',label:'即將到來'},
+  {value:'registered',label:'已報名'},
+  {value:'lottery_pending',label:'抽籤中'},
+  {value:'considering',label:'考慮中'},
+  {value:'history',label:'歷史紀錄'},
+  {value:'completed',label:'已完賽'},
+  {value:'dns',label:'DNS'},
+  {value:'dnf',label:'DNF'},
+];
+function isUpcomingRace(r,todayStr){
+  return ['registered','lottery_pending','considering'].includes(r.status)&&(!r.schedule.raceDate||r.schedule.raceDate>=todayStr);
+}
+function isHistoryRace(r,todayStr){
+  return ['completed','dns','dnf'].includes(r.status)||(r.schedule.raceDate&&r.schedule.raceDate<todayStr);
+}
+function matchesFilter(r,filter,todayStr){
+  if(filter==='all') return true;
+  if(filter==='upcoming') return isUpcomingRace(r,todayStr);
+  if(filter==='history') return isHistoryRace(r,todayStr);
+  return r.status===filter;
+}
+function computeFilterCounts(){
+  const todayStr=todayISO();
+  const counts={};
+  FILTER_CHIPS.forEach(f=>{counts[f.value]=0;});
+  state.races.forEach(r=>{
+    FILTER_CHIPS.forEach(f=>{ if(matchesFilter(r,f.value,todayStr)) counts[f.value]++; });
+  });
+  return counts;
+}
+function renderFilterChips(){
+  const counts=computeFilterCounts();
+  filterChipsEl.innerHTML=FILTER_CHIPS.map(f=>
+    `<button class="chip${state.filterStatus===f.value?' active':''}" data-status="${f.value}">${f.label}${counts[f.value]?` (${counts[f.value]})`:''}</button>`
+  ).join('');
+}
 function filteredRaces(){
   const q=state.searchQuery.trim().toLowerCase();
+  const todayStr=todayISO();
   return state.races.filter(r=>{
-    if(state.filterStatus!=='all'&&r.status!==state.filterStatus) return false;
+    if(!matchesFilter(r,state.filterStatus,todayStr)) return false;
     if(q){
       const hay=`${r.name} ${r.alias} ${(r.location&&r.location.city)||''}`.toLowerCase();
       if(!hay.includes(q)) return false;
@@ -975,9 +1177,35 @@ function buildRacesByDate(races){
   return map;
 }
 
+function formatPace(secPerKm){
+  if(secPerKm==null||!isFinite(secPerKm)||secPerKm<=0) return null;
+  const m=Math.floor(secPerKm/60),s=Math.round(secPerKm%60);
+  return `${m}'${String(s).padStart(2,'0')}"`;
+}
+function computeCareerStats(){
+  const completed=state.races.filter(r=>r.status==='completed');
+  const marathonPB=completed
+    .filter(r=>r.route.distanceKm>=41&&r.route.distanceKm<=43.5&&r.results.chipTimeSeconds!=null)
+    .reduce((min,r)=>(min==null||r.results.chipTimeSeconds<min)?r.results.chipTimeSeconds:min,null);
+  const thisYear=String(new Date().getFullYear());
+  const yearDistance=completed
+    .filter(r=>r.schedule.raceDate&&r.schedule.raceDate.startsWith(thisYear))
+    .reduce((sum,r)=>sum+(r.route.distanceKm||0),0);
+  return {totalCompleted:completed.length,marathonPB,yearDistance};
+}
+function renderCareerSummary(){
+  if(state.races.length<5) return '';
+  const s=computeCareerStats();
+  const items=[['總完賽場次',s.totalCompleted+' 場']];
+  if(s.marathonPB!=null) items.push(['全馬 PB',secToHMS(s.marathonPB)]);
+  if(s.yearDistance>0) items.push([`${new Date().getFullYear()} 年累計里程`,s.yearDistance.toFixed(1)+' 公里']);
+  return `<div class="career-summary">${items.map(([l,v])=>`<div class="career-stat"><span class="career-stat-value mono">${v}</span><span class="career-stat-label">${l}</span></div>`).join('')}</div>`;
+}
+
 function renderCalendar(){
   const y=state.calendarYear,m=state.calendarMonth;
   calLabelEl.textContent=MONTH_LABEL_FMT(y,m);
+  renderFilterChips();
   const racesByDate=buildRacesByDate(filteredRaces());
   const todayISOStr=todayISO();
 
@@ -1019,6 +1247,7 @@ function renderCalendar(){
   }
 
   calendarEl.innerHTML=`
+    ${renderCareerSummary()}
     <div class="cal-weekdays">${WEEKDAY_LABELS.map(w=>`<span>${w}</span>`).join('')}</div>
     <div class="cal-grid">${cells.join('')}</div>
     <div class="cal-list">${listRows.length?listRows.join(''):`<p class="empty-hint">這個月沒有符合條件的賽事</p>`}</div>
@@ -1032,6 +1261,7 @@ function detailHeaderHtml(race){
       <div class="dh-badges">
         <span class="stamp status-${race.status}">${statusLabel(race.status)}</span>
         <span class="sport-icon-wrap" title="${sportLabel(race.sportType)}">${sportIconSvg(sportIconKey(race.sportType),30)}</span>
+        ${race.results.isPb?'<span class="pb-badge">PB</span>':''}
       </div>
       <div class="dh-actions">
         <button class="btn-ghost" data-action="open-paste-modal">貼上資料快速填入</button>
@@ -1082,6 +1312,7 @@ function renderDetail(){
     </details>
     <details class="section" ${!openPre?'open':''}>
       <summary>賽後紀錄與個人數據</summary>
+      ${renderResultsDashboard(race)}
       <div class="gpx-import-bar">
         <button type="button" class="btn-ghost" data-action="open-gpx-picker">匯入運動紀錄檔（GPX / TCX）</button>
         <span class="small auth-hint">支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速</span>
@@ -1147,7 +1378,6 @@ searchInputEl.addEventListener('input',e=>{state.searchQuery=e.target.value;rend
 filterChipsEl.addEventListener('click',e=>{
   const chip=e.target.closest('.chip');if(!chip) return;
   state.filterStatus=chip.dataset.status;
-  [...filterChipsEl.children].forEach(c=>c.classList.toggle('active',c===chip));
   renderCalendar();
 });
 
@@ -1168,6 +1398,26 @@ document.getElementById('cal-today').addEventListener('click',()=>{
   const t=new Date();
   state.calendarYear=t.getFullYear();state.calendarMonth=t.getMonth();
   renderCalendar();
+});
+
+/* ============================================================
+   深色模式
+   ============================================================ */
+const THEME_KEY='theme-pref-v1';
+const MOON_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`;
+const SUN_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>`;
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme',theme);
+  const btn=document.getElementById('btn-theme-toggle');
+  if(btn) btn.innerHTML = theme==='dark' ? SUN_ICON : MOON_ICON;
+  const metaTheme=document.querySelector('meta[name="theme-color"]');
+  if(metaTheme) metaTheme.setAttribute('content', theme==='dark' ? '#12161A' : '#2E6B49');
+}
+applyTheme(document.documentElement.getAttribute('data-theme')||'light');
+document.getElementById('btn-theme-toggle').addEventListener('click',()=>{
+  const next=document.documentElement.getAttribute('data-theme')==='dark' ? 'light':'dark';
+  applyTheme(next);
+  try{ localStorage.setItem(THEME_KEY,next); }catch(e){}
 });
 
 // 手機上往下捲動時，把標題列縮小（隱藏副標題）多留一點空間給表單內容
@@ -1837,6 +2087,7 @@ function openPasteModal(){
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-paste-modal"]')) openPasteModal();
   if(e.target.closest('[data-action="open-gpx-picker"]')) document.getElementById('gpx-file-input').click();
+  if(e.target.closest('[data-action="generate-share-image"]')&&currentRace) downloadShareImage(currentRace);
 });
 
 /* ============================================================
