@@ -234,6 +234,24 @@
   }
   .import-table input.narrow{min-width:60px;width:74px;}
   .import-table td:first-child{width:28px;}
+
+  /* ---------- Series comparison ---------- */
+  .series-best{font-size:13px;margin:0 0 12px;}
+  .series-table-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;}
+  .series-table{border-collapse:collapse;width:100%;font-size:12px;}
+  .series-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);background:var(--paper);white-space:nowrap;}
+  .series-table td{padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;}
+  .series-table tr.current{background:rgba(46,107,73,0.08);}
+
+  /* ---------- Equipment templates ---------- */
+  .template-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
+  .template-bar select{
+    font:inherit;font-size:12px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);
+  }
+  .template-save-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .template-save-row input{
+    flex:1 1 200px;font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);
+  }
 </style>
 </head>
 <body>
@@ -309,6 +327,7 @@ const DIRECTION_OPTIONS=[{value:'outbound',label:'去程'},{value:'return',label
 const SECTION_BASIC=[
   {path:'name',label:'賽事名稱',type:'text'},
   {path:'alias',label:'別名 / 英文名稱',type:'text'},
+  {path:'series',label:'賽事系列（跨年比較用，同系列請填一致名稱）',type:'text',wide:true},
   {path:'status',label:'狀態',type:'select',options:STATUS_OPTIONS},
   {path:'sportType',label:'主要運動種類',type:'select',options:SPORT_OPTIONS},
   {path:'raceFormat',label:'競賽形式',type:'select',options:FORMAT_OPTIONS},
@@ -317,6 +336,10 @@ const SECTION_BASIC=[
   {path:'schedule.registrationOpenDate',label:'報名開始日期',type:'date'},
   {path:'schedule.registrationCloseDate',label:'報名截止日期',type:'date'},
   {path:'schedule.lotteryResultDate',label:'抽籤結果公佈日',type:'date'},
+  {path:'lottery.applicants',label:'抽籤申請人數',type:'number'},
+  {path:'lottery.winners',label:'抽籤名額 / 中籤人數',type:'number'},
+  {path:'lottery.winRatePct',label:'中籤率',type:'number',unit:'%'},
+  {path:'lottery.wasSelected',label:'本次是否抽中',type:'checkbox'},
   {path:'location.venueName',label:'起終點名稱',type:'text'},
   {path:'location.city',label:'縣市',type:'text'},
   {path:'location.country',label:'國家',type:'text'},
@@ -518,8 +541,9 @@ function sparklineSvg(race){
 function emptyRace(name,sportType,status,raceDate){
   const now=new Date().toISOString();
   return {
-    id:uid(),name:name||'',alias:'',status:status||'considering',sportType:sportType||'road_running',raceFormat:'solo',
+    id:uid(),name:name||'',alias:'',series:'',status:status||'considering',sportType:sportType||'road_running',raceFormat:'solo',
     schedule:{raceDate:raceDate||'',startTime:'',registrationOpenDate:'',registrationCloseDate:'',lotteryResultDate:''},
+    lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
     route:{distanceKm:null,elevationGainM:null,elevationLossM:null,minAltitudeM:null,maxAltitudeM:null,startAltitudeM:null,
       surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,terrainNotes:''},
@@ -546,12 +570,20 @@ function emptyRace(name,sportType,status,raceDate){
    ============================================================ */
 const today0=new Date();
 const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',confirmDelete:false,
-  calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth()};
+  calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false};
 let currentRace=null;
 const STORAGE_KEY='races-v1';
+const TEMPLATES_KEY='equipment-templates-v1';
 // window.storage 只存在於 Claude 內建的 artifact 預覽環境；獨立架站（如 GitHub Pages）
 // 或直接開檔案時並不存在，此時自動改用瀏覽器原生的 localStorage，兩種環境都能正常儲存。
 const hasArtifactStorage=(typeof window.storage!=='undefined')&&(typeof window.storage.get==='function');
+
+// 補上舊資料（此功能上線前建立的賽事）缺少的欄位，避免 setPath 寫入 undefined 巢狀物件時出錯。
+function migrateRace(r){
+  if(r.series==null) r.series='';
+  if(r.lottery==null) r.lottery={applicants:null,winners:null,winRatePct:null,wasSelected:false};
+  return r;
+}
 
 async function loadRaces(){
   try{
@@ -562,6 +594,7 @@ async function loadRaces(){
       const raw=localStorage.getItem(STORAGE_KEY);
       state.races=raw?JSON.parse(raw):[];
     }
+    state.races=state.races.map(migrateRace);
   }catch(err){
     state.races=[];
   }
@@ -575,6 +608,32 @@ async function persist(){
     }
   }catch(err){
     console.error('儲存失敗',err);
+  }
+}
+
+let templates=[];
+async function loadTemplates(){
+  try{
+    if(hasArtifactStorage){
+      const res=await window.storage.get(TEMPLATES_KEY,false);
+      templates=(res&&res.value)?JSON.parse(res.value):[];
+    }else{
+      const raw=localStorage.getItem(TEMPLATES_KEY);
+      templates=raw?JSON.parse(raw):[];
+    }
+  }catch(err){
+    templates=[];
+  }
+}
+async function persistTemplates(){
+  try{
+    if(hasArtifactStorage){
+      await window.storage.set(TEMPLATES_KEY,JSON.stringify(templates),false);
+    }else{
+      localStorage.setItem(TEMPLATES_KEY,JSON.stringify(templates));
+    }
+  }catch(err){
+    console.error('範本儲存失敗',err);
   }
 }
 
@@ -632,6 +691,72 @@ function renderGoals(race){
         </div>`).join('')}
     </div>
   </div>`;
+}
+
+function renderEquipmentSection(race){
+  const items=race.equipmentChecklist||[];
+  const options=templates.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}（${t.items.length} 項）</option>`).join('');
+  return `<div class="subsection">
+    <div class="subsection-head"><h3>裝備清單</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="equipmentChecklist">+ 新增</button></div>
+    <div class="template-bar">
+      <select id="template-select">${templates.length?options:'<option value="">尚無已存範本</option>'}</select>
+      <button type="button" class="btn-ghost" data-action="apply-template" ${templates.length?'':'disabled'}>套用範本</button>
+      <button type="button" class="btn-ghost" data-action="save-template" ${items.length?'':'disabled'}>另存為範本</button>
+      <button type="button" class="btn-ghost danger" data-action="delete-template" ${templates.length?'':'disabled'}>${state.confirmDeleteTemplate?'確定刪除？再按一次':'刪除範本'}</button>
+    </div>
+    ${state.savingTemplate?`
+      <div class="template-save-row">
+        <input type="text" id="template-name-input" placeholder="範本名稱，如「路跑標配」「越野標配」">
+        <button type="button" class="btn-primary" data-action="confirm-save-template">儲存範本</button>
+        <button type="button" class="btn-ghost" data-action="cancel-save-template">取消</button>
+      </div>`:''}
+    <div class="repeat-rows">
+      ${items.length?items.map((it,i)=>`
+        <div class="repeat-row">
+          <button type="button" class="row-remove" data-action="remove-item" data-list="equipmentChecklist" data-index="${i}" title="刪除">×</button>
+          ${EQUIP_FIELDS.map(f=>renderField(race,Object.assign({},f,{path:`equipmentChecklist.${i}.${f.path}`}))).join('')}
+        </div>`).join(''):`<p class="empty-hint">尚未新增</p>`}
+    </div>
+  </div>`;
+}
+
+function renderSeriesComparison(race){
+  if(!race.series||!race.series.trim()) return '';
+  const key=race.series.trim();
+  const seriesRaces=state.races.filter(r=>r.series&&r.series.trim()===key)
+    .sort((a,b)=>(a.schedule.raceDate||'').localeCompare(b.schedule.raceDate||''));
+  if(seriesRaces.length<2) return '';
+  const bestTime=seriesRaces.reduce((best,r)=>{
+    const t=r.results&&r.results.chipTimeSeconds;
+    if(t==null) return best;
+    return (best==null||t<best)?t:best;
+  },null);
+  return `<details class="section" open>
+    <summary>系列賽事比較（跨年）</summary>
+    <div class="section-body" style="display:block;padding-bottom:20px;">
+      ${bestTime!=null?`<p class="series-best mono">系列最佳晶片時間：${secToHMS(bestTime)}</p>`:''}
+      <div class="series-table-wrap">
+        <table class="series-table">
+          <thead><tr><th>年份</th><th>日期</th><th>狀態</th><th>晶片時間</th><th>中籤率</th></tr></thead>
+          <tbody>
+            ${seriesRaces.map(r=>{
+              const year=(r.schedule.raceDate||'').slice(0,4)||'—';
+              const t=r.results&&r.results.chipTimeSeconds;
+              const isPb=r.results&&r.results.isPb;
+              const rate=r.lottery&&r.lottery.winRatePct;
+              return `<tr class="${r.id===race.id?'current':''}">
+                <td class="mono">${year}${r.id===race.id?'（本場）':''}</td>
+                <td class="mono">${r.schedule.raceDate||'—'}</td>
+                <td><span class="stamp status-${r.status}">${statusLabel(r.status)}</span></td>
+                <td class="mono">${t!=null?secToHMS(t):'—'}${isPb?' ⭐':''}</td>
+                <td class="mono">${rate!=null?rate+'%':'—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>`;
 }
 
 /* ============================================================
@@ -724,6 +849,7 @@ function renderDetail(){
   const openPre=['registered','lottery_pending','considering'].includes(race.status);
   detailEl.innerHTML=`
     ${detailHeaderHtml(race)}
+    ${renderSeriesComparison(race)}
     <details class="section" ${openPre?'open':''}>
       <summary>基本資訊與時間</summary>
       <div class="section-body">${SECTION_BASIC.map(f=>renderField(race,f)).join('')}</div>
@@ -748,7 +874,7 @@ function renderDetail(){
       <summary>裝備、補給與戰略（賽前準備）</summary>
       <div class="section-body">${SECTION_PREP.map(f=>renderField(race,f)).join('')}</div>
       ${renderGoals(race)}
-      ${renderRepeatable(race,'equipmentChecklist')}
+      ${renderEquipmentSection(race)}
     </details>
     <details class="section" ${!openPre?'open':''}>
       <summary>賽後紀錄與個人數據</summary>
@@ -866,7 +992,8 @@ detailEl.addEventListener('change',e=>{
   }
   persist();
   renderCalendar();
-  if(path==='status'){renderDetail();}else{updateDetailHeaderBits();}
+  const needsFullRerender=(path==='status'||path==='series'||path.startsWith('results.')||path.startsWith('lottery.'));
+  if(needsFullRerender){renderDetail();}else{updateDetailHeaderBits();}
 });
 
 detailEl.addEventListener('click',e=>{
@@ -913,6 +1040,46 @@ detailEl.addEventListener('click',e=>{
       if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
     }
     persist();renderAll();return;
+  }
+  if(e.target.closest('[data-action="apply-template"]')){
+    const sel=document.getElementById('template-select');
+    const tpl=templates.find(t=>t.id===sel.value);
+    if(!tpl) return;
+    currentRace.equipmentChecklist=(currentRace.equipmentChecklist||[]).concat(
+      tpl.items.map(it=>({itemName:it.itemName,category:it.category,isMandatory:it.isMandatory,isPacked:false,notes:''}))
+    );
+    currentRace.updatedAt=new Date().toISOString();
+    persist();renderDetail();return;
+  }
+  if(e.target.closest('[data-action="save-template"]')){
+    state.savingTemplate=true;renderDetail();
+    const input=document.getElementById('template-name-input');
+    if(input) input.focus();
+    return;
+  }
+  if(e.target.closest('[data-action="cancel-save-template"]')){
+    state.savingTemplate=false;renderDetail();return;
+  }
+  if(e.target.closest('[data-action="confirm-save-template"]')){
+    const nameInput=document.getElementById('template-name-input');
+    const name=nameInput.value.trim();
+    if(!name){nameInput.focus();return;}
+    const items=(currentRace.equipmentChecklist||[]).map(it=>({itemName:it.itemName,category:it.category,isMandatory:it.isMandatory}));
+    templates.push({id:uid(),name,items});
+    state.savingTemplate=false;
+    persistTemplates();renderDetail();return;
+  }
+  if(e.target.closest('[data-action="delete-template"]')){
+    const sel=document.getElementById('template-select');
+    if(!sel||!sel.value) return;
+    if(!state.confirmDeleteTemplate){
+      state.confirmDeleteTemplate=true;renderDetail();
+      setTimeout(()=>{state.confirmDeleteTemplate=false;if(currentRace) renderDetail();},4000);
+      return;
+    }
+    templates=templates.filter(t=>t.id!==sel.value);
+    state.confirmDeleteTemplate=false;
+    persistTemplates();renderDetail();return;
   }
 });
 
@@ -1182,7 +1349,7 @@ importModalEl.addEventListener('change',e=>{
    ============================================================ */
 async function init(){
   detailEl.innerHTML='<p class="empty-hint">載入中…</p>';
-  await loadRaces();
+  await Promise.all([loadRaces(),loadTemplates()]);
   renderAll();
 }
 init();
