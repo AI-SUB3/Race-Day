@@ -166,6 +166,32 @@
   .results-badge-value{font-size:16px;font-weight:600;}
   .results-dashboard-actions{display:flex;flex-wrap:wrap;gap:10px;}
 
+  /* ---------- Split analysis ---------- */
+  .split-analysis{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:4px;margin-bottom:18px;border:1px solid var(--rule);}
+  .split-analysis-label{font-size:13px;color:var(--ink-soft);}
+  .split-analysis-value{font-size:20px;font-weight:700;}
+  .split-analysis.split-good{border-color:var(--trail);}
+  .split-analysis.split-good .split-analysis-value{color:var(--trail);}
+  .split-analysis.split-bad{border-color:var(--flag);}
+  .split-analysis.split-bad .split-analysis-value{color:var(--flag);}
+
+  /* ---------- Elevation profile ---------- */
+  .elevation-profile{margin:4px 2px 18px;}
+  .elevation-profile-head{display:flex;justify-content:space-between;color:var(--stone);margin-bottom:6px;}
+  .elevation-svg{width:100%;height:110px;display:block;}
+
+  /* ---------- Shoe management ---------- */
+  .shoe-add-row{display:flex;gap:8px;margin-bottom:16px;}
+  .shoe-add-row input{flex:1;font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
+  .shoe-list{display:flex;flex-direction:column;gap:8px;}
+  .shoe-row{display:flex;align-items:center;gap:14px;padding:10px 12px;border:1px solid var(--rule);border-radius:3px;}
+  .shoe-row-name{flex:1;font-size:15px;}
+  .shoe-row-stats{color:var(--ink-soft);font-size:13px;}
+
+  /* ---------- Pacing calculator ---------- */
+  .pacing-inputs{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px;}
+  .pacing-inputs .field{flex:1 1 150px;}
+
   /* ---------- Progress block ---------- */
   .progress-block{margin:16px 0 22px;}
   .progress-label{display:flex;justify-content:space-between;font-size:15px;color:var(--ink-soft);margin-bottom:6px;}
@@ -395,6 +421,8 @@
 <input type="file" id="gpx-file-input" accept=".gpx,.tcx" style="display:none">
 <div id="gpx-modal" class="modal-overlay" hidden></div>
 <div id="paste-modal" class="modal-overlay" hidden></div>
+<div id="shoe-modal" class="modal-overlay" hidden></div>
+<div id="pacing-modal" class="modal-overlay" hidden></div>
 
 <script>
 /* ============================================================
@@ -456,6 +484,7 @@ const SECTION_ROUTE=[
   {path:'route.surface.stairsPct',label:'階梯比例',type:'number',unit:'%'},
   {path:'route.checkpointCount',label:'CP / 補給站數量',type:'number'},
   {path:'route.cutoffTimeSeconds',label:'全程關門時間',type:'duration'},
+  {path:'route.itraPoints',label:'ITRA / UTMB 點數（官方公告值，非自動計算）',type:'number'},
   {path:'route.terrainNotes',label:'賽道陡升段說明',type:'textarea',wide:true},
 ];
 const SECTION_WEATHER=[
@@ -496,6 +525,8 @@ const SECTION_POST=[
   {path:'results.ageGroupRank',label:'分組名次',type:'number'},
   {path:'results.ageGroupParticipants',label:'分組人數',type:'number'},
   {path:'results.isPb',label:'個人最佳 (PB)',type:'checkbox'},
+  {path:'results.firstHalfSeconds',label:'前半程時間',type:'duration'},
+  {path:'results.secondHalfSeconds',label:'後半程時間',type:'duration'},
   {path:'performanceData.avgHr',label:'平均心率',type:'number',unit:'bpm'},
   {path:'performanceData.maxHr',label:'最大心率',type:'number',unit:'bpm'},
   {path:'performanceData.avgCadence',label:'平均步頻',type:'number',unit:'spm'},
@@ -545,6 +576,13 @@ const MEDIA_FIELDS=[
   {path:'type',label:'類型',type:'select',options:MEDIA_TYPE_OPTIONS},
   {path:'url',label:'連結',type:'url'},{path:'notes',label:'備註',type:'text'},
 ];
+const NUTRITION_SCHEDULE_FIELDS=[
+  {path:'distanceKm',label:'距離／CP',type:'number',unit:'公里'},
+  {path:'item',label:'補給項目',type:'text'},
+  {path:'plannedAmount',label:'預計份量',type:'text'},
+  {path:'consumed',label:'賽後：已補給',type:'checkbox'},
+  {path:'notes',label:'備註',type:'text'},
+];
 
 const LIST_META={
   checkpoints:{title:'CP / 補給站明細',fields:CHECKPOINT_FIELDS,factory:()=>({name:'',distanceKm:null,cutoffTimeSeconds:null,elevationM:null,hasWater:true,hasFood:true,hasDropBag:false,notes:''})},
@@ -552,6 +590,7 @@ const LIST_META={
   transportation:{title:'交通',fields:TRANSPORT_FIELDS,factory:()=>({direction:'outbound',mode:'hsr',departureTime:'',pickupLocation:'',notes:''})},
   companions:{title:'隨行人員',fields:COMPANION_FIELDS,factory:()=>({name:'',role:'partner',contactInfo:'',notes:''})},
   equipmentChecklist:{title:'裝備清單',fields:EQUIP_FIELDS,factory:()=>({itemName:'',category:'other',isMandatory:false,isPacked:false,notes:''})},
+  nutritionSchedule:{title:'補給時程規劃',fields:NUTRITION_SCHEDULE_FIELDS,factory:()=>({distanceKm:null,item:'',plannedAmount:'',consumed:false,notes:''})},
   splits:{title:'分段配速',fields:SPLIT_FIELDS,factory:()=>({distanceKm:null,splitTimeSeconds:null,avgHr:null,avgPaceSecPerKm:null,elevationGainM:null,notes:''})},
   mediaLinks:{title:'多媒體與連結',fields:MEDIA_FIELDS,factory:()=>({type:'other',url:'',notes:''})},
 };
@@ -667,7 +706,7 @@ function emptyRace(name,sportType,status,raceDate){
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
     route:{distanceKm:null,elevationGainM:null,elevationLossM:null,minAltitudeM:null,maxAltitudeM:null,startAltitudeM:null,
-      surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,terrainNotes:''},
+      surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,itraPoints:null,terrainNotes:'',elevationProfile:[]},
     checkpoints:[],
     climateForecast:{avgTempC:null,avgHumidityPct:null,windDirection:'',windSpeedKmh:null,rainProbabilityPct:null},
     raceDayWeather:{feelsLikeTempC:null,condition:'',humidityPct:null,notes:''},
@@ -676,9 +715,10 @@ function emptyRace(name,sportType,status,raceDate){
     goals:[{tier:'A',targetTimeSeconds:null,paceStrategy:''},{tier:'B',targetTimeSeconds:null,paceStrategy:''},{tier:'C',targetTimeSeconds:null,paceStrategy:''}],
     equipmentChecklist:[],
     nutritionPlan:{gelCount:null,electrolyteTabletCount:null,hydrationCapacityMl:null,notes:''},
+    nutritionSchedule:[],
     trainingPlan:{planStartDate:'',planEndDate:'',taperStartDate:'',weeklyMileageTargetKm:null,keyWorkoutNotes:'',externalPlanUrl:'',notes:''},
-    results:{gunTimeSeconds:null,chipTimeSeconds:null,overallRank:null,overallParticipants:null,ageGroupRank:null,ageGroupParticipants:null,isPb:false},
-    performanceData:{avgHr:null,maxHr:null,avgCadence:null,avgPowerWatts:null,dataSource:'',notes:''},
+    results:{gunTimeSeconds:null,chipTimeSeconds:null,overallRank:null,overallParticipants:null,ageGroupRank:null,ageGroupParticipants:null,isPb:false,firstHalfSeconds:null,secondHalfSeconds:null},
+    performanceData:{avgHr:null,maxHr:null,avgCadence:null,avgPowerWatts:null,dataSource:'',notes:'',shoeId:''},
     splits:[],
     review:{hitTheWallNotes:'',courseReview:'',pros:'',cons:'',lessonsLearned:''},
     mediaLinks:[],
@@ -704,6 +744,12 @@ const hasArtifactStorage=(typeof window.storage!=='undefined')&&(typeof window.s
 function migrateRace(r){
   if(r.series==null) r.series='';
   if(r.lottery==null) r.lottery={applicants:null,winners:null,winRatePct:null,wasSelected:false};
+  if(r.nutritionSchedule==null) r.nutritionSchedule=[];
+  if(r.route&&r.route.itraPoints===undefined) r.route.itraPoints=null;
+  if(r.route&&r.route.elevationProfile==null) r.route.elevationProfile=[];
+  if(r.results&&r.results.firstHalfSeconds===undefined) r.results.firstHalfSeconds=null;
+  if(r.results&&r.results.secondHalfSeconds===undefined) r.results.secondHalfSeconds=null;
+  if(r.performanceData&&r.performanceData.shoeId===undefined) r.performanceData.shoeId='';
   return r;
 }
 
@@ -855,6 +901,74 @@ async function persistTemplates(){
   }
 }
 
+const STARTER_TEMPLATES=[
+  {name:'路跑標配',items:[
+    {itemName:'晶片/計時感應器',category:'mandatory_gear',isMandatory:true},
+    {itemName:'號碼布別針',category:'mandatory_gear',isMandatory:true},
+    {itemName:'跑鞋',category:'shoes',isMandatory:true},
+    {itemName:'凡士林/防磨膏',category:'other',isMandatory:false},
+    {itemName:'鹽錠',category:'nutrition',isMandatory:false},
+    {itemName:'能量膠',category:'nutrition',isMandatory:false},
+    {itemName:'帽子/太陽眼鏡',category:'apparel',isMandatory:false},
+    {itemName:'GPS 運動錶',category:'other',isMandatory:false},
+  ]},
+  {name:'越野標配（強制裝備參考，實際以賽會簡章為準）',items:[
+    {itemName:'頭燈＋備用電池',category:'headlamp',isMandatory:true},
+    {itemName:'求生毯/急救毯',category:'mandatory_gear',isMandatory:true},
+    {itemName:'防風防水外套',category:'apparel',isMandatory:true},
+    {itemName:'水袋/水壺（確認容量規定）',category:'other',isMandatory:true},
+    {itemName:'哨子',category:'mandatory_gear',isMandatory:true},
+    {itemName:'手機（確認電量）',category:'mandatory_gear',isMandatory:true},
+    {itemName:'個人藥品',category:'other',isMandatory:false},
+    {itemName:'保暖衣物',category:'apparel',isMandatory:false},
+    {itemName:'越野杖',category:'other',isMandatory:false},
+    {itemName:'能量膠/補給食物',category:'nutrition',isMandatory:false},
+  ]},
+  {name:'三鐵標配',items:[
+    {itemName:'泳鏡',category:'other',isMandatory:true},
+    {itemName:'泳帽',category:'other',isMandatory:true},
+    {itemName:'防寒衣（視水溫規則）',category:'apparel',isMandatory:false},
+    {itemName:'自行車＋安全帽',category:'mandatory_gear',isMandatory:true},
+    {itemName:'卡鞋',category:'shoes',isMandatory:false},
+    {itemName:'三鐵服',category:'apparel',isMandatory:false},
+    {itemName:'跑鞋',category:'shoes',isMandatory:true},
+    {itemName:'運動錶',category:'other',isMandatory:false},
+    {itemName:'能量膠/運動飲料',category:'nutrition',isMandatory:false},
+  ]},
+];
+
+const SHOES_KEY='shoes-v1';
+let shoes=[];
+async function loadShoes(){
+  try{
+    if(hasArtifactStorage){
+      const res=await window.storage.get(SHOES_KEY,false);
+      shoes=(res&&res.value)?JSON.parse(res.value):[];
+    }else{
+      const raw=localStorage.getItem(SHOES_KEY);
+      shoes=raw?JSON.parse(raw):[];
+    }
+  }catch(err){
+    shoes=[];
+  }
+}
+async function persistShoes(){
+  try{
+    if(hasArtifactStorage){
+      await window.storage.set(SHOES_KEY,JSON.stringify(shoes),false);
+    }else{
+      localStorage.setItem(SHOES_KEY,JSON.stringify(shoes));
+    }
+  }catch(err){
+    console.error('鞋款儲存失敗',err);
+  }
+}
+function computeShoeStats(shoeId){
+  const races=state.races.filter(r=>r.performanceData&&r.performanceData.shoeId===shoeId&&r.status==='completed');
+  const totalDistance=races.reduce((s,r)=>s+(r.route.distanceKm||0),0);
+  return {totalRaces:races.length,totalDistance};
+}
+
 /* ============================================================
    欄位 / 表單渲染
    ============================================================ */
@@ -1002,6 +1116,54 @@ function renderResultsDashboard(race){
     <div class="results-dashboard-actions">
       <button type="button" class="btn-ghost" data-action="generate-share-image">產生分享圖</button>
     </div>
+  </div>`;
+}
+
+function computeSplitPercent(race){
+  const h1=race.results.firstHalfSeconds,h2=race.results.secondHalfSeconds;
+  if(h1==null||h2==null||h1<=0) return null;
+  return ((h2-h1)/h1)*100;
+}
+function renderSplitAnalysis(race){
+  const pct=computeSplitPercent(race);
+  if(pct==null) return '';
+  const isNegative=pct<0;
+  const label=isNegative?'負分段（後半程加速）':'正分段（後半程掉速）';
+  const cls=isNegative?'split-good':(pct>5?'split-bad':'split-ok');
+  return `<div class="split-analysis ${cls}">
+    <span class="split-analysis-label">${label}</span>
+    <span class="split-analysis-value mono">${pct>0?'+':''}${pct.toFixed(1)}%</span>
+  </div>`;
+}
+
+function elevationProfileHtml(race){
+  let pts=(race.route.elevationProfile&&race.route.elevationProfile.length>=2)?race.route.elevationProfile
+    :(race.checkpoints||[]).filter(c=>c.elevationM!=null&&c.distanceKm!=null).map(c=>({distanceKm:c.distanceKm,elevationM:c.elevationM}));
+  pts=pts.filter(p=>p.elevationM!=null&&p.distanceKm!=null).sort((a,b)=>a.distanceKm-b.distanceKm);
+  if(pts.length<2) return '';
+  const w=600,h=130,pad=6;
+  const xs=pts.map(p=>p.distanceKm),ys=pts.map(p=>p.elevationM);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const sx=x=>pad+(x-minX)/((maxX-minX)||1)*(w-2*pad);
+  const sy=y=>h-pad-(y-minY)/((maxY-minY)||1)*(h-2*pad);
+  const linePoints=pts.map(p=>sx(p.distanceKm).toFixed(1)+','+sy(p.elevationM).toFixed(1)).join(' ');
+  const areaPoints=`${sx(minX).toFixed(1)},${(h-pad).toFixed(1)} ${linePoints} ${sx(maxX).toFixed(1)},${(h-pad).toFixed(1)}`;
+  return `<div class="elevation-profile">
+    <div class="elevation-profile-head small"><span>海拔變化圖</span><span class="mono">${Math.round(minY)}–${Math.round(maxY)} 公尺</span></div>
+    <svg viewBox="0 0 ${w} ${h}" class="elevation-svg" preserveAspectRatio="none">
+      <polygon points="${areaPoints}" fill="var(--trail)" opacity="0.14"/>
+      <polyline points="${linePoints}" fill="none" stroke="var(--trail)" stroke-width="2"/>
+    </svg>
+  </div>`;
+}
+
+function renderShoeSelector(race){
+  const options=shoes.map(s=>`<option value="${s.id}" ${race.performanceData.shoeId===s.id?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
+  return `<div class="subsection">
+    <div class="subsection-head"><h3>比賽鞋款</h3><button type="button" class="btn-ghost" data-action="open-shoe-modal">管理鞋款</button></div>
+    <label class="field" for="f-shoe-select"><span>本場穿著鞋款</span>
+      <select id="f-shoe-select" data-path="performanceData.shoeId"><option value="">—</option>${options}</select>
+    </label>
   </div>`;
 }
 
@@ -1291,6 +1453,7 @@ function renderDetail(){
     <details class="section" ${openPre?'open':''}>
       <summary>地理與路線</summary>
       <div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f)).join('')}</div>
+      ${elevationProfileHtml(race)}
       ${renderRepeatable(race,'checkpoints')}
     </details>
     <details class="section">
@@ -1308,16 +1471,22 @@ function renderDetail(){
       <summary>裝備、補給與戰略（賽前準備）</summary>
       <div class="section-body">${SECTION_PREP.map(f=>renderField(race,f)).join('')}</div>
       ${renderGoals(race)}
+      <div class="subsection">
+        <div class="subsection-head"><h3></h3><button type="button" class="btn-ghost" data-action="open-pacing-modal">配速試算與手環產生器</button></div>
+      </div>
       ${renderEquipmentSection(race)}
+      ${renderRepeatable(race,'nutritionSchedule')}
     </details>
     <details class="section" ${!openPre?'open':''}>
       <summary>賽後紀錄與個人數據</summary>
       ${renderResultsDashboard(race)}
+      ${renderSplitAnalysis(race)}
       <div class="gpx-import-bar">
         <button type="button" class="btn-ghost" data-action="open-gpx-picker">匯入運動紀錄檔（GPX / TCX）</button>
         <span class="small auth-hint">支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速</span>
       </div>
       <div class="section-body">${SECTION_POST.map(f=>renderField(race,f)).join('')}</div>
+      ${renderShoeSelector(race)}
       ${renderRepeatable(race,'splits')}
       ${renderRepeatable(race,'mediaLinks')}
     </details>
@@ -1873,6 +2042,24 @@ function computeSplitsFromPoints(pts){
   }
   return splits;
 }
+function downsampleElevationProfile(pts,maxPoints){
+  const valid=pts.filter(p=>p.lat!=null&&p.lon!=null&&p.ele!=null);
+  if(valid.length<2) return [];
+  let cum=0;
+  const withDist=[{distanceKm:0,elevationM:valid[0].ele}];
+  for(let i=1;i<valid.length;i++){
+    cum+=haversineKm(valid[i-1].lat,valid[i-1].lon,valid[i].lat,valid[i].lon);
+    withDist.push({distanceKm:cum,elevationM:valid[i].ele});
+  }
+  if(withDist.length<=maxPoints) return withDist.map(p=>({distanceKm:+p.distanceKm.toFixed(2),elevationM:Math.round(p.elevationM)}));
+  const step=(withDist.length-1)/(maxPoints-1);
+  const out=[];
+  for(let i=0;i<maxPoints;i++){
+    const idx=Math.round(i*step);
+    out.push({distanceKm:+withDist[idx].distanceKm.toFixed(2),elevationM:Math.round(withDist[idx].elevationM)});
+  }
+  return out;
+}
 function summarizeTrackPoints(pts){
   const valid=pts.filter(p=>p.lat!=null&&p.lon!=null);
   if(valid.length<2) throw new Error('檔案中沒有足夠的座標點');
@@ -1891,6 +2078,7 @@ function summarizeTrackPoints(pts){
     maxHr:hrs.length?Math.max(...hrs):null,
     avgCadence:cads.length?Math.round(cads.reduce((a,b)=>a+b,0)/cads.length):null,
     splits:computeSplitsFromPoints(valid),
+    elevationProfile:downsampleElevationProfile(valid,50),
   };
 }
 function parseGpxDoc(xml){
@@ -1951,6 +2139,7 @@ function parseTcxDoc(xml){
     maxHr:maxHr||(ptHrs.length?Math.max(...ptHrs):null),
     avgCadence:null,
     splits:laps.length>1?splits:computeSplitsFromPoints(pts),
+    elevationProfile:downsampleElevationProfile(pts,50),
   };
 }
 function parseGpxOrTcx(text){
@@ -2018,6 +2207,7 @@ gpxModalEl_getter().addEventListener('click',e=>{
       if(s.avgCadence!=null) currentRace.performanceData.avgCadence=s.avgCadence;
       if(!currentRace.performanceData.dataSource) currentRace.performanceData.dataSource='運動手錶匯入 (GPX/TCX)';
       if(s.splits&&s.splits.length) currentRace.splits=s.splits;
+      if(s.elevationProfile&&s.elevationProfile.length) currentRace.route.elevationProfile=s.elevationProfile;
       currentRace.updatedAt=new Date().toISOString();
       persist();renderCalendar();renderDetail();
     }
@@ -2084,10 +2274,191 @@ function openPasteModal(){
   pasteModalEl_getter().innerHTML=pasteModalHtml();
   pasteModalEl_getter().hidden=false;
 }
+
+/* ============================================================
+   鞋款管理
+   ============================================================ */
+function shoeModalHtml(){
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>鞋款管理</h2>
+    <p class="modal-hint">記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。</p>
+    <div class="shoe-add-row">
+      <input type="text" id="new-shoe-name" placeholder="鞋款名稱，如「ASICS Metaspeed」">
+      <button type="button" class="btn-primary" data-action="add-shoe">新增</button>
+    </div>
+    <div class="shoe-list">
+      ${shoes.length?shoes.map(s=>{
+        const stats=computeShoeStats(s.id);
+        return `<div class="shoe-row">
+          <span class="shoe-row-name">${escapeHtml(s.name)}</span>
+          <span class="shoe-row-stats mono">${stats.totalRaces} 場・${stats.totalDistance.toFixed(1)} 公里</span>
+          <button type="button" class="btn-ghost danger" data-action="delete-shoe" data-id="${s.id}">刪除</button>
+        </div>`;
+      }).join(''):'<p class="empty-hint">尚未新增鞋款</p>'}
+    </div>
+    <div class="modal-actions"><button class="btn-ghost" data-action="close-shoe-modal">關閉</button></div>
+  </div>`;
+}
+const shoeModalEl_getter=()=>document.getElementById('shoe-modal');
+function openShoeModal(){
+  shoeModalEl_getter().innerHTML=shoeModalHtml();
+  shoeModalEl_getter().hidden=false;
+}
+shoeModalEl_getter().addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-shoe-modal"]')){
+    shoeModalEl_getter().hidden=true;shoeModalEl_getter().innerHTML='';return;
+  }
+  if(e.target.closest('[data-action="add-shoe"]')){
+    const input=document.getElementById('new-shoe-name');
+    const name=input.value.trim();
+    if(!name){input.focus();return;}
+    shoes.push({id:uid(),name,notes:''});
+    persistShoes();
+    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    if(currentRace) renderDetail();
+    return;
+  }
+  if(e.target.closest('[data-action="delete-shoe"]')){
+    const id=e.target.closest('[data-action="delete-shoe"]').dataset.id;
+    shoes=shoes.filter(s=>s.id!==id);
+    state.races.forEach(r=>{ if(r.performanceData.shoeId===id) r.performanceData.shoeId=''; });
+    persistShoes();persist();
+    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    if(currentRace) renderDetail();
+    return;
+  }
+});
+
+/* ============================================================
+   配速試算與手環產生器
+   ============================================================ */
+function computePacingRows(targetSeconds,distanceKm,strategy,intervalKm){
+  if(!targetSeconds||!distanceKm||!intervalKm) return [];
+  const avgPace=targetSeconds/distanceKm;
+  const x=strategy==='negative'?0.04:(strategy==='positive'?-0.04:0);
+  const p1=avgPace*(1+x),p2=avgPace*(1-x);
+  const rows=[];
+  let d=intervalKm;
+  while(d<distanceKm-0.05){
+    const t=p1*d+(p2-p1)*d*d/(2*distanceKm);
+    rows.push({distanceKm:+d.toFixed(1),cumulativeSeconds:Math.round(t)});
+    d+=intervalKm;
+  }
+  rows.push({distanceKm:+distanceKm.toFixed(2),cumulativeSeconds:Math.round(targetSeconds)});
+  return rows;
+}
+function pacingTableHtml(rows){
+  return `<table class="series-table"><thead><tr><th>距離</th><th>預計通過時間</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td class="mono">${r.distanceKm} km</td><td class="mono">${secToHMS(r.cumulativeSeconds)}</td></tr>`).join('')}</tbody></table>`;
+}
+function pacingModalHtml(prefillTarget,prefillDistance,rows){
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>配速試算與手環產生器</h2>
+    <p class="modal-hint">輸入目標時間與距離，選擇配速策略，算出每個分段的預計通過時間，也可以下載成手環圖片。</p>
+    <div class="pacing-inputs">
+      <label class="field" for="pacing-target"><span>目標時間</span><input type="text" id="pacing-target" placeholder="H:MM:SS" value="${escapeHtml(prefillTarget||'')}"></label>
+      <label class="field" for="pacing-distance"><span>總距離（公里）</span><input type="number" step="any" id="pacing-distance" value="${prefillDistance||''}"></label>
+      <label class="field" for="pacing-strategy"><span>配速策略</span><select id="pacing-strategy">
+        <option value="even">勻速</option>
+        <option value="negative">負分段（後段加速）</option>
+        <option value="positive">正分段（後段保守）</option>
+      </select></label>
+      <label class="field" for="pacing-interval"><span>分段間隔</span><select id="pacing-interval">
+        <option value="5">每 5 公里</option>
+        <option value="10">每 10 公里</option>
+        <option value="1">每 1 公里</option>
+      </select></label>
+    </div>
+    <div class="modal-actions modal-actions-top">
+      <button class="btn-primary" data-action="calc-pacing">試算</button>
+    </div>
+    <div id="pacing-results">${rows&&rows.length?pacingTableHtml(rows):''}</div>
+    <div class="modal-actions">
+      ${rows&&rows.length?'<button class="btn-ghost" data-action="download-wristband">下載配速手環圖片</button>':''}
+      <button class="btn-ghost" data-action="close-pacing">關閉</button>
+    </div>
+  </div>`;
+}
+let pacingModalRows=[];
+const pacingModalEl_getter=()=>document.getElementById('pacing-modal');
+function openPacingModal(){
+  if(!currentRace) return;
+  const goalA=currentRace.goals.find(g=>g.tier==='A');
+  const prefillTarget=goalA&&goalA.targetTimeSeconds!=null?secToHMS(goalA.targetTimeSeconds):'';
+  const prefillDistance=currentRace.route.distanceKm||'';
+  pacingModalRows=[];
+  pacingModalEl_getter().innerHTML=pacingModalHtml(prefillTarget,prefillDistance,null);
+  pacingModalEl_getter().hidden=false;
+}
+pacingModalEl_getter().addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-pacing"]')){
+    pacingModalEl_getter().hidden=true;pacingModalEl_getter().innerHTML='';return;
+  }
+  if(e.target.closest('[data-action="calc-pacing"]')){
+    const targetStr=document.getElementById('pacing-target').value;
+    const distance=parseFloat(document.getElementById('pacing-distance').value);
+    const strategy=document.getElementById('pacing-strategy').value;
+    const interval=parseFloat(document.getElementById('pacing-interval').value);
+    const targetSeconds=hmsToSec(targetStr);
+    if(!targetSeconds||!distance){
+      document.getElementById('pacing-results').innerHTML='<p class="paste-error">請輸入有效的目標時間與距離</p>';
+      return;
+    }
+    pacingModalRows=computePacingRows(targetSeconds,distance,strategy,interval);
+    pacingModalEl_getter().innerHTML=pacingModalHtml(targetStr,distance,pacingModalRows);
+    return;
+  }
+  if(e.target.closest('[data-action="download-wristband"]')){
+    downloadWristbandImage(pacingModalRows,currentRace);
+    return;
+  }
+});
+async function buildWristbandCanvas(rows,race){
+  try{ await document.fonts.ready; }catch(e){}
+  const W=360,H=120+rows.length*70;
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#16231C';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#9BA3A0';
+  ctx.font='20px "Noto Sans TC",sans-serif';
+  ctx.fillText(race&&race.name?Array.from(race.name).slice(0,16).join(''):'配速手環',24,50);
+  let y=100;
+  rows.forEach(r=>{
+    ctx.fillStyle='#EDEEE9';
+    ctx.font='bold 28px "IBM Plex Mono",monospace';
+    ctx.textAlign='left';
+    ctx.fillText(String(r.distanceKm)+' km',24,y);
+    ctx.fillStyle='#4C9A72';
+    ctx.font='bold 32px "IBM Plex Mono",monospace';
+    ctx.textAlign='right';
+    ctx.fillText(secToHMS(r.cumulativeSeconds),W-24,y);
+    ctx.textAlign='left';
+    ctx.strokeStyle='#2A3038';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(24,y+20);ctx.lineTo(W-24,y+20);ctx.stroke();
+    y+=70;
+  });
+  return canvas;
+}
+async function downloadWristbandImage(rows,race){
+  if(!rows||!rows.length) return;
+  const canvas=await buildWristbandCanvas(rows,race);
+  canvas.toBlob(blob=>{
+    if(!blob) return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='配速手環.png';
+    a.click();
+    URL.revokeObjectURL(url);
+  },'image/png');
+}
+
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-paste-modal"]')) openPasteModal();
   if(e.target.closest('[data-action="open-gpx-picker"]')) document.getElementById('gpx-file-input').click();
   if(e.target.closest('[data-action="generate-share-image"]')&&currentRace) downloadShareImage(currentRace);
+  if(e.target.closest('[data-action="open-shoe-modal"]')) openShoeModal();
+  if(e.target.closest('[data-action="open-pacing-modal"]')) openPacingModal();
 });
 
 /* ============================================================
@@ -2096,7 +2467,11 @@ document.addEventListener('click',e=>{
 async function init(){
   detailEl.innerHTML='<p class="empty-hint">載入中…</p>';
   renderAuthArea();
-  await Promise.all([loadRaces(),loadTemplates()]);
+  await Promise.all([loadRaces(),loadTemplates(),loadShoes()]);
+  if(templates.length===0){
+    templates=STARTER_TEMPLATES.map(t=>({id:uid(),name:t.name,items:t.items}));
+    persistTemplates();
+  }
   renderAll();
 }
 init();
