@@ -1,0 +1,289 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Race",
+  "description": "賽事紀錄網站 - 單一賽事文件結構（MongoDB races collection / 純 JSON 儲存皆適用）。與 schema.sql 的 17 張表為同一份資料模型的兩種表示法：關聯式版本正規化拆表，這裡則依 1:1 / 1:少 的關係直接嵌入子文件（sub-document）或陣列；只有原本 1:N 且筆數可能較多的（如 checkpoints、splits）才維持陣列形式，避免單一文件過度膨脹。",
+  "type": "object",
+  "required": ["name", "status", "sportType", "raceDate"],
+  "properties": {
+    "_id": { "type": "string", "description": "文件唯一 ID（ObjectId 或 UUID）" },
+
+    "name": { "type": "string", "description": "賽事名稱，如「2026 臺北馬拉松」" },
+    "alias": { "type": "string", "description": "別名/英文名，如「Taipei Marathon」" },
+    "status": {
+      "type": "string",
+      "enum": ["registered", "lottery_pending", "considering", "completed", "dns", "dnf"],
+      "description": "已報名/抽籤中/考慮中/已完賽/DNS/DNF"
+    },
+    "sportType": {
+      "type": "string",
+      "enum": ["road_running", "trail_running", "ultra_marathon", "duathlon", "triathlon", "cycling", "obstacle_race", "other"]
+    },
+    "raceFormat": {
+      "type": "string",
+      "enum": ["solo", "pair", "relay", "loop", "age_group"]
+    },
+
+    "schedule": {
+      "type": "object",
+      "description": "時間與倒數。countdownDays 不建議落地儲存，前端用 raceDate 動態計算",
+      "properties": {
+        "raceDate": { "type": "string", "format": "date" },
+        "startTime": { "type": "string", "description": "HH:MM 格式" },
+        "registrationOpenDate": { "type": "string", "format": "date" },
+        "registrationCloseDate": { "type": "string", "format": "date" },
+        "lotteryResultDate": { "type": "string", "format": "date" }
+      }
+    },
+
+    "location": {
+      "type": "object",
+      "properties": {
+        "venueName": { "type": "string" },
+        "city": { "type": "string" },
+        "country": { "type": "string" }
+      }
+    },
+
+    "route": {
+      "type": "object",
+      "description": "路線距離、爬升、海拔、地形",
+      "properties": {
+        "distanceKm": { "type": "number" },
+        "elevationGainM": { "type": "integer" },
+        "elevationLossM": { "type": "integer" },
+        "minAltitudeM": { "type": "integer" },
+        "maxAltitudeM": { "type": "integer" },
+        "startAltitudeM": { "type": "integer" },
+        "surface": {
+          "type": "object",
+          "properties": {
+            "pavedPct": { "type": "number" },
+            "trailPct": { "type": "number" },
+            "stairsPct": { "type": "number" }
+          }
+        },
+        "checkpointCount": { "type": "integer" },
+        "cutoffTimeSeconds": { "type": "integer" },
+        "terrainNotes": { "type": "string" }
+      }
+    },
+
+    "checkpoints": {
+      "type": "array",
+      "description": "CP / 補給站逐點明細（選配，越野/超馬賽事建議填寫）",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer" },
+          "name": { "type": "string" },
+          "distanceKm": { "type": "number" },
+          "cutoffTimeSeconds": { "type": "integer" },
+          "hasWater": { "type": "boolean" },
+          "hasFood": { "type": "boolean" },
+          "hasDropBag": { "type": "boolean" },
+          "elevationM": { "type": "integer" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "climateForecast": {
+      "type": "object",
+      "description": "歷年平均氣候，賽前參考",
+      "properties": {
+        "avgTempC": { "type": "number" },
+        "avgHumidityPct": { "type": "number" },
+        "windDirection": { "type": "string" },
+        "windSpeedKmh": { "type": "number" },
+        "rainProbabilityPct": { "type": "number" }
+      }
+    },
+
+    "raceDayWeather": {
+      "type": "object",
+      "description": "比賽當日實際天氣，完賽後填寫",
+      "properties": {
+        "feelsLikeTempC": { "type": "number" },
+        "condition": { "type": "string", "enum": ["sunny", "cloudy", "rainy", "foggy", "other"] },
+        "humidityPct": { "type": "number" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "budget": {
+      "type": "object",
+      "properties": {
+        "registrationFee": { "type": "number" },
+        "currency": { "type": "string", "default": "TWD" },
+        "paymentStatus": { "type": "string", "enum": ["unpaid", "paid", "refunding"] },
+        "chipDeposit": { "type": "number" }
+      }
+    },
+
+    "accommodations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "hotelName": { "type": "string" },
+          "address": { "type": "string" },
+          "checkIn": { "type": "string", "format": "date-time" },
+          "checkOut": { "type": "string", "format": "date-time" },
+          "distanceToStartKm": { "type": "number" },
+          "bookingStatus": { "type": "string", "enum": ["considering", "booked", "paid", "cancelled"] },
+          "cost": { "type": "number" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "transportation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "direction": { "type": "string", "enum": ["outbound", "return"] },
+          "mode": { "type": "string", "enum": ["hsr", "shuttle", "self_drive", "flight", "other"] },
+          "departureTime": { "type": "string", "format": "date-time" },
+          "pickupLocation": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "companions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string", "enum": ["partner", "cheer_squad", "emergency_contact", "pacer", "other"] },
+          "contactInfo": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "goals": {
+      "type": "array",
+      "description": "賽前目標 A/B/C",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tier": { "type": "string", "enum": ["A", "B", "C"] },
+          "targetTimeSeconds": { "type": "integer" },
+          "paceStrategy": { "type": "string" }
+        }
+      }
+    },
+
+    "equipmentChecklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "itemName": { "type": "string" },
+          "category": { "type": "string", "enum": ["shoes", "apparel", "vest", "headlamp", "nutrition", "mandatory_gear", "other"] },
+          "isMandatory": { "type": "boolean" },
+          "isPacked": { "type": "boolean" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "nutritionPlan": {
+      "type": "object",
+      "properties": {
+        "gelCount": { "type": "integer" },
+        "electrolyteTabletCount": { "type": "integer" },
+        "hydrationCapacityMl": { "type": "integer" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "trainingPlan": {
+      "type": "object",
+      "description": "訓練計畫（賽前準備，補充欄位）",
+      "properties": {
+        "planStartDate": { "type": "string", "format": "date" },
+        "planEndDate": { "type": "string", "format": "date" },
+        "taperStartDate": { "type": "string", "format": "date" },
+        "weeklyMileageTargetKm": { "type": "number" },
+        "keyWorkoutNotes": { "type": "string" },
+        "externalPlanUrl": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "results": {
+      "type": "object",
+      "description": "個人成績 / PB，完賽後填寫",
+      "properties": {
+        "gunTimeSeconds": { "type": "integer" },
+        "chipTimeSeconds": { "type": "integer" },
+        "overallRank": { "type": "integer" },
+        "overallParticipants": { "type": "integer" },
+        "ageGroupRank": { "type": "integer" },
+        "ageGroupParticipants": { "type": "integer" },
+        "isPb": { "type": "boolean" }
+      }
+    },
+
+    "performanceData": {
+      "type": "object",
+      "properties": {
+        "avgHr": { "type": "integer" },
+        "maxHr": { "type": "integer" },
+        "avgCadence": { "type": "integer" },
+        "avgPowerWatts": { "type": "integer" },
+        "dataSource": { "type": "string", "description": "如 'strava' / 'coros_manual'" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "splits": {
+      "type": "array",
+      "description": "分段配速，可由既有 Strava 同步流程直接匯入",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer" },
+          "distanceKm": { "type": "number" },
+          "splitTimeSeconds": { "type": "integer" },
+          "avgHr": { "type": "integer" },
+          "avgPaceSecPerKm": { "type": "integer" },
+          "elevationGainM": { "type": "integer" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "review": {
+      "type": "object",
+      "description": "賽後心得與檢討",
+      "properties": {
+        "hitTheWallNotes": { "type": "string" },
+        "courseReview": { "type": "string" },
+        "pros": { "type": "string" },
+        "cons": { "type": "string" },
+        "lessonsLearned": { "type": "string" }
+      }
+    },
+
+    "mediaLinks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "url"],
+        "properties": {
+          "type": { "type": "string", "enum": ["official_site", "brochure_pdf", "gpx_track", "photo_album", "certificate", "medal_photo", "other"] },
+          "url": { "type": "string", "format": "uri" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}
