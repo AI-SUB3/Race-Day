@@ -53,6 +53,7 @@
   .topbar-actions{display:flex;align-items:center;gap:14px;}
   .auth-area{display:flex;align-items:center;gap:10px;}
   .auth-hint{color:var(--stone);}
+  .auth-error{color:var(--flag);max-width:260px;}
   .auth-user{display:flex;align-items:center;gap:6px;color:var(--ink-soft);}
   .auth-user img{width:22px;height:22px;border-radius:50%;display:block;}
   .app-title{font-size:21px;letter-spacing:0.01em;}
@@ -78,12 +79,12 @@
 
   /* ---------- Calendar ---------- */
   #calendar{margin-bottom:8px;}
-  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:6px;}
   .cal-weekdays span{font-size:14px;color:var(--stone);text-align:center;padding:2px 0;}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;}
   .cal-cell{
-    min-height:96px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);
-    padding:6px 6px 4px;display:flex;flex-direction:column;gap:3px;
+    min-width:0;min-height:96px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);
+    padding:6px 6px 4px;display:flex;flex-direction:column;gap:3px;overflow:hidden;
   }
   .cal-cell.muted{background:transparent;border-color:transparent;}
   .cal-cell.muted .cal-daynum{color:var(--stone);}
@@ -209,13 +210,19 @@
   @media (max-width:860px){
     #topbar{padding:16px 18px 12px;}
     #main-content{padding:18px 18px 80px;}
+    .topbar-row1{flex-direction:column;align-items:stretch;gap:12px;}
+    .topbar-actions{justify-content:space-between;}
+    .auth-user{max-width:140px;}
+    .auth-user .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .cal-cell{min-height:64px;padding:4px 4px 3px;}
     .cal-weekdays span{font-size:12px;}
-    .cal-chip{font-size:12px;}
+    .cal-chip{font-size:12px;padding:2px 4px;}
   }
   @media (max-width:520px){
     .cal-cell{min-height:auto;}
     .cal-daynum{font-size:13px;}
+    .topbar-actions{flex-wrap:wrap;gap:10px;}
+    .auth-user{max-width:110px;}
   }
 
   /* ---------- Import modal ---------- */
@@ -693,6 +700,7 @@ async function mergeCloudAndLocal(cloudRaces){
   });
   state.races=Object.values(merged).map(migrateRace);
 }
+let authError=null;
 function renderAuthArea(){
   const el=document.getElementById('auth-area');
   if(!el) return;
@@ -705,8 +713,16 @@ function renderAuthArea(){
     const photo=state.user.photoURL?`<img src="${state.user.photoURL}" alt="">`:'';
     el.innerHTML=`<span class="auth-user small">${photo}<span class="mono">${escapeHtml(name)}</span></span><button id="btn-signout" class="btn-text">登出</button>`;
   }else{
-    el.innerHTML=`<button id="btn-signin" class="btn-ghost">使用 Google 登入同步</button>`;
+    el.innerHTML=`<button id="btn-signin" class="btn-ghost">使用 Google 登入同步</button>${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
   }
+}
+function authErrorMessage(err){
+  const code=err&&err.code||'';
+  if(code==='auth/unauthorized-domain') return '這個網域還沒被 Firebase 授權，請到 Authentication → Settings → Authorized domains 新增此網域';
+  if(code==='auth/popup-blocked') return '瀏覽器擋掉了登入視窗，請允許彈出視窗後再試一次';
+  if(code==='auth/popup-closed-by-user') return '登入視窗被關閉了，請再試一次';
+  if(code==='auth/cancelled-popup-request') return '';
+  return '登入失敗：'+(err&&err.message?err.message:'未知錯誤')+(code?`（${code}）`:'');
 }
 async function handleAuthChange(user){
   state.user=user;
@@ -725,7 +741,14 @@ async function handleAuthChange(user){
 }
 document.addEventListener('click',e=>{
   if(e.target.closest('#btn-signin')){
-    if(cloudEnabled()) window.__cloud.signIn().catch(err=>console.error('登入失敗',err));
+    if(cloudEnabled()){
+      authError=null;renderAuthArea();
+      window.__cloud.signIn().catch(err=>{
+        console.error('登入失敗',err);
+        authError=authErrorMessage(err);
+        renderAuthArea();
+      });
+    }
     return;
   }
   if(e.target.closest('#btn-signout')){
