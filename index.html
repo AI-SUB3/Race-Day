@@ -103,6 +103,26 @@
   .cal-chip.selected{background:var(--ink);color:var(--surface)!important;border-left-color:var(--surface);}
   .cal-more{font-size:13px;color:var(--stone);padding:1px 5px;}
 
+  /* ---------- Calendar: mobile list view ---------- */
+  .cal-list{display:none;}
+  .cal-list-day{margin-bottom:14px;}
+  .cal-list-date{
+    display:flex;align-items:baseline;gap:6px;font-size:18px;font-weight:600;
+    color:var(--ink-soft);margin-bottom:6px;padding-left:2px;
+  }
+  .cal-list-date.today{color:var(--trail);}
+  .cal-list-weekday{font-size:13px;color:var(--stone);font-weight:400;}
+  .cal-list-races{display:flex;flex-direction:column;gap:8px;}
+  .cal-list-item{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    border:1px solid var(--rule);border-radius:4px;background:var(--surface);
+    padding:14px 14px;font:inherit;cursor:pointer;min-height:48px;
+  }
+  .cal-list-item.selected{background:var(--ink);border-color:var(--ink);}
+  .cal-list-item.selected .cal-list-name{color:var(--surface);}
+  .cal-list-item.selected .stamp{filter:brightness(1.6);}
+  .cal-list-name{font-size:15px;color:var(--ink);}
+
   /* ---------- Progress block ---------- */
   .progress-block{margin:16px 0 22px;}
   .progress-label{display:flex;justify-content:space-between;font-size:15px;color:var(--ink-soft);margin-bottom:6px;}
@@ -208,15 +228,23 @@
   .create-actions{display:flex;gap:10px;margin-top:8px;}
 
   @media (max-width:860px){
-    #topbar{padding:16px 18px 12px;}
+    #topbar{padding:16px 18px 12px;transition:padding 0.2s ease;}
     #main-content{padding:18px 18px 80px;}
     .topbar-row1{flex-direction:column;align-items:stretch;gap:12px;}
     .topbar-actions{justify-content:space-between;}
     .auth-user{max-width:140px;}
     .auth-user .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .app-tagline{transition:opacity 0.15s ease,max-height 0.15s ease,margin 0.15s ease;max-height:20px;overflow:hidden;}
+    #topbar.topbar-compact{padding-top:10px;padding-bottom:8px;}
+    #topbar.topbar-compact .app-tagline{opacity:0;max-height:0;margin:0;}
+    #topbar.topbar-compact .topbar-row1{gap:6px;}
     .cal-cell{min-height:64px;padding:4px 4px 3px;}
     .cal-weekdays span{font-size:12px;}
     .cal-chip{font-size:12px;padding:2px 4px;}
+  }
+  @media (max-width:640px){
+    .cal-weekdays,.cal-grid{display:none;}
+    .cal-list{display:block;}
   }
   @media (max-width:520px){
     .cal-cell{min-height:auto;}
@@ -791,28 +819,30 @@ async function persistTemplates(){
 /* ============================================================
    欄位 / 表單渲染
    ============================================================ */
+function pathToId(path){ return 'f-'+path.replace(/\./g,'-'); }
 function renderField(race,cfg){
   const val=getPath(race,cfg.path);
+  const id=pathToId(cfg.path);
   let input;
   switch(cfg.type){
     case 'select':
-      input=`<select data-path="${cfg.path}"><option value="">—</option>${cfg.options.map(o=>`<option value="${o.value}" ${val===o.value?'selected':''}>${o.label}</option>`).join('')}</select>`;
+      input=`<select id="${id}" data-path="${cfg.path}"><option value="">—</option>${cfg.options.map(o=>`<option value="${o.value}" ${val===o.value?'selected':''}>${o.label}</option>`).join('')}</select>`;
       break;
     case 'textarea':
-      input=`<textarea data-path="${cfg.path}" rows="3">${escapeHtml(val||'')}</textarea>`;
+      input=`<textarea id="${id}" data-path="${cfg.path}" rows="3">${escapeHtml(val||'')}</textarea>`;
       break;
     case 'checkbox':
-      return `<label class="field field-inline"><span>${cfg.label}</span><input type="checkbox" data-path="${cfg.path}" ${val?'checked':''}></label>`;
+      return `<label class="field field-inline" for="${id}"><span>${cfg.label}</span><input id="${id}" type="checkbox" data-path="${cfg.path}" ${val?'checked':''}></label>`;
     case 'duration':
-      input=`<input type="text" placeholder="H:MM:SS" data-path="${cfg.path}" data-kind="duration" value="${val!=null?secToHMS(val):''}">`;
+      input=`<input id="${id}" type="text" placeholder="H:MM:SS" data-path="${cfg.path}" data-kind="duration" value="${val!=null?secToHMS(val):''}">`;
       break;
     case 'number':
-      input=`<input type="number" step="any" data-path="${cfg.path}" value="${val!=null?val:''}">`;
+      input=`<input id="${id}" type="number" step="any" data-path="${cfg.path}" value="${val!=null?val:''}">`;
       break;
     default:
-      input=`<input type="${cfg.type||'text'}" data-path="${cfg.path}" value="${escapeHtml(val!=null?val:'')}">`;
+      input=`<input id="${id}" type="${cfg.type||'text'}" data-path="${cfg.path}" value="${escapeHtml(val!=null?val:'')}">`;
   }
-  return `<label class="field${cfg.wide?' wide':''}"><span>${cfg.label}${cfg.unit?`<i>(${cfg.unit})</i>`:''}</span>${input}</label>`;
+  return `<label class="field${cfg.wide?' wide':''}" for="${id}"><span>${cfg.label}${cfg.unit?`<i>(${cfg.unit})</i>`:''}</span>${input}</label>`;
 }
 
 function renderRepeatable(race,listKey){
@@ -834,12 +864,15 @@ function renderGoals(race){
   return `<div class="subsection">
     <div class="subsection-head"><h3>賽前目標</h3></div>
     <div class="repeat-rows">
-      ${race.goals.map((g,i)=>`
+      ${race.goals.map((g,i)=>{
+        const timeId=pathToId(`goals.${i}.targetTimeSeconds`),paceId=pathToId(`goals.${i}.paceStrategy`);
+        return `
         <div class="repeat-row">
           <span class="tier-label mono">${g.tier}</span>
-          <label class="field"><span>目標時間</span><input type="text" placeholder="H:MM:SS" data-path="goals.${i}.targetTimeSeconds" data-kind="duration" value="${g.targetTimeSeconds!=null?secToHMS(g.targetTimeSeconds):''}"></label>
-          <label class="field" style="flex:2 1 220px;"><span>配速策略</span><input type="text" data-path="goals.${i}.paceStrategy" value="${escapeHtml(g.paceStrategy||'')}"></label>
-        </div>`).join('')}
+          <label class="field" for="${timeId}"><span>目標時間</span><input id="${timeId}" type="text" placeholder="H:MM:SS" data-path="goals.${i}.targetTimeSeconds" data-kind="duration" value="${g.targetTimeSeconds!=null?secToHMS(g.targetTimeSeconds):''}"></label>
+          <label class="field" style="flex:2 1 220px;" for="${paceId}"><span>配速策略</span><input id="${paceId}" type="text" data-path="goals.${i}.paceStrategy" value="${escapeHtml(g.paceStrategy||'')}"></label>
+        </div>`;
+      }).join('')}
     </div>
   </div>`;
 }
@@ -955,6 +988,7 @@ function renderCalendar(){
   const totalCells=Math.ceil((startOffset+daysInMonth)/7)*7;
 
   const cells=[];
+  const listRows=[];
   for(let i=0;i<totalCells;i++){
     const dayNum=i-startOffset+1;
     let cellY=y,cellM=m,cellD=dayNum,muted=false;
@@ -970,11 +1004,24 @@ function renderCalendar(){
       ${shown.map(r=>`<button type="button" class="cal-chip status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" title="${escapeHtml(r.name)}">${escapeHtml(r.name)||'(未命名賽事)'}</button>`).join('')}
       ${extra>0?`<span class="cal-more">+${extra}</span>`:''}
     </div>`);
+    // 手機清單檢視只列本月、有賽事的日期，避免小螢幕上格子太擠、觸控熱區太小
+    if(!muted&&dayRaces.length){
+      listRows.push(`<div class="cal-list-day">
+        <div class="cal-list-date mono${isToday?' today':''}">${cellD}<span class="cal-list-weekday">${WEEKDAY_LABELS[new Date(cellY,cellM,cellD).getDay()]}</span></div>
+        <div class="cal-list-races">
+          ${dayRaces.map(r=>`<button type="button" class="cal-list-item status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
+            <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
+            <span class="cal-list-name">${escapeHtml(r.name)||'(未命名賽事)'}</span>
+          </button>`).join('')}
+        </div>
+      </div>`);
+    }
   }
 
   calendarEl.innerHTML=`
     <div class="cal-weekdays">${WEEKDAY_LABELS.map(w=>`<span>${w}</span>`).join('')}</div>
     <div class="cal-grid">${cells.join('')}</div>
+    <div class="cal-list">${listRows.length?listRows.join(''):`<p class="empty-hint">這個月沒有符合條件的賽事</p>`}</div>
   `;
 }
 
@@ -1007,7 +1054,7 @@ function renderDetail(){
   detailEl.innerHTML=`
     ${detailHeaderHtml(race)}
     ${renderSeriesComparison(race)}
-    <details class="section" ${openPre?'open':''}>
+    <details class="section" open>
       <summary>基本資訊與時間</summary>
       <div class="section-body">${SECTION_BASIC.map(f=>renderField(race,f)).join('')}</div>
     </details>
@@ -1067,10 +1114,10 @@ function emptyStateHtml(){
 function renderCreateForm(){
   return `<div class="create-form">
     <h1>新增賽事</h1>
-    <label class="field"><span>賽事名稱</span><input type="text" id="new-name" placeholder="如：2026 臺北馬拉松"></label>
-    <label class="field"><span>主要運動種類</span><select id="new-sport">${SPORT_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select></label>
-    <label class="field"><span>狀態</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value==='considering'?'selected':''}>${o.label}</option>`).join('')}</select></label>
-    <label class="field"><span>比賽日期</span><input type="date" id="new-date"></label>
+    <label class="field" for="new-name"><span>賽事名稱</span><input type="text" id="new-name" placeholder="如：2026 臺北馬拉松"></label>
+    <label class="field" for="new-sport"><span>主要運動種類</span><select id="new-sport">${SPORT_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select></label>
+    <label class="field" for="new-status"><span>狀態</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value==='considering'?'selected':''}>${o.label}</option>`).join('')}</select></label>
+    <label class="field" for="new-date"><span>比賽日期</span><input type="date" id="new-date"></label>
     <div class="create-actions">
       <button class="btn-primary" data-action="confirm-create">建立賽事</button>
       <button class="btn-ghost" data-action="cancel-create">取消</button>
@@ -1105,7 +1152,7 @@ filterChipsEl.addEventListener('click',e=>{
 });
 
 calendarEl.addEventListener('click',e=>{
-  const chip=e.target.closest('.cal-chip');if(!chip) return;
+  const chip=e.target.closest('.cal-chip,.cal-list-item');if(!chip) return;
   selectRace(chip.dataset.id);
 });
 
@@ -1122,6 +1169,19 @@ document.getElementById('cal-today').addEventListener('click',()=>{
   state.calendarYear=t.getFullYear();state.calendarMonth=t.getMonth();
   renderCalendar();
 });
+
+// 手機上往下捲動時，把標題列縮小（隱藏副標題）多留一點空間給表單內容
+(function(){
+  let ticking=false;
+  function updateTopbarCompact(){
+    const topbar=document.getElementById('topbar');
+    if(topbar) topbar.classList.toggle('topbar-compact',window.scrollY>40);
+    ticking=false;
+  }
+  window.addEventListener('scroll',()=>{
+    if(!ticking){requestAnimationFrame(updateTopbarCompact);ticking=true;}
+  },{passive:true});
+})();
 
 document.getElementById('btn-export').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(state.races,null,2)],{type:'application/json'});
