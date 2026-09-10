@@ -97,7 +97,11 @@
     background:none;cursor:pointer;color:var(--ink-soft);font-family:inherit;
   }
   .chip.active{background:var(--ink);color:var(--surface);border-color:var(--ink);}
-  .topbar-row3{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;}
+  .chips-primary{display:flex;flex-wrap:wrap;gap:6px;}
+  .chips-secondary{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule);}
+  .chip-secondary{font-size:12px;padding:3px 9px;opacity:0.88;}
+  .topbar-row3{display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap;}
+  .app-version{color:var(--stone);margin-left:auto;}
 
   #main-content{flex:1;padding:24px 32px 100px;max-width:1120px;width:100%;margin:0 auto;}
   .empty-hint{color:var(--stone);font-size:15px;padding:16px 8px;}
@@ -409,6 +413,7 @@
       <button id="btn-import" class="btn-text">匯入 Excel</button>
       <button id="btn-export" class="btn-text">匯出 JSON</button>
       <button id="btn-clear" class="btn-text danger">清除全部資料</button>
+      <span class="app-version small mono">v1.0.0</span>
     </div>
   </header>
   <main id="main-content">
@@ -1279,17 +1284,17 @@ const searchInputEl=document.getElementById('search-input');
 const WEEKDAY_LABELS=['日','一','二','三','四','五','六'];
 const MONTH_LABEL_FMT=(y,m)=>`${y} 年 ${m+1} 月`;
 
-const FILTER_CHIPS=[
+const FILTER_PRIMARY=[
   {value:'all',label:'全部'},
   {value:'upcoming',label:'即將到來'},
-  {value:'registered',label:'已報名'},
-  {value:'lottery_pending',label:'抽籤中'},
-  {value:'considering',label:'考慮中'},
   {value:'history',label:'歷史紀錄'},
-  {value:'completed',label:'已完賽'},
-  {value:'dns',label:'DNS'},
-  {value:'dnf',label:'DNF'},
 ];
+const STATUS_CHIP_LABELS={registered:'已報名',lottery_pending:'抽籤中',considering:'考慮中',completed:'已完賽',dns:'DNS',dnf:'DNF'};
+const FILTER_SECONDARY_MAP={
+  all:[],
+  upcoming:['registered','lottery_pending','considering'],
+  history:['completed','dns','dnf'],
+};
 function isUpcomingRace(r,todayStr){
   return ['registered','lottery_pending','considering'].includes(r.status)&&(!r.schedule.raceDate||r.schedule.raceDate>=todayStr);
 }
@@ -1302,20 +1307,33 @@ function matchesFilter(r,filter,todayStr){
   if(filter==='history') return isHistoryRace(r,todayStr);
   return r.status===filter;
 }
+function primaryPhaseFor(filterStatus){
+  if(filterStatus==='all'||filterStatus==='upcoming'||filterStatus==='history') return filterStatus;
+  if(FILTER_SECONDARY_MAP.upcoming.includes(filterStatus)) return 'upcoming';
+  if(FILTER_SECONDARY_MAP.history.includes(filterStatus)) return 'history';
+  return 'all';
+}
 function computeFilterCounts(){
   const todayStr=todayISO();
+  const allValues=['all','upcoming','history',...Object.keys(STATUS_CHIP_LABELS)];
   const counts={};
-  FILTER_CHIPS.forEach(f=>{counts[f.value]=0;});
+  allValues.forEach(v=>{counts[v]=0;});
   state.races.forEach(r=>{
-    FILTER_CHIPS.forEach(f=>{ if(matchesFilter(r,f.value,todayStr)) counts[f.value]++; });
+    allValues.forEach(v=>{ if(matchesFilter(r,v,todayStr)) counts[v]++; });
   });
   return counts;
 }
 function renderFilterChips(){
   const counts=computeFilterCounts();
-  filterChipsEl.innerHTML=FILTER_CHIPS.map(f=>
-    `<button class="chip${state.filterStatus===f.value?' active':''}" data-status="${f.value}">${f.label}${counts[f.value]?` (${counts[f.value]})`:''}</button>`
+  const activePrimary=primaryPhaseFor(state.filterStatus);
+  const primaryHtml=FILTER_PRIMARY.map(f=>
+    `<button class="chip chip-primary${activePrimary===f.value?' active':''}" data-status="${f.value}">${f.label}${counts[f.value]?` (${counts[f.value]})`:''}</button>`
   ).join('');
+  const secondaryValues=FILTER_SECONDARY_MAP[activePrimary]||[];
+  const secondaryHtml=secondaryValues.map(v=>
+    `<button class="chip chip-secondary${state.filterStatus===v?' active':''}" data-status="${v}">${STATUS_CHIP_LABELS[v]}${counts[v]?` (${counts[v]})`:''}</button>`
+  ).join('');
+  filterChipsEl.innerHTML=`<div class="chips-primary">${primaryHtml}</div>${secondaryHtml?`<div class="chips-secondary">${secondaryHtml}</div>`:''}`;
 }
 function filteredRaces(){
   const q=state.searchQuery.trim().toLowerCase();

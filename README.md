@@ -1,110 +1,70 @@
-# 賽事紀錄網站 — 資料庫欄位架構設計
+# 賽事紀錄（Race Day）
 
-本設計提供兩套對應同一份資料模型的 schema，對應你提到的三種地端儲存方式：
+一個從報名到終點的個人賽事紀錄網站。純前端、單一 `index.html`，部署在 GitHub Pages，不需要自架後端伺服器。
 
-| 檔案 | 適用儲存 | 設計邏輯 |
-|---|---|---|
-| `schema.sql` | PostgreSQL / SQLite | 正規化，拆成 17 張表，1:1 關係獨立成表、1:N 關係用外鍵 |
-| `race-document.schema.json` | JSON 檔案 / MongoDB | 單一賽事一份文件，子資料以巢狀物件或陣列嵌入 |
+**線上網址**：https://ai-sub3.github.io/Race-Day/
+**版本**：v1.0.0（[CHANGELOG.md](./CHANGELOG.md)）
+**詳細操作說明**：[USAGE.md](./USAGE.md)
 
-兩者欄位名稱一一對應（`snake_case` vs `camelCase`），選一種儲存方式即可，未來若要換引擎，欄位對照表可直接照抄。
+## 這是什麼
 
----
+給路跑／越野跑／三鐵愛好者用的個人賽事管理工具，用行事曆管理賽事的整個生命週期——從考慮報名、抽籤、備賽，到完賽後的成績與檢討，取代散落在 Excel、記事本、聊天記錄裡的資料。
 
-## 設計取捨
+## 主要功能
 
-**為什麼關聯式版本要拆 17 張表，而不是全部塞進 `races` 一張表？**
-你列的欄位裡，「賽前」（目標、裝備、補給、訓練計畫）和「賽後」（成績、體能數據、心得）是兩個時間點才會有值的資料。全塞一張表會讓「還沒比」的賽事有大量 NULL 欄位，也不利於之後個別擴充（例如成績要加上分組完賽率，不用動到主表）。拆表後，`races` 主表只保留「不管賽前賽後都存在」的基本資訊與路線資料。
+- **行事曆主畫面**：年/月導覽，手機自動切換成清單檢視；雙層篩選（全部／即將到來／歷史紀錄）＋搜尋；生涯數據總覽
+- **完整賽事欄位**：基本資訊、地理路線（含海拔變化圖）、氣象、預算行程、裝備補給、賽後成績與分析——完整欄位設計見 [`race-document.schema.json`](./race-document.schema.json)
+- **系列賽事比較**：同一場賽事跨年比較 PB 趨勢
+- **裝備清單範本化**：內建路跑／越野／三鐵標配範本，可自訂另存
+- **配速試算與手環產生器**：依目標時間與策略算出分段配速，可下載成圖片
+- **鞋款里程追蹤**、**分段掉速分析**、**補給時程規劃（計畫 vs 實際）**
+- **資料匯入**：Excel（自己的賽事規劃表）、GPX/TCX（Garmin／COROS／Strava 運動紀錄，自動抓距離/爬升/心率/分段/海拔）、貼上 JSON 快速填入（給 AI 讀完賽事網站/簡章/證書後使用）
+- **成績分享圖**：一鍵產生可下載的賽事成績卡片
+- **深色模式**、**PWA 加入主畫面**（含自訂圖示）
+- **Firebase 雲端同步（選用）**：Google 登入後跨裝置同步，本機儲存永遠是主要資料來源，未設定完全不影響使用
 
-**為什麼 JSON 版本反而全部嵌在一份文件裡？**
-文件式資料庫的優勢是「一次讀取就拿到一場賽事的完整內容」，不需要 join。既然這些子資料的筆數都不多（住宿頂多幾筆、裝備清單頂多幾十筆），嵌入不會造成文件過度膨脹，也更符合前端「開一場賽事頁面」的讀取模式。
+## 技術架構
 
-**時間長度一律存秒數（INTEGER `*Seconds`）**
-`gunTime`、`chipTime`、`targetTime`、`cutoffTime` 都存成秒數，而非 `"03:45:00"` 字串。這樣可以直接做數學運算（配速換算、PB 比較、排序），顯示時再由前端格式化成 `HH:MM:SS`。
+- 純靜態網頁：一個 `index.html`，內嵌 CSS 與 JavaScript，無建置流程、無框架
+- 儲存：`localStorage`（獨立架站時）或 Claude 內建 artifact 儲存（預覽環境），Firebase Firestore 為選用的雲端同步層
+- 外部函式庫皆透過 CDN 載入：SheetJS（Excel 解析）、Firebase JS SDK（選用）
+- GPX/TCX 解析、海拔剖面、配速計算、分享圖／配速手環產生（Canvas）皆為純前端運算，資料不會上傳到任何第三方伺服器
 
-**倒數天數不落地儲存**
-`countdownDays` 是 `raceDate` 的衍生值，每次查詢當下算最準，存起來反而要處理「每天要更新」的問題。SQL 範例見 `schema.sql` 文末。
+## 部署方式（GitHub Pages）
 
-**CP 與分段配速拆出獨立表/陣列（`checkpoints`、`race_splits` / `splits`）**
-你原本的欄位是「CP / 補給站數量」這種彙總數字。考量到越野賽的關門時間通常是逐站分別限制，我把它展開成可逐點紀錄的結構——這樣「賽道分析」不只是一個數字，而是能真的畫出補給站分佈圖、標出哪一站最容易被關門。`race_splits` 則是分段配速，格式設計成可以直接對應你既有的 Strava 同步流程（[[recent-work]] 提到的 Python + Excel 匯出），未來要把訓練資料自動寫入這張表會比較順。
+1. Fork 或下載本 repo
+2. 上傳 `index.html` 到你的 repo 根目錄（檔名須為 `index.html`）
+3. repo 設定 → Pages → Source 選 `Deploy from a branch` → Branch 選 `main` / `/(root)`
+4. 約 1 分鐘後即可在 `https://<你的帳號>.github.io/<repo 名稱>/` 存取
 
----
+## 啟用雲端同步（選用）
 
-## 欄位分類對照（17 張表 / 對應 JSON 子物件）
+預設完全不需要 Firebase 也能正常使用（資料存在瀏覽器本機）。若要跨裝置同步，需要：
 
-| 分類 | SQL 表名 | JSON 子物件 | 關係 |
-|---|---|---|---|
-| 基本資訊與狀態、時間、地理路線 | `races` | 頂層欄位 + `schedule` / `location` / `route` | 主表 |
-| CP / 補給站明細 | `checkpoints` | `checkpoints[]` | 1:N |
-| 歷年氣候預測 | `race_climate_forecast` | `climateForecast` | 1:1 |
-| 當日實際天氣 | `race_day_weather` | `raceDayWeather` | 1:1 |
-| 報名費用 | `race_budget` | `budget` | 1:1 |
-| 住宿 | `accommodations` | `accommodations[]` | 1:N |
-| 交通 | `transportation` | `transportation[]` | 1:N |
-| 隨行人員 | `companions` | `companions[]` | 1:N |
-| 賽前目標 A/B/C | `race_goals` | `goals[]` | 1:N |
-| 裝備清單 | `equipment_checklist` | `equipmentChecklist[]` | 1:N |
-| 補給策略 | `nutrition_plan` | `nutritionPlan` | 1:1 |
-| 訓練計畫 | `training_plan` | `trainingPlan` | 1:1 |
-| 個人成績 | `race_results` | `results` | 1:1 |
-| 體能數據 | `performance_data` | `performanceData` | 1:1 |
-| 分段配速 | `race_splits` | `splits[]` | 1:N |
-| 賽後心得與檢討 | `race_review` | `review` | 1:1 |
-| 多媒體與連結 | `media_links` | `mediaLinks[]` | 1:N |
+1. 到 Firebase Console（console.firebase.google.com）建立專案，啟用 Authentication（Google 登入）與 Firestore Database
+2. Firestore 安全性規則設定為僅允許使用者存取自己 UID 底下的資料：
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{uid}/races/{raceId} {
+         allow read, write: if request.auth != null && request.auth.uid == uid;
+       }
+     }
+   }
+   ```
+3. 在 Firebase Console 註冊一個網頁應用程式，取得 `firebaseConfig`
+4. 打開 `index.html`，搜尋 `YOUR_API_KEY`，把整組 `firebaseConfig` 換成你的設定值
 
----
+`apiKey` 等設定值會出現在公開原始碼中，這是 Firebase 的正常設計（安全性來自 Firestore 規則與 Authorized Domains，不是靠隱藏設定值），GitHub 的 Secret Scanning 若跳出提示可放心標記為已處理。詳細步驟見 [USAGE.md](./USAGE.md#5-雲端同步選用)。
 
-## Enum 值字典（兩套 schema 共用）
+## 資料結構
 
-| 欄位 | 可選值 |
-|---|---|
-| `status` | `registered`(已報名) / `lottery_pending`(抽籤中) / `considering`(考慮中) / `completed`(已完賽) / `dns`(未起跑) / `dnf`(未完賽) |
-| `sportType` | `road_running`(路跑) / `trail_running`(越野跑) / `ultra_marathon`(超馬) / `duathlon`(二鐵) / `triathlon`(三鐵) / `cycling`(自行車) / `obstacle_race`(斯巴達障礙賽) / `other` |
-| `raceFormat` | `solo`(個人) / `pair`(雙人組) / `relay`(多人接力) / `loop`(繞圈賽) / `age_group`(分齡賽) |
-| `paymentStatus` | `unpaid` / `paid` / `refunding` |
-| `bookingStatus` | `considering` / `booked` / `paid` / `cancelled` |
-| `condition`（天氣） | `sunny` / `cloudy` / `rainy` / `foggy` / `other` |
-| `role`（隨行人員） | `partner` / `cheer_squad` / `emergency_contact` / `pacer` / `other` |
-| `goalTier` | `A` / `B` / `C` |
-| `category`（裝備） | `shoes` / `apparel` / `vest` / `headlamp` / `nutrition` / `mandatory_gear` / `other` |
-| `linkType`（多媒體） | `official_site` / `brochure_pdf` / `gpx_track` / `photo_album` / `certificate` / `medal_photo` / `other` |
+賽事資料以巢狀 JSON 文件儲存，一筆賽事一份文件，欄位設計文件：
 
----
+- [`race-document.schema.json`](./race-document.schema.json)：JSON Schema（對應本 app 實際使用的資料結構，也是 Firestore 文件的結構）
+- [`schema.sql`](./schema.sql)：對應的關聯式資料庫版本（PostgreSQL／SQLite），供未來若改用其他後端參考
 
-## JSON 版本範例文件（節錄）
+## 版本紀錄
 
-```json
-{
-  "name": "2026 臺北馬拉松",
-  "alias": "Taipei Marathon",
-  "status": "registered",
-  "sportType": "road_running",
-  "raceFormat": "solo",
-  "schedule": {
-    "raceDate": "2026-12-20",
-    "startTime": "06:30",
-    "registrationCloseDate": "2026-09-30"
-  },
-  "location": { "venueName": "臺北市政府", "city": "臺北市", "country": "臺灣" },
-  "route": {
-    "distanceKm": 42.195,
-    "elevationGainM": 180,
-    "surface": { "pavedPct": 100, "trailPct": 0, "stairsPct": 0 },
-    "cutoffTimeSeconds": 21600
-  },
-  "goals": [
-    { "tier": "A", "targetTimeSeconds": 12600, "paceStrategy": "均速配速，前半程稍慢 5%" }
-  ],
-  "nutritionPlan": { "gelCount": 6, "electrolyteTabletCount": 2, "hydrationCapacityMl": 500 }
-}
-```
-
-（完整欄位結構見 `race-document.schema.json`；關聯式版本的等效 DDL 見 `schema.sql`）
-
----
-
-## 後續可擴充方向
-
-- **多年份重複賽事比較**：若同一場賽事每年都參加（如年度臺北馬），可以加一個 `event_series`（賽事系列）主表，`races` 改成掛在 `event_series_id` 下，方便跨年比較 PB 趨勢。
-- **抽籤機率追蹤**：`race_goals` 旁可加一張 `lottery_history` 記錄每年抽籤中籤率，作為隔年報名決策參考。
-- **裝備清單可模板化**：`equipment_checklist` 可以先建一份「路跑標配」「越野標配」模板，新賽事建立時自動帶入預設項目，再依賽事調整。
+見 [CHANGELOG.md](./CHANGELOG.md)。
