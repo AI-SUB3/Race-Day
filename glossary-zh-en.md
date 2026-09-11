@@ -79,7 +79,7 @@
 | `field.post.results.secondHalfSeconds` | 後半程時間 | Second Half Time |
 | `field.post.review.cons` | 缺點評價 | What Did Not Go Well |
 | `field.post.review.courseReview` | 路線心得 | Course Review |
-| `field.post.review.hitTheWallNotes` | 撞牆期紀錄 | "Hit the Wall" Notes |
+| `field.post.review.hitTheWallNotes` | 撞牆期紀錄 | Bonk Notes |
 | `field.post.review.lessonsLearned` | 檢討筆記 | Lessons Learned |
 | `field.post.review.pros` | 優點評價 | What Went Well |
 | `field.prep.nutritionPlan.electrolyteTabletCount` | 電解質 / 鹽錠數量 | Electrolyte / Salt Tablets |
@@ -123,7 +123,7 @@
 | `field.weather.climateForecast.windDirection` | 風向 | Wind Direction |
 | `field.weather.climateForecast.windSpeedKmh` | 風速 | Wind Speed |
 | `field.weather.raceDayWeather.condition` | 當日氣候狀況 | Race-day Condition |
-| `field.weather.raceDayWeather.feelsLikeTempC` | 實際體感溫度 | Actual Feels-like Temp |
+| `field.weather.raceDayWeather.feelsLikeTempC` | 實際體感溫度 | Feels-like Temp |
 | `field.weather.raceDayWeather.humidityPct` | 當日濕度 | Race-day Humidity |
 | `field.weather.raceDayWeather.notes` | 天氣備註 | Weather Notes |
 ## 清單標題 (Repeatable List Titles)
@@ -215,17 +215,17 @@
 | `ui.clearAll` | 清除全部資料 | Clear All Data |
 | `ui.clearAllConfirm` | 確定清除？再按一次 | Are you sure? Click again to confirm |
 | `ui.close` | 關閉 | Close |
-| `ui.countdownDays` | 倒數 ${d} 天 | {n} days to go |
+| `ui.countdownDays` | 倒數 ${d} 天 | ${d} days to go |
 | `ui.createRace` | 新增賽事 | Create Race |
 | `ui.dateNotSet` | 尚未設定日期 | Date not set |
-| `ui.daysLeft` | 還有 ${d} 天 | {n} days left |
+| `ui.daysLeft` | 還有 ${d} 天 | ${d} days left |
 | `ui.delete` | 刪除 | Delete |
 | `ui.deleteConfirm` | 確定刪除？再按一次 | Are you sure? Click again to confirm |
 | `ui.deleteRace` | 刪除賽事 | Delete race |
 | `ui.deleteTemplate` | 刪除範本 | Delete template |
 | `ui.deleteTemplateConfirm` | 確定刪除？再按一次 | Confirm delete? Click again |
-| `ui.downloadWristband` | 下載配速手環圖片 | Download wristband image |
-| `ui.errCannotParseFile` | 檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔 | Could not parse this file — please check it\u2019s a valid GPX or TCX file |
+| `ui.downloadWristband` | 下載配速手環圖片 | Download pace band image |
+| `ui.errCannotParseFile` | 檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔 | Could not parse this file — please check it’s a valid GPX or TCX file |
 | `ui.errNotEnoughPoints` | 檔案中沒有足夠的座標點 | Not enough coordinate points in this file |
 | `ui.errPasteNotObject` | 請貼上一個 JSON 物件（用 { } 包起來） | Please paste a JSON object (wrapped in { }) |
 | `ui.excelBackToSheets` | ‹ 重新選擇工作表 | ‹ Back to sheet selection |
@@ -249,7 +249,7 @@
 | `ui.gpxAvgHr` | 平均心率 | Avg heart rate |
 | `ui.gpxDistance` | 距離 | Distance |
 | `ui.gpxElevGain` | 總爬升 | Elevation gain |
-| `ui.gpxHintFull` | 從 ${fileEsc} 讀到以下數據，確認後套用到「${raceName}」（已有官方成績的欄位不會被覆蓋）： | Read the following data from {file}. Confirm to apply it to "{race}" (fields that already have official results will not be overwritten): |
+| `ui.gpxHintFull` | 從 ${fileEsc} 讀到以下數據，確認後套用到「${raceName}」（已有官方成績的欄位不會被覆蓋）： | Read the following data from ${fileEsc}. Confirm to apply it to "${raceName}" (fields that already have official results will not be overwritten): |
 | `ui.gpxImportBtn` | 匯入運動紀錄檔（GPX / TCX） | Import activity file (GPX / TCX) |
 | `ui.gpxImportHint` | 支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速 | Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits. |
 | `ui.gpxMaxHr` | 最大心率 | Max heart rate |
@@ -257,10 +257,10 @@
 | `ui.gpxSplits` | 分段配速 | Splits |
 | `ui.gpxTime` | 時間 | Time |
 | `ui.helpTitle` | 使用說明 | Help |
-| `ui.helpVersionLine` | 版本 ${APP_VERSION} ・ 更完整的說明與雲端同步／推播通知部署步驟請見 repo 裡的 USAGE.md | Version {n} ・ For the full guide and cloud-sync/push-notification setup steps, see USAGE.md in the repo |
+| `ui.helpVersionLine` | 版本 ${APP_VERSION} ・ 更完整的說明與雲端同步／推播通知部署步驟請見 repo 裡的 USAGE.md | Version ${APP_VERSION} ・ For the full guide and cloud-sync/push-notification setup steps, see USAGE.md in the repo |
 | `ui.justToday` | 就是今天 | Today |
 | `ui.loading` | 載入中… | Loading… |
-| `ui.monthsLeft` | 還有約 ${Math.round(d/30)} 個月 | About {n} months left |
+| `ui.monthsLeft` | 還有約 ${Math.round(d/30)} 個月 | About ${Math.round(d/30)} months left |
 | `ui.newRace` | + 新增賽事 | + New Race |
 | `ui.newRaceDate` | 比賽日期 | Race date |
 | `ui.newRaceName` | 賽事名稱 | Race name |
@@ -270,7 +270,7 @@
 | `ui.notYetAdded` | 尚未新增 | Nothing added yet |
 | `ui.notifFailed` | 推播設定失敗： | Failed to enable notifications: |
 | `ui.pacingCalc` | 試算 | Calculate |
-| `ui.pacingCalcTitle` | 配速試算與手環產生器 | Pace Calculator & Wristband Generator |
+| `ui.pacingCalcTitle` | 配速試算與手環產生器 | Pace Calculator & Pace Band Generator |
 | `ui.pacingDistance` | 總距離（公里） | Distance (km) |
 | `ui.pacingDistanceCol` | 距離 | Distance |
 | `ui.pacingEven` | 勻速 | Even split |
@@ -285,8 +285,8 @@
 | `ui.pacingStrategy` | 配速策略 | Pacing strategy |
 | `ui.pacingTargetTime` | 目標時間 | Target time |
 | `ui.pacingTimeCol` | 預計通過時間 | Expected split time |
-| `ui.pastDaysAgo` | 已過 ${Math.abs(d)} 天 | {n} days ago |
-| `ui.pasteHintFull` | 把賽事網站、簡章 PDF 或證書內容請 Claude 整理成 JSON（欄位名稱對照 race-document.schema.json），貼在下面就會套用到「${raceName}」。只會更新你貼的欄位，其他資料不會被覆蓋。 | Ask an AI to turn a race website, brochure PDF or finisher certificate into JSON matching race-document.schema.json, then paste it here to apply it to "{race}". Only the fields you paste will be updated — everything else stays as-is. |
+| `ui.pastDaysAgo` | 已過 ${Math.abs(d)} 天 | ${Math.abs(d)} days ago |
+| `ui.pasteHintFull` | 把賽事網站、簡章 PDF 或證書內容請 Claude 整理成 JSON（欄位名稱對照 race-document.schema.json），貼在下面就會套用到「${raceName}」。只會更新你貼的欄位，其他資料不會被覆蓋。 | Ask an AI to turn a race website, brochure PDF or finisher certificate into JSON matching race-document.schema.json, then paste it here to apply it to "${raceName}". Only the fields you paste will be updated — everything else stays as-is. |
 | `ui.pasteJsonError` | JSON 格式錯誤： | Invalid JSON: |
 | `ui.pasteModalTitle` | 貼上資料快速填入 | Paste to Quick-fill |
 | `ui.pasteQuickFill` | 貼上資料快速填入 | Paste to quick-fill |
@@ -323,8 +323,8 @@
 | `ui.templateSelectEmpty` | 尚無已存範本 | No saved templates |
 | `ui.unknownError` | 未知錯誤 | Unknown error |
 | `ui.unnamedRace` | (未命名賽事) | (Untitled race) |
-| `ui.weeksLeft` | 還有 ${Math.round(d/7)} 週 | {n} weeks left |
-| `ui.wristbandFilename` | 配速手環.png | pace-wristband.png |
-| `ui.wristbandTitle` | 配速手環 | Pace Wristband |
+| `ui.weeksLeft` | 還有 ${Math.round(d/7)} 週 | ${Math.round(d/7)} weeks left |
+| `ui.wristbandFilename` | 配速手環.png | pace-band.png |
+| `ui.wristbandTitle` | 配速手環 | Pace Band |
 
 （另有 45 個內部/長文字段落型 key 未列入逐條對照表，例如說明頁的整段內容；請直接參考 `index.html` 裡的 `JA`/`EN`/程式碼中對應的中文原文。）

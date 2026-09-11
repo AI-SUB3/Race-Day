@@ -51,7 +51,7 @@
 | `field.equipmentChecklist.isPacked` | 已打包 | 準備済み |
 | `field.equipmentChecklist.itemName` | 項目名稱 | アイテム名 |
 | `field.equipmentChecklist.notes` | 備註 | 備考 |
-| `field.logistics.budget.chipDeposit` | 晶片押金 | 計測チップ保証金 |
+| `field.logistics.budget.chipDeposit` | 晶片押金 | 計測チップ預かり金 |
 | `field.logistics.budget.currency` | 幣別 | 通貨 |
 | `field.logistics.budget.paymentStatus` | 繳費狀態 | 支払い状況 |
 | `field.logistics.budget.registrationFee` | 報名費用 | エントリー費 |
@@ -79,7 +79,7 @@
 | `field.post.results.secondHalfSeconds` | 後半程時間 | 後半タイム |
 | `field.post.review.cons` | 缺點評價 | 改善点 |
 | `field.post.review.courseReview` | 路線心得 | コースの感想 |
-| `field.post.review.hitTheWallNotes` | 撞牆期紀錄 | 壁にぶつかった記録 |
+| `field.post.review.hitTheWallNotes` | 撞牆期紀錄 | 30kmの壁に関する記録 |
 | `field.post.review.lessonsLearned` | 檢討筆記 | 振り返りメモ |
 | `field.post.review.pros` | 優點評價 | 良かった点 |
 | `field.prep.nutritionPlan.electrolyteTabletCount` | 電解質 / 鹽錠數量 | 塩分タブレット数 |
@@ -215,10 +215,10 @@
 | `ui.clearAll` | 清除全部資料 | すべてのデータを削除 |
 | `ui.clearAllConfirm` | 確定清除？再按一次 | 本当に削除しますか？もう一度押してください |
 | `ui.close` | 關閉 | 閉じる |
-| `ui.countdownDays` | 倒數 ${d} 天 | あと {n} 日 |
+| `ui.countdownDays` | 倒數 ${d} 天 | あと ${d} 日 |
 | `ui.createRace` | 新增賽事 | 大会を作成 |
 | `ui.dateNotSet` | 尚未設定日期 | 日付未設定 |
-| `ui.daysLeft` | 還有 ${d} 天 | 残り {n} 日 |
+| `ui.daysLeft` | 還有 ${d} 天 | 残り ${d} 日 |
 | `ui.delete` | 刪除 | 削除 |
 | `ui.deleteConfirm` | 確定刪除？再按一次 | 本当に削除しますか？もう一度 |
 | `ui.deleteRace` | 刪除賽事 | 大会を削除 |
@@ -260,7 +260,7 @@
 | `ui.helpVersionLine` | 版本 ${APP_VERSION} ・ 更完整的說明與雲端同步／推播通知部署步驟請見 repo 裡的 USAGE.md | バージョン {n} ・ より詳しい使い方やクラウド同期／プッシュ通知の設定手順はリポジトリの USAGE.md をご覧ください |
 | `ui.justToday` | 就是今天 | 本日です |
 | `ui.loading` | 載入中… | 読み込み中… |
-| `ui.monthsLeft` | 還有約 ${Math.round(d/30)} 個月 | 残り約 {n} ヶ月 |
+| `ui.monthsLeft` | 還有約 ${Math.round(d/30)} 個月 | 残り約 ${Math.round(d/30)} ヶ月 |
 | `ui.newRace` | + 新增賽事 | + 大会を追加 |
 | `ui.newRaceDate` | 比賽日期 | レース日 |
 | `ui.newRaceName` | 賽事名稱 | 大会名 |
@@ -285,7 +285,7 @@
 | `ui.pacingStrategy` | 配速策略 | ペース戦略 |
 | `ui.pacingTargetTime` | 目標時間 | 目標タイム |
 | `ui.pacingTimeCol` | 預計通過時間 | 通過予定タイム |
-| `ui.pastDaysAgo` | 已過 ${Math.abs(d)} 天 | {n} 日前に終了 |
+| `ui.pastDaysAgo` | 已過 ${Math.abs(d)} 天 | ${Math.abs(d)} 日前に終了 |
 | `ui.pasteHintFull` | 把賽事網站、簡章 PDF 或證書內容請 Claude 整理成 JSON（欄位名稱對照 race-document.schema.json），貼在下面就會套用到「${raceName}」。只會更新你貼的欄位，其他資料不會被覆蓋。 | 大会サイト、要項PDF、完走証の内容をAIに race-document.schema.json の形式のJSONに整理してもらい、ここに貼り付けると「{race}」に反映されます。貼り付けた項目だけが更新され、他のデータは変更されません。 |
 | `ui.pasteJsonError` | JSON 格式錯誤： | JSON形式エラー： |
 | `ui.pasteModalTitle` | 貼上資料快速填入 | データを貼り付けて入力 |
@@ -323,8 +323,8 @@
 | `ui.templateSelectEmpty` | 尚無已存範本 | テンプレートなし |
 | `ui.unknownError` | 未知錯誤 | 不明なエラー |
 | `ui.unnamedRace` | (未命名賽事) | （無題の大会） |
-| `ui.weeksLeft` | 還有 ${Math.round(d/7)} 週 | 残り {n} 週間 |
-| `ui.wristbandFilename` | 配速手環.png | ペース手帳.png |
+| `ui.weeksLeft` | 還有 ${Math.round(d/7)} 週 | 残り ${Math.round(d/7)} 週間 |
+| `ui.wristbandFilename` | 配速手環.png | ペースバンド.png |
 | `ui.wristbandTitle` | 配速手環 | ペースリストバンド |
 
 （另有 45 個內部/長文字段落型 key 未列入逐條對照表，例如說明頁的整段內容；請直接參考 `index.html` 裡的 `JA`/`EN`/程式碼中對應的中文原文。）
