@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-title" content="賽事紀錄">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -62,6 +62,7 @@
     font-size:16px;
     line-height:1.6;
   }
+  [data-lang="ja"] body{font-family:'Noto Sans JP',sans-serif;}
   :focus-visible{outline:2px solid var(--contour);outline-offset:1px;}
   h1,h2,h3{margin:0;font-weight:700;}
   .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
@@ -79,6 +80,13 @@
   .auth-area{display:flex;align-items:center;gap:10px;}
   .auth-hint{color:var(--stone);}
   .auth-error{color:var(--flag);max-width:260px;}
+  .foreground-toast{
+    position:fixed;bottom:20px;right:20px;max-width:320px;z-index:100;
+    background:var(--ink);color:var(--surface);border-radius:4px;padding:14px 16px;
+    display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 18px rgba(0,0,0,0.25);
+  }
+  .foreground-toast strong{font-size:14px;}
+  .foreground-toast span{font-size:13px;opacity:0.85;}
   .auth-user{display:flex;align-items:center;gap:6px;color:var(--ink-soft);}
   .auth-user img{width:22px;height:22px;border-radius:50%;display:block;}
   .app-title{font-size:21px;letter-spacing:0.01em;}
@@ -196,6 +204,28 @@
   .pacing-inputs{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px;}
   .pacing-inputs .field{flex:1 1 150px;}
 
+  /* ---------- Help FAB + modal ---------- */
+  .help-fab{
+    position:fixed;bottom:20px;right:20px;z-index:40;
+    width:52px;height:52px;border-radius:50%;
+    background:var(--ink);color:var(--surface);
+    display:flex;align-items:center;justify-content:center;
+    border:none;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.28);
+  }
+  .help-fab svg{width:26px;height:26px;display:block;}
+  .help-fab:hover{opacity:0.9;}
+  .help-body{max-height:60vh;overflow-y:auto;padding-right:6px;}
+  .help-body h3{font-size:15px;margin:22px 0 8px;color:var(--ink);}
+  .help-body h3:first-child{margin-top:0;}
+  .help-body p{margin:0 0 10px;color:var(--ink-soft);font-size:14px;line-height:1.7;}
+  .help-body ul{margin:0 0 10px;padding-left:20px;color:var(--ink-soft);font-size:14px;line-height:1.7;}
+  .help-body li{margin-bottom:5px;}
+  .help-body strong{color:var(--ink);}
+  @media (max-width:640px){
+    .help-fab{width:46px;height:46px;bottom:16px;right:16px;}
+    .help-fab svg{width:22px;height:22px;}
+  }
+
   /* ---------- Progress block ---------- */
   .progress-block{margin:16px 0 22px;}
   .progress-label{display:flex;justify-content:space-between;font-size:15px;color:var(--ink-soft);margin-bottom:6px;}
@@ -228,6 +258,12 @@
   .btn-ghost:hover{border-color:var(--ink);}
   .icon-btn{display:inline-flex;align-items:center;justify-content:center;padding:6px;width:34px;height:34px;}
   .icon-btn svg{width:18px;height:18px;display:block;}
+  .lang-switcher{display:flex;flex-direction:column;gap:2px;align-items:flex-start;}
+  .lang-switcher select{
+    font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--rule);border-radius:3px;
+    background:var(--surface);color:var(--ink);
+  }
+  .lang-caption{color:var(--stone);white-space:nowrap;}
   .btn-ghost.danger{color:var(--flag);border-color:var(--rule);}
   .btn-ghost.danger:hover{border-color:var(--flag);}
   .btn-text{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:14px;padding:0;}
@@ -267,7 +303,7 @@
   .field span{font-size:14px;}
   .field span i{font-style:normal;color:var(--stone);margin-left:3px;}
   .field input,.field select,.field textarea{
-    font:inherit;font-family:'Noto Sans TC',sans-serif;font-size:15px;
+    font:inherit;font-size:15px;
     padding:8px 10px;border:1px solid var(--rule);border-radius:3px;
     background:var(--surface);color:var(--ink);width:100%;
   }
@@ -390,30 +426,39 @@
   <header id="topbar">
     <div class="topbar-row1">
       <div class="topbar-brand">
-        <h1 class="app-title">賽事紀錄</h1>
-        <p class="app-tagline">從報名到終點的完整紀錄</p>
+        <h1 class="app-title" data-i18n="ui.appTitle">賽事紀錄</h1>
+        <p class="app-tagline" data-i18n="ui.appTagline">從報名到終點的完整紀錄</p>
       </div>
       <div class="topbar-actions">
         <button id="btn-theme-toggle" class="btn-ghost icon-btn" aria-label="切換深色模式" title="切換深色模式"></button>
+        <div class="lang-switcher">
+          <select id="lang-select" aria-label="Language / 語言 / 言語">
+            <option value="zh">繁體中文</option>
+            <option value="ja">日本語</option>
+            <option value="en">English</option>
+          </select>
+          <span class="lang-caption small">支援：繁體中文・日本語・English</span>
+        </div>
         <div id="auth-area" class="auth-area"></div>
-        <button id="btn-new" class="btn-primary">+ 新增賽事</button>
+        <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
       </div>
     </div>
     <div class="topbar-row2">
       <div class="cal-nav">
-        <button id="cal-prev" class="btn-ghost" aria-label="上個月">‹</button>
+        <button id="cal-prev" class="btn-ghost" data-i18n-title="ui.calPrev" aria-label="上個月">‹</button>
         <span id="cal-label" class="cal-label mono"></span>
-        <button id="cal-next" class="btn-ghost" aria-label="下個月">›</button>
-        <button id="cal-today" class="btn-ghost">今天</button>
+        <button id="cal-next" class="btn-ghost" data-i18n-title="ui.calNext" aria-label="下個月">›</button>
+        <button id="cal-today" class="btn-ghost" data-i18n="ui.today">今天</button>
       </div>
-      <input id="search-input" type="search" placeholder="搜尋賽事名稱、城市…">
+      <input id="search-input" type="search" data-i18n-placeholder="ui.searchPlaceholder" placeholder="搜尋賽事名稱、城市…">
       <div id="filter-chips" class="chips"></div>
     </div>
     <div class="topbar-row3">
-      <button id="btn-import" class="btn-text">匯入 Excel</button>
-      <button id="btn-export" class="btn-text">匯出 JSON</button>
-      <button id="btn-clear" class="btn-text danger">清除全部資料</button>
-      <span class="app-version small mono">v1.0.0</span>
+      <button id="btn-import" class="btn-text" data-i18n="ui.importExcel">匯入 Excel</button>
+      <button id="btn-export" class="btn-text" data-i18n="ui.exportJson">匯出 JSON</button>
+      <button id="btn-export-ics" class="btn-text" data-i18n="ui.exportIcs">匯出行事曆提醒</button>
+      <button id="btn-clear" class="btn-text danger" data-i18n="ui.clearAll">清除全部資料</button>
+      <span id="app-version" class="app-version small mono"></span>
     </div>
   </header>
   <main id="main-content">
@@ -428,6 +473,8 @@
 <div id="paste-modal" class="modal-overlay" hidden></div>
 <div id="shoe-modal" class="modal-overlay" hidden></div>
 <div id="pacing-modal" class="modal-overlay" hidden></div>
+<div id="help-modal" class="modal-overlay" hidden></div>
+<button id="btn-help" class="help-fab" aria-label="使用說明" title="使用說明"></button>
 
 <script>
 /* ============================================================
@@ -611,9 +658,13 @@ function setPath(obj,path,value){
   for(let i=0;i<keys.length-1;i++){o=o[keys[i]];}
   o[keys[keys.length-1]]=value;
 }
-function labelFor(options,value){const o=options.find(o=>o.value===value);return o?o.label:(value||'—');}
-function statusLabel(v){return labelFor(STATUS_OPTIONS,v);}
-function sportLabel(v){return labelFor(SPORT_OPTIONS,v);}
+function labelFor(options,value,ns){
+  const o=options.find(o=>o.value===value);
+  if(!o) return value||'—';
+  return ns?t('opt.'+ns+'.'+value,o.label):o.label;
+}
+function statusLabel(v){return labelFor(STATUS_OPTIONS,v,'status');}
+function sportLabel(v){return labelFor(SPORT_OPTIONS,v,'sport');}
 function secToHMS(sec){
   if(sec==null||sec==='') return '';
   sec=Math.round(Number(sec));
@@ -635,23 +686,25 @@ function daysDiff(dateStr){
   const today=new Date();today.setHours(0,0,0,0);
   return Math.round((target-today)/86400000);
 }
+function tf(key,fallback,n){ return t(key,fallback).replace('{n}',n); }
+function tf2(key,fallback,a,b){ return t(key,fallback).replace('{a}',a).replace('{b}',b); }
 function countdownLabel(race){
-  if(race.status==='completed') return '已完賽';
-  if(race.status==='dns') return 'DNS';
-  if(race.status==='dnf') return 'DNF';
+  if(race.status==='completed') return t('opt.status.completed','已完賽');
+  if(race.status==='dns') return t('opt.status.dns','DNS');
+  if(race.status==='dnf') return t('opt.status.dnf','DNF');
   const d=daysDiff(race.schedule&&race.schedule.raceDate);
-  if(d==null) return '尚未設定日期';
-  if(d>0) return `倒數 ${d} 天`;
-  if(d===0) return '今天出發';
-  return `已過 ${Math.abs(d)} 天`;
+  if(d==null) return t('ui.dateNotSet','尚未設定日期');
+  if(d>0) return tf('ui.countdownDays',`倒數 ${d} 天`,d);
+  if(d===0) return t('ui.startToday','今天出發');
+  return tf('ui.pastDaysAgo',`已過 ${Math.abs(d)} 天`,Math.abs(d));
 }
 function adaptiveCountdown(d){
-  if(d==null) return '尚未設定日期';
-  if(d<0) return `已過 ${Math.abs(d)} 天`;
-  if(d===0) return '就是今天';
-  if(d>=60) return `還有約 ${Math.round(d/30)} 個月`;
-  if(d>=14) return `還有 ${Math.round(d/7)} 週`;
-  return `還有 ${d} 天`;
+  if(d==null) return t('ui.dateNotSet','尚未設定日期');
+  if(d<0) return tf('ui.pastDaysAgo',`已過 ${Math.abs(d)} 天`,Math.abs(d));
+  if(d===0) return t('ui.justToday','就是今天');
+  if(d>=60) return tf('ui.monthsLeft',`還有約 ${Math.round(d/30)} 個月`,Math.round(d/30));
+  if(d>=14) return tf('ui.weeksLeft',`還有 ${Math.round(d/7)} 週`,Math.round(d/7));
+  return tf('ui.daysLeft',`還有 ${d} 天`,d);
 }
 const PROGRESS_WINDOW_DAYS=180;
 function progressPct(d){
@@ -739,6 +792,476 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   user:null};
 let currentRace=null;
+const APP_VERSION='v2.0.0';
+
+/* ============================================================
+   多語系（i18n）
+   設計原則：中文（預設）字串就地留在原本的 label/title 裡當作
+   fallback；只需要建立日文對照表 JA，用 t(key, fallback) 查表，
+   查不到就自動退回中文，不會有畫面開天窗的風險。
+   ============================================================ */
+const LANG_KEY='lang-pref-v1';
+let currentLang='zh';
+try{ currentLang=localStorage.getItem(LANG_KEY)||'zh'; }catch(e){}
+function t(key,fallback){
+  const dict=(currentLang==='ja')?JA:(currentLang==='en')?EN:null;
+  if(dict){
+    const v=dict[key];
+    if(v!=null) return v;
+  }
+  return fallback!=null?fallback:key;
+}
+function setLang(lang){
+  currentLang=lang;
+  try{ localStorage.setItem(LANG_KEY,lang); }catch(e){}
+  document.documentElement.setAttribute('lang',lang==='ja'?'ja':lang==='en'?'en':'zh-Hant');
+  document.documentElement.setAttribute('data-lang',lang);
+  applyStaticTranslations();
+  renderAll();
+  renderAuthArea();
+}
+function applyStaticTranslations(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    if(el.dataset.zhText==null) el.dataset.zhText=el.textContent;
+    el.textContent=t(el.dataset.i18n, el.dataset.zhText);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    if(el.dataset.zhPlaceholder==null) el.dataset.zhPlaceholder=el.getAttribute('placeholder');
+    el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder, el.dataset.zhPlaceholder));
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    if(el.dataset.zhTitle==null) el.dataset.zhTitle=el.getAttribute('aria-label')||el.getAttribute('title')||'';
+    const v=t(el.dataset.i18nTitle, el.dataset.zhTitle);
+    if(el.hasAttribute('aria-label')) el.setAttribute('aria-label',v);
+    el.setAttribute('title',v);
+  });
+}
+
+const JA={
+  // ---- 靜態 UI（topbar／按鈕／通用字串） ----
+  'ui.appTitle':'レース記録','ui.appTagline':'エントリーからゴールまでの完全な記録',
+  'ui.newRace':'+ 大会を追加','ui.searchPlaceholder':'大会名・都市で検索…','ui.today':'今日',
+  'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
+  'ui.importExcel':'Excelを読み込む','ui.exportJson':'JSONを書き出す','ui.exportIcs':'カレンダーリマインダーを書き出す',
+  'ui.clearAll':'すべてのデータを削除','ui.clearAllConfirm':'本当に削除しますか？もう一度押してください',
+  'ui.cloudNotConfigured':'クラウド同期は未設定です','ui.signIn':'Googleでログインして同期','ui.signOut':'ログアウト',
+  'ui.enableNotif':'プッシュ通知を有効にする','ui.notifEnabled':'通知は有効です',
+  'ui.deleteRace':'大会を削除','ui.deleteConfirm':'本当に削除しますか？もう一度',
+  'ui.pasteQuickFill':'データを貼り付けて入力','ui.exportRaceIcs':'カレンダーに追加',
+  'ui.createRace':'大会を作成','ui.cancel':'キャンセル','ui.close':'閉じる','ui.apply':'適用',
+  'ui.selectAll':'すべて選択','ui.selectNone':'選択解除','ui.addItem':'+ 追加','ui.delete':'削除',
+  'ui.notYetAdded':'まだ追加されていません','ui.noMatchingRaces':'条件に一致する大会がありません',
+  'ui.loading':'読み込み中…',
+  'ui.noMatchingRacesMonth':'今月は条件に一致する大会がありません',
+  'ui.selectRaceHint':'上のカレンダーから大会を選ぶか、新しい大会を作成してください。',
+  'ui.unnamedRace':'（無題の大会）','ui.dateNotSet':'日付未設定',
+  'ui.countdownDays':'あと {n} 日','ui.startToday':'本日スタート','ui.pastDaysAgo':'{n} 日前に終了',
+  'ui.justToday':'本日です','ui.monthsLeft':'残り約 {n} ヶ月','ui.weeksLeft':'残り {n} 週間','ui.daysLeft':'残り {n} 日',
+  'ui.newRaceName':'大会名','ui.newRaceNamePlaceholder':'例：2026 台北マラソン',
+  'ui.newRaceSport':'主な種目','ui.newRaceStatus':'ステータス','ui.newRaceDate':'レース日',
+  'ui.helpTitle':'使い方','ui.help':'ヘルプ',
+  'ui.langToggle':'English / 日本語 / 中文',
+  // ---- 行事曆／篩選 ----
+  'ui.calPrev':'前の月','ui.calNext':'次の月',
+  'ui.weekday.0':'日','ui.weekday.1':'月','ui.weekday.2':'火','ui.weekday.3':'水','ui.weekday.4':'木','ui.weekday.5':'金','ui.weekday.6':'土',
+  'ui.careerTotalRaces':'完走レース数','ui.careerMarathonPB':'フルマラソン自己ベスト','ui.careerYearDistance':'年間走行距離',
+  // ---- 賽事詳情 - 區塊標題 ----
+  'ui.sectionBasic':'基本情報と日程','ui.sectionRoute':'コースと地形','ui.sectionWeather':'気象',
+  'ui.sectionLogistics':'予算と旅程','ui.sectionPrep':'装備・補給・戦略（レース前の準備）',
+  'ui.sectionPost':'レース後の記録とデータ','ui.seriesComparison':'シリーズ大会の比較（年別）',
+  'ui.seriesBest':'シリーズ最高記録','ui.seriesYear':'年','ui.seriesThisRace':'（このレース）',
+  // ---- 賽事目標 ----
+  'ui.goalsTitle':'目標タイム','ui.goalTargetTime':'目標タイム','ui.goalPaceStrategy':'ペース戦略',
+  // ---- 裝備清單／範本 ----
+  'ui.equipmentTitle':'装備リスト','ui.templateSelectEmpty':'テンプレートなし',
+  'ui.applyTemplate':'テンプレートを適用','ui.saveAsTemplate':'テンプレートとして保存',
+  'ui.deleteTemplate':'テンプレートを削除','ui.deleteTemplateConfirm':'本当に削除？もう一度',
+  'ui.templateNamePlaceholder':'テンプレート名（例：ロード標準装備）','ui.saveTemplate':'保存',
+  'ui.pacingCalcTitle':'ペース計算＆リストバンド作成',
+  // ---- 配速試算 ----
+  'ui.pacingHint':'目標タイムと距離、ペース戦略を入力すると、区間ごとの通過予定タイムを計算します。',
+  'ui.pacingTargetTime':'目標タイム','ui.pacingDistance':'距離（km）','ui.pacingStrategy':'ペース戦略',
+  'ui.pacingEven':'イーブンペース','ui.pacingNegative':'ネガティブスプリット（後半加速）','ui.pacingPositive':'ポジティブスプリット（後半抑えめ）',
+  'ui.pacingInterval':'区間','ui.pacingEvery5':'5kmごと','ui.pacingEvery10':'10kmごと','ui.pacingEvery1':'1kmごと',
+  'ui.pacingCalc':'計算','ui.pacingDistanceCol':'距離','ui.pacingTimeCol':'通過予定タイム',
+  'ui.pacingInvalid':'有効な目標タイムと距離を入力してください','ui.downloadWristband':'リストバンド画像をダウンロード',
+  'ui.wristbandTitle':'ペースリストバンド',
+  'ui.shareImageSuffix':'-シェア画像.png','ui.wristbandFilename':'ペース手帳.png',
+  // ---- 補給時程 ----
+  'ui.nutritionScheduleTitle':'補給計画',
+  // ---- 鞋款管理 ----
+  'ui.shoeManageTitle':'シューズ管理',
+  'ui.shoeHint':'レースで履いたシューズを記録し、完走レースの累計距離から交換時期の目安にできます（本アプリに記録されたレース距離のみ集計、練習分は含みません）。',
+  'ui.shoeNamePlaceholder':'シューズ名（例：ASICS Metaspeed）','ui.shoeAdd':'追加','ui.shoeNoneYet':'まだシューズが登録されていません',
+  'ui.shoeStats':'走行距離','ui.shoeManage':'シューズを管理','ui.raceShoe':'着用シューズ',
+  'ui.shoeStatsLine':'{a} レース・{b} km',
+  // ---- 成績儀表板 ----
+  'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
+  'ui.resultAvgHr':'平均心拍数','ui.resultElevGain':'累積標高',
+  'ui.pbBadge':'自己ベスト PB','ui.generateShareImage':'シェア画像を作成',
+  'ui.splitPositive':'ポジティブスプリット（後半失速）','ui.splitNegative':'ネガティブスプリット（後半加速）',
+  // ---- GPX/TCX 匯入 ----
+  'ui.gpxImportBtn':'アクティビティファイルを読み込む（GPX / TCX）',
+  'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
+  'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（すでに公式記録が入力されている項目は上書きしません）：',
+  'ui.gpxModalTitle':'アクティビティファイルの読み込み',
+  'ui.gpxApply':'このレースに適用','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
+  // ---- Excel 匯入 ----
+  'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
+  'ui.excelParse':'解析してプレビュー','ui.excelStep2Title':'Excelを読み込む — レース一覧の確認',
+  'ui.excelSelectedCount':'{a} / {b} 件選択中。インポート前に名前・日付・距離・場所・ステータスを直接編集できます。チェックを外すとその行はスキップされます（距離の単位、DNF/DNSは念のため確認してください）。',
+  'ui.excelBackToSheets':'‹ シート選択に戻る','ui.excelColDate':'日付','ui.excelColName':'大会名','ui.excelColDistance':'距離',
+  'ui.excelColVenue':'場所','ui.excelColStatus':'ステータス','ui.excelColSource':'元シート','ui.excelImport':'選択したレースを読み込む',
+  // ---- 貼上資料快速填入 ----
+  'ui.pasteModalTitle':'データを貼り付けて入力',
+  'ui.pasteHint':'大会サイト・要項PDF・完走証の内容をAIに整理してもらったJSONをここに貼り付けると、対応する項目だけが自動的に反映されます。',
+  'ui.pasteHintFull':'大会サイト、要項PDF、完走証の内容をAIに <span class="mono">race-document.schema.json</span> の形式のJSONに整理してもらい、ここに貼り付けると「{race}」に反映されます。貼り付けた項目だけが更新され、他のデータは変更されません。',
+  'ui.pasteJsonError':'JSON形式エラー：',
+  'ui.errNotEnoughPoints':'ファイル内に十分な座標点がありません',
+  'ui.errCannotParseFile':'ファイル形式を解析できません。有効な GPX または TCX ファイルか確認してください',
+  'ui.errPasteNotObject':'JSONオブジェクト（{ } で囲まれたもの）を貼り付けてください',
+  'ui.errVapidNotSet':'VAPID鍵が未設定です','ui.errNoServiceWorker':'このブラウザはバックグラウンド通知に対応していません',
+  'ui.errNoNotificationSupport':'このブラウザは通知機能に対応していません','ui.errPermissionDenied':'通知の許可が得られませんでした',
+  'ui.errNoToken':'プッシュ通知用のトークンを取得できませんでした',
+  // ---- 疑難排解／通知 ----
+  'ui.authUnauthorizedDomain':'このドメインはまだFirebaseで許可されていません。Authentication → Settings → Authorized domainsに追加してください',
+  'ui.unknownError':'不明なエラー',
+  'ui.authPopupBlocked':'ブラウザがポップアップをブロックしました。ポップアップを許可して再試行してください',
+  'ui.authPopupClosed':'ログインウィンドウが閉じられました。もう一度お試しください',
+  'ui.authFailed':'ログイン失敗：','ui.notifFailed':'通知の設定に失敗：',
+  'ui.helpVersionLine':'バージョン {n} ・ より詳しい使い方やクラウド同期／プッシュ通知の設定手順はリポジトリの USAGE.md をご覧ください',
+  'ui.helpBodyHtml':`
+      <h3>カレンダーとフィルター</h3>
+      <ul>
+        <li>上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え、「今日」で当月に戻ります。スマートフォンでは自動的に当月のレース一覧表示になります。</li>
+        <li>フィルターは2段階：まず「すべて／今後の予定／過去の記録」を選択し、「今後の予定」または「過去の記録」を選ぶと詳細ステータスが展開されます（ボタンが一度に多く表示されすぎないように）。</li>
+        <li>検索欄でレース名や都市名で絞り込みできます。5件以上記録するとキャリアデータ（完走数、フルマラソン自己ベスト、年間走行距離）が表示されます。</li>
+      </ul>
+      <h3>レースの追加と管理</h3>
+      <ul>
+        <li>右上の「+ 大会を追加」で作成。カレンダーや一覧のレースをクリックすると詳細画面が開き、編集内容は自動保存されます。</li>
+        <li>詳細画面の「大会を削除」は誤操作防止のため2回クリックが必要です。</li>
+      </ul>
+      <h3>レース詳細の項目</h3>
+      <ul>
+        <li><strong>基本情報</strong>：大会名、シリーズ（同じ名前なら自動で年別比較）、ステータス、日程、抽選情報。</li>
+        <li><strong>コースと地形</strong>：距離、標高、標高変化グラフ、CP詳細、ITRA/UTMBポイント（要手動入力）。</li>
+        <li><strong>装備・補給・戦略</strong>：装備リスト（ロード／トレイル／トライアスロン標準装備テンプレート対応）、補給計画、ペース計算＆リストバンド作成。</li>
+        <li><strong>レース後の記録</strong>：成績ダッシュボード、前後半のペース分析、シューズ走行距離管理、シェア画像のワンクリック作成。</li>
+      </ul>
+      <h3>データの読み込み</h3>
+      <ul>
+        <li><strong>Excelを読み込む</strong>：レース計画表を読み込み、シートを選択して1件ずつ確認してから取り込めます。</li>
+        <li><strong>アクティビティファイル（GPX/TCX）</strong>：Garmin/COROS/Strava から書き出したファイルに対応、距離・標高・心拍数・スプリットを自動取得。</li>
+        <li><strong>データを貼り付けて入力</strong>：大会サイト・要項・完走証の内容をAIにJSON化してもらい貼り付けると、該当項目だけ反映されます。</li>
+      </ul>
+      <h3>リマインダーと通知</h3>
+      <ul>
+        <li><strong>カレンダーリマインダー</strong>：詳細画面の「カレンダーに追加」または左下の「カレンダーリマインダーを書き出す」で .ics ファイルをダウンロードし、スマホのカレンダーに追加。1ヶ月前・1週間前の通知が内蔵されています。</li>
+        <li><strong>プッシュ通知</strong>（オプション、Cloud Functionsの追加デプロイが必要）：クラウド同期でログイン後、右上の「プッシュ通知を有効にする」。デプロイ手順は USAGE.md 参照。</li>
+      </ul>
+      <h3>クラウド同期とデータの安全性</h3>
+      <ul>
+        <li>右上の「Googleでログインして同期」でデバイス間同期（Firebaseの設定が必要、USAGE.md参照）。ログインしなくても通常利用には影響ありません。</li>
+        <li>ローカル保存が常にメインのデータソースです。ログイン後に追加でクラウド同期されます。初回ログイン時はクラウドとローカルのデータを自動でマージし、データが失われることはありません。</li>
+        <li>「JSONを書き出す」でいつでも全データをバックアップ可能。「すべてのデータを削除」は2回クリックで確認します。</li>
+      </ul>
+      <h3>その他</h3>
+      <ul>
+        <li>右上の月／太陽アイコンでダークモード切り替え、選択内容は記憶されます。</li>
+        <li>右上の言語メニューで繁体字中国語／日本語／英語に対応しています。</li>
+        <li>スマートフォンのブラウザでサイトを開き「ホーム画面に追加」を選ぶと、専用アイコンでアプリのように使えます。</li>
+      </ul>`,
+
+  // ---- 選項清單（狀態、運動種類等） ----
+  'opt.status.registered':'エントリー済み','opt.status.lottery_pending':'抽選待ち','opt.status.considering':'検討中',
+  'opt.status.completed':'完走','opt.status.dns':'未出走 (DNS)','opt.status.dnf':'途中棄権 (DNF)',
+  'opt.sport.road_running':'ロード','opt.sport.trail_running':'トレイルラン','opt.sport.ultra_marathon':'ウルトラマラソン',
+  'opt.sport.duathlon':'デュアスロン','opt.sport.triathlon':'トライアスロン','opt.sport.cycling':'サイクリング',
+  'opt.sport.obstacle_race':'障害物レース','opt.sport.other':'その他',
+  'opt.format.solo':'個人','opt.format.pair':'ペア','opt.format.relay':'リレー','opt.format.loop':'周回','opt.format.age_group':'年代別',
+  'opt.payment.unpaid':'未払い','opt.payment.paid':'支払済み','opt.payment.refunding':'返金手続き中',
+  'opt.booking.considering':'検討中','opt.booking.booked':'予約済み','opt.booking.paid':'支払済み','opt.booking.cancelled':'キャンセル',
+  'opt.weather.sunny':'晴れ','opt.weather.cloudy':'曇り','opt.weather.rainy':'雨','opt.weather.foggy':'霧','opt.weather.other':'その他',
+  'opt.role.partner':'同行者','opt.role.cheer_squad':'応援団','opt.role.emergency_contact':'緊急連絡先','opt.role.pacer':'ペーサー','opt.role.other':'その他',
+  'opt.equipcat.shoes':'シューズ','opt.equipcat.apparel':'ウェア','opt.equipcat.vest':'ベスト','opt.equipcat.headlamp':'ヘッドライト',
+  'opt.equipcat.nutrition':'補給食','opt.equipcat.mandatory_gear':'必携装備','opt.equipcat.other':'その他',
+  'opt.mediatype.official_site':'公式サイト','opt.mediatype.brochure_pdf':'要項PDF','opt.mediatype.gpx_track':'GPXトラック',
+  'opt.mediatype.photo_album':'アルバム','opt.mediatype.certificate':'完走証','opt.mediatype.medal_photo':'メダル写真','opt.mediatype.other':'その他',
+  'opt.transportmode.hsr':'新幹線／高鉄','opt.transportmode.shuttle':'シャトルバス','opt.transportmode.self_drive':'自家用車',
+  'opt.transportmode.flight':'飛行機','opt.transportmode.other':'その他',
+  'opt.direction.outbound':'往路','opt.direction.return':'復路',
+
+  // ---- 賽事詳情欄位（依區塊分命名空間，避免同名欄位衝突） ----
+  'field.basic.name':'大会名','field.basic.alias':'別名／英語名',
+  'field.basic.series':'シリーズ名（年別比較用、同じシリーズは同じ名前で）',
+  'field.basic.status':'ステータス','field.basic.sportType':'主な種目','field.basic.raceFormat':'形式',
+  'field.basic.schedule.raceDate':'レース日','field.basic.schedule.startTime':'スタート時刻',
+  'field.basic.schedule.registrationOpenDate':'エントリー開始日','field.basic.schedule.registrationCloseDate':'エントリー締切日',
+  'field.basic.schedule.lotteryResultDate':'抽選結果発表日',
+  'field.basic.lottery.applicants':'抽選応募者数','field.basic.lottery.winners':'抽選当選枠／当選者数',
+  'field.basic.lottery.winRatePct':'当選率','field.basic.lottery.wasSelected':'今回当選したか',
+  'field.basic.location.venueName':'スタート／ゴール地点','field.basic.location.city':'都市／県','field.basic.location.country':'国',
+  'field.route.route.distanceKm':'総距離','field.route.route.elevationGainM':'累積標高（上り）','field.route.route.elevationLossM':'累積標高（下り）',
+  'field.route.route.startAltitudeM':'スタート標高','field.route.route.minAltitudeM':'最低標高','field.route.route.maxAltitudeM':'最高標高',
+  'field.route.route.surface.pavedPct':'舗装路の割合','field.route.route.surface.trailPct':'未舗装路の割合','field.route.route.surface.stairsPct':'階段の割合',
+  'field.route.route.checkpointCount':'CP／エイド数','field.route.route.cutoffTimeSeconds':'制限時間',
+  'field.route.route.itraPoints':'ITRA／UTMBポイント（公式発表値、自動計算ではありません）',
+  'field.route.route.terrainNotes':'コース・急登に関する備考',
+  'field.weather.climateForecast.avgTempC':'例年の平均気温','field.weather.climateForecast.avgHumidityPct':'例年の平均湿度',
+  'field.weather.climateForecast.windDirection':'風向き','field.weather.climateForecast.windSpeedKmh':'風速',
+  'field.weather.climateForecast.rainProbabilityPct':'降水確率','field.weather.raceDayWeather.condition':'当日の天候',
+  'field.weather.raceDayWeather.feelsLikeTempC':'体感温度（実績）','field.weather.raceDayWeather.humidityPct':'当日の湿度',
+  'field.weather.raceDayWeather.notes':'天候メモ',
+  'field.logistics.budget.registrationFee':'エントリー費','field.logistics.budget.currency':'通貨',
+  'field.logistics.budget.paymentStatus':'支払い状況','field.logistics.budget.chipDeposit':'計測チップ保証金',
+  'field.prep.nutritionPlan.gelCount':'エナジージェル数','field.prep.nutritionPlan.electrolyteTabletCount':'塩分タブレット数',
+  'field.prep.nutritionPlan.hydrationCapacityMl':'水分携行量（想定）','field.prep.nutritionPlan.notes':'補給メモ',
+  'field.prep.trainingPlan.planStartDate':'練習計画開始日','field.prep.trainingPlan.planEndDate':'練習計画終了日',
+  'field.prep.trainingPlan.taperStartDate':'テーパリング開始日','field.prep.trainingPlan.weeklyMileageTargetKm':'週間走行距離目標',
+  'field.prep.trainingPlan.keyWorkoutNotes':'重要練習メモ','field.prep.trainingPlan.externalPlanUrl':'外部練習計画リンク',
+  'field.prep.trainingPlan.notes':'練習メモ',
+  'field.post.results.gunTimeSeconds':'グロスタイム（Gun Time）','field.post.results.chipTimeSeconds':'ネットタイム（Chip Time）',
+  'field.post.results.overallRank':'総合順位','field.post.results.overallParticipants':'総エントリー数',
+  'field.post.results.ageGroupRank':'年代別順位','field.post.results.ageGroupParticipants':'年代別エントリー数',
+  'field.post.results.isPb':'自己ベスト (PB)','field.post.results.firstHalfSeconds':'前半タイム','field.post.results.secondHalfSeconds':'後半タイム',
+  'field.post.performanceData.avgHr':'平均心拍数','field.post.performanceData.maxHr':'最大心拍数',
+  'field.post.performanceData.avgCadence':'平均ケイデンス','field.post.performanceData.avgPowerWatts':'平均パワー',
+  'field.post.performanceData.dataSource':'データ元',
+  'field.post.review.hitTheWallNotes':'壁にぶつかった記録','field.post.review.courseReview':'コースの感想',
+  'field.post.review.pros':'良かった点','field.post.review.cons':'改善点','field.post.review.lessonsLearned':'振り返りメモ',
+
+  'field.checkpoints.name':'名称','field.checkpoints.distanceKm':'距離','field.checkpoints.cutoffTimeSeconds':'関門時刻',
+  'field.checkpoints.elevationM':'標高','field.checkpoints.hasWater':'給水あり','field.checkpoints.hasFood':'給食あり',
+  'field.checkpoints.hasDropBag':'ドロップバッグ可','field.checkpoints.notes':'備考',
+  'field.accommodations.hotelName':'宿泊先名','field.accommodations.address':'住所',
+  'field.accommodations.checkIn':'チェックイン','field.accommodations.checkOut':'チェックアウト',
+  'field.accommodations.distanceToStartKm':'スタート地点までの距離','field.accommodations.bookingStatus':'予約状況',
+  'field.accommodations.cost':'費用','field.accommodations.notes':'備考',
+  'field.transportation.direction':'往復','field.transportation.mode':'交通手段',
+  'field.transportation.departureTime':'出発時刻','field.transportation.pickupLocation':'集合場所','field.transportation.notes':'備考',
+  'field.companions.name':'氏名','field.companions.role':'役割','field.companions.contactInfo':'連絡先','field.companions.notes':'備考',
+  'field.equipmentChecklist.itemName':'アイテム名','field.equipmentChecklist.category':'カテゴリー',
+  'field.equipmentChecklist.isMandatory':'必携装備','field.equipmentChecklist.isPacked':'準備済み','field.equipmentChecklist.notes':'備考',
+  'field.splits.distanceKm':'距離','field.splits.splitTimeSeconds':'スプリットタイム','field.splits.avgHr':'平均心拍数',
+  'field.splits.avgPaceSecPerKm':'平均ペース','field.splits.elevationGainM':'上り','field.splits.notes':'備考',
+  'field.mediaLinks.type':'種類','field.mediaLinks.url':'リンク','field.mediaLinks.notes':'備考',
+  'field.nutritionSchedule.distanceKm':'距離／CP','field.nutritionSchedule.item':'補給内容',
+  'field.nutritionSchedule.plannedAmount':'予定量','field.nutritionSchedule.consumed':'レース後：摂取済み','field.nutritionSchedule.notes':'備考',
+
+  'list.checkpoints':'CP／エイドステーション','list.accommodations':'宿泊','list.transportation':'交通',
+  'list.companions':'同行者','list.equipmentChecklist':'装備リスト','list.nutritionSchedule':'補給計画',
+  'list.splits':'スプリット','list.mediaLinks':'関連リンク',
+};
+
+const EN={
+  // ---- static UI ----
+  'ui.appTitle':'Race Log','ui.appTagline':'Your complete record, from sign-up to finish line',
+  'ui.newRace':'+ New Race','ui.searchPlaceholder':'Search by race name or city…','ui.today':'Today',
+  'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
+  'ui.importExcel':'Import Excel','ui.exportJson':'Export JSON','ui.exportIcs':'Export Calendar Reminders',
+  'ui.clearAll':'Clear All Data','ui.clearAllConfirm':'Are you sure? Click again to confirm',
+  'ui.cloudNotConfigured':'Cloud sync not configured','ui.signIn':'Sign in with Google to sync','ui.signOut':'Sign out',
+  'ui.enableNotif':'Enable push notifications','ui.notifEnabled':'Notifications enabled',
+  'ui.deleteRace':'Delete race','ui.deleteConfirm':'Are you sure? Click again to confirm',
+  'ui.pasteQuickFill':'Paste to quick-fill','ui.exportRaceIcs':'Add calendar reminder',
+  'ui.createRace':'Create Race','ui.cancel':'Cancel','ui.close':'Close','ui.apply':'Apply',
+  'ui.selectAll':'Select All','ui.selectNone':'Select None','ui.addItem':'+ Add','ui.delete':'Delete',
+  'ui.notYetAdded':'Nothing added yet','ui.noMatchingRaces':'No races match the current filters',
+  'ui.loading':'Loading…',
+  'ui.noMatchingRacesMonth':'No matching races this month',
+  'ui.selectRaceHint':'Select a race from the calendar above, or create a new one.',
+  'ui.unnamedRace':'(Untitled race)','ui.dateNotSet':'Date not set',
+  'ui.countdownDays':'{n} days to go','ui.startToday':'Starts today','ui.pastDaysAgo':'{n} days ago',
+  'ui.justToday':'Today','ui.monthsLeft':'About {n} months left','ui.weeksLeft':'{n} weeks left','ui.daysLeft':'{n} days left',
+  'ui.newRaceName':'Race name','ui.newRaceNamePlaceholder':'e.g. 2026 Taipei Marathon',
+  'ui.newRaceSport':'Sport type','ui.newRaceStatus':'Status','ui.newRaceDate':'Race date',
+  'ui.helpTitle':'Help','ui.help':'Help',
+  'ui.langToggle':'繁體中文 / 日本語 / English',
+  'ui.calPrev':'Previous month','ui.calNext':'Next month',
+  'ui.weekday.0':'Sun','ui.weekday.1':'Mon','ui.weekday.2':'Tue','ui.weekday.3':'Wed','ui.weekday.4':'Thu','ui.weekday.5':'Fri','ui.weekday.6':'Sat',
+  'ui.careerTotalRaces':'Races finished','ui.careerMarathonPB':'Marathon PB','ui.careerYearDistance':'Distance this year',
+  'ui.sectionBasic':'Basic Info & Schedule','ui.sectionRoute':'Course & Terrain','ui.sectionWeather':'Weather',
+  'ui.sectionLogistics':'Budget & Logistics','ui.sectionPrep':'Gear, Nutrition & Strategy (Pre-race)',
+  'ui.sectionPost':'Results & Post-race Data','ui.seriesComparison':'Series Comparison (Year over Year)',
+  'ui.seriesBest':'Series best chip time','ui.seriesYear':'Year','ui.seriesThisRace':' (this race)',
+  'ui.goalsTitle':'Pre-race Goals','ui.goalTargetTime':'Target Time','ui.goalPaceStrategy':'Pace Strategy',
+  'ui.equipmentTitle':'Gear Checklist','ui.templateSelectEmpty':'No saved templates',
+  'ui.applyTemplate':'Apply template','ui.saveAsTemplate':'Save as template',
+  'ui.deleteTemplate':'Delete template','ui.deleteTemplateConfirm':'Confirm delete? Click again',
+  'ui.templateNamePlaceholder':'Template name, e.g. "Road standard kit"','ui.saveTemplate':'Save template',
+  'ui.pacingCalcTitle':'Pace Calculator & Wristband Generator',
+  'ui.pacingHint':'Enter a target time, distance and pacing strategy to calculate your expected split times.',
+  'ui.pacingTargetTime':'Target time','ui.pacingDistance':'Distance (km)','ui.pacingStrategy':'Pacing strategy',
+  'ui.pacingEven':'Even split','ui.pacingNegative':'Negative split (faster second half)','ui.pacingPositive':'Positive split (conservative second half)',
+  'ui.pacingInterval':'Interval','ui.pacingEvery5':'Every 5 km','ui.pacingEvery10':'Every 10 km','ui.pacingEvery1':'Every 1 km',
+  'ui.pacingCalc':'Calculate','ui.pacingDistanceCol':'Distance','ui.pacingTimeCol':'Expected split time',
+  'ui.pacingInvalid':'Please enter a valid target time and distance','ui.downloadWristband':'Download wristband image',
+  'ui.wristbandTitle':'Pace Wristband',
+  'ui.shareImageSuffix':'-share-image.png','ui.wristbandFilename':'pace-wristband.png',
+  'ui.nutritionScheduleTitle':'Nutrition Schedule',
+  'ui.shoeManageTitle':'Shoe Manager',
+  'ui.shoeHint':'Track which shoes you wore for each race, and see accumulated race mileage per pair to help gauge when to retire them (only counts race distance logged in this app, not training miles).',
+  'ui.shoeNamePlaceholder':'Shoe name, e.g. "ASICS Metaspeed"','ui.shoeAdd':'Add','ui.shoeNoneYet':'No shoes added yet',
+  'ui.shoeStats':'Mileage','ui.shoeManage':'Manage shoes','ui.raceShoe':'Shoes worn',
+  'ui.shoeStatsLine':'{a} races · {b} km',
+  'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
+  'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
+  'ui.pbBadge':'Personal Best','ui.generateShareImage':'Generate share image',
+  'ui.splitPositive':'Positive split (slowed down)','ui.splitNegative':'Negative split (sped up)',
+  'ui.gpxImportBtn':'Import activity file (GPX / TCX)',
+  'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
+  'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (fields that already have official results will not be overwritten):',
+  'ui.gpxModalTitle':'Import Activity File',
+  'ui.gpxApply':'Apply to this race','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
+  'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
+  'ui.excelParse':'Parse & Preview','ui.excelStep2Title':'Import Excel — Review Races',
+  'ui.excelSelectedCount':'{a} / {b} selected. You can edit name, date, distance, location and status directly before importing; uncheck a row to skip it (worth double-checking distance units and DNF/DNS).',
+  'ui.excelBackToSheets':'‹ Back to sheet selection','ui.excelColDate':'Date','ui.excelColName':'Race name','ui.excelColDistance':'Distance',
+  'ui.excelColVenue':'Location','ui.excelColStatus':'Status','ui.excelColSource':'Source sheet','ui.excelImport':'Import selected races',
+  'ui.pasteModalTitle':'Paste to Quick-fill',
+  'ui.pasteHint':'Have an AI turn a race website, brochure PDF or finisher certificate into JSON, then paste it here — only the fields you paste will be updated.',
+  'ui.pasteHintFull':'Ask an AI to turn a race website, brochure PDF or finisher certificate into JSON matching <span class="mono">race-document.schema.json</span>, then paste it here to apply it to "{race}". Only the fields you paste will be updated — everything else stays as-is.',
+  'ui.pasteJsonError':'Invalid JSON: ',
+  'ui.errNotEnoughPoints':'Not enough coordinate points in this file',
+  'ui.errCannotParseFile':'Could not parse this file — please check it\u2019s a valid GPX or TCX file',
+  'ui.errPasteNotObject':'Please paste a JSON object (wrapped in { })',
+  'ui.errVapidNotSet':'VAPID key not configured yet','ui.errNoServiceWorker':'This browser does not support background notifications',
+  'ui.errNoNotificationSupport':'This browser does not support notifications','ui.errPermissionDenied':'Notification permission was not granted',
+  'ui.errNoToken':'Could not obtain a push notification token',
+  'ui.authUnauthorizedDomain':'This domain is not authorized in Firebase yet — add it under Authentication → Settings → Authorized domains',
+  'ui.unknownError':'Unknown error',
+  'ui.authPopupBlocked':'Your browser blocked the sign-in popup — please allow popups and try again',
+  'ui.authPopupClosed':'The sign-in window was closed — please try again',
+  'ui.authFailed':'Sign-in failed: ','ui.notifFailed':'Failed to enable notifications: ',
+  'ui.helpVersionLine':'Version {n} ・ For the full guide and cloud-sync/push-notification setup steps, see USAGE.md in the repo',
+  'ui.helpBodyHtml':`
+      <h3>Calendar & Filters</h3>
+      <ul>
+        <li>Use <span class="mono">‹ Year Month ›</span> at the top to change months, and "Today" to jump back to the current month. On mobile it automatically switches to a list of this month's races.</li>
+        <li>Filters have two levels: pick "All / Upcoming / History" first — tapping "Upcoming" or "History" reveals the more specific statuses underneath, so the bar isn't crowded with options at once.</li>
+        <li>The search box filters by race name or city. Once you've logged 5+ races, a career stats strip appears (races finished, marathon PB, distance this year).</li>
+      </ul>
+      <h3>Creating & Managing Races</h3>
+      <ul>
+        <li>Use "+ New Race" in the top right to create one. Click a race on the calendar or list to open its detail page — edits save automatically.</li>
+        <li>"Delete race" on the detail page needs two clicks to confirm, to avoid accidental deletion.</li>
+      </ul>
+      <h3>Race Detail Fields</h3>
+      <ul>
+        <li><strong>Basic Info</strong>: name, series (same-name series get automatic year-over-year PB comparison), status, schedule, lottery info.</li>
+        <li><strong>Course & Terrain</strong>: distance, elevation, an elevation profile chart, checkpoint details, ITRA/UTMB points (enter manually).</li>
+        <li><strong>Gear, Nutrition & Strategy</strong>: gear checklist (with built-in road/trail/triathlon starter templates), a nutrition schedule, and a pace calculator with wristband generator.</li>
+        <li><strong>Post-race Record</strong>: a results dashboard, first/second-half pace analysis, shoe mileage tracking, and one-click share image generation.</li>
+      </ul>
+      <h3>Importing Data</h3>
+      <ul>
+        <li><strong>Import Excel</strong>: reads your own race planning spreadsheet — pick which sheets, review each row before importing.</li>
+        <li><strong>Import Activity File (GPX/TCX)</strong>: works with files exported from Garmin, COROS or Strava — automatically pulls distance, elevation, heart rate and splits.</li>
+        <li><strong>Paste to Quick-fill</strong>: have an AI turn a race website, brochure or finisher certificate into JSON and paste it in — only the pasted fields get updated.</li>
+      </ul>
+      <h3>Reminders & Notifications</h3>
+      <ul>
+        <li><strong>Calendar Reminders</strong>: use "Add calendar reminder" on a race's detail page, or "Export Calendar Reminders" at the bottom left, to download an .ics file for your phone's calendar — with built-in 1-month and 1-week alerts.</li>
+        <li><strong>Push Notifications</strong> (optional, requires deploying a separate Cloud Function): once signed in for cloud sync, use "Enable push notifications" in the top right. See USAGE.md for deployment steps.</li>
+      </ul>
+      <h3>Cloud Sync & Data Safety</h3>
+      <ul>
+        <li>"Sign in with Google to sync" in the top right syncs your data across devices (requires your own Firebase setup, see USAGE.md). Not signing in has no effect on local use.</li>
+        <li>Local storage is always the primary data source — signing in adds cloud sync on top. On first sign-in, cloud and local data are merged automatically, so nothing is lost.</li>
+        <li>"Export JSON" backs up all your data any time. "Clear All Data" needs two clicks to confirm.</li>
+      </ul>
+      <h3>Other</h3>
+      <ul>
+        <li>The moon/sun icon in the top right toggles dark mode and remembers your choice.</li>
+        <li>The language menu in the top right supports Traditional Chinese, Japanese and English.</li>
+        <li>On mobile, open the site in your browser and choose "Add to Home Screen" for an app-like experience with a custom icon.</li>
+      </ul>`,
+
+  // ---- option sets ----
+  'opt.status.registered':'Registered','opt.status.lottery_pending':'Lottery Pending','opt.status.considering':'Considering',
+  'opt.status.completed':'Completed','opt.status.dns':'DNS','opt.status.dnf':'DNF',
+  'opt.sport.road_running':'Road Running','opt.sport.trail_running':'Trail Running','opt.sport.ultra_marathon':'Ultramarathon',
+  'opt.sport.duathlon':'Duathlon','opt.sport.triathlon':'Triathlon','opt.sport.cycling':'Cycling',
+  'opt.sport.obstacle_race':'Obstacle Race','opt.sport.other':'Other',
+  'opt.format.solo':'Solo','opt.format.pair':'Pair','opt.format.relay':'Relay','opt.format.loop':'Loop','opt.format.age_group':'Age Group',
+  'opt.payment.unpaid':'Unpaid','opt.payment.paid':'Paid','opt.payment.refunding':'Refunding',
+  'opt.booking.considering':'Considering','opt.booking.booked':'Booked','opt.booking.paid':'Paid','opt.booking.cancelled':'Cancelled',
+  'opt.weather.sunny':'Sunny','opt.weather.cloudy':'Cloudy','opt.weather.rainy':'Rainy','opt.weather.foggy':'Foggy','opt.weather.other':'Other',
+  'opt.role.partner':'Companion','opt.role.cheer_squad':'Cheer Squad','opt.role.emergency_contact':'Emergency Contact','opt.role.pacer':'Pacer','opt.role.other':'Other',
+  'opt.equipcat.shoes':'Shoes','opt.equipcat.apparel':'Apparel','opt.equipcat.vest':'Vest','opt.equipcat.headlamp':'Headlamp',
+  'opt.equipcat.nutrition':'Nutrition','opt.equipcat.mandatory_gear':'Mandatory Gear','opt.equipcat.other':'Other',
+  'opt.mediatype.official_site':'Official Site','opt.mediatype.brochure_pdf':'Race Brochure PDF','opt.mediatype.gpx_track':'GPX Track',
+  'opt.mediatype.photo_album':'Photo Album','opt.mediatype.certificate':'Certificate','opt.mediatype.medal_photo':'Medal Photo','opt.mediatype.other':'Other',
+  'opt.transportmode.hsr':'High-speed Rail','opt.transportmode.shuttle':'Shuttle','opt.transportmode.self_drive':'Self-drive',
+  'opt.transportmode.flight':'Flight','opt.transportmode.other':'Other',
+  'opt.direction.outbound':'Outbound','opt.direction.return':'Return',
+
+  // ---- field labels ----
+  'field.basic.name':'Race Name','field.basic.alias':'Alias / English Name',
+  'field.basic.series':'Race Series (for year-over-year comparison — use the same name each year)',
+  'field.basic.status':'Status','field.basic.sportType':'Primary Sport','field.basic.raceFormat':'Format',
+  'field.basic.schedule.raceDate':'Race Date','field.basic.schedule.startTime':'Start Time',
+  'field.basic.schedule.registrationOpenDate':'Registration Opens','field.basic.schedule.registrationCloseDate':'Registration Closes',
+  'field.basic.schedule.lotteryResultDate':'Lottery Result Date',
+  'field.basic.lottery.applicants':'Lottery Applicants','field.basic.lottery.winners':'Lottery Slots / Winners',
+  'field.basic.lottery.winRatePct':'Win Rate','field.basic.lottery.wasSelected':'Selected This Time',
+  'field.basic.location.venueName':'Start/Finish Venue','field.basic.location.city':'City','field.basic.location.country':'Country',
+  'field.route.route.distanceKm':'Total Distance','field.route.route.elevationGainM':'Elevation Gain','field.route.route.elevationLossM':'Elevation Loss',
+  'field.route.route.startAltitudeM':'Start Altitude','field.route.route.minAltitudeM':'Min Altitude','field.route.route.maxAltitudeM':'Max Altitude',
+  'field.route.route.surface.pavedPct':'Paved %','field.route.route.surface.trailPct':'Trail %','field.route.route.surface.stairsPct':'Stairs %',
+  'field.route.route.checkpointCount':'CP / Aid Station Count','field.route.route.cutoffTimeSeconds':'Overall Cutoff Time',
+  'field.route.route.itraPoints':'ITRA / UTMB Points (official value, not auto-calculated)',
+  'field.route.route.terrainNotes':'Course / Climb Notes',
+  'field.weather.climateForecast.avgTempC':'Avg Historical Temp','field.weather.climateForecast.avgHumidityPct':'Avg Historical Humidity',
+  'field.weather.climateForecast.windDirection':'Wind Direction','field.weather.climateForecast.windSpeedKmh':'Wind Speed',
+  'field.weather.climateForecast.rainProbabilityPct':'Rain Probability','field.weather.raceDayWeather.condition':'Race-day Condition',
+  'field.weather.raceDayWeather.feelsLikeTempC':'Actual Feels-like Temp','field.weather.raceDayWeather.humidityPct':'Race-day Humidity',
+  'field.weather.raceDayWeather.notes':'Weather Notes',
+  'field.logistics.budget.registrationFee':'Registration Fee','field.logistics.budget.currency':'Currency',
+  'field.logistics.budget.paymentStatus':'Payment Status','field.logistics.budget.chipDeposit':'Chip Deposit',
+  'field.prep.nutritionPlan.gelCount':'Energy Gels','field.prep.nutritionPlan.electrolyteTabletCount':'Electrolyte / Salt Tablets',
+  'field.prep.nutritionPlan.hydrationCapacityMl':'Hydration Capacity (est.)','field.prep.nutritionPlan.notes':'Nutrition Notes',
+  'field.prep.trainingPlan.planStartDate':'Training Plan Start','field.prep.trainingPlan.planEndDate':'Training Plan End',
+  'field.prep.trainingPlan.taperStartDate':'Taper Start Date','field.prep.trainingPlan.weeklyMileageTargetKm':'Weekly Mileage Target',
+  'field.prep.trainingPlan.keyWorkoutNotes':'Key Workout Notes','field.prep.trainingPlan.externalPlanUrl':'External Plan Link',
+  'field.prep.trainingPlan.notes':'Training Notes',
+  'field.post.results.gunTimeSeconds':'Gun Time','field.post.results.chipTimeSeconds':'Chip Time',
+  'field.post.results.overallRank':'Overall Rank','field.post.results.overallParticipants':'Overall Field Size',
+  'field.post.results.ageGroupRank':'Age-group Rank','field.post.results.ageGroupParticipants':'Age-group Field Size',
+  'field.post.results.isPb':'Personal Best (PB)','field.post.results.firstHalfSeconds':'First Half Time','field.post.results.secondHalfSeconds':'Second Half Time',
+  'field.post.performanceData.avgHr':'Avg Heart Rate','field.post.performanceData.maxHr':'Max Heart Rate',
+  'field.post.performanceData.avgCadence':'Avg Cadence','field.post.performanceData.avgPowerWatts':'Avg Power',
+  'field.post.performanceData.dataSource':'Data Source',
+  'field.post.review.hitTheWallNotes':'"Hit the Wall" Notes','field.post.review.courseReview':'Course Review',
+  'field.post.review.pros':'What Went Well','field.post.review.cons':'What Did Not Go Well','field.post.review.lessonsLearned':'Lessons Learned',
+
+  'field.checkpoints.name':'Name','field.checkpoints.distanceKm':'Distance','field.checkpoints.cutoffTimeSeconds':'Cutoff Time',
+  'field.checkpoints.elevationM':'Elevation','field.checkpoints.hasWater':'Water Available','field.checkpoints.hasFood':'Food Available',
+  'field.checkpoints.hasDropBag':'Drop Bag Allowed','field.checkpoints.notes':'Notes',
+  'field.accommodations.hotelName':'Hotel Name','field.accommodations.address':'Address',
+  'field.accommodations.checkIn':'Check-in','field.accommodations.checkOut':'Check-out',
+  'field.accommodations.distanceToStartKm':'Distance to Start','field.accommodations.bookingStatus':'Booking Status',
+  'field.accommodations.cost':'Cost','field.accommodations.notes':'Notes',
+  'field.transportation.direction':'Direction','field.transportation.mode':'Mode',
+  'field.transportation.departureTime':'Departure Time','field.transportation.pickupLocation':'Pickup Location','field.transportation.notes':'Notes',
+  'field.companions.name':'Name','field.companions.role':'Role','field.companions.contactInfo':'Contact Info','field.companions.notes':'Notes',
+  'field.equipmentChecklist.itemName':'Item Name','field.equipmentChecklist.category':'Category',
+  'field.equipmentChecklist.isMandatory':'Mandatory','field.equipmentChecklist.isPacked':'Packed','field.equipmentChecklist.notes':'Notes',
+  'field.splits.distanceKm':'Distance','field.splits.splitTimeSeconds':'Split Time','field.splits.avgHr':'Avg Heart Rate',
+  'field.splits.avgPaceSecPerKm':'Avg Pace','field.splits.elevationGainM':'Elevation Gain','field.splits.notes':'Notes',
+  'field.mediaLinks.type':'Type','field.mediaLinks.url':'URL','field.mediaLinks.notes':'Notes',
+  'field.nutritionSchedule.distanceKm':'Distance / CP','field.nutritionSchedule.item':'Item',
+  'field.nutritionSchedule.plannedAmount':'Planned Amount','field.nutritionSchedule.consumed':'Post-race: Consumed','field.nutritionSchedule.notes':'Notes',
+
+  'list.checkpoints':'CP / Aid Stations','list.accommodations':'Accommodation','list.transportation':'Transportation',
+  'list.companions':'Companions','list.equipmentChecklist':'Gear Checklist','list.nutritionSchedule':'Nutrition Schedule',
+  'list.splits':'Splits','list.mediaLinks':'Media Links',
+};
+
+
 const STORAGE_KEY='races-v1';
 const TEMPLATES_KEY='equipment-templates-v1';
 // window.storage 只存在於 Claude 內建的 artifact 預覽環境；獨立架站（如 GitHub Pages）
@@ -829,19 +1352,31 @@ function renderAuthArea(){
   if(state.user){
     const name=state.user.displayName||state.user.email||'已登入';
     const photo=state.user.photoURL?`<img src="${state.user.photoURL}" alt="">`:'';
-    el.innerHTML=`<span class="auth-user small">${photo}<span class="mono">${escapeHtml(name)}</span></span><button id="btn-signout" class="btn-text">登出</button>`;
+    const notifConfigured=window.__cloud&&window.__cloud.notificationsConfigured;
+    const notifEnabled=localStorage.getItem('notif-enabled-v1')==='1';
+    const notifBtn=notifConfigured?`<button id="btn-enable-notif" class="btn-text">${notifEnabled?'推播已啟用':'啟用推播通知'}</button>`:'';
+    el.innerHTML=`<span class="auth-user small">${photo}<span class="mono">${escapeHtml(name)}</span></span>${notifBtn}<button id="btn-signout" class="btn-text">登出</button>${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
   }else{
     el.innerHTML=`<button id="btn-signin" class="btn-ghost">使用 Google 登入同步</button>${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
   }
 }
 function authErrorMessage(err){
   const code=err&&err.code||'';
-  if(code==='auth/unauthorized-domain') return '這個網域還沒被 Firebase 授權，請到 Authentication → Settings → Authorized domains 新增此網域';
-  if(code==='auth/popup-blocked') return '瀏覽器擋掉了登入視窗，請允許彈出視窗後再試一次';
-  if(code==='auth/popup-closed-by-user') return '登入視窗被關閉了，請再試一次';
+  if(code==='auth/unauthorized-domain') return t('ui.authUnauthorizedDomain','這個網域還沒被 Firebase 授權，請到 Authentication → Settings → Authorized domains 新增此網域');
+  if(code==='auth/popup-blocked') return t('ui.authPopupBlocked','瀏覽器擋掉了登入視窗，請允許彈出視窗後再試一次');
+  if(code==='auth/popup-closed-by-user') return t('ui.authPopupClosed','登入視窗被關閉了，請再試一次');
   if(code==='auth/cancelled-popup-request') return '';
-  return '登入失敗：'+(err&&err.message?err.message:'未知錯誤')+(code?`（${code}）`:'');
+  return t('ui.authFailed','登入失敗：')+(err&&err.message?err.message:t('ui.unknownError','未知錯誤'))+(code?`（${code}）`:'');
 }
+window.__onForegroundMessage=function(payload){
+  const title=(payload.notification&&payload.notification.title)||'賽事紀錄';
+  const body=(payload.notification&&payload.notification.body)||'';
+  const el=document.createElement('div');
+  el.className='foreground-toast';
+  el.innerHTML=`<strong>${escapeHtml(title)}</strong><span>${escapeHtml(body)}</span>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.remove(); },6000);
+};
 async function handleAuthChange(user){
   state.user=user;
   renderAuthArea();
@@ -864,6 +1399,20 @@ document.addEventListener('click',e=>{
       window.__cloud.signIn().catch(err=>{
         console.error('登入失敗',err);
         authError=authErrorMessage(err);
+        renderAuthArea();
+      });
+    }
+    return;
+  }
+  if(e.target.closest('#btn-enable-notif')){
+    if(cloudEnabled()&&state.user){
+      authError=null;
+      window.__cloud.enableNotifications(state.user.uid).then(()=>{
+        try{ localStorage.setItem('notif-enabled-v1','1'); }catch(err){}
+        renderAuthArea();
+      }).catch(err=>{
+        console.error('推播設定失敗',err);
+        authError=t('ui.notifFailed','推播設定失敗：')+err.message;
         renderAuthArea();
       });
     }
@@ -977,20 +1526,29 @@ function computeShoeStats(shoeId){
 /* ============================================================
    欄位 / 表單渲染
    ============================================================ */
+const OPTION_SET_NS=new Map([
+  [STATUS_OPTIONS,'status'],[SPORT_OPTIONS,'sport'],[FORMAT_OPTIONS,'format'],
+  [PAYMENT_OPTIONS,'payment'],[BOOKING_OPTIONS,'booking'],[WEATHER_OPTIONS,'weather'],
+  [ROLE_OPTIONS,'role'],[EQUIP_CATEGORY_OPTIONS,'equipcat'],[MEDIA_TYPE_OPTIONS,'mediatype'],
+  [TRANSPORT_MODE_OPTIONS,'transportmode'],[DIRECTION_OPTIONS,'direction'],
+]);
 function pathToId(path){ return 'f-'+path.replace(/\./g,'-'); }
-function renderField(race,cfg){
+function renderField(race,cfg,ns){
   const val=getPath(race,cfg.path);
   const id=pathToId(cfg.path);
+  const label=ns?t('field.'+ns+'.'+(cfg.labelPath||cfg.path),cfg.label):cfg.label;
   let input;
   switch(cfg.type){
-    case 'select':
-      input=`<select id="${id}" data-path="${cfg.path}"><option value="">—</option>${cfg.options.map(o=>`<option value="${o.value}" ${val===o.value?'selected':''}>${o.label}</option>`).join('')}</select>`;
+    case 'select':{
+      const optNs=OPTION_SET_NS.get(cfg.options);
+      input=`<select id="${id}" data-path="${cfg.path}"><option value="">—</option>${cfg.options.map(o=>`<option value="${o.value}" ${val===o.value?'selected':''}>${optNs?t('opt.'+optNs+'.'+o.value,o.label):o.label}</option>`).join('')}</select>`;
       break;
+    }
     case 'textarea':
       input=`<textarea id="${id}" data-path="${cfg.path}" rows="3">${escapeHtml(val||'')}</textarea>`;
       break;
     case 'checkbox':
-      return `<label class="field field-inline" for="${id}"><span>${cfg.label}</span><input id="${id}" type="checkbox" data-path="${cfg.path}" ${val?'checked':''}></label>`;
+      return `<label class="field field-inline" for="${id}"><span>${label}</span><input id="${id}" type="checkbox" data-path="${cfg.path}" ${val?'checked':''}></label>`;
     case 'duration':
       input=`<input id="${id}" type="text" placeholder="H:MM:SS" data-path="${cfg.path}" data-kind="duration" value="${val!=null?secToHMS(val):''}">`;
       break;
@@ -1000,35 +1558,35 @@ function renderField(race,cfg){
     default:
       input=`<input id="${id}" type="${cfg.type||'text'}" data-path="${cfg.path}" value="${escapeHtml(val!=null?val:'')}">`;
   }
-  return `<label class="field${cfg.wide?' wide':''}" for="${id}"><span>${cfg.label}${cfg.unit?`<i>(${cfg.unit})</i>`:''}</span>${input}</label>`;
+  return `<label class="field${cfg.wide?' wide':''}" for="${id}"><span>${label}${cfg.unit?`<i>(${cfg.unit})</i>`:''}</span>${input}</label>`;
 }
 
 function renderRepeatable(race,listKey){
   const meta=LIST_META[listKey];
   const items=race[listKey]||[];
   return `<div class="subsection">
-    <div class="subsection-head"><h3>${meta.title}</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="${listKey}">+ 新增</button></div>
+    <div class="subsection-head"><h3>${t('list.'+listKey,meta.title)}</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="${listKey}">${t('ui.addItem','+ 新增')}</button></div>
     <div class="repeat-rows">
       ${items.length?items.map((it,i)=>`
         <div class="repeat-row">
-          <button type="button" class="row-remove" data-action="remove-item" data-list="${listKey}" data-index="${i}" title="刪除">×</button>
-          ${meta.fields.map(f=>renderField(race,Object.assign({},f,{path:`${listKey}.${i}.${f.path}`}))).join('')}
-        </div>`).join(''):`<p class="empty-hint">尚未新增</p>`}
+          <button type="button" class="row-remove" data-action="remove-item" data-list="${listKey}" data-index="${i}" title="${t('ui.delete','刪除')}">×</button>
+          ${meta.fields.map(f=>renderField(race,Object.assign({},f,{path:`${listKey}.${i}.${f.path}`,labelPath:f.path}),listKey)).join('')}
+        </div>`).join(''):`<p class="empty-hint">${t('ui.notYetAdded','尚未新增')}</p>`}
     </div>
   </div>`;
 }
 
 function renderGoals(race){
   return `<div class="subsection">
-    <div class="subsection-head"><h3>賽前目標</h3></div>
+    <div class="subsection-head"><h3>${t('ui.goalsTitle','賽前目標')}</h3></div>
     <div class="repeat-rows">
       ${race.goals.map((g,i)=>{
         const timeId=pathToId(`goals.${i}.targetTimeSeconds`),paceId=pathToId(`goals.${i}.paceStrategy`);
         return `
         <div class="repeat-row">
           <span class="tier-label mono">${g.tier}</span>
-          <label class="field" for="${timeId}"><span>目標時間</span><input id="${timeId}" type="text" placeholder="H:MM:SS" data-path="goals.${i}.targetTimeSeconds" data-kind="duration" value="${g.targetTimeSeconds!=null?secToHMS(g.targetTimeSeconds):''}"></label>
-          <label class="field" style="flex:2 1 220px;" for="${paceId}"><span>配速策略</span><input id="${paceId}" type="text" data-path="goals.${i}.paceStrategy" value="${escapeHtml(g.paceStrategy||'')}"></label>
+          <label class="field" for="${timeId}"><span>${t('ui.goalTargetTime','目標時間')}</span><input id="${timeId}" type="text" placeholder="H:MM:SS" data-path="goals.${i}.targetTimeSeconds" data-kind="duration" value="${g.targetTimeSeconds!=null?secToHMS(g.targetTimeSeconds):''}"></label>
+          <label class="field" style="flex:2 1 220px;" for="${paceId}"><span>${t('ui.goalPaceStrategy','配速策略')}</span><input id="${paceId}" type="text" data-path="goals.${i}.paceStrategy" value="${escapeHtml(g.paceStrategy||'')}"></label>
         </div>`;
       }).join('')}
     </div>
@@ -1037,27 +1595,27 @@ function renderGoals(race){
 
 function renderEquipmentSection(race){
   const items=race.equipmentChecklist||[];
-  const options=templates.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}（${t.items.length} 項）</option>`).join('');
+  const options=templates.map(tp=>`<option value="${tp.id}">${escapeHtml(tp.name)}（${tp.items.length}）</option>`).join('');
   return `<div class="subsection">
-    <div class="subsection-head"><h3>裝備清單</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="equipmentChecklist">+ 新增</button></div>
+    <div class="subsection-head"><h3>${t('list.equipmentChecklist','裝備清單')}</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="equipmentChecklist">${t('ui.addItem','+ 新增')}</button></div>
     <div class="template-bar">
-      <select id="template-select">${templates.length?options:'<option value="">尚無已存範本</option>'}</select>
-      <button type="button" class="btn-ghost" data-action="apply-template" ${templates.length?'':'disabled'}>套用範本</button>
-      <button type="button" class="btn-ghost" data-action="save-template" ${items.length?'':'disabled'}>另存為範本</button>
-      <button type="button" class="btn-ghost danger" data-action="delete-template" ${templates.length?'':'disabled'}>${state.confirmDeleteTemplate?'確定刪除？再按一次':'刪除範本'}</button>
+      <select id="template-select">${templates.length?options:`<option value="">${t('ui.templateSelectEmpty','尚無已存範本')}</option>`}</select>
+      <button type="button" class="btn-ghost" data-action="apply-template" ${templates.length?'':'disabled'}>${t('ui.applyTemplate','套用範本')}</button>
+      <button type="button" class="btn-ghost" data-action="save-template" ${items.length?'':'disabled'}>${t('ui.saveAsTemplate','另存為範本')}</button>
+      <button type="button" class="btn-ghost danger" data-action="delete-template" ${templates.length?'':'disabled'}>${state.confirmDeleteTemplate?t('ui.deleteTemplateConfirm','確定刪除？再按一次'):t('ui.deleteTemplate','刪除範本')}</button>
     </div>
     ${state.savingTemplate?`
       <div class="template-save-row">
-        <input type="text" id="template-name-input" placeholder="範本名稱，如「路跑標配」「越野標配」">
-        <button type="button" class="btn-primary" data-action="confirm-save-template">儲存範本</button>
-        <button type="button" class="btn-ghost" data-action="cancel-save-template">取消</button>
+        <input type="text" id="template-name-input" placeholder="${t('ui.templateNamePlaceholder','範本名稱，如「路跑標配」「越野標配」')}">
+        <button type="button" class="btn-primary" data-action="confirm-save-template">${t('ui.saveTemplate','儲存範本')}</button>
+        <button type="button" class="btn-ghost" data-action="cancel-save-template">${t('ui.cancel','取消')}</button>
       </div>`:''}
     <div class="repeat-rows">
       ${items.length?items.map((it,i)=>`
         <div class="repeat-row">
-          <button type="button" class="row-remove" data-action="remove-item" data-list="equipmentChecklist" data-index="${i}" title="刪除">×</button>
-          ${EQUIP_FIELDS.map(f=>renderField(race,Object.assign({},f,{path:`equipmentChecklist.${i}.${f.path}`}))).join('')}
-        </div>`).join(''):`<p class="empty-hint">尚未新增</p>`}
+          <button type="button" class="row-remove" data-action="remove-item" data-list="equipmentChecklist" data-index="${i}" title="${t('ui.delete','刪除')}">×</button>
+          ${EQUIP_FIELDS.map(f=>renderField(race,Object.assign({},f,{path:`equipmentChecklist.${i}.${f.path}`,labelPath:f.path}),'equipmentChecklist')).join('')}
+        </div>`).join(''):`<p class="empty-hint">${t('ui.notYetAdded','尚未新增')}</p>`}
     </div>
   </div>`;
 }
@@ -1074,23 +1632,23 @@ function renderSeriesComparison(race){
     return (best==null||t<best)?t:best;
   },null);
   return `<details class="section" open>
-    <summary>系列賽事比較（跨年）</summary>
+    <summary>${t('ui.seriesComparison','系列賽事比較（跨年）')}</summary>
     <div class="section-body" style="display:block;padding-bottom:20px;">
-      ${bestTime!=null?`<p class="series-best mono">系列最佳晶片時間：${secToHMS(bestTime)}</p>`:''}
+      ${bestTime!=null?`<p class="series-best mono">${t('ui.seriesBest','系列最佳晶片時間')}：${secToHMS(bestTime)}</p>`:''}
       <div class="series-table-wrap">
         <table class="series-table">
-          <thead><tr><th>年份</th><th>日期</th><th>狀態</th><th>晶片時間</th><th>中籤率</th></tr></thead>
+          <thead><tr><th>${t('ui.seriesYear','年份')}</th><th>${t('field.basic.schedule.raceDate','日期')}</th><th>${t('field.basic.status','狀態')}</th><th>${t('field.post.results.chipTimeSeconds','晶片時間')}</th><th>${t('field.basic.lottery.winRatePct','中籤率')}</th></tr></thead>
           <tbody>
             ${seriesRaces.map(r=>{
               const year=(r.schedule.raceDate||'').slice(0,4)||'—';
-              const t=r.results&&r.results.chipTimeSeconds;
+              const chipT=r.results&&r.results.chipTimeSeconds;
               const isPb=r.results&&r.results.isPb;
               const rate=r.lottery&&r.lottery.winRatePct;
               return `<tr class="${r.id===race.id?'current':''}">
-                <td class="mono">${year}${r.id===race.id?'（本場）':''}</td>
+                <td class="mono">${year}${r.id===race.id?t('ui.seriesThisRace','（本場）'):''}</td>
                 <td class="mono">${r.schedule.raceDate||'—'}</td>
                 <td><span class="stamp status-${r.status}">${statusLabel(r.status)}</span></td>
-                <td class="mono${isPb?' pb-time':''}">${t!=null?secToHMS(t):'—'}${isPb?' <span class="pb-badge">PB</span>':''}</td>
+                <td class="mono${isPb?' pb-time':''}">${chipT!=null?secToHMS(chipT):'—'}${isPb?' <span class="pb-badge">PB</span>':''}</td>
                 <td class="mono">${rate!=null?rate+'%':'—'}</td>
               </tr>`;
             }).join('')}
@@ -1103,23 +1661,23 @@ function renderSeriesComparison(race){
 
 function renderResultsDashboard(race){
   if(race.status!=='completed'||race.results.chipTimeSeconds==null) return '';
-  const t=race.results.chipTimeSeconds;
+  const chipT=race.results.chipTimeSeconds;
   const isPb=!!race.results.isPb;
-  const pace=race.route.distanceKm?formatPace(t/race.route.distanceKm):null;
+  const pace=race.route.distanceKm?formatPace(chipT/race.route.distanceKm):null;
   const badges=[];
-  if(pace) badges.push(['配速',pace+'/km']);
-  if(race.results.overallRank!=null) badges.push(['總排名次',race.results.overallRank+(race.results.overallParticipants?`／${race.results.overallParticipants}`:'')]);
-  if(race.results.ageGroupRank!=null) badges.push(['分組名次',race.results.ageGroupRank+(race.results.ageGroupParticipants?`／${race.results.ageGroupParticipants}`:'')]);
-  if(race.performanceData.avgHr!=null) badges.push(['平均心率',race.performanceData.avgHr+' bpm']);
-  if(race.route.elevationGainM!=null) badges.push(['總爬升',race.route.elevationGainM+' 公尺']);
+  if(pace) badges.push([t('ui.resultPace','配速'),pace+'/km']);
+  if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),race.results.overallRank+(race.results.overallParticipants?`／${race.results.overallParticipants}`:'')]);
+  if(race.results.ageGroupRank!=null) badges.push([t('field.post.results.ageGroupRank','分組名次'),race.results.ageGroupRank+(race.results.ageGroupParticipants?`／${race.results.ageGroupParticipants}`:'')]);
+  if(race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),race.performanceData.avgHr+' bpm']);
+  if(race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺']);
   return `<div class="results-dashboard${isPb?' is-pb':''}">
     <div class="results-dashboard-main">
-      <div class="results-big-time mono">${secToHMS(t)}</div>
-      ${isPb?'<span class="pb-badge">個人最佳 PB</span>':''}
+      <div class="results-big-time mono">${secToHMS(chipT)}</div>
+      ${isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
     </div>
     ${badges.length?`<div class="results-badge-grid">${badges.map(([label,val])=>`<div class="results-badge"><span class="results-badge-label">${label}</span><span class="results-badge-value mono">${escapeHtml(String(val))}</span></div>`).join('')}</div>`:''}
     <div class="results-dashboard-actions">
-      <button type="button" class="btn-ghost" data-action="generate-share-image">產生分享圖</button>
+      <button type="button" class="btn-ghost" data-action="generate-share-image">${t('ui.generateShareImage','產生分享圖')}</button>
     </div>
   </div>`;
 }
@@ -1165,8 +1723,8 @@ function elevationProfileHtml(race){
 function renderShoeSelector(race){
   const options=shoes.map(s=>`<option value="${s.id}" ${race.performanceData.shoeId===s.id?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
   return `<div class="subsection">
-    <div class="subsection-head"><h3>比賽鞋款</h3><button type="button" class="btn-ghost" data-action="open-shoe-modal">管理鞋款</button></div>
-    <label class="field" for="f-shoe-select"><span>本場穿著鞋款</span>
+    <div class="subsection-head"><h3>${t('ui.shoeManageTitle','比賽鞋款')}</h3><button type="button" class="btn-ghost" data-action="open-shoe-modal">${t('ui.shoeManage','管理鞋款')}</button></div>
+    <label class="field" for="f-shoe-select"><span>${t('ui.raceShoe','本場穿著鞋款')}</span>
       <select id="f-shoe-select" data-path="performanceData.shoeId"><option value="">—</option>${options}</select>
     </label>
   </div>`;
@@ -1195,6 +1753,9 @@ function canvasWrapText(ctx,text,x,y,maxWidth,lineHeight,maxLines){
   ctx.fillText(line,x,curY);
   return curY;
 }
+function canvasFontFamily(){
+  return currentLang==='ja' ? '"Noto Sans JP",sans-serif' : '"Noto Sans TC",sans-serif';
+}
 async function buildShareCanvas(race){
   try{ await document.fonts.ready; }catch(e){}
   const W=1080,H=1080;
@@ -1202,6 +1763,7 @@ async function buildShareCanvas(race){
   canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
   const isPb=!!race.results.isPb;
+  const uiFont=canvasFontFamily();
 
   ctx.fillStyle='#16231C';
   ctx.fillRect(0,0,W,H);
@@ -1214,12 +1776,12 @@ async function buildShareCanvas(race){
   ctx.beginPath();ctx.arc(280,55,11,0,Math.PI*2);ctx.fill();
 
   ctx.fillStyle='#9BA3A0';
-  ctx.font='28px "Noto Sans TC",sans-serif';
-  ctx.fillText('賽事紀錄',80,210);
+  ctx.font=`28px ${uiFont}`;
+  ctx.fillText(t('ui.appTitle','賽事紀錄'),80,210);
 
   ctx.fillStyle='#EDEEE9';
-  ctx.font='bold 52px "Noto Sans TC",sans-serif';
-  const nameEndY=canvasWrapText(ctx,race.name||'(未命名賽事)',80,300,W-160,64,2);
+  ctx.font=`bold 52px ${uiFont}`;
+  const nameEndY=canvasWrapText(ctx,race.name||t('ui.unnamedRace','(未命名賽事)'),80,300,W-160,64,2);
 
   ctx.fillStyle='#9BA3A0';
   ctx.font='30px "IBM Plex Mono",monospace';
@@ -1231,24 +1793,24 @@ async function buildShareCanvas(race){
   ctx.fillText(secToHMS(race.results.chipTimeSeconds||0),80,timeY);
   if(isPb){
     ctx.strokeStyle='#D9B15C';ctx.fillStyle='none';ctx.lineWidth=2;
-    ctx.font='bold 28px "Noto Sans TC",sans-serif';
+    ctx.font=`bold 28px ${uiFont}`;
     ctx.fillStyle='#D9B15C';
-    ctx.fillText('個人最佳 PB',80,timeY+50);
+    ctx.fillText(t('ui.pbBadge','個人最佳 PB'),80,timeY+50);
   }
 
   const pace=race.route.distanceKm?formatPace(race.results.chipTimeSeconds/race.route.distanceKm):null;
   const badges=[];
-  if(pace) badges.push(['配速',pace+'/km']);
-  if(race.route.distanceKm) badges.push(['距離',race.route.distanceKm+' 公里']);
-  if(race.route.elevationGainM!=null) badges.push(['總爬升',race.route.elevationGainM+' 公尺']);
-  if(race.results.overallRank!=null) badges.push(['總排名次',String(race.results.overallRank)]);
+  if(pace) badges.push([t('ui.resultPace','配速'),pace+'/km']);
+  if(race.route.distanceKm) badges.push([t('field.route.route.distanceKm','距離'),race.route.distanceKm+' 公里']);
+  if(race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺']);
+  if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),String(race.results.overallRank)]);
 
   const badgeY=timeY+(isPb?110:70);
   const colW=(W-160)/Math.max(badges.length,1);
   badges.forEach((b,i)=>{
     const bx=80+i*colW;
     ctx.fillStyle='#6B7178';
-    ctx.font='24px "Noto Sans TC",sans-serif';
+    ctx.font=`24px ${uiFont}`;
     ctx.fillText(b[0],bx,badgeY);
     ctx.fillStyle='#EDEEE9';
     ctx.font='bold 34px "IBM Plex Mono",monospace';
@@ -1256,7 +1818,7 @@ async function buildShareCanvas(race){
   });
 
   ctx.fillStyle='#4C9A72';
-  ctx.font='24px "Noto Sans TC",sans-serif';
+  ctx.font=`24px ${uiFont}`;
   ctx.fillText(sportLabel(race.sportType),80,H-70);
 
   return canvas;
@@ -1267,7 +1829,7 @@ async function downloadShareImage(race){
     if(!blob) return;
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=url;a.download=(race.name||'race').replace(/[\\/:*?"<>|]/g,'')+'-分享圖.png';
+    a.href=url;a.download=(race.name||'race').replace(/[\\/:*?"<>|]/g,'')+t('ui.shareImageSuffix','-分享圖.png');
     a.click();
     URL.revokeObjectURL(url);
   },'image/png');
@@ -1281,13 +1843,21 @@ const calLabelEl=document.getElementById('cal-label');
 const detailEl=document.getElementById('detail');
 const filterChipsEl=document.getElementById('filter-chips');
 const searchInputEl=document.getElementById('search-input');
-const WEEKDAY_LABELS=['日','一','二','三','四','五','六'];
-const MONTH_LABEL_FMT=(y,m)=>`${y} 年 ${m+1} 月`;
+function weekdayLabels(){
+  return [0,1,2,3,4,5,6].map(i=>t('ui.weekday.'+i, WEEKDAY_LABELS_ZH[i]));
+}
+const WEEKDAY_LABELS_ZH=['日','一','二','三','四','五','六'];
+const MONTH_NAMES_EN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function monthLabel(y,m){
+  if(currentLang==='en') return `${MONTH_NAMES_EN[m]} ${y}`;
+  if(currentLang==='ja') return `${y}年${m+1}月`;
+  return `${y} 年 ${m+1} 月`;
+}
 
 const FILTER_PRIMARY=[
-  {value:'all',label:'全部'},
-  {value:'upcoming',label:'即將到來'},
-  {value:'history',label:'歷史紀錄'},
+  {value:'all',labelKey:'ui.filterAll',label:'全部'},
+  {value:'upcoming',labelKey:'ui.filterUpcoming',label:'即將到來'},
+  {value:'history',labelKey:'ui.filterHistory',label:'歷史紀錄'},
 ];
 const STATUS_CHIP_LABELS={registered:'已報名',lottery_pending:'抽籤中',considering:'考慮中',completed:'已完賽',dns:'DNS',dnf:'DNF'};
 const FILTER_SECONDARY_MAP={
@@ -1327,11 +1897,11 @@ function renderFilterChips(){
   const counts=computeFilterCounts();
   const activePrimary=primaryPhaseFor(state.filterStatus);
   const primaryHtml=FILTER_PRIMARY.map(f=>
-    `<button class="chip chip-primary${activePrimary===f.value?' active':''}" data-status="${f.value}">${f.label}${counts[f.value]?` (${counts[f.value]})`:''}</button>`
+    `<button class="chip chip-primary${activePrimary===f.value?' active':''}" data-status="${f.value}">${t(f.labelKey,f.label)}${counts[f.value]?` (${counts[f.value]})`:''}</button>`
   ).join('');
   const secondaryValues=FILTER_SECONDARY_MAP[activePrimary]||[];
   const secondaryHtml=secondaryValues.map(v=>
-    `<button class="chip chip-secondary${state.filterStatus===v?' active':''}" data-status="${v}">${STATUS_CHIP_LABELS[v]}${counts[v]?` (${counts[v]})`:''}</button>`
+    `<button class="chip chip-secondary${state.filterStatus===v?' active':''}" data-status="${v}">${t('opt.status.'+v, STATUS_CHIP_LABELS[v])}${counts[v]?` (${counts[v]})`:''}</button>`
   ).join('');
   filterChipsEl.innerHTML=`<div class="chips-primary">${primaryHtml}</div>${secondaryHtml?`<div class="chips-secondary">${secondaryHtml}</div>`:''}`;
 }
@@ -1384,7 +1954,7 @@ function renderCareerSummary(){
 
 function renderCalendar(){
   const y=state.calendarYear,m=state.calendarMonth;
-  calLabelEl.textContent=MONTH_LABEL_FMT(y,m);
+  calLabelEl.textContent=monthLabel(y,m);
   renderFilterChips();
   const racesByDate=buildRacesByDate(filteredRaces());
   const todayISOStr=todayISO();
@@ -1415,7 +1985,7 @@ function renderCalendar(){
     // 手機清單檢視只列本月、有賽事的日期，避免小螢幕上格子太擠、觸控熱區太小
     if(!muted&&dayRaces.length){
       listRows.push(`<div class="cal-list-day">
-        <div class="cal-list-date mono${isToday?' today':''}">${cellD}<span class="cal-list-weekday">${WEEKDAY_LABELS[new Date(cellY,cellM,cellD).getDay()]}</span></div>
+        <div class="cal-list-date mono${isToday?' today':''}">${cellD}<span class="cal-list-weekday">${weekdayLabels()[new Date(cellY,cellM,cellD).getDay()]}</span></div>
         <div class="cal-list-races">
           ${dayRaces.map(r=>`<button type="button" class="cal-list-item status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
             <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
@@ -1428,28 +1998,29 @@ function renderCalendar(){
 
   calendarEl.innerHTML=`
     ${renderCareerSummary()}
-    <div class="cal-weekdays">${WEEKDAY_LABELS.map(w=>`<span>${w}</span>`).join('')}</div>
+    <div class="cal-weekdays">${weekdayLabels().map(w=>`<span>${w}</span>`).join('')}</div>
     <div class="cal-grid">${cells.join('')}</div>
     <div class="cal-list">${listRows.length?listRows.join(''):`<p class="empty-hint">這個月沒有符合條件的賽事</p>`}</div>
   `;
 }
 
 function detailHeaderHtml(race){
-  const chip=(race.status==='completed'&&race.results.chipTimeSeconds)?` ・ 晶片時間 ${secToHMS(race.results.chipTimeSeconds)}`:'';
+  const chip=(race.status==='completed'&&race.results.chipTimeSeconds)?` ・ ${t('field.post.results.chipTimeSeconds','晶片時間')} ${secToHMS(race.results.chipTimeSeconds)}`:'';
   return `<header class="detail-header">
     <div class="dh-top">
       <div class="dh-badges">
         <span class="stamp status-${race.status}">${statusLabel(race.status)}</span>
         <span class="sport-icon-wrap" title="${sportLabel(race.sportType)}">${sportIconSvg(sportIconKey(race.sportType),30)}</span>
-        ${race.results.isPb?'<span class="pb-badge">PB</span>':''}
+        ${race.results.isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
       </div>
       <div class="dh-actions">
-        <button class="btn-ghost" data-action="open-paste-modal">貼上資料快速填入</button>
-        <button class="btn-ghost danger" data-action="delete-race">${state.confirmDelete?'確定刪除？再按一次':'刪除賽事'}</button>
+        ${race.schedule.raceDate?`<button class="btn-ghost" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
+        <button class="btn-ghost" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
+        <button class="btn-ghost danger" data-action="delete-race">${state.confirmDelete?t('ui.deleteConfirm','確定刪除？再按一次'):t('ui.deleteRace','刪除賽事')}</button>
       </div>
     </div>
-    <h1>${escapeHtml(race.name)||'(未命名賽事)'} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
-    <div class="dh-meta mono">${race.schedule.raceDate||'尚未設定日期'} ・ ${countdownLabel(race)}${chip}</div>
+    <h1>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
+    <div class="dh-meta mono">${race.schedule.raceDate||t('ui.dateNotSet','尚未設定日期')} ・ ${countdownLabel(race)}${chip}</div>
     ${sparklineSvg(race)}
     ${progressBlockHtml(race)}
   </header>`;
@@ -1465,45 +2036,45 @@ function renderDetail(){
     ${detailHeaderHtml(race)}
     ${renderSeriesComparison(race)}
     <details class="section" open>
-      <summary>基本資訊與時間</summary>
-      <div class="section-body">${SECTION_BASIC.map(f=>renderField(race,f)).join('')}</div>
+      <summary>${t('ui.sectionBasic','基本資訊與時間')}</summary>
+      <div class="section-body">${SECTION_BASIC.map(f=>renderField(race,f,'basic')).join('')}</div>
     </details>
     <details class="section" ${openPre?'open':''}>
-      <summary>地理與路線</summary>
-      <div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f)).join('')}</div>
+      <summary>${t('ui.sectionRoute','地理與路線')}</summary>
+      <div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f,'route')).join('')}</div>
       ${elevationProfileHtml(race)}
       ${renderRepeatable(race,'checkpoints')}
     </details>
     <details class="section">
-      <summary>氣象</summary>
-      <div class="section-body">${SECTION_WEATHER.map(f=>renderField(race,f)).join('')}</div>
+      <summary>${t('ui.sectionWeather','氣象')}</summary>
+      <div class="section-body">${SECTION_WEATHER.map(f=>renderField(race,f,'weather')).join('')}</div>
     </details>
     <details class="section" ${openPre?'open':''}>
-      <summary>預算與行程規劃</summary>
-      <div class="section-body">${SECTION_LOGISTICS.map(f=>renderField(race,f)).join('')}</div>
+      <summary>${t('ui.sectionLogistics','預算與行程規劃')}</summary>
+      <div class="section-body">${SECTION_LOGISTICS.map(f=>renderField(race,f,'logistics')).join('')}</div>
       ${renderRepeatable(race,'accommodations')}
       ${renderRepeatable(race,'transportation')}
       ${renderRepeatable(race,'companions')}
     </details>
     <details class="section" ${openPre?'open':''}>
-      <summary>裝備、補給與戰略（賽前準備）</summary>
-      <div class="section-body">${SECTION_PREP.map(f=>renderField(race,f)).join('')}</div>
+      <summary>${t('ui.sectionPrep','裝備、補給與戰略（賽前準備）')}</summary>
+      <div class="section-body">${SECTION_PREP.map(f=>renderField(race,f,'prep')).join('')}</div>
       ${renderGoals(race)}
       <div class="subsection">
-        <div class="subsection-head"><h3></h3><button type="button" class="btn-ghost" data-action="open-pacing-modal">配速試算與手環產生器</button></div>
+        <div class="subsection-head"><h3></h3><button type="button" class="btn-ghost" data-action="open-pacing-modal">${t('ui.pacingCalcTitle','配速試算與手環產生器')}</button></div>
       </div>
       ${renderEquipmentSection(race)}
       ${renderRepeatable(race,'nutritionSchedule')}
     </details>
     <details class="section" ${!openPre?'open':''}>
-      <summary>賽後紀錄與個人數據</summary>
+      <summary>${t('ui.sectionPost','賽後紀錄與個人數據')}</summary>
       ${renderResultsDashboard(race)}
       ${renderSplitAnalysis(race)}
       <div class="gpx-import-bar">
-        <button type="button" class="btn-ghost" data-action="open-gpx-picker">匯入運動紀錄檔（GPX / TCX）</button>
-        <span class="small auth-hint">支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速</span>
+        <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX）')}</button>
+        <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
       </div>
-      <div class="section-body">${SECTION_POST.map(f=>renderField(race,f)).join('')}</div>
+      <div class="section-body">${SECTION_POST.map(f=>renderField(race,f,'post')).join('')}</div>
       ${renderShoeSelector(race)}
       ${renderRepeatable(race,'splits')}
       ${renderRepeatable(race,'mediaLinks')}
@@ -1524,21 +2095,21 @@ function emptyStateHtml(){
       ${sportIconSvg('trail',40)}
       ${sportIconSvg('triathlon',40)}
     </div>
-    <p>點選上方行事曆中的賽事查看詳細紀錄，或建立一場新賽事。</p>
-    <button class="btn-primary" data-action="start-create">+ 新增賽事</button>
+    <p>${t('ui.selectRaceHint','點選上方行事曆中的賽事查看詳細紀錄，或建立一場新賽事。')}</p>
+    <button class="btn-primary" data-action="start-create">${t('ui.newRace','+ 新增賽事')}</button>
   </div>`;
 }
 
 function renderCreateForm(){
   return `<div class="create-form">
-    <h1>新增賽事</h1>
-    <label class="field" for="new-name"><span>賽事名稱</span><input type="text" id="new-name" placeholder="如：2026 臺北馬拉松"></label>
-    <label class="field" for="new-sport"><span>主要運動種類</span><select id="new-sport">${SPORT_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select></label>
-    <label class="field" for="new-status"><span>狀態</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value==='considering'?'selected':''}>${o.label}</option>`).join('')}</select></label>
-    <label class="field" for="new-date"><span>比賽日期</span><input type="date" id="new-date"></label>
+    <h1>${t('ui.createRace','新增賽事')}</h1>
+    <label class="field" for="new-name"><span>${t('ui.newRaceName','賽事名稱')}</span><input type="text" id="new-name" placeholder="${t('ui.newRaceNamePlaceholder','如：2026 臺北馬拉松')}"></label>
+    <label class="field" for="new-sport"><span>${t('ui.newRaceSport','主要運動種類')}</span><select id="new-sport">${SPORT_OPTIONS.map(o=>`<option value="${o.value}">${t('opt.sport.'+o.value,o.label)}</option>`).join('')}</select></label>
+    <label class="field" for="new-status"><span>${t('ui.newRaceStatus','狀態')}</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value==='considering'?'selected':''}>${t('opt.status.'+o.value,o.label)}</option>`).join('')}</select></label>
+    <label class="field" for="new-date"><span>${t('ui.newRaceDate','比賽日期')}</span><input type="date" id="new-date"></label>
     <div class="create-actions">
-      <button class="btn-primary" data-action="confirm-create">建立賽事</button>
-      <button class="btn-ghost" data-action="cancel-create">取消</button>
+      <button class="btn-primary" data-action="confirm-create">${t('ui.createRace','建立賽事')}</button>
+      <button class="btn-ghost" data-action="cancel-create">${t('ui.cancel','取消')}</button>
     </div>
   </div>`;
 }
@@ -1607,6 +2178,11 @@ document.getElementById('btn-theme-toggle').addEventListener('click',()=>{
   try{ localStorage.setItem(THEME_KEY,next); }catch(e){}
 });
 
+document.getElementById('lang-select').value=currentLang;
+document.getElementById('lang-select').addEventListener('change',e=>{
+  setLang(e.target.value);
+});
+
 // 手機上往下捲動時，把標題列縮小（隱藏副標題）多留一點空間給表單內容
 (function(){
   let ticking=false;
@@ -1628,15 +2204,78 @@ document.getElementById('btn-export').addEventListener('click',()=>{
   URL.revokeObjectURL(url);
 });
 
+/* ============================================================
+   行事曆提醒匯出（.ics，倒數一個月／一週）
+   ============================================================ */
+function escapeICS(str){
+  return String(str||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+}
+function nowICSStamp(){
+  const d=new Date();
+  return d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,'0')+String(d.getUTCDate()).padStart(2,'0')+'T'+
+    String(d.getUTCHours()).padStart(2,'0')+String(d.getUTCMinutes()).padStart(2,'0')+String(d.getUTCSeconds()).padStart(2,'0')+'Z';
+}
+function raceToICSEvent(race){
+  if(!race.schedule.raceDate) return '';
+  const dt=race.schedule.raceDate.replace(/-/g,'');
+  const startDate=new Date(race.schedule.raceDate+'T00:00:00');
+  const endDate=new Date(startDate.getTime()+86400000);
+  const endStr=endDate.getFullYear()+String(endDate.getMonth()+1).padStart(2,'0')+String(endDate.getDate()).padStart(2,'0');
+  const summary=escapeICS(race.name||'賽事');
+  const location=escapeICS([race.location.venueName,race.location.city].filter(Boolean).join(' '));
+  return [
+    'BEGIN:VEVENT',
+    `UID:${race.id}@race-day-app`,
+    `DTSTAMP:${nowICSStamp()}`,
+    `DTSTART;VALUE=DATE:${dt}`,
+    `DTEND;VALUE=DATE:${endStr}`,
+    `SUMMARY:${summary}`,
+    location?`LOCATION:${location}`:null,
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:賽事倒數一個月：${summary}`,
+    'TRIGGER:-P30D',
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:賽事倒數一週：${summary}`,
+    'TRIGGER:-P7D',
+    'END:VALARM',
+    'END:VEVENT',
+  ].filter(Boolean).join('\r\n');
+}
+function buildICS(races){
+  const events=races.map(raceToICSEvent).filter(Boolean).join('\r\n');
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//賽事紀錄//RaceDay//ZH','CALSCALE:GREGORIAN',events,'END:VCALENDAR'].join('\r\n');
+}
+function downloadICS(icsText,filename){
+  const blob=new Blob([icsText],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+}
+document.getElementById('btn-export-ics').addEventListener('click',()=>{
+  const todayStr=todayISO();
+  const upcoming=state.races.filter(r=>r.schedule.raceDate&&isUpcomingRace(r,todayStr));
+  if(!upcoming.length) return;
+  downloadICS(buildICS(upcoming),'賽事提醒.ics');
+});
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-action="export-race-ics"]')&&currentRace){
+    downloadICS(buildICS([currentRace]),(currentRace.name||'賽事').replace(/[\\/:*?"<>|]/g,'')+'-提醒.ics');
+  }
+});
+
 let confirmClear=false;
 document.getElementById('btn-clear').addEventListener('click',e=>{
   if(!confirmClear){
-    confirmClear=true;e.target.textContent='確定清除？再按一次';
-    setTimeout(()=>{confirmClear=false;e.target.textContent='清除全部資料';},4000);
+    confirmClear=true;e.target.textContent=t('ui.clearAllConfirm','確定清除？再按一次');
+    setTimeout(()=>{confirmClear=false;e.target.textContent=t('ui.clearAll','清除全部資料');},4000);
     return;
   }
   state.races=[];state.selectedId=null;confirmClear=false;
-  e.target.textContent='清除全部資料';
+  e.target.textContent=t('ui.clearAll','清除全部資料');
   persist();renderAll();
 });
 
@@ -1913,31 +2552,31 @@ function parseCheckedSheets(){
 function importModalHtml(step){
   if(step==='select-sheets'){
     return `<div class="modal-panel">
-      <h2>匯入 Excel — 選擇工作表</h2>
-      <p class="modal-hint">已勾選看起來像「年度賽事清單」的工作表，可自行調整要匯入哪些分頁。</p>
+      <h2>${t('ui.excelStep1Title','匯入 Excel — 選擇工作表')}</h2>
+      <p class="modal-hint">${t('ui.excelStep1Hint','已勾選看起來像「年度賽事清單」的工作表，可自行調整要匯入哪些分頁。')}</p>
       <div class="sheet-checks">
         ${importWorkbook.SheetNames.map(n=>`
           <label class="sheet-check"><input type="checkbox" data-sheet="${escapeHtml(n)}" ${importSheetChecks[n]?'checked':''}> ${escapeHtml(n)}</label>
         `).join('')}
       </div>
       <div class="modal-actions">
-        <button class="btn-primary" data-action="parse-sheets">解析並預覽</button>
-        <button class="btn-ghost" data-action="close-import">取消</button>
+        <button class="btn-primary" data-action="parse-sheets">${t('ui.excelParse','解析並預覽')}</button>
+        <button class="btn-ghost" data-action="close-import">${t('ui.cancel','取消')}</button>
       </div>
     </div>`;
   }
   const checkedCount=importCandidates.filter(c=>c.checked).length;
   return `<div class="modal-panel modal-panel-wide">
-    <h2>匯入 Excel — 確認賽事清單</h2>
-    <p class="modal-hint">已選 <span class="mono">${checkedCount}</span> / ${importCandidates.length} 筆。可直接調整名稱、日期、距離、地點、狀態後再匯入；取消勾選可略過該筆（距離單位、DNF/DNS 建議順手核對一下）。</p>
+    <h2>${t('ui.excelStep2Title','匯入 Excel — 確認賽事清單')}</h2>
+    <p class="modal-hint">${tf2('ui.excelSelectedCount',`已選 <span class="mono">${checkedCount}</span> / ${importCandidates.length} 筆。可直接調整名稱、日期、距離、地點、狀態後再匯入；取消勾選可略過該筆（距離單位、DNF/DNS 建議順手核對一下）。`,`<span class="mono">${checkedCount}</span>`,importCandidates.length)}</p>
     <div class="modal-actions modal-actions-top">
-      <button class="btn-ghost" data-action="check-all">全選</button>
-      <button class="btn-ghost" data-action="check-none">全不選</button>
-      <button class="btn-ghost" data-action="back-sheets">‹ 重新選擇工作表</button>
+      <button class="btn-ghost" data-action="check-all">${t('ui.selectAll','全選')}</button>
+      <button class="btn-ghost" data-action="check-none">${t('ui.selectNone','全不選')}</button>
+      <button class="btn-ghost" data-action="back-sheets">${t('ui.excelBackToSheets','‹ 重新選擇工作表')}</button>
     </div>
     <div class="import-table-wrap">
       <table class="import-table">
-        <thead><tr><th></th><th>日期</th><th>賽事名稱</th><th>距離</th><th>地點</th><th>狀態</th><th>來源分頁</th></tr></thead>
+        <thead><tr><th></th><th>${t('ui.excelColDate','日期')}</th><th>${t('ui.excelColName','賽事名稱')}</th><th>${t('ui.excelColDistance','距離')}</th><th>${t('ui.excelColVenue','地點')}</th><th>${t('ui.excelColStatus','狀態')}</th><th>${t('ui.excelColSource','來源分頁')}</th></tr></thead>
         <tbody>
           ${importCandidates.map((c,i)=>`
             <tr>
@@ -1946,7 +2585,7 @@ function importModalHtml(step){
               <td><input type="text" data-idx="${i}" data-field="name" value="${escapeHtml(c.name)}"></td>
               <td><input type="text" data-idx="${i}" data-field="distanceRaw" value="${escapeHtml(c.distanceRaw)}" class="mono narrow"></td>
               <td><input type="text" data-idx="${i}" data-field="venue" value="${escapeHtml(c.venue)}"></td>
-              <td><select data-idx="${i}" data-field="status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${c.status===o.value?'selected':''}>${o.label}</option>`).join('')}</select></td>
+              <td><select data-idx="${i}" data-field="status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${c.status===o.value?'selected':''}>${t('opt.status.'+o.value,o.label)}</option>`).join('')}</select></td>
               <td class="small mono">${escapeHtml(c.sheetName)}</td>
             </tr>
           `).join('')}
@@ -1954,8 +2593,8 @@ function importModalHtml(step){
       </table>
     </div>
     <div class="modal-actions">
-      <button class="btn-primary" data-action="confirm-import">匯入所選賽事</button>
-      <button class="btn-ghost" data-action="close-import">取消</button>
+      <button class="btn-primary" data-action="confirm-import">${t('ui.excelImport','匯入所選賽事')}</button>
+      <button class="btn-ghost" data-action="close-import">${t('ui.cancel','取消')}</button>
     </div>
   </div>`;
 }
@@ -2080,7 +2719,7 @@ function downsampleElevationProfile(pts,maxPoints){
 }
 function summarizeTrackPoints(pts){
   const valid=pts.filter(p=>p.lat!=null&&p.lon!=null);
-  if(valid.length<2) throw new Error('檔案中沒有足夠的座標點');
+  if(valid.length<2) throw new Error(t('ui.errNotEnoughPoints','檔案中沒有足夠的座標點'));
   let distKm=0;
   for(let i=1;i<valid.length;i++) distKm+=haversineKm(valid[i-1].lat,valid[i-1].lon,valid[i].lat,valid[i].lon);
   const elevations=valid.map(p=>p.ele).filter(e=>e!=null);
@@ -2162,35 +2801,37 @@ function parseTcxDoc(xml){
 }
 function parseGpxOrTcx(text){
   const xml=new DOMParser().parseFromString(text,'application/xml');
-  if(xml.getElementsByTagName('parsererror').length) throw new Error('檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔');
+  if(xml.getElementsByTagName('parsererror').length) throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔'));
   const isTcx=xml.getElementsByTagName('TrainingCenterDatabase').length>0;
   return isTcx?parseTcxDoc(xml):parseGpxDoc(xml);
 }
 
 const gpxModalEl_getter=()=>document.getElementById('gpx-modal');
 function gpxSummaryHtml(summary,filename){
+  const raceName=escapeHtml(currentRace.name||t('ui.unnamedRace','此賽事'));
+  const fileEsc=escapeHtml(filename);
   return `<div class="modal-panel">
-    <h2>匯入運動紀錄檔</h2>
-    <p class="modal-hint">從 <strong>${escapeHtml(filename)}</strong> 讀到以下數據，確認後套用到「${escapeHtml(currentRace.name||'此賽事')}」（已有官方成績的欄位不會被覆蓋）：</p>
+    <h2>${t('ui.gpxModalTitle','匯入運動紀錄檔')}</h2>
+    <p class="modal-hint">${t('ui.gpxHintFull',`從 <strong>${fileEsc}</strong> 讀到以下數據，確認後套用到「${raceName}」（已有官方成績的欄位不會被覆蓋）：`).replace('{file}',fileEsc).replace('{race}',raceName)}</p>
     <ul class="gpx-summary">
-      <li>距離 <span class="mono">${summary.distanceKm} 公里</span></li>
-      <li>總爬升 <span class="mono">${summary.elevationGainM!=null?summary.elevationGainM+' 公尺':'—'}</span></li>
-      <li>時間 <span class="mono">${summary.durationSeconds!=null?secToHMS(summary.durationSeconds):'—'}</span></li>
-      <li>平均心率 <span class="mono">${summary.avgHr!=null?summary.avgHr+' bpm':'—'}</span></li>
-      <li>最大心率 <span class="mono">${summary.maxHr!=null?summary.maxHr+' bpm':'—'}</span></li>
-      <li>分段配速 <span class="mono">${summary.splits.length} 筆</span></li>
+      <li>${t('ui.gpxDistance','距離')} <span class="mono">${summary.distanceKm} 公里</span></li>
+      <li>${t('ui.gpxElevGain','總爬升')} <span class="mono">${summary.elevationGainM!=null?summary.elevationGainM+' 公尺':'—'}</span></li>
+      <li>${t('ui.gpxTime','時間')} <span class="mono">${summary.durationSeconds!=null?secToHMS(summary.durationSeconds):'—'}</span></li>
+      <li>${t('ui.gpxAvgHr','平均心率')} <span class="mono">${summary.avgHr!=null?summary.avgHr+' bpm':'—'}</span></li>
+      <li>${t('ui.gpxMaxHr','最大心率')} <span class="mono">${summary.maxHr!=null?summary.maxHr+' bpm':'—'}</span></li>
+      <li>${t('ui.gpxSplits','分段配速')} <span class="mono">${summary.splits.length}</span></li>
     </ul>
     <div class="modal-actions">
-      <button class="btn-primary" data-action="confirm-gpx-import">套用到此賽事</button>
-      <button class="btn-ghost" data-action="close-gpx">取消</button>
+      <button class="btn-primary" data-action="confirm-gpx-import">${t('ui.gpxApply','套用到此賽事')}</button>
+      <button class="btn-ghost" data-action="close-gpx">${t('ui.cancel','取消')}</button>
     </div>
   </div>`;
 }
 function gpxErrorHtml(message){
   return `<div class="modal-panel">
-    <h2>匯入運動紀錄檔</h2>
+    <h2>${t('ui.gpxModalTitle','匯入運動紀錄檔')}</h2>
     <p class="modal-hint" style="color:var(--flag);">${escapeHtml(message)}</p>
-    <div class="modal-actions"><button class="btn-ghost" data-action="close-gpx">關閉</button></div>
+    <div class="modal-actions"><button class="btn-ghost" data-action="close-gpx">${t('ui.close','關閉')}</button></div>
   </div>`;
 }
 let pendingGpxSummary=null;
@@ -2252,14 +2893,15 @@ function deepMergeInto(target,source){
   });
 }
 function pasteModalHtml(){
+  const raceName=escapeHtml(currentRace.name||t('ui.unnamedRace','此賽事'));
   return `<div class="modal-panel modal-panel-wide">
-    <h2>貼上資料快速填入</h2>
-    <p class="modal-hint">把賽事網站、簡章 PDF 或證書內容請 Claude 整理成 JSON（欄位名稱對照 <span class="mono">race-document.schema.json</span>），貼在下面就會套用到「${escapeHtml(currentRace.name||'此賽事')}」。只會更新你貼的欄位，其他資料不會被覆蓋。</p>
+    <h2>${t('ui.pasteModalTitle','貼上資料快速填入')}</h2>
+    <p class="modal-hint">${t('ui.pasteHintFull',`把賽事網站、簡章 PDF 或證書內容請 Claude 整理成 JSON（欄位名稱對照 <span class="mono">race-document.schema.json</span>），貼在下面就會套用到「${raceName}」。只會更新你貼的欄位，其他資料不會被覆蓋。`).replace('{race}',raceName)}</p>
     <textarea id="paste-json-input" rows="9" placeholder='{"name":"2026 臺北馬拉松","schedule":{"raceDate":"2026-12-20"},"route":{"distanceKm":42.195,"elevationGainM":180},"location":{"venueName":"臺北市政府","city":"臺北市"},"budget":{"registrationFee":1500}}'></textarea>
     <p class="paste-error" id="paste-error"></p>
     <div class="modal-actions">
-      <button class="btn-primary" data-action="confirm-paste">套用</button>
-      <button class="btn-ghost" data-action="close-paste">取消</button>
+      <button class="btn-primary" data-action="confirm-paste">${t('ui.apply','套用')}</button>
+      <button class="btn-ghost" data-action="close-paste">${t('ui.cancel','取消')}</button>
     </div>
   </div>`;
 }
@@ -2274,9 +2916,9 @@ pasteModalEl_getter().addEventListener('click',e=>{
     let parsed;
     try{
       parsed=JSON.parse(ta.value);
-      if(typeof parsed!=='object'||parsed===null||Array.isArray(parsed)) throw new Error('請貼上一個 JSON 物件（用 { } 包起來）');
+      if(typeof parsed!=='object'||parsed===null||Array.isArray(parsed)) throw new Error(t('ui.errPasteNotObject','請貼上一個 JSON 物件（用 { } 包起來）'));
     }catch(err){
-      errEl.textContent='JSON 格式錯誤：'+err.message;
+      errEl.textContent=t('ui.pasteJsonError','JSON 格式錯誤：')+err.message;
       return;
     }
     delete parsed.id;delete parsed.createdAt;
@@ -2294,27 +2936,93 @@ function openPasteModal(){
 }
 
 /* ============================================================
+   使用說明（App 內建，右下角路跑小人按鈕開啟）
+   ============================================================ */
+function helpModalHtml(){
+  const zhBody=`
+      <h3>行事曆與篩選</h3>
+      <ul>
+        <li>上方 <span class="mono">‹ 年 月 ›</span> 切換月份，「今天」跳回當月；手機（寬度較窄）會自動改成當月賽事清單，方便點按。</li>
+        <li>篩選分兩層：先選「全部／即將到來／歷史紀錄」，點「即將到來」或「歷史紀錄」後才會展開細分狀態，避免按鈕一次擠太多。</li>
+        <li>搜尋框可用賽事名稱或城市過濾；累積 5 場以上會出現生涯數據（總完賽場次、全馬 PB、當年里程）。</li>
+      </ul>
+      <h3>新增與管理賽事</h3>
+      <ul>
+        <li>右上角「+ 新增賽事」建立；點月曆或清單上的賽事開啟詳情頁編輯，欄位修改即時自動儲存。</li>
+        <li>詳情頁「刪除賽事」需連按兩次確認。</li>
+      </ul>
+      <h3>賽事詳情欄位</h3>
+      <ul>
+        <li><strong>基本資訊</strong>：名稱、系列（同名系列會自動跨年比較 PB）、狀態、時間、抽籤資訊。</li>
+        <li><strong>地理與路線</strong>：距離、爬升、海拔變化圖、CP 明細、ITRA/UTMB 點數（需自行查詢填入）。</li>
+        <li><strong>裝備補給與戰略</strong>：裝備清單（可套用路跑／越野／三鐵標配範本）、補給時程規劃、配速試算與手環產生器。</li>
+        <li><strong>賽後紀錄</strong>：成績儀表板、前後半程掉速分析、比賽鞋款里程追蹤、一鍵產生分享圖。</li>
+      </ul>
+      <h3>資料匯入</h3>
+      <ul>
+        <li><strong>匯入 Excel</strong>：讀取賽事規劃表，可勾選工作表、逐筆確認後再匯入。</li>
+        <li><strong>匯入運動紀錄檔（GPX/TCX）</strong>：Garmin/COROS/Strava 匯出的檔案，自動抓距離、爬升、心率、分段、海拔。</li>
+        <li><strong>貼上資料快速填入</strong>：把賽事網站/簡章/證書內容請 AI 整理成 JSON 後貼上，只更新你貼的欄位。</li>
+      </ul>
+      <h3>提醒與通知</h3>
+      <ul>
+        <li><strong>行事曆提醒</strong>：詳情頁「加入行事曆提醒」或左下角「匯出行事曆提醒」，下載 .ics 檔匯入手機行事曆，內建倒數一個月／一週提醒。</li>
+        <li><strong>推播通知</strong>（選用，需額外部署 Cloud Functions）：登入雲端同步後右上角「啟用推播通知」；部署步驟見 USAGE.md。</li>
+      </ul>
+      <h3>雲端同步與資料安全</h3>
+      <ul>
+        <li>右上角「使用 Google 登入同步」讓資料跨裝置同步（需自行設定 Firebase，見 USAGE.md）；不登入完全不影響本機使用。</li>
+        <li>本機儲存永遠是主要資料來源，登入後才會額外同步到雲端；首次登入會自動合併雲端與本機資料，不會遺失。</li>
+        <li>「匯出 JSON」可隨時備份全部資料；「清除全部資料」需連按兩次確認。</li>
+      </ul>
+      <h3>其他</h3>
+      <ul>
+        <li>右上角月亮/太陽圖示切換深色模式，會記住你的選擇。</li>
+        <li>右上角語言選單支援繁體中文／日文／英文。</li>
+        <li>手機瀏覽器開啟網站後選「加入主畫面」，會使用自訂圖示，體驗跟 App 一樣。</li>
+      </ul>`;
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.helpTitle','使用說明')}</h2>
+    <p class="modal-hint">${tf('ui.helpVersionLine',`版本 ${APP_VERSION} ・ 更完整的說明與雲端同步／推播通知部署步驟請見 repo 裡的 USAGE.md`,APP_VERSION)}</p>
+    <div class="help-body">${t('ui.helpBodyHtml',zhBody)}</div>
+    <div class="modal-actions"><button class="btn-ghost" data-action="close-help">${t('ui.close','關閉')}</button></div>
+  </div>`;
+}
+const helpModalEl_getter=()=>document.getElementById('help-modal');
+function openHelpModal(){
+  helpModalEl_getter().innerHTML=helpModalHtml();
+  helpModalEl_getter().hidden=false;
+}
+helpModalEl_getter().addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-help"]')){
+    helpModalEl_getter().hidden=true;helpModalEl_getter().innerHTML='';
+  }
+});
+document.getElementById('btn-help').innerHTML=sportIconSvg('runner',26);
+document.getElementById('btn-help').addEventListener('click',openHelpModal);
+
+/* ============================================================
    鞋款管理
    ============================================================ */
 function shoeModalHtml(){
   return `<div class="modal-panel modal-panel-wide">
-    <h2>鞋款管理</h2>
-    <p class="modal-hint">記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。</p>
+    <h2>${t('ui.shoeManageTitle','鞋款管理')}</h2>
+    <p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。')}</p>
     <div class="shoe-add-row">
-      <input type="text" id="new-shoe-name" placeholder="鞋款名稱，如「ASICS Metaspeed」">
-      <button type="button" class="btn-primary" data-action="add-shoe">新增</button>
+      <input type="text" id="new-shoe-name" placeholder="${t('ui.shoeNamePlaceholder','鞋款名稱，如「ASICS Metaspeed」')}">
+      <button type="button" class="btn-primary" data-action="add-shoe">${t('ui.shoeAdd','新增')}</button>
     </div>
     <div class="shoe-list">
       ${shoes.length?shoes.map(s=>{
         const stats=computeShoeStats(s.id);
         return `<div class="shoe-row">
           <span class="shoe-row-name">${escapeHtml(s.name)}</span>
-          <span class="shoe-row-stats mono">${stats.totalRaces} 場・${stats.totalDistance.toFixed(1)} 公里</span>
-          <button type="button" class="btn-ghost danger" data-action="delete-shoe" data-id="${s.id}">刪除</button>
+          <span class="shoe-row-stats mono">${tf2('ui.shoeStatsLine',`${stats.totalRaces} 場・${stats.totalDistance.toFixed(1)} 公里`,stats.totalRaces,stats.totalDistance.toFixed(1))}</span>
+          <button type="button" class="btn-ghost danger" data-action="delete-shoe" data-id="${s.id}">${t('ui.delete','刪除')}</button>
         </div>`;
-      }).join(''):'<p class="empty-hint">尚未新增鞋款</p>'}
+      }).join(''):`<p class="empty-hint">${t('ui.shoeNoneYet','尚未新增鞋款')}</p>`}
     </div>
-    <div class="modal-actions"><button class="btn-ghost" data-action="close-shoe-modal">關閉</button></div>
+    <div class="modal-actions"><button class="btn-ghost" data-action="close-shoe-modal">${t('ui.close','關閉')}</button></div>
   </div>`;
 }
 const shoeModalEl_getter=()=>document.getElementById('shoe-modal');
@@ -2366,34 +3074,34 @@ function computePacingRows(targetSeconds,distanceKm,strategy,intervalKm){
   return rows;
 }
 function pacingTableHtml(rows){
-  return `<table class="series-table"><thead><tr><th>距離</th><th>預計通過時間</th></tr></thead>
+  return `<table class="series-table"><thead><tr><th>${t('ui.pacingDistanceCol','距離')}</th><th>${t('ui.pacingTimeCol','預計通過時間')}</th></tr></thead>
     <tbody>${rows.map(r=>`<tr><td class="mono">${r.distanceKm} km</td><td class="mono">${secToHMS(r.cumulativeSeconds)}</td></tr>`).join('')}</tbody></table>`;
 }
 function pacingModalHtml(prefillTarget,prefillDistance,rows){
   return `<div class="modal-panel modal-panel-wide">
-    <h2>配速試算與手環產生器</h2>
-    <p class="modal-hint">輸入目標時間與距離，選擇配速策略，算出每個分段的預計通過時間，也可以下載成手環圖片。</p>
+    <h2>${t('ui.pacingCalcTitle','配速試算與手環產生器')}</h2>
+    <p class="modal-hint">${t('ui.pacingHint','輸入目標時間與距離，選擇配速策略，算出每個分段的預計通過時間，也可以下載成手環圖片。')}</p>
     <div class="pacing-inputs">
-      <label class="field" for="pacing-target"><span>目標時間</span><input type="text" id="pacing-target" placeholder="H:MM:SS" value="${escapeHtml(prefillTarget||'')}"></label>
-      <label class="field" for="pacing-distance"><span>總距離（公里）</span><input type="number" step="any" id="pacing-distance" value="${prefillDistance||''}"></label>
-      <label class="field" for="pacing-strategy"><span>配速策略</span><select id="pacing-strategy">
-        <option value="even">勻速</option>
-        <option value="negative">負分段（後段加速）</option>
-        <option value="positive">正分段（後段保守）</option>
+      <label class="field" for="pacing-target"><span>${t('ui.pacingTargetTime','目標時間')}</span><input type="text" id="pacing-target" placeholder="H:MM:SS" value="${escapeHtml(prefillTarget||'')}"></label>
+      <label class="field" for="pacing-distance"><span>${t('ui.pacingDistance','總距離（公里）')}</span><input type="number" step="any" id="pacing-distance" value="${prefillDistance||''}"></label>
+      <label class="field" for="pacing-strategy"><span>${t('ui.pacingStrategy','配速策略')}</span><select id="pacing-strategy">
+        <option value="even">${t('ui.pacingEven','勻速')}</option>
+        <option value="negative">${t('ui.pacingNegative','負分段（後段加速）')}</option>
+        <option value="positive">${t('ui.pacingPositive','正分段（後段保守）')}</option>
       </select></label>
-      <label class="field" for="pacing-interval"><span>分段間隔</span><select id="pacing-interval">
-        <option value="5">每 5 公里</option>
-        <option value="10">每 10 公里</option>
-        <option value="1">每 1 公里</option>
+      <label class="field" for="pacing-interval"><span>${t('ui.pacingInterval','分段間隔')}</span><select id="pacing-interval">
+        <option value="5">${t('ui.pacingEvery5','每 5 公里')}</option>
+        <option value="10">${t('ui.pacingEvery10','每 10 公里')}</option>
+        <option value="1">${t('ui.pacingEvery1','每 1 公里')}</option>
       </select></label>
     </div>
     <div class="modal-actions modal-actions-top">
-      <button class="btn-primary" data-action="calc-pacing">試算</button>
+      <button class="btn-primary" data-action="calc-pacing">${t('ui.pacingCalc','試算')}</button>
     </div>
     <div id="pacing-results">${rows&&rows.length?pacingTableHtml(rows):''}</div>
     <div class="modal-actions">
-      ${rows&&rows.length?'<button class="btn-ghost" data-action="download-wristband">下載配速手環圖片</button>':''}
-      <button class="btn-ghost" data-action="close-pacing">關閉</button>
+      ${rows&&rows.length?`<button class="btn-ghost" data-action="download-wristband">${t('ui.downloadWristband','下載配速手環圖片')}</button>`:''}
+      <button class="btn-ghost" data-action="close-pacing">${t('ui.close','關閉')}</button>
     </div>
   </div>`;
 }
@@ -2419,7 +3127,7 @@ pacingModalEl_getter().addEventListener('click',e=>{
     const interval=parseFloat(document.getElementById('pacing-interval').value);
     const targetSeconds=hmsToSec(targetStr);
     if(!targetSeconds||!distance){
-      document.getElementById('pacing-results').innerHTML='<p class="paste-error">請輸入有效的目標時間與距離</p>';
+      document.getElementById('pacing-results').innerHTML=`<p class="paste-error">${t('ui.pacingInvalid','請輸入有效的目標時間與距離')}</p>`;
       return;
     }
     pacingModalRows=computePacingRows(targetSeconds,distance,strategy,interval);
@@ -2439,8 +3147,8 @@ async function buildWristbandCanvas(rows,race){
   const ctx=canvas.getContext('2d');
   ctx.fillStyle='#16231C';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#9BA3A0';
-  ctx.font='20px "Noto Sans TC",sans-serif';
-  ctx.fillText(race&&race.name?Array.from(race.name).slice(0,16).join(''):'配速手環',24,50);
+  ctx.font=`20px ${canvasFontFamily()}`;
+  ctx.fillText(race&&race.name?Array.from(race.name).slice(0,16).join(''):t('ui.wristbandTitle','配速手環'),24,50);
   let y=100;
   rows.forEach(r=>{
     ctx.fillStyle='#EDEEE9';
@@ -2465,7 +3173,7 @@ async function downloadWristbandImage(rows,race){
     if(!blob) return;
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=url;a.download='配速手環.png';
+    a.href=url;a.download=t('ui.wristbandFilename','配速手環.png');
     a.click();
     URL.revokeObjectURL(url);
   },'image/png');
@@ -2483,7 +3191,11 @@ document.addEventListener('click',e=>{
    初始化
    ============================================================ */
 async function init(){
-  detailEl.innerHTML='<p class="empty-hint">載入中…</p>';
+  document.getElementById('app-version').textContent=APP_VERSION;
+  document.documentElement.setAttribute('lang',currentLang==='ja'?'ja':currentLang==='en'?'en':'zh-Hant');
+  document.documentElement.setAttribute('data-lang',currentLang);
+  applyStaticTranslations();
+  detailEl.innerHTML=`<p class="empty-hint">${t('ui.loading','載入中…')}</p>`;
   renderAuthArea();
   await Promise.all([loadRaces(),loadTemplates(),loadShoes()]);
   if(templates.length===0){
@@ -2507,6 +3219,9 @@ init();
   import {
     getFirestore, collection, doc, setDoc, deleteDoc, getDocs, writeBatch
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  import {
+    getMessaging, getToken, onMessage
+  } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
 
   // TODO：換成你自己 Firebase 專案「網頁應用程式」設定裡的值（Firebase Console → 專案設定 → 一般 → 你的應用程式）
   const firebaseConfig = {
@@ -2517,6 +3232,9 @@ init();
     messagingSenderId: "1095751046156",
     appId: "1:1095751046156:web:73d0556cf529516f874a29"
   };
+  // TODO：Firebase Console → 專案設定 → Cloud Messaging → Web Push 憑證 → 產生金鑰組，把公開金鑰貼在這裡
+  const VAPID_KEY = "YOUR_VAPID_KEY";
+
   const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
 
   let app=null, auth=null, db=null;
@@ -2534,6 +3252,7 @@ init();
 
   window.__cloud={
     enabled: !!(app&&auth&&db),
+    notificationsConfigured: VAPID_KEY!=='YOUR_VAPID_KEY',
     async signIn(){
       await signInWithPopup(auth, new GoogleAuthProvider());
     },
@@ -2554,6 +3273,22 @@ init();
       snap.docs.forEach(d=>{ if(!keepIds.has(d.id)) batch.delete(d.ref); });
       races.forEach(r=>batch.set(doc(racesCol(uid), r.id), r));
       await batch.commit();
+    },
+    async enableNotifications(uid){
+      if(VAPID_KEY==='YOUR_VAPID_KEY') throw new Error(t('ui.errVapidNotSet','尚未設定 VAPID 金鑰'));
+      if(!('serviceWorker' in navigator)) throw new Error(t('ui.errNoServiceWorker','此瀏覽器不支援背景通知'));
+      if(!('Notification' in window)) throw new Error(t('ui.errNoNotificationSupport','此瀏覽器不支援通知功能'));
+      const permission=await Notification.requestPermission();
+      if(permission!=='granted') throw new Error(t('ui.errPermissionDenied','未取得通知權限'));
+      const registration=await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      const messaging=getMessaging(app);
+      const token=await getToken(messaging,{vapidKey:VAPID_KEY,serviceWorkerRegistration:registration});
+      if(!token) throw new Error(t('ui.errNoToken','無法取得推播權杖'));
+      await setDoc(doc(db,'users',uid,'fcmTokens',token),{token,createdAt:new Date().toISOString()});
+      onMessage(messaging,(payload)=>{
+        if(window.__onForegroundMessage) window.__onForegroundMessage(payload);
+      });
+      return token;
     }
   };
 
