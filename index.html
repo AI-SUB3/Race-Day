@@ -291,11 +291,15 @@
   .empty-state p{margin-bottom:16px;}
   .empty-state-icons{display:flex;gap:26px;margin-bottom:22px;color:var(--stone);}
 
-  .detail-header{padding-bottom:22px;margin-bottom:6px;border-bottom:2px solid var(--ink);}
-  .dh-layout{display:flex;gap:24px;align-items:flex-start;}
-  .dh-main{flex:1;min-width:0;}
-  .dh-cover{width:136px;height:136px;flex-shrink:0;border-radius:10px;overflow:hidden;border:1px solid var(--rule);background:var(--paper);}
-  .dh-cover img{width:100%;height:100%;object-fit:cover;display:block;}
+  .detail-header{position:relative;padding-bottom:22px;margin-bottom:6px;border-bottom:2px solid var(--ink);}
+  .detail-header.has-cover{
+    padding:20px 22px 26px;border-radius:10px;border-bottom:none;
+    box-shadow:inset 0 0 0 1px var(--rule);overflow:hidden;
+  }
+  .dh-cover-bg{position:absolute;inset:0;z-index:0;}
+  .dh-cover-bg img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;}
+  .dh-cover-overlay{position:absolute;inset:0;background:var(--paper);opacity:0.86;}
+  .dh-content{position:relative;z-index:1;}
   .cover-upload{display:flex;gap:8px;margin:8px 0 12px;}
   .dh-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
   .dh-badges{display:flex;align-items:center;gap:12px;}
@@ -372,8 +376,7 @@
     .cal-cell{min-height:64px;padding:4px 4px 3px;}
     .cal-weekdays span{font-size:12px;}
     .cal-chip{font-size:12px;padding:2px 4px;}
-    .dh-layout{flex-direction:column-reverse;}
-    .dh-cover{width:100%;height:170px;}
+    .detail-header.has-cover{padding:16px 16px 20px;}
   }
   @media (max-width:640px){
     .cal-weekdays,.cal-grid{display:none;}
@@ -819,7 +822,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   user:null};
 let currentRace=null;
-const APP_VERSION='v2.1.0';
+const APP_VERSION='v2.1.1';
 
 /* ============================================================
    多語系（i18n）
@@ -974,6 +977,7 @@ const JA={
       </ul>
       <h3>レース詳細の項目</h3>
       <ul>
+        <li><strong>カバー写真</strong>：タイトル下から写真をアップロードでき、タイトル部分の淡いブランド背景になります。同じ写真がカレンダーのマスやスマホの一覧にも小さなサムネイルとして表示されます。</li>
         <li><strong>基本情報</strong>：大会名、シリーズ（同じ名前なら自動で年別比較）、ステータス、日程、抽選情報。</li>
         <li><strong>コースと地形</strong>：距離、標高、標高変化グラフ、CP詳細、ITRA/UTMBポイント（要手動入力）。</li>
         <li><strong>装備・補給・戦略</strong>：装備リスト（ロード／トレイル／トライアスロン標準装備テンプレート対応）、補給計画、ペース計算＆リストバンド作成。</li>
@@ -1182,6 +1186,7 @@ const EN={
       </ul>
       <h3>Race Detail Fields</h3>
       <ul>
+        <li><strong>Cover Photo</strong>: upload a photo below the title — it becomes a faded background for the title block, and the same photo shows as a small thumbnail on the calendar and mobile list too.</li>
         <li><strong>Basic Info</strong>: name, series (same-name series get automatic year-over-year PB comparison), status, schedule, lottery info.</li>
         <li><strong>Course & Terrain</strong>: distance, elevation, an elevation profile chart, checkpoint details, ITRA/UTMB points (enter manually).</li>
         <li><strong>Gear, Nutrition & Strategy</strong>: gear checklist (with built-in road/trail/triathlon starter templates), a nutrition schedule, and a pace calculator with wristband generator.</li>
@@ -2050,32 +2055,30 @@ function coverUploadHtml(race){
 }
 function detailHeaderHtml(race){
   const chip=(race.status==='completed'&&race.results.chipTimeSeconds)?` ・ ${t('field.post.results.chipTimeSeconds','晶片時間')} ${secToHMS(race.results.chipTimeSeconds)}`:'';
-  return `<header class="detail-header">
-    <div class="dh-layout">
-      <div class="dh-main">
-        <div class="dh-top">
-          <div class="dh-badges">
-            <span class="stamp status-${race.status}">${statusLabel(race.status)}</span>
-            <span class="sport-icon-wrap" title="${sportLabel(race.sportType)}">${sportIconSvg(sportIconKey(race.sportType),30)}</span>
-            ${race.results.isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
-          </div>
-          <div class="dh-actions">
-            ${race.schedule.raceDate?`<button class="btn-ghost" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
-            <button class="btn-ghost" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
-            <button class="btn-ghost danger" data-action="delete-race">${state.confirmDelete?t('ui.deleteConfirm','確定刪除？再按一次'):t('ui.deleteRace','刪除賽事')}</button>
-          </div>
+  const hasCover=!!race.coverImage;
+  return `<header class="detail-header${hasCover?' has-cover':''}">
+    ${hasCover?`<div class="dh-cover-bg"><img src="${race.coverImage}" alt=""><div class="dh-cover-overlay"></div></div>`:''}
+    <div class="dh-content">
+      <div class="dh-top">
+        <div class="dh-badges">
+          <span class="stamp status-${race.status}">${statusLabel(race.status)}</span>
+          <span class="sport-icon-wrap" title="${sportLabel(race.sportType)}">${sportIconSvg(sportIconKey(race.sportType),30)}</span>
+          ${race.results.isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
         </div>
-        <h1>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
-        ${coverUploadHtml(race)}
-        <div class="dh-meta mono">${race.schedule.raceDate||t('ui.dateNotSet','尚未設定日期')} ・ ${countdownLabel(race)}${chip}</div>
-        ${sparklineSvg(race)}
-        ${progressBlockHtml(race)}
+        <div class="dh-actions">
+          ${race.schedule.raceDate?`<button class="btn-ghost" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
+          <button class="btn-ghost" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
+          <button class="btn-ghost danger" data-action="delete-race">${state.confirmDelete?t('ui.deleteConfirm','確定刪除？再按一次'):t('ui.deleteRace','刪除賽事')}</button>
+        </div>
       </div>
-      ${race.coverImage?`<div class="dh-cover"><img src="${race.coverImage}" alt=""></div>`:''}
+      <h1>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
+      ${coverUploadHtml(race)}
+      <div class="dh-meta mono">${race.schedule.raceDate||t('ui.dateNotSet','尚未設定日期')} ・ ${countdownLabel(race)}${chip}</div>
+      ${sparklineSvg(race)}
+      ${progressBlockHtml(race)}
     </div>
   </header>`;
 }
-
 function renderDetail(){
   if(state.creating){detailEl.innerHTML=renderCreateForm();return;}
   const race=state.races.find(r=>r.id===state.selectedId);
@@ -2697,7 +2700,7 @@ importModalEl.addEventListener('change',e=>{
 });
 
 /* ============================================================
-   封面照片（本機處理：置中裁切成正方形、縮小、壓縮成 JPEG）
+   封面照片（本機處理：保留長寬比縮小、壓縮成 JPEG）
    不會上傳到任何伺服器，純瀏覽器端 Canvas 運算。
    ============================================================ */
 function processCoverImage(file){
@@ -2706,14 +2709,16 @@ function processCoverImage(file){
     reader.onload=e=>{
       const img=new Image();
       img.onload=()=>{
-        const size=Math.min(img.width,img.height);
-        const sx=(img.width-size)/2,sy=(img.height-size)/2;
-        const target=480;
+        // 保留原始長寬比，只縮小到合理上限，不強制裁成正方形——
+        // 背景底圖用得到完整構圖，小縮圖（行事曆格子等）顯示時再用 CSS object-fit 裁切即可。
+        const maxDim=760;
+        const scale=Math.min(1,maxDim/Math.max(img.width,img.height));
+        const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
         const canvas=document.createElement('canvas');
-        canvas.width=target;canvas.height=target;
+        canvas.width=w;canvas.height=h;
         const ctx=canvas.getContext('2d');
-        ctx.drawImage(img,sx,sy,size,size,0,0,target,target);
-        resolve(canvas.toDataURL('image/jpeg',0.82));
+        ctx.drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.78));
       };
       img.onerror=()=>reject(new Error(t('ui.errImageLoad','無法讀取這張圖片')));
       img.src=e.target.result;
@@ -3051,6 +3056,7 @@ function helpModalHtml(){
       </ul>
       <h3>賽事詳情欄位</h3>
       <ul>
+        <li><strong>封面照片</strong>：標題下方可上傳照片，會變成標題區塊的淡化背景底圖，同一張圖也會出現在行事曆格子與手機清單的小縮圖。</li>
         <li><strong>基本資訊</strong>：名稱、系列（同名系列會自動跨年比較 PB）、狀態、時間、抽籤資訊。</li>
         <li><strong>地理與路線</strong>：距離、爬升、海拔變化圖、CP 明細、ITRA/UTMB 點數（需自行查詢填入）。</li>
         <li><strong>裝備補給與戰略</strong>：裝備清單（可套用路跑／越野／三鐵標配範本）、補給時程規劃、配速試算與手環產生器。</li>
