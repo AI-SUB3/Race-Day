@@ -297,7 +297,7 @@
     box-shadow:inset 0 0 0 1px var(--rule);overflow:hidden;
   }
   .dh-cover-bg{position:absolute;inset:0;z-index:0;}
-  .dh-cover-bg img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;}
+  .dh-cover-bg img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;}
   .dh-cover-overlay{position:absolute;inset:0;background:var(--paper);opacity:0.86;}
   .dh-content{position:relative;z-index:1;}
   .cover-upload{display:flex;gap:8px;margin:8px 0 12px;}
@@ -361,6 +361,10 @@
   .create-form{max-width:420px;}
   .create-form h1{font-size:24px;margin-bottom:20px;}
   .create-actions{display:flex;gap:10px;margin-top:8px;}
+  .create-import-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
+  .create-staged-ok{color:var(--trail);font-size:13px;}
+  .create-staged-err{color:var(--flag);font-size:13px;}
+  .create-staged-thumb{width:32px;height:32px;border-radius:5px;object-fit:cover;}
 
   @media (max-width:860px){
     #topbar{padding:16px 18px 12px;transition:padding 0.2s ease;}
@@ -493,7 +497,7 @@
 </div>
 <input type="file" id="import-file-input" accept=".xlsx,.xls" style="display:none">
 <div id="import-modal" class="modal-overlay" hidden></div>
-<input type="file" id="gpx-file-input" accept=".gpx,.tcx" style="display:none">
+<input type="file" id="gpx-file-input" accept=".gpx,.tcx,.fit" style="display:none">
 <input type="file" id="cover-file-input" accept="image/*" style="display:none">
 <div id="gpx-modal" class="modal-overlay" hidden></div>
 <div id="paste-modal" class="modal-overlay" hidden></div>
@@ -536,6 +540,7 @@ const DIRECTION_OPTIONS=[{value:'outbound',label:'去程'},{value:'return',label
 const SECTION_BASIC=[
   {path:'name',label:'賽事名稱',type:'text'},
   {path:'alias',label:'別名 / 英文名稱',type:'text'},
+  {path:'officialUrl',label:'賽事官方網站',type:'url',wide:true},
   {path:'series',label:'賽事系列（跨年比較用，同系列請填一致名稱）',type:'text',wide:true},
   {path:'status',label:'狀態',type:'select',options:STATUS_OPTIONS},
   {path:'sportType',label:'主要運動種類',type:'select',options:SPORT_OPTIONS},
@@ -789,7 +794,7 @@ function emptyRace(name,sportType,status,raceDate){
   const now=new Date().toISOString();
   return {
     id:uid(),name:name||'',alias:'',series:'',status:status||'considering',sportType:sportType||'road_running',raceFormat:'solo',
-    coverImage:'',
+    coverImage:'',officialUrl:'',
     schedule:{raceDate:raceDate||'',startTime:'',registrationOpenDate:'',registrationCloseDate:'',lotteryResultDate:''},
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
@@ -822,7 +827,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   user:null};
 let currentRace=null;
-const APP_VERSION='v2.1.1';
+const APP_VERSION='v2.2.1';
 
 /* ============================================================
    多語系（i18n）
@@ -889,6 +894,8 @@ const JA={
   'ui.justToday':'本日です','ui.monthsLeft':'残り約 {n} ヶ月','ui.weeksLeft':'残り {n} 週間','ui.daysLeft':'残り {n} 日',
   'ui.newRaceName':'大会名','ui.newRaceNamePlaceholder':'例：2026 台北マラソン',
   'ui.newRaceSport':'主な種目','ui.newRaceStatus':'ステータス','ui.newRaceDate':'レース日',
+  'ui.newRaceUrl':'大会公式サイト',
+  'ui.createImportActivity':'アクティビティファイルを読み込む','ui.createImportCover':'大会ビジュアルを読み込む',
   'ui.helpTitle':'使い方','ui.help':'ヘルプ','ui.helpCaption':'質問はこちらへ！',
   'ui.coverAdd':'＋ カバー写真を追加','ui.coverChange':'カバー写真を変更','ui.coverRemove':'写真を削除',
   'ui.errImageLoad':'この画像を読み込めませんでした',
@@ -933,7 +940,7 @@ const JA={
   'ui.pbBadge':'自己ベスト PB','ui.generateShareImage':'シェア画像を作成',
   'ui.splitPositive':'ポジティブスプリット（後半失速）','ui.splitNegative':'ネガティブスプリット（後半加速）',
   // ---- GPX/TCX 匯入 ----
-  'ui.gpxImportBtn':'アクティビティファイルを読み込む（GPX / TCX）',
+  'ui.gpxImportBtn':'アクティビティファイルを読み込む（GPX / TCX / FIT）',
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（すでに公式記録が入力されている項目は上書きしません）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
@@ -951,7 +958,8 @@ const JA={
   'ui.pasteHintFull':'大会サイト、要項PDF、完走証の内容をAIに <span class="mono">race-document.schema.json</span> の形式のJSONに整理してもらい、ここに貼り付けると「{race}」に反映されます。貼り付けた項目だけが更新され、他のデータは変更されません。',
   'ui.pasteJsonError':'JSON形式エラー：',
   'ui.errNotEnoughPoints':'ファイル内に十分な座標点がありません',
-  'ui.errCannotParseFile':'ファイル形式を解析できません。有効な GPX または TCX ファイルか確認してください',
+  'ui.errCannotParseFile':'ファイル形式を解析できません。有効な GPX、TCX、または FIT ファイルか確認してください',
+  'ui.errCannotParseThisFile':'このファイルを解析できませんでした：',
   'ui.errPasteNotObject':'JSONオブジェクト（{ } で囲まれたもの）を貼り付けてください',
   'ui.errVapidNotSet':'VAPID鍵が未設定です','ui.errNoServiceWorker':'このブラウザはバックグラウンド通知に対応していません',
   'ui.errNoNotificationSupport':'このブラウザは通知機能に対応していません','ui.errPermissionDenied':'通知の許可が得られませんでした',
@@ -973,6 +981,7 @@ const JA={
       <h3>レースの追加と管理</h3>
       <ul>
         <li>右上の「+ 大会を追加」で作成。カレンダーや一覧のレースをクリックすると詳細画面が開き、編集内容は自動保存されます。</li>
+        <li>新規作成時に公式サイトのURLを直接貼り付けたり、アクティビティファイル（GPX/TCX/FIT）や大会ビジュアルを先に読み込んでおくと、作成時に自動で反映されます。</li>
         <li>詳細画面の「大会を削除」は誤操作防止のため2回クリックが必要です。</li>
       </ul>
       <h3>レース詳細の項目</h3>
@@ -986,7 +995,7 @@ const JA={
       <h3>データの読み込み</h3>
       <ul>
         <li><strong>Excelを読み込む</strong>：レース計画表を読み込み、シートを選択して1件ずつ確認してから取り込めます。</li>
-        <li><strong>アクティビティファイル（GPX/TCX）</strong>：Garmin/COROS/Strava から書き出したファイルに対応、距離・標高・心拍数・スプリットを自動取得。</li>
+        <li><strong>アクティビティファイル（GPX/TCX/FIT）</strong>：Garmin/COROS/Strava から書き出したファイルに対応、距離・標高・心拍数・スプリットを自動取得。</li>
         <li><strong>データを貼り付けて入力</strong>：大会サイト・要項・完走証の内容をAIにJSON化してもらい貼り付けると、該当項目だけ反映されます。</li>
       </ul>
       <h3>リマインダーと通知</h3>
@@ -1028,6 +1037,7 @@ const JA={
 
   // ---- 賽事詳情欄位（依區塊分命名空間，避免同名欄位衝突） ----
   'field.basic.name':'大会名','field.basic.alias':'別名／英語名',
+  'field.basic.officialUrl':'公式サイト',
   'field.basic.series':'シリーズ名（年別比較用、同じシリーズは同じ名前で）',
   'field.basic.status':'ステータス','field.basic.sportType':'主な種目','field.basic.raceFormat':'形式',
   'field.basic.schedule.raceDate':'レース日','field.basic.schedule.startTime':'スタート時刻',
@@ -1110,6 +1120,8 @@ const EN={
   'ui.justToday':'Today','ui.monthsLeft':'About {n} months left','ui.weeksLeft':'{n} weeks left','ui.daysLeft':'{n} days left',
   'ui.newRaceName':'Race name','ui.newRaceNamePlaceholder':'e.g. 2026 Taipei Marathon',
   'ui.newRaceSport':'Sport type','ui.newRaceStatus':'Status','ui.newRaceDate':'Race date',
+  'ui.newRaceUrl':'Official Race Website',
+  'ui.createImportActivity':'Import Activity File','ui.createImportCover':'Import Race Cover Image',
   'ui.helpTitle':'Help','ui.help':'Help','ui.helpCaption':'Got questions? Ask me!',
   'ui.coverAdd':'+ Add Cover Photo','ui.coverChange':'Change Cover Photo','ui.coverRemove':'Remove Photo',
   'ui.errImageLoad':'Could not load this image',
@@ -1145,7 +1157,7 @@ const EN={
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
   'ui.pbBadge':'Personal Best','ui.generateShareImage':'Generate share image',
   'ui.splitPositive':'Positive split (slowed down)','ui.splitNegative':'Negative split (sped up)',
-  'ui.gpxImportBtn':'Import activity file (GPX / TCX)',
+  'ui.gpxImportBtn':'Import activity file (GPX / TCX / FIT)',
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (fields that already have official results will not be overwritten):',
   'ui.gpxModalTitle':'Import Activity File',
@@ -1161,7 +1173,8 @@ const EN={
   'ui.pasteHintFull':'Ask an AI to turn a race website, brochure PDF or finisher certificate into JSON matching <span class="mono">race-document.schema.json</span>, then paste it here to apply it to "{race}". Only the fields you paste will be updated — everything else stays as-is.',
   'ui.pasteJsonError':'Invalid JSON: ',
   'ui.errNotEnoughPoints':'Not enough coordinate points in this file',
-  'ui.errCannotParseFile':'Could not parse this file — please check it\u2019s a valid GPX or TCX file',
+  'ui.errCannotParseFile':'Could not parse this file — please check it\u2019s a valid GPX, TCX, or FIT file',
+  'ui.errCannotParseThisFile':'Could not parse this file: ',
   'ui.errPasteNotObject':'Please paste a JSON object (wrapped in { })',
   'ui.errVapidNotSet':'VAPID key not configured yet','ui.errNoServiceWorker':'This browser does not support background notifications',
   'ui.errNoNotificationSupport':'This browser does not support notifications','ui.errPermissionDenied':'Notification permission was not granted',
@@ -1182,6 +1195,7 @@ const EN={
       <h3>Creating & Managing Races</h3>
       <ul>
         <li>Use "+ New Race" in the top right to create one. Click a race on the calendar or list to open its detail page — edits save automatically.</li>
+        <li>While creating a race, you can paste the official website URL directly, or import an activity file (GPX/TCX/FIT) or a race cover image first — both get applied automatically once the race is created.</li>
         <li>"Delete race" on the detail page needs two clicks to confirm, to avoid accidental deletion.</li>
       </ul>
       <h3>Race Detail Fields</h3>
@@ -1195,7 +1209,7 @@ const EN={
       <h3>Importing Data</h3>
       <ul>
         <li><strong>Import Excel</strong>: reads your own race planning spreadsheet — pick which sheets, review each row before importing.</li>
-        <li><strong>Import Activity File (GPX/TCX)</strong>: works with files exported from Garmin, COROS or Strava — automatically pulls distance, elevation, heart rate and splits.</li>
+        <li><strong>Import Activity File (GPX/TCX/FIT)</strong>: works with files exported from Garmin, COROS or Strava — automatically pulls distance, elevation, heart rate and splits.</li>
         <li><strong>Paste to Quick-fill</strong>: have an AI turn a race website, brochure or finisher certificate into JSON and paste it in — only the pasted fields get updated.</li>
       </ul>
       <h3>Reminders & Notifications</h3>
@@ -1237,6 +1251,7 @@ const EN={
 
   // ---- field labels ----
   'field.basic.name':'Race Name','field.basic.alias':'Alias / English Name',
+  'field.basic.officialUrl':'Official Website',
   'field.basic.series':'Race Series (for year-over-year comparison — use the same name each year)',
   'field.basic.status':'Status','field.basic.sportType':'Primary Sport','field.basic.raceFormat':'Format',
   'field.basic.schedule.raceDate':'Race Date','field.basic.schedule.startTime':'Start Time',
@@ -1308,6 +1323,7 @@ const hasArtifactStorage=(typeof window.storage!=='undefined')&&(typeof window.s
 function migrateRace(r){
   if(r.series==null) r.series='';
   if(r.coverImage==null) r.coverImage='';
+  if(r.officialUrl==null) r.officialUrl='';
   if(r.lottery==null) r.lottery={applicants:null,winners:null,winRatePct:null,wasSelected:false};
   if(r.nutritionSchedule==null) r.nutritionSchedule=[];
   if(r.route&&r.route.itraPoints===undefined) r.route.itraPoints=null;
@@ -2124,7 +2140,7 @@ function renderDetail(){
       ${renderResultsDashboard(race)}
       ${renderSplitAnalysis(race)}
       <div class="gpx-import-bar">
-        <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX）')}</button>
+        <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX / FIT）')}</button>
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
       </div>
       <div class="section-body">${SECTION_POST.map(f=>renderField(race,f,'post')).join('')}</div>
@@ -2153,16 +2169,41 @@ function emptyStateHtml(){
   </div>`;
 }
 
+function createActivityLineHtml(){
+  return createStagedActivity
+    ?`<span class="create-staged-ok">✓ ${escapeHtml(createStagedActivity.filename)}</span>`
+    :(createStagedActivityError?`<span class="create-staged-err">${escapeHtml(createStagedActivityError)}</span>`:'');
+}
+function createCoverLineHtml(){
+  return createStagedCover
+    ?`<img class="create-staged-thumb" src="${createStagedCover}" alt="">`
+    :(createStagedCoverError?`<span class="create-staged-err">${escapeHtml(createStagedCoverError)}</span>`:'');
+}
+function updateCreateStagingUI(){
+  const a=document.getElementById('create-activity-line');
+  const c=document.getElementById('create-cover-line');
+  if(a) a.innerHTML=createActivityLineHtml();
+  if(c) c.innerHTML=createCoverLineHtml();
+}
 function renderCreateForm(){
   return `<div class="create-form">
     <h1>${t('ui.createRace','新增賽事')}</h1>
     <label class="field" for="new-name"><span>${t('ui.newRaceName','賽事名稱')}</span><input type="text" id="new-name" placeholder="${t('ui.newRaceNamePlaceholder','如：2026 臺北馬拉松')}"></label>
+    <label class="field" for="new-url"><span>${t('ui.newRaceUrl','賽事官方網站')}</span><input type="url" id="new-url" placeholder="https://..."></label>
     <label class="field" for="new-sport"><span>${t('ui.newRaceSport','主要運動種類')}</span><select id="new-sport">${SPORT_OPTIONS.map(o=>`<option value="${o.value}">${t('opt.sport.'+o.value,o.label)}</option>`).join('')}</select></label>
     <label class="field" for="new-status"><span>${t('ui.newRaceStatus','狀態')}</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value==='considering'?'selected':''}>${t('opt.status.'+o.value,o.label)}</option>`).join('')}</select></label>
     <label class="field" for="new-date"><span>${t('ui.newRaceDate','比賽日期')}</span><input type="date" id="new-date"></label>
     <div class="create-actions">
       <button class="btn-primary" data-action="confirm-create">${t('ui.createRace','建立賽事')}</button>
       <button class="btn-ghost" data-action="cancel-create">${t('ui.cancel','取消')}</button>
+    </div>
+    <div class="create-import-row">
+      <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.createImportActivity','匯入運動紀錄檔')}</button>
+      <span id="create-activity-line">${createActivityLineHtml()}</span>
+    </div>
+    <div class="create-import-row">
+      <button type="button" class="btn-ghost" data-action="open-cover-picker">${t('ui.createImportCover','匯入賽事主視覺')}</button>
+      <span id="create-cover-line">${createCoverLineHtml()}</span>
     </div>
   </div>`;
 }
@@ -2180,7 +2221,13 @@ function selectRace(id,{scroll}={scroll:true}){
 /* ============================================================
    事件處理
    ============================================================ */
-function startCreate(){state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();}
+let createStagedActivity=null,createStagedActivityError=null;
+let createStagedCover=null,createStagedCoverError=null;
+function resetCreateStaging(){
+  createStagedActivity=null;createStagedActivityError=null;
+  createStagedCover=null;createStagedCoverError=null;
+}
+function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();}
 
 document.getElementById('btn-new').addEventListener('click',startCreate);
 
@@ -2379,7 +2426,7 @@ detailEl.addEventListener('click',e=>{
     persist();renderAll();return;
   }
   if(e.target.closest('[data-action="start-create"]')){startCreate();return;}
-  if(e.target.closest('[data-action="cancel-create"]')){state.creating=false;renderAll();return;}
+  if(e.target.closest('[data-action="cancel-create"]')){state.creating=false;resetCreateStaging();renderAll();return;}
   if(e.target.closest('[data-action="confirm-create"]')){
     const nameEl=document.getElementById('new-name');
     const name=nameEl.value.trim();
@@ -2387,9 +2434,14 @@ detailEl.addEventListener('click',e=>{
     const sportType=document.getElementById('new-sport').value;
     const status=document.getElementById('new-status').value;
     const raceDate=document.getElementById('new-date').value;
+    const officialUrl=document.getElementById('new-url').value.trim();
     const race=emptyRace(name,sportType,status,raceDate);
+    if(officialUrl) race.officialUrl=officialUrl;
+    if(createStagedActivity) applyActivitySummaryToRace(race,createStagedActivity.summary);
+    if(createStagedCover) race.coverImage=createStagedCover;
     state.races.push(race);
     state.selectedId=race.id;state.creating=false;
+    resetCreateStaging();
     if(raceDate){
       const d=new Date(raceDate+'T00:00:00');
       if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
@@ -2730,7 +2782,19 @@ function processCoverImage(file){
 document.getElementById('cover-file-input').addEventListener('change',async e=>{
   const file=e.target.files[0];
   e.target.value='';
-  if(!file||!currentRace) return;
+  if(!file) return;
+  if(state.creating){
+    try{
+      createStagedCover=await processCoverImage(file);
+      createStagedCoverError=null;
+    }catch(err){
+      createStagedCover=null;
+      createStagedCoverError=t('ui.errImageLoad','無法讀取這張圖片');
+    }
+    updateCreateStagingUI();
+    return;
+  }
+  if(!currentRace) return;
   try{
     const dataUrl=await processCoverImage(file);
     currentRace.coverImage=dataUrl;
@@ -2750,7 +2814,7 @@ document.addEventListener('click',e=>{
 });
 
 /* ============================================================
-   運動紀錄檔匯入（GPX / TCX，Garmin / COROS / Strava 皆可匯出）
+   運動紀錄檔匯入（GPX / TCX / FIT，Garmin / COROS / Strava 皆可匯出）
    全部在瀏覽器端解析，不會上傳到任何伺服器。
    ============================================================ */
 function haversineKm(lat1,lon1,lat2,lon2){
@@ -2841,6 +2905,119 @@ function summarizeTrackPoints(pts){
     elevationProfile:downsampleElevationProfile(valid,50),
   };
 }
+/* ============================================================
+   FIT 檔案解析（Garmin/COROS/Wahoo 等裝置常見的二進位格式）
+   只解析我們需要的「record」訊息（GPS/心率/步頻逐點紀錄），
+   足夠餵給既有的 summarizeTrackPoints() 走同一套彙整邏輯。
+   ============================================================ */
+const FIT_EPOCH_MS=Date.UTC(1989,11,31,0,0,0);
+function fitBaseTypeInfo(baseType){
+  const table={
+    0x00:{size:1,signed:false,kind:'int',invalid:0xFF},
+    0x01:{size:1,signed:true,kind:'int',invalid:0x7F},
+    0x02:{size:1,signed:false,kind:'int',invalid:0xFF},
+    0x83:{size:2,signed:true,kind:'int',invalid:0x7FFF},
+    0x84:{size:2,signed:false,kind:'int',invalid:0xFFFF},
+    0x85:{size:4,signed:true,kind:'int',invalid:0x7FFFFFFF},
+    0x86:{size:4,signed:false,kind:'int',invalid:0xFFFFFFFF},
+    0x87:{size:1,signed:false,kind:'string',invalid:null},
+    0x88:{size:4,signed:false,kind:'float',invalid:null},
+    0x89:{size:8,signed:false,kind:'float',invalid:null},
+    0x0A:{size:1,signed:false,kind:'int',invalid:0xFF},
+    0x8B:{size:2,signed:false,kind:'int',invalid:0xFFFF},
+    0x8C:{size:4,signed:false,kind:'int',invalid:0xFFFFFFFF},
+    0x0D:{size:1,signed:false,kind:'byte',invalid:null},
+    0x8E:{size:8,signed:true,kind:'int',invalid:null},
+    0x8F:{size:8,signed:false,kind:'int',invalid:null},
+    0x90:{size:8,signed:false,kind:'int',invalid:null},
+  };
+  return table[baseType&0xFF]||{size:1,signed:false,kind:'byte',invalid:null};
+}
+function parseFitPoints(buffer){
+  const view=new DataView(buffer);
+  if(buffer.byteLength<14) throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔'));
+  const headerSize=view.getUint8(0);
+  const sig=String.fromCharCode(view.getUint8(8),view.getUint8(9),view.getUint8(10),view.getUint8(11));
+  if(sig!=='.FIT') throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔'));
+  const dataSize=view.getUint32(4,true);
+  const dataEnd=Math.min(headerSize+dataSize,buffer.byteLength);
+  let offset=headerSize;
+  const localDefs={};
+  const points=[];
+
+  function readField(off,size,baseType,little){
+    const info=fitBaseTypeInfo(baseType);
+    if(info.kind==='string'||info.kind==='byte') return null;
+    try{
+      let raw;
+      if(info.kind==='float'){
+        raw=(info.size===4)?view.getFloat32(off,little):view.getFloat64(off,little);
+        return raw;
+      }
+      switch(info.size){
+        case 1: raw=info.signed?view.getInt8(off):view.getUint8(off); break;
+        case 2: raw=info.signed?view.getInt16(off,little):view.getUint16(off,little); break;
+        case 4: raw=info.signed?view.getInt32(off,little):view.getUint32(off,little); break;
+        case 8: raw=Number(info.signed?view.getBigInt64(off,little):view.getBigUint64(off,little)); break;
+        default: raw=null;
+      }
+      if(info.invalid!=null&&raw===info.invalid) return null;
+      return raw;
+    }catch(e){ return null; }
+  }
+
+  while(offset<dataEnd){
+    const recordHeader=view.getUint8(offset); offset+=1;
+    const isDefinition=(recordHeader&0x40)!==0;
+    const isCompressedTS=(recordHeader&0x80)!==0;
+    const localType=isCompressedTS?((recordHeader>>5)&0x03):(recordHeader&0x0F);
+
+    if(isDefinition&&!isCompressedTS){
+      offset+=1; // reserved
+      const architecture=view.getUint8(offset); offset+=1;
+      const little=architecture===0;
+      const globalMesgNum=little?view.getUint16(offset,true):view.getUint16(offset,false); offset+=2;
+      const numFields=view.getUint8(offset); offset+=1;
+      const fields=[];
+      for(let i=0;i<numFields;i++){
+        fields.push({defNum:view.getUint8(offset),size:view.getUint8(offset+1),baseType:view.getUint8(offset+2)});
+        offset+=3;
+      }
+      let devFields=[];
+      if(recordHeader&0x20){
+        const numDev=view.getUint8(offset); offset+=1;
+        for(let i=0;i<numDev;i++){
+          devFields.push({size:view.getUint8(offset+1)});
+          offset+=3;
+        }
+      }
+      localDefs[localType]={globalMesgNum,little,fields,devFields};
+    }else{
+      const def=localDefs[localType];
+      if(!def) break; // 沒看過的 local type，無法得知訊息長度，安全起見停止解析
+      const values={};
+      for(const f of def.fields){
+        values[f.defNum]=readField(offset,f.size,f.baseType,def.little);
+        offset+=f.size;
+      }
+      for(const df of def.devFields) offset+=df.size;
+      if(def.globalMesgNum===20){ // 'record' message
+        const rawLat=values[0],rawLon=values[1];
+        const lat=(rawLat!=null)?rawLat*(180/Math.pow(2,31)):null;
+        const lon=(rawLon!=null)?rawLon*(180/Math.pow(2,31)):null;
+        const rawAlt=values[2];
+        const ele=(rawAlt!=null)?(rawAlt/5-500):null;
+        const hr=values[3]!=null?values[3]:null;
+        const cad=values[4]!=null?values[4]:null;
+        const rawTime=values[253];
+        const time=(rawTime!=null)?new Date(FIT_EPOCH_MS+rawTime*1000):null;
+        if(lat!=null&&lon!=null) points.push({lat,lon,ele,hr,cad,time});
+      }
+    }
+  }
+  return points;
+}
+
 function parseGpxDoc(xml){
   const pts=[...xml.getElementsByTagName('trkpt')].map(pt=>{
     const eleEl=findByLocalName(pt,'ele'),timeEl=findByLocalName(pt,'time');
@@ -2938,19 +3115,51 @@ function gpxErrorHtml(message){
   </div>`;
 }
 let pendingGpxSummary=null;
+function applyActivitySummaryToRace(race,s){
+  if(s.distanceKm) race.route.distanceKm=s.distanceKm;
+  if(s.elevationGainM!=null) race.route.elevationGainM=s.elevationGainM;
+  if(s.durationSeconds!=null&&race.results.chipTimeSeconds==null) race.results.chipTimeSeconds=s.durationSeconds;
+  if(s.avgHr!=null) race.performanceData.avgHr=s.avgHr;
+  if(s.maxHr!=null) race.performanceData.maxHr=s.maxHr;
+  if(s.avgCadence!=null) race.performanceData.avgCadence=s.avgCadence;
+  if(!race.performanceData.dataSource) race.performanceData.dataSource='運動手錶匯入 (GPX/TCX/FIT)';
+  if(s.splits&&s.splits.length) race.splits=s.splits;
+  if(s.elevationProfile&&s.elevationProfile.length) race.route.elevationProfile=s.elevationProfile;
+}
+async function parseActivityFile(file){
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(ext==='fit'){
+    const buffer=await file.arrayBuffer();
+    const points=parseFitPoints(buffer);
+    return summarizeTrackPoints(points);
+  }
+  const text=await file.text();
+  return parseGpxOrTcx(text);
+}
 document.getElementById('gpx-file-input').addEventListener('change',async e=>{
   const file=e.target.files[0];
   e.target.value='';
-  if(!file||!currentRace) return;
+  if(!file) return;
+  if(state.creating){
+    try{
+      createStagedActivity={summary:await parseActivityFile(file),filename:file.name};
+      createStagedActivityError=null;
+    }catch(err){
+      createStagedActivity=null;
+      createStagedActivityError=t('ui.errCannotParseThisFile','無法解析這個檔案：')+err.message;
+    }
+    updateCreateStagingUI();
+    return;
+  }
+  if(!currentRace) return;
   const modal=gpxModalEl_getter();
   try{
-    const text=await file.text();
-    pendingGpxSummary=parseGpxOrTcx(text);
+    pendingGpxSummary=await parseActivityFile(file);
     modal.innerHTML=gpxSummaryHtml(pendingGpxSummary,file.name);
     modal.hidden=false;
   }catch(err){
     pendingGpxSummary=null;
-    modal.innerHTML=gpxErrorHtml('無法解析這個檔案：'+err.message);
+    modal.innerHTML=gpxErrorHtml(t('ui.errCannotParseThisFile','無法解析這個檔案：')+err.message);
     modal.hidden=false;
   }
 });
@@ -2960,16 +3169,7 @@ gpxModalEl_getter().addEventListener('click',e=>{
   }
   if(e.target.closest('[data-action="confirm-gpx-import"]')){
     if(pendingGpxSummary&&currentRace){
-      const s=pendingGpxSummary;
-      if(s.distanceKm) currentRace.route.distanceKm=s.distanceKm;
-      if(s.elevationGainM!=null) currentRace.route.elevationGainM=s.elevationGainM;
-      if(s.durationSeconds!=null&&currentRace.results.chipTimeSeconds==null) currentRace.results.chipTimeSeconds=s.durationSeconds;
-      if(s.avgHr!=null) currentRace.performanceData.avgHr=s.avgHr;
-      if(s.maxHr!=null) currentRace.performanceData.maxHr=s.maxHr;
-      if(s.avgCadence!=null) currentRace.performanceData.avgCadence=s.avgCadence;
-      if(!currentRace.performanceData.dataSource) currentRace.performanceData.dataSource='運動手錶匯入 (GPX/TCX)';
-      if(s.splits&&s.splits.length) currentRace.splits=s.splits;
-      if(s.elevationProfile&&s.elevationProfile.length) currentRace.route.elevationProfile=s.elevationProfile;
+      applyActivitySummaryToRace(currentRace,pendingGpxSummary);
       currentRace.updatedAt=new Date().toISOString();
       persist();renderCalendar();renderDetail();
     }
@@ -3052,6 +3252,7 @@ function helpModalHtml(){
       <h3>新增與管理賽事</h3>
       <ul>
         <li>右上角「+ 新增賽事」建立；點月曆或清單上的賽事開啟詳情頁編輯，欄位修改即時自動儲存。</li>
+        <li>新增賽事時可直接貼上官方網站連結，也可以先匯入運動紀錄檔（GPX/TCX/FIT）或賽事主視覺，建立時會一併套用。</li>
         <li>詳情頁「刪除賽事」需連按兩次確認。</li>
       </ul>
       <h3>賽事詳情欄位</h3>
@@ -3065,7 +3266,7 @@ function helpModalHtml(){
       <h3>資料匯入</h3>
       <ul>
         <li><strong>匯入 Excel</strong>：讀取賽事規劃表，可勾選工作表、逐筆確認後再匯入。</li>
-        <li><strong>匯入運動紀錄檔（GPX/TCX）</strong>：Garmin/COROS/Strava 匯出的檔案，自動抓距離、爬升、心率、分段、海拔。</li>
+        <li><strong>匯入運動紀錄檔（GPX/TCX/FIT）</strong>：Garmin/COROS/Strava 匯出的檔案，自動抓距離、爬升、心率、分段、海拔。</li>
         <li><strong>貼上資料快速填入</strong>：把賽事網站/簡章/證書內容請 AI 整理成 JSON 後貼上，只更新你貼的欄位。</li>
       </ul>
       <h3>提醒與通知</h3>
