@@ -43,6 +43,7 @@
     --sport-duathlon:#8A6B35;
     --sport-triathlon:#2A7A8A;
     --sport-cycling:#5C6670;
+    --sport-swimming:#1E7FA8;
     --sport-obstacle_race:#6B6339;
     --sport-other:#8B8D82;
   }
@@ -63,6 +64,7 @@
     --sport-duathlon:#C9A363;
     --sport-triathlon:#5CB8C4;
     --sport-cycling:#9AA5B0;
+    --sport-swimming:#5FBEDB;
     --sport-obstacle_race:#A89F5C;
     --sport-other:#9BA3A0;
   }
@@ -722,6 +724,7 @@ const SPORT_OPTIONS=[
   {value:'road_running',label:'路跑'},{value:'trail_running',label:'越野跑'},
   {value:'ultra_marathon',label:'超級馬拉松'},{value:'duathlon',label:'二鐵'},
   {value:'triathlon',label:'三鐵'},{value:'cycling',label:'自行車'},
+  {value:'swimming',label:'游泳'},
   {value:'obstacle_race',label:'障礙賽'},{value:'other',label:'其他'},
 ];
 const FORMAT_OPTIONS=[
@@ -981,6 +984,10 @@ const SPORT_ICON_INNER={
   triathlon:`<path d="M1 17 Q3 14.5 5 17 T9 17"/>
     <circle cx="14" cy="13" r="3.2"/>
     <path d="M18.5 12 L23 5"/><circle cx="23" cy="5" r="1.5" fill="currentColor" stroke="none"/>`,
+  swimming:`<circle cx="6" cy="5.5" r="1.8" fill="currentColor" stroke="none"/>
+    <path d="M7.4 7.3 L13.5 9.8 L19 6.8" stroke-width="1.6"/>
+    <path d="M2 14.5 Q4.5 12 7 14.5 T12 14.5 T17 14.5 T22 14.5" stroke-width="1.5"/>
+    <path d="M2 18.3 Q4.5 15.8 7 18.3 T12 18.3 T17 18.3 T22 18.3" stroke-width="1.5"/>`,
 };
 const EMPTY_STATE_ICONS={
   checkpoints:`<path d="M6 21V3"/><path d="M6 4h11l-2.5 3L17 10H6"/>`,
@@ -1006,6 +1013,7 @@ function emptyStateBlock(iconKey,text){
 function sportIconKey(sportType){
   if(sportType==='trail_running'||sportType==='ultra_marathon') return 'trail';
   if(sportType==='triathlon'||sportType==='duathlon'||sportType==='cycling') return 'triathlon';
+  if(sportType==='swimming') return 'swimming';
   return 'runner';
 }
 function sportColorVar(sportType){
@@ -1067,7 +1075,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',user:null};
 let currentRace=null;
-const APP_VERSION='v2.16.0';
+const APP_VERSION='v2.16.2';
 
 /* ============================================================
    多語系（i18n）
@@ -1306,6 +1314,7 @@ const JA={
   'opt.status.completed':'完走','opt.status.dns':'未出走 (DNS)','opt.status.dnf':'途中棄権 (DNF)',
   'opt.sport.road_running':'ロード','opt.sport.trail_running':'トレイルラン','opt.sport.ultra_marathon':'ウルトラマラソン',
   'opt.sport.duathlon':'デュアスロン','opt.sport.triathlon':'トライアスロン','opt.sport.cycling':'サイクリング',
+  'opt.sport.swimming':'水泳',
   'opt.sport.obstacle_race':'障害物レース','opt.sport.other':'その他',
   'opt.format.solo':'個人','opt.format.pair':'ペア','opt.format.relay':'リレー','opt.format.loop':'周回','opt.format.age_group':'年代別',
   'opt.payment.unpaid':'未払い','opt.payment.paid':'支払済み','opt.payment.refunding':'返金手続き中',
@@ -1565,6 +1574,7 @@ const EN={
   'opt.status.completed':'Completed','opt.status.dns':'DNS','opt.status.dnf':'DNF',
   'opt.sport.road_running':'Road Running','opt.sport.trail_running':'Trail Running','opt.sport.ultra_marathon':'Ultramarathon',
   'opt.sport.duathlon':'Duathlon','opt.sport.triathlon':'Triathlon','opt.sport.cycling':'Cycling',
+  'opt.sport.swimming':'Swimming',
   'opt.sport.obstacle_race':'Obstacle Race','opt.sport.other':'Other',
   'opt.format.solo':'Solo','opt.format.pair':'Pair','opt.format.relay':'Relay','opt.format.loop':'Loop','opt.format.age_group':'Age Group',
   'opt.payment.unpaid':'Unpaid','opt.payment.paid':'Paid','opt.payment.refunding':'Refunding',
@@ -2139,13 +2149,22 @@ const STARTER_TEMPLATES=[
     {itemName:'手套',category:'apparel',isMandatory:false},
     {itemName:'能量膠/運動飲料',category:'nutrition',isMandatory:false},
   ]},
+  {name:'游泳標配',items:[
+    {itemName:'泳鏡',category:'mandatory_gear',isMandatory:true},
+    {itemName:'泳帽',category:'mandatory_gear',isMandatory:true},
+    {itemName:'防寒衣/防寒泳衣（視水溫規則）',category:'apparel',isMandatory:false},
+    {itemName:'防水袋/浮標（開放水域安全裝備）',category:'mandatory_gear',isMandatory:true},
+    {itemName:'耳塞/鼻夾',category:'other',isMandatory:false},
+    {itemName:'防寒油/凡士林',category:'other',isMandatory:false},
+    {itemName:'毛巾/更衣用具',category:'other',isMandatory:false},
+  ]},
 ];
 
 // 依運動種類自動套用對應的裝備範本（僅在裝備清單還是空的時候才會套用，
 // 不會覆蓋使用者已經自己填好的內容）。索引對應 STARTER_TEMPLATES 陣列。
 const SPORT_TEMPLATE_INDEX={
   road_running:0,trail_running:1,ultra_marathon:1,obstacle_race:1,
-  triathlon:2,duathlon:2,cycling:3,
+  triathlon:2,duathlon:2,cycling:3,swimming:4,
 };
 function autoApplyEquipmentTemplate(race){
   if(race.equipmentChecklist&&race.equipmentChecklist.length>0) return false;
@@ -2516,9 +2535,12 @@ function initRouteMap(race){
     [t('ui.mapStandard','標準地圖')]:standardLayer,
     [t('ui.mapTerrain','地形圖')]:terrainLayer,
   }).addTo(currentRouteMap);
-  const polyline=L.polyline(pts,{color:'#2E6B49',weight:3}).addTo(currentRouteMap);
-  L.circleMarker(pts[0],{radius:5,color:'#2E6B49',fillColor:'#2E6B49',fillOpacity:1}).addTo(currentRouteMap);
-  L.circleMarker(pts[pts.length-1],{radius:5,color:'#B8451F',fillColor:'#B8451F',fillOpacity:1}).addTo(currentRouteMap);
+  // 路線用「深紅色實線 + 外層較透明的同色寬線」疊出發光效果，
+  // 不管在地形圖的綠色系還是一般地圖上都能清楚跳出來，深色/淺色模式都測過。
+  const glowLine=L.polyline(pts,{color:'#FF3D3D',weight:9,opacity:0.4,lineCap:'round',lineJoin:'round'}).addTo(currentRouteMap);
+  const polyline=L.polyline(pts,{color:'#C4001D',weight:3.5,opacity:1,lineCap:'round',lineJoin:'round'}).addTo(currentRouteMap);
+  L.circleMarker(pts[0],{radius:6,color:'#fff',weight:2,fillColor:'#00C853',fillOpacity:1}).addTo(currentRouteMap);
+  L.circleMarker(pts[pts.length-1],{radius:6,color:'#fff',weight:2,fillColor:'#FFD600',fillOpacity:1}).addTo(currentRouteMap);
   currentRouteMap.fitBounds(polyline.getBounds(),{padding:[16,16]});
 }
 function routeMapHtml(race){
@@ -2983,7 +3005,7 @@ function renderDetail(){
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
       </div>
       <div class="section-body">${SECTION_POST.map(f=>renderField(race,f,'post')).join('')}</div>
-      ${race.sportType!=='cycling'?renderShoeSelector(race):''}
+      ${(race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}
       ${renderRepeatable(race,'splits')}
       ${renderRepeatable(race,'mediaLinks')}
     </details>
