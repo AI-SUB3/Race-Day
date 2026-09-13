@@ -77,6 +77,12 @@
   }
   .topbar-row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
   .topbar-actions{display:flex;align-items:center;gap:14px;}
+  .new-race-stack{display:flex;flex-direction:column;align-items:stretch;gap:4px;}
+  .btn-text-small{
+    background:none;border:none;padding:0;font:inherit;font-size:12px;color:var(--ink-soft);
+    text-decoration:underline;cursor:pointer;text-align:center;
+  }
+  .btn-text-small:hover{color:var(--ink);}
   .auth-area{display:flex;align-items:center;gap:10px;}
   .auth-hint{color:var(--stone);}
   .auth-error{color:var(--flag);max-width:260px;}
@@ -550,7 +556,10 @@
           <span class="lang-caption small">支援：繁體中文・日本語・English</span>
         </div>
         <div id="auth-area" class="auth-area"></div>
-        <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
+        <div class="new-race-stack">
+          <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
+          <button id="btn-sample-data" class="btn-text-small" data-i18n="ui.sampleData">範例資料</button>
+        </div>
       </div>
     </div>
     <div class="topbar-row2">
@@ -935,7 +944,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   user:null};
 let currentRace=null;
-const APP_VERSION='v2.11.0';
+const APP_VERSION='v2.12.0';
 
 /* ============================================================
    多語系（i18n）
@@ -984,6 +993,7 @@ const JA={
   // ---- 靜態 UI（topbar／按鈕／通用字串） ----
   'ui.appTitle':'レース記録','ui.appTagline':'エントリーからゴールまでの完全な記録',
   'ui.newRace':'+ 大会を追加','ui.searchPlaceholder':'大会名・都市で検索…','ui.today':'今日',
+  'ui.sampleData':'サンプルデータ',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
   'ui.importExcel':'Excelを読み込む','ui.exportJson':'JSONを書き出す','ui.exportIcs':'カレンダーリマインダーを書き出す',
   'ui.clearAll':'すべてのデータを削除','ui.clearAllConfirm':'本当に削除しますか？もう一度押してください',
@@ -1244,6 +1254,7 @@ const EN={
   // ---- static UI ----
   'ui.appTitle':'Race Log','ui.appTagline':'Your complete record, from sign-up to finish line',
   'ui.newRace':'+ New Race','ui.searchPlaceholder':'Search by race name or city…','ui.today':'Today',
+  'ui.sampleData':'Sample Data',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
   'ui.importExcel':'Import Excel','ui.exportJson':'Export JSON','ui.exportIcs':'Export Calendar Reminders',
   'ui.clearAll':'Clear All Data','ui.clearAllConfirm':'Are you sure? Click again to confirm',
@@ -1563,6 +1574,125 @@ function migrateRace(r){
   if(r.performanceData&&r.performanceData.shoeId===undefined) r.performanceData.shoeId='';
   return r;
 }
+
+/* ============================================================
+   範例資料：給第一次使用的人快速看過每個欄位大概填什麼，
+   用固定 id 識別，避免重複點擊建立出好幾份一樣的範例。
+   ============================================================ */
+const EXAMPLE_RACE_IDS=['example-taipei-marathon','example-serow-trail'];
+function buildExampleRaces(){
+  const now=new Date().toISOString();
+  const marathon=emptyRace('範例｜2026 台北馬拉松','road_running','registered','2026-12-20');
+  marathon.id='example-taipei-marathon';
+  marathon.alias='2026 Taipei Marathon';
+  marathon.series='台北馬拉松';
+  marathon.officialUrl='https://www.taipeimarathon.org.tw';
+  marathon.schedule.startTime='06:30';
+  marathon.schedule.registrationOpenDate='2026-08-01';
+  marathon.schedule.registrationCloseDate='2026-09-15';
+  marathon.schedule.lotteryResultDate='2026-09-25';
+  marathon.lottery={applicants:52000,winners:30000,winRatePct:58,wasSelected:true};
+  marathon.location={venueName:'臺北市政府',city:'臺北市',country:'臺灣'};
+  marathon.route={distanceKm:42.195,elevationGainM:180,elevationLossM:180,minAltitudeM:5,maxAltitudeM:45,startAltitudeM:10,
+    surface:{pavedPct:100,trailPct:0,stairsPct:0},checkpointCount:15,cutoffTimeSeconds:21600,itraPoints:null,
+    terrainNotes:'全程柏油路，橋樑路段較多，注意風勢與反光路面。',elevationProfile:[],trackPoints:[]};
+  marathon.checkpoints=[
+    {name:'CP1',distanceKm:5,cutoffTimeSeconds:null,elevationM:8,hasWater:true,hasFood:false,hasDropBag:false,notes:''},
+    {name:'CP2（半程）',distanceKm:21.1,cutoffTimeSeconds:10800,elevationM:12,hasWater:true,hasFood:true,hasDropBag:false,notes:'香蕉、鹽錠'},
+    {name:'CP3',distanceKm:30,cutoffTimeSeconds:16200,elevationM:6,hasWater:true,hasFood:true,hasDropBag:false,notes:''},
+    {name:'終點關門',distanceKm:42.195,cutoffTimeSeconds:21600,elevationM:10,hasWater:true,hasFood:true,hasDropBag:true,notes:'6 小時關門'},
+  ];
+  marathon.climateForecast={avgTempC:18,avgHumidityPct:70,windDirection:'東北風',windSpeedKmh:15,rainProbabilityPct:20};
+  marathon.budget={registrationFee:1500,currency:'TWD',paymentStatus:'paid',chipDeposit:0};
+  marathon.accommodations=[{hotelName:'市府station旁商旅（範例）',address:'臺北市信義區',checkIn:'2026-12-19',checkOut:'2026-12-20',distanceToStartKm:0.5,bookingStatus:'booked',cost:3200,notes:'步行可到起點'}];
+  marathon.transportation=[
+    {direction:'outbound',mode:'mrt',departureTime:'05:30',pickupLocation:'家裡',notes:'提前搭捷運，避免管制'},
+    {direction:'return',mode:'mrt',departureTime:'13:00',pickupLocation:'市府站',notes:''},
+  ];
+  marathon.companions=[{name:'小林（範例）',role:'pacer',contactInfo:'',notes:'配速員，目標 4 小時30分'}];
+  marathon.goals=[
+    {tier:'A',targetTimeSeconds:hmsToSec('4:00:00'),paceStrategy:'前半程 5:40/km 穩定，後半程視狀況加速'},
+    {tier:'B',targetTimeSeconds:hmsToSec('4:15:00'),paceStrategy:'全程平均配速 6:00/km'},
+    {tier:'C',targetTimeSeconds:hmsToSec('4:30:00'),paceStrategy:'安全完賽，量力而為'},
+  ];
+  marathon.equipmentChecklist=STARTER_TEMPLATES[0].items.map(it=>Object.assign({isPacked:false,notes:''},it));
+  marathon.nutritionPlan={gelCount:4,electrolyteTabletCount:2,hydrationCapacityMl:500,notes:'每 10K 補一次膠'};
+  marathon.nutritionSchedule=[
+    {distanceKm:10,item:'能量膠',plannedAmount:'1 條',consumed:false,notes:''},
+    {distanceKm:21,item:'鹽錠＋香蕉',plannedAmount:'1 顆＋半根',consumed:false,notes:''},
+    {distanceKm:32,item:'能量膠',plannedAmount:'1 條',consumed:false,notes:'加咖啡因'},
+  ];
+  marathon.trainingPlan={planStartDate:'2026-09-01',planEndDate:'2026-12-19',taperStartDate:'2026-12-08',
+    weeklyMileageTargetKm:55,keyWorkoutNotes:'週二間歇、週四節奏跑、週日長距離',externalPlanUrl:'',notes:'範例訓練計畫，可依自己狀況調整'};
+  marathon.createdAt=now;marathon.updatedAt=now;
+
+  const trail=emptyRace('範例｜2026 山羚羊虎頭山越野賽','trail_running','completed','2026-03-15');
+  trail.id='example-serow-trail';
+  trail.alias='羚羊組 25K';
+  trail.series='山羚羊系列';
+  trail.officialUrl='https://www.serowtrail.com';
+  trail.schedule.startTime='07:00';
+  trail.location={venueName:'虎頭山環保公園',city:'桃園市',country:'臺灣'};
+  trail.route={distanceKm:25,elevationGainM:900,elevationLossM:900,minAltitudeM:80,maxAltitudeM:320,startAltitudeM:100,
+    surface:{pavedPct:15,trailPct:80,stairsPct:5},checkpointCount:3,cutoffTimeSeconds:21600,itraPoints:8,
+    terrainNotes:'多段連續爬升，路面濕滑處多，建議使用越野釘鞋。',
+    elevationProfile:[
+      {distanceKm:0,elevationM:100},{distanceKm:3,elevationM:220},{distanceKm:6,elevationM:180},
+      {distanceKm:10,elevationM:320},{distanceKm:14,elevationM:250},{distanceKm:18,elevationM:290},
+      {distanceKm:22,elevationM:150},{distanceKm:25,elevationM:100},
+    ],
+    trackPoints:[
+      {lat:24.9998,lon:121.3128},{lat:25.0032,lon:121.3155},{lat:25.0061,lon:121.3187},
+      {lat:25.0045,lon:121.3221},{lat:25.0012,lon:121.3204},{lat:24.9985,lon:121.3167},{lat:24.9998,lon:121.3128},
+    ]};
+  trail.checkpoints=[
+    {name:'CP1',distanceKm:8,cutoffTimeSeconds:7200,elevationM:280,hasWater:true,hasFood:true,hasDropBag:false,notes:'鹹湯、水果'},
+    {name:'CP2',distanceKm:16,cutoffTimeSeconds:14400,elevationM:260,hasWater:true,hasFood:true,hasDropBag:true,notes:'可換裝'},
+    {name:'終點關門',distanceKm:25,cutoffTimeSeconds:21600,elevationM:100,hasWater:true,hasFood:true,hasDropBag:false,notes:''},
+  ];
+  trail.raceDayWeather={feelsLikeTempC:22,condition:'多雲偶陣雨',humidityPct:85,notes:'CP2 後下了場短暫雨，路面濕滑'};
+  trail.budget={registrationFee:1800,currency:'TWD',paymentStatus:'paid',chipDeposit:0};
+  trail.equipmentChecklist=STARTER_TEMPLATES[1].items.map(it=>Object.assign({isPacked:true,notes:''},it));
+  trail.results={gunTimeSeconds:hmsToSec('3:32:10'),chipTimeSeconds:hmsToSec('3:30:05'),overallRank:118,overallParticipants:450,
+    ageGroupRank:14,ageGroupParticipants:62,isPb:true,firstHalfSeconds:hmsToSec('1:38:00'),secondHalfSeconds:hmsToSec('1:52:05')};
+  trail.performanceData={avgHr:152,maxHr:176,avgCadence:162,avgPowerWatts:null,dataSource:'運動手錶匯入 (GPX/TCX/FIT)',
+    notes:'後段心率略高，補給節奏可以再提前',shoeId:''};
+  trail.splits=[
+    {distanceKm:5,splitTimeSeconds:hmsToSec('0:32:00'),avgHr:148,avgPaceSecPerKm:384,elevationGainM:180,notes:''},
+    {distanceKm:10,splitTimeSeconds:hmsToSec('1:08:00'),avgHr:155,avgPaceSecPerKm:432,elevationGainM:260,notes:'CP1 後開始爬升'},
+    {distanceKm:15,splitTimeSeconds:hmsToSec('1:45:00'),avgHr:158,avgPaceSecPerKm:444,elevationGainM:220,notes:''},
+    {distanceKm:20,splitTimeSeconds:hmsToSec('2:35:00'),avgHr:150,avgPaceSecPerKm:600,elevationGainM:180,notes:'下雨路滑，放慢腳步'},
+    {distanceKm:25,splitTimeSeconds:hmsToSec('3:30:05'),avgHr:152,avgPaceSecPerKm:462,elevationGainM:60,notes:'最後衝刺'},
+  ];
+  trail.review={
+    hitTheWallNotes:'20K 後下雨路滑，配速掉了不少，補給沒跟上導致後半段有點撞牆。',
+    courseReview:'風景很好，補給站食物豐富，路標清楚，但雨後路段真的很滑，建議越野釘鞋。',
+    pros:'補給充足、風景佳、路標清楚',
+    cons:'雨後路滑路段較危險、部分路段較窄容易塞車',
+    lessonsLearned:'下次雨天賽事要提前補給、鞋子選擇要更保守',
+  };
+  trail.mediaLinks=[{type:'official_site',url:'https://www.serowtrail.com',notes:'官方賽事網站'}];
+  trail.createdAt=now;trail.updatedAt=now;
+
+  return [marathon,trail];
+}
+function hasExampleRaces(){
+  return state.races.some(r=>EXAMPLE_RACE_IDS.includes(r.id));
+}
+document.getElementById('btn-sample-data').addEventListener('click',()=>{
+  const existing=state.races.find(r=>EXAMPLE_RACE_IDS.includes(r.id)&&!r.deletedAt);
+  if(existing){
+    state.selectedId=existing.id;state.creating=false;
+    renderAll();scrollDetailIntoView();
+    return;
+  }
+  const examples=buildExampleRaces();
+  state.races.push(...examples);
+  state.selectedId=examples[0].id;state.creating=false;
+  const d=new Date(examples[0].schedule.raceDate+'T00:00:00');
+  if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
+  persist();renderAll();scrollDetailIntoView();
+});
 
 function duplicateRace(race){
   const copy=JSON.parse(JSON.stringify(race));
