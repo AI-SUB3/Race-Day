@@ -125,7 +125,14 @@
   .app-version{color:var(--stone);margin-left:auto;}
 
   #main-content{flex:1;padding:24px 32px 100px;max-width:1120px;width:100%;margin:0 auto;}
-  .empty-hint{color:var(--stone);font-size:15px;padding:16px 8px;}
+  .empty-hint{color:var(--stone);font-size:15px;padding:16px 8px;margin:0;}
+  .empty-hint-block{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:22px 8px;color:var(--stone);
+  }
+  .empty-hint-block svg{width:30px;height:30px;opacity:0.55;}
+  .empty-hint-block .empty-hint{padding:0;text-align:center;}
+  .repeat-rows .empty-hint-block{padding:16px 8px;}
 
   /* ---------- Calendar ---------- */
   #calendar{margin-bottom:8px;}
@@ -181,13 +188,22 @@
   .cal-list-name{font-size:15px;color:var(--ink);}
 
   /* ---------- Career summary ---------- */
-  .career-summary{display:flex;gap:30px;flex-wrap:wrap;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--rule);}
+  .career-summary-wrap{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--rule);}
+  .career-summary{display:flex;gap:30px;flex-wrap:wrap;}
   .career-stat{display:flex;align-items:center;gap:10px;}
   .career-stat-icon{color:var(--trail);flex-shrink:0;opacity:0.85;}
   .career-stat-icon svg{width:22px;height:22px;display:block;}
   .career-stat-text{display:flex;flex-direction:column;gap:2px;}
   .career-stat-value{font-size:23px;font-weight:700;}
   .career-stat-label{font-size:12px;color:var(--stone);}
+  .yearly-chart-wrap{margin-left:auto;max-width:100%;overflow-x:auto;}
+  .yearly-chart-title{color:var(--stone);margin-bottom:2px;}
+  .yearly-chart-svg{height:100px;display:block;}
+  .yearly-chart-count{font-size:11px;fill:var(--ink-soft);}
+  .yearly-chart-year{font-size:11px;fill:var(--stone);}
+  @media (max-width:640px){
+    .yearly-chart-wrap{margin-left:0;width:100%;}
+  }
 
   /* ---------- Results dashboard ---------- */
   .results-dashboard{border:1px solid var(--rule);border-radius:4px;padding:22px;margin-bottom:22px;background:var(--surface);}
@@ -214,6 +230,11 @@
   .elevation-profile{margin:4px 2px 18px;}
   .elevation-profile-head{display:flex;justify-content:space-between;color:var(--stone);margin-bottom:6px;}
   .elevation-svg{width:100%;height:110px;display:block;}
+
+  /* ---------- Route map ---------- */
+  .route-map-wrap{margin:4px 2px 18px;}
+  .route-map-head{color:var(--stone);margin-bottom:6px;}
+  .route-map{width:100%;height:280px;border-radius:4px;border:1px solid var(--rule);background:var(--paper);z-index:0;}
 
   /* ---------- Shoe management ---------- */
   .shoe-add-row{display:flex;gap:8px;margin-bottom:16px;}
@@ -264,10 +285,19 @@
   .help-body ul{margin:0 0 10px;padding-left:20px;color:var(--ink-soft);font-size:14px;line-height:1.7;}
   .help-body li{margin-bottom:5px;}
   .help-body strong{color:var(--ink);}
+  .new-race-fab{
+    display:none;position:fixed;z-index:41;
+    background:var(--ink);color:var(--surface);border:none;border-radius:50%;
+    align-items:center;justify-content:center;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,0.28);
+  }
   @media (max-width:640px){
     .help-fab{width:52px;height:52px;}
     .help-fab-wrap{bottom:16px;right:16px;}
     .help-fab-caption{font-size:11px;padding:5px 10px;}
+    .new-race-fab{display:flex;width:52px;height:52px;bottom:82px;right:16px;}
+    .new-race-fab svg{width:24px;height:24px;}
+    #btn-new{display:none;}
   }
 
   /* ---------- Progress block ---------- */
@@ -320,6 +350,18 @@
   .empty-state p{margin-bottom:16px;}
   .empty-state-icons{display:flex;gap:26px;margin-bottom:22px;color:var(--stone);}
 
+  .quick-nav{
+    display:flex;gap:8px;overflow-x:auto;padding:10px 2px;margin-bottom:14px;
+    position:sticky;top:var(--topbar-height,150px);z-index:8;background:var(--paper);
+    scrollbar-width:none;
+  }
+  .quick-nav::-webkit-scrollbar{display:none;}
+  .quick-nav a{
+    flex-shrink:0;padding:5px 13px;border:1px solid var(--rule);border-radius:14px;
+    font-size:13px;color:var(--ink-soft);text-decoration:none;background:var(--surface);
+    white-space:nowrap;
+  }
+  .quick-nav a:hover{border-color:var(--trail);color:var(--ink);}
   .detail-header{position:relative;padding-bottom:22px;margin-bottom:6px;border-bottom:2px solid var(--ink);}
   .detail-header.has-cover{
     padding:20px 22px 26px;border-radius:10px;border-bottom:none;
@@ -334,6 +376,15 @@
   .dh-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
   .dh-badges{display:flex;align-items:center;gap:12px;}
   .dh-actions{display:flex;align-items:center;gap:8px;}
+  .save-status{
+    font-size:12px;color:var(--stone);display:flex;align-items:center;gap:5px;
+    opacity:0;transition:opacity 0.25s;white-space:nowrap;
+  }
+  .save-status[data-state="saving"],.save-status[data-state="saved"]{opacity:1;}
+  .save-status[data-state="saved"]{color:var(--trail);}
+  .save-status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+  .save-status[data-state="saving"] .save-status-dot{animation:save-pulse 1s ease-in-out infinite;}
+  @keyframes save-pulse{0%,100%{opacity:0.3;}50%{opacity:1;}}
   .sport-icon-wrap{display:inline-flex;color:var(--trail);}
   .sport-icon{display:block;}
   .detail-header h1{font-size:30px;line-height:1.3;}
@@ -542,6 +593,9 @@
   <span id="help-fab-caption" class="help-fab-caption" data-i18n="ui.helpCaption">有問題找我！</span>
   <button id="btn-help" class="help-fab" aria-label="使用說明" title="使用說明"></button>
 </div>
+<button id="btn-new-fab" class="new-race-fab" data-action="start-create" aria-label="新增賽事" title="新增賽事">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
 
 <script>
 /* ============================================================
@@ -804,6 +858,26 @@ const SPORT_ICON_INNER={
     <circle cx="14" cy="13" r="3.2"/>
     <path d="M18.5 12 L23 5"/><circle cx="23" cy="5" r="1.5" fill="currentColor" stroke="none"/>`,
 };
+const EMPTY_STATE_ICONS={
+  checkpoints:`<path d="M6 21V3"/><path d="M6 4h11l-2.5 3L17 10H6"/>`,
+  accommodations:`<path d="M3 20V9l9-6 9 6v11"/><path d="M9 20v-7h6v7"/>`,
+  transportation:`<path d="M5 11l1.5-4A2 2 0 0 1 8.4 5.5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="3" y="11" width="18" height="5" rx="1.5"/><circle cx="7.5" cy="18" r="1.6" fill="currentColor" stroke="none"/><circle cx="16.5" cy="18" r="1.6" fill="currentColor" stroke="none"/>`,
+  companions:`<circle cx="8" cy="7" r="3"/><path d="M2 21v-2a6 6 0 0 1 6-6"/><circle cx="17" cy="9" r="2.5"/><path d="M13.5 21v-1.5A5 5 0 0 1 17 15a5 5 0 0 1 5 5v1"/>`,
+  equipmentChecklist:`<path d="M8 8V6.5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2V8"/><rect x="4" y="8" width="16" height="10" rx="3"/><path d="M4 12.5h16"/>`,
+  nutritionSchedule:`<path d="M10 2h4v3l2 2v13a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V7l2-2z"/><path d="M9 11h6"/>`,
+  splits:`<circle cx="12" cy="13" r="8"/><path d="M12 13V9"/><path d="M9 2h6"/><path d="M12 2v2"/>`,
+  mediaLinks:`<path d="M9 15l6-6"/><path d="M8 10 5.5 12.5a3 3 0 0 0 4 4L12 14"/><path d="M16 14l2.5-2.5a3 3 0 0 0-4-4L12 10"/>`,
+  shoes:`<path d="M3 17.5c0-1.6.9-3 2.4-3.6l5.7-2.4a1.3 1.3 0 0 1 1.5.3l1.8 1.9c.4.4 1 .6 1.5.5l2.6-.6a2 2 0 0 1 2.4 2l.1 1c.1.9-.6 1.7-1.5 1.7H4a1 1 0 0 1-1-1z" fill="currentColor" stroke="none"/><path d="M2.5 17.5h19"/>`,
+  trash:`<path d="M4 7h16"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M9 4h6l1 3H8z"/>`,
+  history:`<path d="M21 3v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 9"/><path d="M3 21v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 15"/>`,
+};
+function emptyStateBlock(iconKey,text){
+  const inner=EMPTY_STATE_ICONS[iconKey]||'';
+  return `<div class="empty-hint-block">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>
+    <p class="empty-hint">${text}</p>
+  </div>`;
+}
 function sportIconKey(sportType){
   if(sportType==='trail_running'||sportType==='ultra_marathon') return 'trail';
   if(sportType==='triathlon'||sportType==='duathlon'||sportType==='cycling') return 'triathlon';
@@ -833,7 +907,7 @@ function emptyRace(name,sportType,status,raceDate){
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
     route:{distanceKm:null,elevationGainM:null,elevationLossM:null,minAltitudeM:null,maxAltitudeM:null,startAltitudeM:null,
-      surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,itraPoints:null,terrainNotes:'',elevationProfile:[]},
+      surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,itraPoints:null,terrainNotes:'',elevationProfile:[],trackPoints:[]},
     checkpoints:[],
     climateForecast:{avgTempC:null,avgHumidityPct:null,windDirection:'',windSpeedKmh:null,rainProbabilityPct:null},
     raceDayWeather:{feelsLikeTempC:null,condition:'',humidityPct:null,notes:''},
@@ -861,7 +935,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   user:null};
 let currentRace=null;
-const APP_VERSION='v2.8.1';
+const APP_VERSION='v2.11.0';
 
 /* ============================================================
    多語系（i18n）
@@ -922,6 +996,8 @@ const JA={
   'ui.jsonImportDone':'JSONの読み込み完了',
   'ui.jsonImportSummary':'{a} 件追加、{b} 件はバージョンの競合により古い方を「データ復元」に保存しました',
   'ui.jsonImportFailed':'JSONの読み込みに失敗しました',
+  'ui.saving':'保存中…','ui.saved':'保存済み',
+  'ui.navBasic':'基本','ui.navRoute':'コース','ui.navWeather':'気象','ui.navLogistics':'予算','ui.navPrep':'装備','ui.navPost':'結果',
   'ui.deleteRace':'大会を削除','ui.deleteConfirm':'本当に削除しますか？もう一度',
   'ui.duplicateRace':'大会を複製','ui.duplicateRaceHint':'場所・コース・装備などを引き継いで新しい大会を作成します（年次シリーズ大会に便利）',
   'ui.duplicateSuffix':'（コピー）',
@@ -950,6 +1026,8 @@ const JA={
   'ui.calPrev':'前の月','ui.calNext':'次の月',
   'ui.weekday.0':'日','ui.weekday.1':'月','ui.weekday.2':'火','ui.weekday.3':'水','ui.weekday.4':'木','ui.weekday.5':'金','ui.weekday.6':'土',
   'ui.careerTotalRaces':'完走レース数','ui.careerMarathonPB':'フルマラソン自己ベスト','ui.careerYearDistance':'年間走行距離',
+  'ui.yearlyChartTitle':'年別完走数',
+  'ui.elevationProfileTitle':'標高変化グラフ','ui.routeMapTitle':'コースマップ',
   // ---- 賽事詳情 - 區塊標題 ----
   'ui.sectionBasic':'基本情報と日程','ui.sectionRoute':'コースと地形','ui.sectionWeather':'気象',
   'ui.sectionLogistics':'予算と旅程','ui.sectionPrep':'装備・補給・戦略（レース前の準備）',
@@ -1178,6 +1256,8 @@ const EN={
   'ui.jsonImportDone':'JSON import complete',
   'ui.jsonImportSummary':'{a} added; {b} had a version conflict — the older version was kept in "Data Recovery"',
   'ui.jsonImportFailed':'JSON import failed',
+  'ui.saving':'Saving…','ui.saved':'Saved',
+  'ui.navBasic':'Basic','ui.navRoute':'Course','ui.navWeather':'Weather','ui.navLogistics':'Budget','ui.navPrep':'Gear','ui.navPost':'Results',
   'ui.deleteRace':'Delete race','ui.deleteConfirm':'Are you sure? Click again to confirm',
   'ui.duplicateRace':'Duplicate Race','ui.duplicateRaceHint':'Carries over location, course, gear and more into a new race (handy for annual series races)',
   'ui.duplicateSuffix':' (Copy)',
@@ -1205,6 +1285,8 @@ const EN={
   'ui.calPrev':'Previous month','ui.calNext':'Next month',
   'ui.weekday.0':'Sun','ui.weekday.1':'Mon','ui.weekday.2':'Tue','ui.weekday.3':'Wed','ui.weekday.4':'Thu','ui.weekday.5':'Fri','ui.weekday.6':'Sat',
   'ui.careerTotalRaces':'Races finished','ui.careerMarathonPB':'Marathon PB','ui.careerYearDistance':'Distance this year',
+  'ui.yearlyChartTitle':'Races Completed by Year',
+  'ui.elevationProfileTitle':'Elevation Profile','ui.routeMapTitle':'Route Map',
   'ui.sectionBasic':'Basic Info & Schedule','ui.sectionRoute':'Course & Terrain','ui.sectionWeather':'Weather',
   'ui.sectionLogistics':'Budget & Logistics','ui.sectionPrep':'Gear, Nutrition & Strategy (Pre-race)',
   'ui.sectionPost':'Results & Post-race Data','ui.seriesComparison':'Series Comparison (Year over Year)',
@@ -1475,6 +1557,7 @@ function migrateRace(r){
   if(r.nutritionSchedule==null) r.nutritionSchedule=[];
   if(r.route&&r.route.itraPoints===undefined) r.route.itraPoints=null;
   if(r.route&&r.route.elevationProfile==null) r.route.elevationProfile=[];
+  if(r.route&&r.route.trackPoints==null) r.route.trackPoints=[];
   if(r.results&&r.results.firstHalfSeconds===undefined) r.results.firstHalfSeconds=null;
   if(r.results&&r.results.secondHalfSeconds===undefined) r.results.secondHalfSeconds=null;
   if(r.performanceData&&r.performanceData.shoeId===undefined) r.performanceData.shoeId='';
@@ -1882,7 +1965,7 @@ function renderRepeatable(race,listKey){
         <div class="repeat-row">
           <button type="button" class="row-remove" data-action="remove-item" data-list="${listKey}" data-index="${i}" title="${t('ui.delete','刪除')}">×</button>
           ${meta.fields.map(f=>renderField(race,Object.assign({},f,{path:`${listKey}.${i}.${f.path}`,labelPath:f.path}),listKey)).join('')}
-        </div>`).join(''):`<p class="empty-hint">${t('ui.notYetAdded','尚未新增')}</p>`}
+        </div>`).join(''):emptyStateBlock(listKey,t('ui.notYetAdded','尚未新增'))}
     </div>
   </div>`;
 }
@@ -1926,11 +2009,22 @@ function renderEquipmentSection(race){
         <div class="repeat-row">
           <button type="button" class="row-remove" data-action="remove-item" data-list="equipmentChecklist" data-index="${i}" title="${t('ui.delete','刪除')}">×</button>
           ${EQUIP_FIELDS.map(f=>renderField(race,Object.assign({},f,{path:`equipmentChecklist.${i}.${f.path}`,labelPath:f.path}),'equipmentChecklist')).join('')}
-        </div>`).join(''):`<p class="empty-hint">${t('ui.notYetAdded','尚未新增')}</p>`}
+        </div>`).join(''):emptyStateBlock('equipmentChecklist',t('ui.notYetAdded','尚未新增'))}
     </div>
   </div>`;
 }
 
+const QUICK_NAV_SECTIONS=[
+  ['section-basic','ui.navBasic','基本'],
+  ['section-route','ui.navRoute','路線'],
+  ['section-weather','ui.navWeather','氣象'],
+  ['section-logistics','ui.navLogistics','預算'],
+  ['section-prep','ui.navPrep','裝備'],
+  ['section-post','ui.navPost','賽後'],
+];
+function quickNavHtml(){
+  return `<nav class="quick-nav">${QUICK_NAV_SECTIONS.map(([id,key,fallback])=>`<a href="#${id}" data-target="${id}">${t(key,fallback)}</a>`).join('')}</nav>`;
+}
 function renderSeriesComparison(race){
   if(!race.series||!race.series.trim()) return '';
   const key=race.series.trim();
@@ -2023,12 +2117,65 @@ function elevationProfileHtml(race){
   const linePoints=pts.map(p=>sx(p.distanceKm).toFixed(1)+','+sy(p.elevationM).toFixed(1)).join(' ');
   const areaPoints=`${sx(minX).toFixed(1)},${(h-pad).toFixed(1)} ${linePoints} ${sx(maxX).toFixed(1)},${(h-pad).toFixed(1)}`;
   return `<div class="elevation-profile">
-    <div class="elevation-profile-head small"><span>海拔變化圖</span><span class="mono">${Math.round(minY)}–${Math.round(maxY)} 公尺</span></div>
+    <div class="elevation-profile-head small"><span>${t('ui.elevationProfileTitle','海拔變化圖')}</span><span class="mono">${Math.round(minY)}–${Math.round(maxY)} 公尺</span></div>
     <svg viewBox="0 0 ${w} ${h}" class="elevation-svg" preserveAspectRatio="none">
       <polygon points="${areaPoints}" fill="var(--trail)" opacity="0.14"/>
       <polyline points="${linePoints}" fill="none" stroke="var(--trail)" stroke-width="2"/>
     </svg>
   </div>`;
+}
+
+/* ============================================================
+   路線軌跡地圖（Leaflet + OpenStreetMap，僅在有 GPS 座標點時才會
+   延遲載入地圖套件，避免拖慢一般情況下的頁面載入速度）
+   ============================================================ */
+let leafletLoadPromise=null;
+function ensureLeafletLoaded(){
+  if(window.L) return Promise.resolve();
+  if(leafletLoadPromise) return leafletLoadPromise;
+  leafletLoadPromise=new Promise((resolve,reject)=>{
+    const cssLink=document.createElement('link');
+    cssLink.rel='stylesheet';
+    cssLink.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(cssLink);
+    const script=document.createElement('script');
+    script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload=()=>resolve();
+    script.onerror=()=>reject(new Error('Leaflet failed to load'));
+    document.head.appendChild(script);
+  });
+  return leafletLoadPromise;
+}
+let currentRouteMap=null;
+function destroyRouteMap(){
+  if(currentRouteMap){ currentRouteMap.remove(); currentRouteMap=null; }
+}
+function initRouteMap(race){
+  destroyRouteMap();
+  const container=document.getElementById('route-map');
+  if(!container||!race.route.trackPoints||race.route.trackPoints.length<2||typeof L==='undefined') return;
+  const pts=race.route.trackPoints.map(p=>[p.lat,p.lon]);
+  currentRouteMap=L.map(container,{scrollWheelZoom:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:18,attribution:'&copy; OpenStreetMap contributors',
+  }).addTo(currentRouteMap);
+  const polyline=L.polyline(pts,{color:'#2E6B49',weight:3}).addTo(currentRouteMap);
+  L.circleMarker(pts[0],{radius:5,color:'#2E6B49',fillColor:'#2E6B49',fillOpacity:1}).addTo(currentRouteMap);
+  L.circleMarker(pts[pts.length-1],{radius:5,color:'#B8451F',fillColor:'#B8451F',fillOpacity:1}).addTo(currentRouteMap);
+  currentRouteMap.fitBounds(polyline.getBounds(),{padding:[16,16]});
+}
+function routeMapHtml(race){
+  if(!race.route.trackPoints||race.route.trackPoints.length<2) return '';
+  return `<div class="route-map-wrap">
+    <div class="route-map-head small">${t('ui.routeMapTitle','路線軌跡圖')}</div>
+    <div id="route-map" class="route-map"></div>
+  </div>`;
+}
+function renderRouteMapIfNeeded(race){
+  if(!race.route.trackPoints||race.route.trackPoints.length<2) return;
+  ensureLeafletLoaded().then(()=>{
+    if(currentRace&&currentRace.id===race.id) initRouteMap(race);
+  }).catch(err=>console.error('地圖載入失敗',err));
 }
 
 function renderShoeSelector(race){
@@ -2258,17 +2405,51 @@ function computeCareerStats(){
 const CAREER_FLAG_ICON=`<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v16"/><path d="M4 3h9l-2 2.5L13 8H4"/></svg>`;
 const CAREER_TROPHY_ICON=`<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8v4a4 4 0 0 1-8 0V3z"/><path d="M6 4H3.5a1 1 0 0 0-1 1.2c.3 1.6 1.3 3 3 3.4M14 4h2.5a1 1 0 0 1 1 1.2c-.3 1.6-1.3 3-3 3.4"/><path d="M10 11v3M7 17h6M8 14h4v3H8z"/></svg>`;
 const CAREER_ROUTE_ICON=`<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15l4-8 3 4 3-6 3 5 3-3"/></svg>`;
+function computeYearlyStats(){
+  const byYear={};
+  state.races.forEach(r=>{
+    if(r.deletedAt||r.status!=='completed'||!r.schedule.raceDate) return;
+    const year=r.schedule.raceDate.slice(0,4);
+    if(!byYear[year]) byYear[year]={count:0,distanceKm:0};
+    byYear[year].count++;
+    byYear[year].distanceKm+=(r.route.distanceKm||0);
+  });
+  return Object.keys(byYear).sort().map(year=>({year,count:byYear[year].count,distanceKm:byYear[year].distanceKm}));
+}
+function yearlyChartSvg(){
+  const data=computeYearlyStats();
+  if(data.length<1) return '';
+  const barW=38,gap=22,padTop=26,padBottom=22,chartH=90;
+  const w=data.length*barW+(data.length+1)*gap;
+  const h=padTop+chartH+padBottom;
+  const maxCount=Math.max(...data.map(d=>d.count),1);
+  const bars=data.map((d,i)=>{
+    const barH=Math.max(4,Math.round((d.count/maxCount)*chartH));
+    const x=gap+i*(barW+gap);
+    const y=padTop+chartH-barH;
+    return `<text x="${x+barW/2}" y="${y-8}" text-anchor="middle" class="yearly-chart-count mono">${d.count}</text>
+      <rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="var(--trail)" opacity="0.82"/>
+      <text x="${x+barW/2}" y="${padTop+chartH+18}" text-anchor="middle" class="yearly-chart-year mono">${d.year}</text>`;
+  }).join('');
+  return `<div class="yearly-chart-wrap">
+    <div class="yearly-chart-title small">${t('ui.yearlyChartTitle','歷年完賽場次')}</div>
+    <svg viewBox="0 0 ${w} ${h}" class="yearly-chart-svg" preserveAspectRatio="xMinYMid meet">${bars}</svg>
+  </div>`;
+}
 function renderCareerSummary(){
   if(state.races.length<5) return '';
   const s=computeCareerStats();
   const items=[[CAREER_FLAG_ICON,t('ui.careerTotalRaces','總完賽場次'),s.totalCompleted+' 場']];
   if(s.marathonPB!=null) items.push([CAREER_TROPHY_ICON,t('ui.careerMarathonPB','全馬 PB'),secToHMS(s.marathonPB)]);
   if(s.yearDistance>0) items.push([CAREER_ROUTE_ICON,t('ui.careerYearDistance','今年累計里程'),s.yearDistance.toFixed(1)+' 公里']);
-  return `<div class="career-summary">${items.map(([icon,l,v])=>`
-    <div class="career-stat">
-      <span class="career-stat-icon">${icon}</span>
-      <div class="career-stat-text"><span class="career-stat-value mono">${v}</span><span class="career-stat-label">${l}</span></div>
-    </div>`).join('')}</div>`;
+  return `<div class="career-summary-wrap">
+    <div class="career-summary">${items.map(([icon,l,v])=>`
+      <div class="career-stat">
+        <span class="career-stat-icon">${icon}</span>
+        <div class="career-stat-text"><span class="career-stat-value mono">${v}</span><span class="career-stat-label">${l}</span></div>
+      </div>`).join('')}</div>
+    ${yearlyChartSvg()}
+  </div>`;
 }
 
 function renderCalendar(){
@@ -2350,6 +2531,7 @@ function detailHeaderHtml(race){
           ${race.results.isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
         </div>
         <div class="dh-actions">
+          <span id="save-status" class="save-status" data-state="idle"></span>
           ${race.schedule.raceDate?`<button class="btn-ghost" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
           <button class="btn-ghost" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
           <button class="btn-ghost" data-action="duplicate-race" title="${t('ui.duplicateRaceHint','複製地點、路線、裝備等欄位，建立新的一場（適合同系列跨年賽事）')}">${t('ui.duplicateRace','複製賽事')}</button>
@@ -2365,36 +2547,38 @@ function detailHeaderHtml(race){
   </header>`;
 }
 function renderDetail(){
-  if(state.creating){detailEl.innerHTML=renderCreateForm();return;}
+  if(state.creating){destroyRouteMap();detailEl.innerHTML=renderCreateForm();return;}
   const race=state.races.find(r=>r.id===state.selectedId);
-  if(!race){detailEl.innerHTML=emptyStateHtml();currentRace=null;return;}
+  if(!race){destroyRouteMap();detailEl.innerHTML=emptyStateHtml();currentRace=null;return;}
   currentRace=race;
   const openPre=['registered','lottery_pending','considering'].includes(race.status);
   detailEl.innerHTML=`
     ${detailHeaderHtml(race)}
+    ${quickNavHtml()}
     ${renderSeriesComparison(race)}
-    <details class="section" open>
+    <details class="section" id="section-basic" open>
       <summary>${t('ui.sectionBasic','基本資訊與時間')}</summary>
       <div class="section-body">${SECTION_BASIC.map(f=>renderField(race,f,'basic')).join('')}</div>
     </details>
-    <details class="section" ${openPre?'open':''}>
+    <details class="section" id="section-route" ${(openPre||(race.route.trackPoints&&race.route.trackPoints.length>=2))?'open':''}>
       <summary>${t('ui.sectionRoute','地理與路線')}</summary>
       <div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f,'route')).join('')}</div>
       ${elevationProfileHtml(race)}
+      ${routeMapHtml(race)}
       ${renderRepeatable(race,'checkpoints')}
     </details>
-    <details class="section">
+    <details class="section" id="section-weather">
       <summary>${t('ui.sectionWeather','氣象')}</summary>
       <div class="section-body">${SECTION_WEATHER.map(f=>renderField(race,f,'weather')).join('')}</div>
     </details>
-    <details class="section" ${openPre?'open':''}>
+    <details class="section" id="section-logistics" ${openPre?'open':''}>
       <summary>${t('ui.sectionLogistics','預算與行程規劃')}</summary>
       <div class="section-body">${SECTION_LOGISTICS.map(f=>renderField(race,f,'logistics')).join('')}</div>
       ${renderRepeatable(race,'accommodations')}
       ${renderRepeatable(race,'transportation')}
       ${renderRepeatable(race,'companions')}
     </details>
-    <details class="section" ${openPre?'open':''}>
+    <details class="section" id="section-prep" ${openPre?'open':''}>
       <summary>${t('ui.sectionPrep','裝備、補給與戰略（賽前準備）')}</summary>
       <div class="section-body">${SECTION_PREP.map(f=>renderField(race,f,'prep')).join('')}</div>
       ${renderGoals(race)}
@@ -2404,7 +2588,7 @@ function renderDetail(){
       ${renderEquipmentSection(race)}
       ${renderRepeatable(race,'nutritionSchedule')}
     </details>
-    <details class="section" ${!openPre?'open':''}>
+    <details class="section" id="section-post" ${!openPre?'open':''}>
       <summary>${t('ui.sectionPost','賽後紀錄與個人數據')}</summary>
       ${renderResultsDashboard(race)}
       ${renderSplitAnalysis(race)}
@@ -2418,6 +2602,8 @@ function renderDetail(){
       ${renderRepeatable(race,'mediaLinks')}
     </details>
   `;
+  destroyRouteMap();
+  renderRouteMapIfNeeded(race);
 }
 
 function updateDetailHeaderBits(){
@@ -2557,17 +2743,24 @@ document.getElementById('lang-select').addEventListener('change',e=>{
   setLang(e.target.value);
 });
 
-// 手機上往下捲動時，把標題列縮小（隱藏副標題）多留一點空間給表單內容
+// 手機上往下捲動時，把標題列縮小（隱藏副標題）多留一點空間給表單內容；
+// 同時把目前標題列的實際高度記錄成 CSS 變數，讓快速導覽列能貼著標題列下方吸頂，不會疊在一起。
+function updateTopbarHeightVar(){
+  const topbar=document.getElementById('topbar');
+  if(topbar) document.documentElement.style.setProperty('--topbar-height',topbar.offsetHeight+'px');
+}
 (function(){
   let ticking=false;
   function updateTopbarCompact(){
     const topbar=document.getElementById('topbar');
     if(topbar) topbar.classList.toggle('topbar-compact',window.scrollY>40);
+    updateTopbarHeightVar();
     ticking=false;
   }
   window.addEventListener('scroll',()=>{
     if(!ticking){requestAnimationFrame(updateTopbarCompact);ticking=true;}
   },{passive:true});
+  window.addEventListener('resize',updateTopbarHeightVar);
 })();
 
 document.getElementById('btn-export').addEventListener('click',()=>{
@@ -2685,7 +2878,23 @@ document.getElementById('btn-clear').addEventListener('click',e=>{
   persist();renderAll();
 });
 
-detailEl.addEventListener('change',e=>{
+let saveStatusHideTimer=null;
+function showSaveStatus(kind){
+  const el=document.getElementById('save-status');
+  if(!el) return;
+  clearTimeout(saveStatusHideTimer);
+  if(kind==='saving'){
+    el.dataset.state='saving';
+    el.innerHTML=`<span class="save-status-dot"></span>${t('ui.saving','儲存中…')}`;
+  }else if(kind==='saved'){
+    el.dataset.state='saved';
+    el.innerHTML=`<span class="save-status-dot"></span>${t('ui.saved','已自動儲存')}`;
+    saveStatusHideTimer=setTimeout(()=>{
+      if(el.dataset.state==='saved'){ el.dataset.state='idle'; el.innerHTML=''; }
+    },2500);
+  }
+}
+detailEl.addEventListener('change',async e=>{
   const t=e.target;const path=t.dataset.path;if(!path||!currentRace) return;
   let value;
   if(t.type==='checkbox') value=t.checked;
@@ -2698,10 +2907,12 @@ detailEl.addEventListener('change',e=>{
     const d=new Date(value+'T00:00:00');
     if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
   }
-  persist();
+  showSaveStatus('saving');
+  await persist();
   renderCalendar();
   const needsFullRerender=(path==='status'||path==='series'||path.startsWith('results.')||path.startsWith('lottery.'));
   if(needsFullRerender){renderDetail();}else{updateDetailHeaderBits();}
+  showSaveStatus('saved');
 });
 
 detailEl.addEventListener('click',e=>{
@@ -2739,7 +2950,6 @@ detailEl.addEventListener('click',e=>{
     persist();renderAll();scrollDetailIntoView();
     return;
   }
-  if(e.target.closest('[data-action="start-create"]')){startCreate();return;}
   if(e.target.closest('[data-action="cancel-create"]')){state.creating=false;resetCreateStaging();renderAll();return;}
   if(e.target.closest('[data-action="confirm-create"]')){
     const nameEl=document.getElementById('new-name');
@@ -3200,6 +3410,18 @@ function downsampleElevationProfile(pts,maxPoints){
   }
   return out;
 }
+function downsampleLatLon(pts,maxPoints){
+  const valid=pts.filter(p=>p.lat!=null&&p.lon!=null);
+  if(valid.length<2) return [];
+  if(valid.length<=maxPoints) return valid.map(p=>({lat:p.lat,lon:p.lon}));
+  const step=(valid.length-1)/(maxPoints-1);
+  const out=[];
+  for(let i=0;i<maxPoints;i++){
+    const idx=Math.round(i*step);
+    out.push({lat:valid[idx].lat,lon:valid[idx].lon});
+  }
+  return out;
+}
 function summarizeTrackPoints(pts){
   const valid=pts.filter(p=>p.lat!=null&&p.lon!=null);
   if(valid.length<2) throw new Error(t('ui.errNotEnoughPoints','檔案中沒有足夠的座標點'));
@@ -3219,6 +3441,7 @@ function summarizeTrackPoints(pts){
     avgCadence:cads.length?Math.round(cads.reduce((a,b)=>a+b,0)/cads.length):null,
     splits:computeSplitsFromPoints(valid),
     elevationProfile:downsampleElevationProfile(valid,50),
+    trackPoints:downsampleLatLon(valid,400),
   };
 }
 /* ============================================================
@@ -3393,6 +3616,7 @@ function parseTcxDoc(xml){
     avgCadence:null,
     splits:laps.length>1?splits:computeSplitsFromPoints(pts),
     elevationProfile:downsampleElevationProfile(pts,50),
+    trackPoints:downsampleLatLon(pts,400),
   };
 }
 function parseGpxOrTcx(text){
@@ -3441,6 +3665,7 @@ function applyActivitySummaryToRace(race,s){
   if(!race.performanceData.dataSource) race.performanceData.dataSource='運動手錶匯入 (GPX/TCX/FIT)';
   if(s.splits&&s.splits.length) race.splits=s.splits;
   if(s.elevationProfile&&s.elevationProfile.length) race.route.elevationProfile=s.elevationProfile;
+  if(s.trackPoints&&s.trackPoints.length) race.route.trackPoints=s.trackPoints;
 }
 async function parseActivityFile(file){
   const ext=(file.name.split('.').pop()||'').toLowerCase();
@@ -3640,7 +3865,7 @@ function recoveryModalHtml(){
           <span class="recovery-row-date mono small">${t('ui.recoveryDeletedOn','刪除於')} ${(r.deletedAt||'').slice(0,10)}</span>
           <button type="button" class="btn-ghost" data-action="restore-race" data-id="${r.id}">${t('ui.recoveryRestore','還原')}</button>
           <button type="button" class="btn-text danger" data-action="purge-race" data-id="${r.id}">${t('ui.recoveryPurge','永久刪除')}</button>
-        </div>`).join('')}</div>`:`<p class="empty-hint">${t('ui.recoveryDeletedEmpty','目前沒有已刪除的賽事')}</p>`}
+        </div>`).join('')}</div>`:emptyStateBlock('trash',t('ui.recoveryDeletedEmpty','目前沒有已刪除的賽事'))}
     </div>
     <div class="recovery-section">
       <h3>${t('ui.recoveryOverwriteTitle','同步覆蓋紀錄')}</h3>
@@ -3651,7 +3876,7 @@ function recoveryModalHtml(){
           <span class="recovery-row-date mono small">${t('ui.recoveryOverwrittenOn','覆蓋於')} ${(en.discardedAt||'').slice(0,10)}</span>
           <button type="button" class="btn-ghost" data-action="restore-overwrite" data-entry="${en.id}">${t('ui.recoveryRestoreVersion','還原此版本')}</button>
           <button type="button" class="btn-text danger" data-action="dismiss-overwrite" data-entry="${en.id}">${t('ui.recoveryDismiss','移除紀錄')}</button>
-        </div>`).join('')}</div>`:`<p class="empty-hint">${t('ui.recoveryOverwriteEmpty','目前沒有同步覆蓋紀錄')}</p>`}
+        </div>`).join('')}</div>`:emptyStateBlock('history',t('ui.recoveryOverwriteEmpty','目前沒有同步覆蓋紀錄'))}
     </div>
     <div class="modal-actions"><button class="btn-ghost" data-action="close-recovery">${t('ui.close','關閉')}</button></div>
   </div>`;
@@ -3707,6 +3932,7 @@ function dismissOverwriteEntry(entryId){
   openRecoveryModal();
 }
 document.addEventListener('click',e=>{
+  if(e.target.closest('[data-action="start-create"]')){startCreate();return;}
   if(e.target.closest('[data-action="open-recovery"]')){ openRecoveryModal(); return; }
   if(e.target.closest('[data-action="close-recovery"]')){ closeRecoveryModal(); return; }
   const restoreBtn=e.target.closest('[data-action="restore-race"]');
@@ -3717,6 +3943,16 @@ document.addEventListener('click',e=>{
   if(restoreOwBtn){ restoreOverwriteEntry(restoreOwBtn.dataset.entry); return; }
   const dismissOwBtn=e.target.closest('[data-action="dismiss-overwrite"]');
   if(dismissOwBtn){ dismissOverwriteEntry(dismissOwBtn.dataset.entry); return; }
+  const navLink=e.target.closest('.quick-nav a');
+  if(navLink){
+    e.preventDefault();
+    const targetEl=document.getElementById(navLink.dataset.target);
+    if(targetEl){
+      if(targetEl.tagName==='DETAILS'&&!targetEl.open) targetEl.open=true;
+      targetEl.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+    return;
+  }
 });
 
 /* ============================================================
@@ -3738,7 +3974,7 @@ function shoeModalHtml(){
           <span class="shoe-row-stats mono">${tf2('ui.shoeStatsLine',`${stats.totalRaces} 場・${stats.totalDistance.toFixed(1)} 公里`,stats.totalRaces,stats.totalDistance.toFixed(1))}</span>
           <button type="button" class="btn-ghost danger" data-action="delete-shoe" data-id="${s.id}">${t('ui.delete','刪除')}</button>
         </div>`;
-      }).join(''):`<p class="empty-hint">${t('ui.shoeNoneYet','尚未新增鞋款')}</p>`}
+      }).join(''):emptyStateBlock('shoes',t('ui.shoeNoneYet','尚未新增鞋款'))}
     </div>
     <div class="modal-actions"><button class="btn-ghost" data-action="close-shoe-modal">${t('ui.close','關閉')}</button></div>
   </div>`;
@@ -3924,6 +4160,7 @@ async function init(){
   if(purgeOldTrash()) persist();
   renderAll();
   checkStorageQuota();
+  updateTopbarHeightVar();
 }
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
