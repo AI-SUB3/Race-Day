@@ -37,6 +37,14 @@
     --flag:#B8451F;
     --stone:#8B8D82;
     --gold:#B08D2E;
+    --sport-road_running:#9C4A5C;
+    --sport-trail_running:#2E6B49;
+    --sport-ultra_marathon:#5B4A7A;
+    --sport-duathlon:#8A6B35;
+    --sport-triathlon:#2A7A8A;
+    --sport-cycling:#5C6670;
+    --sport-obstacle_race:#6B6339;
+    --sport-other:#8B8D82;
   }
   [data-theme="dark"]{
     --paper:#12161A;
@@ -49,6 +57,14 @@
     --flag:#E07850;
     --stone:#6B7178;
     --gold:#D9B15C;
+    --sport-road_running:#D4788A;
+    --sport-trail_running:#4C9A72;
+    --sport-ultra_marathon:#9B87C4;
+    --sport-duathlon:#C9A363;
+    --sport-triathlon:#5CB8C4;
+    --sport-cycling:#9AA5B0;
+    --sport-obstacle_race:#A89F5C;
+    --sport-other:#9BA3A0;
   }
   [data-theme="dark"] .empty-state-icons,
   [data-theme="dark"] .sport-icon-wrap{color:var(--trail);}
@@ -114,6 +130,30 @@
   .cal-nav{display:flex;align-items:center;gap:6px;flex-shrink:0;}
   .cal-nav .btn-ghost{padding:6px 11px;font-size:16px;}
   .cal-label{font-size:16px;min-width:92px;text-align:center;display:inline-block;}
+  #cal-view-toggle{padding:6px 9px!important;}
+  #cal-view-toggle svg{width:17px;height:17px;display:block;}
+  #cal-view-toggle.active{background:var(--ink);color:var(--surface);}
+
+  /* ---------- Photo grid (trophy wall) ---------- */
+  .photo-grid-wrap{margin-top:4px;}
+  .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;}
+  .photo-card{
+    display:flex;flex-direction:column;border:1px solid var(--rule);border-radius:6px;overflow:hidden;
+    background:var(--surface);cursor:pointer;padding:0;text-align:left;font:inherit;
+    transition:box-shadow 0.15s,border-color 0.15s;
+  }
+  .photo-card:hover{border-color:var(--trail);box-shadow:0 4px 14px rgba(0,0,0,0.12);}
+  .photo-card.selected{border-color:var(--trail);border-width:2px;}
+  .photo-card-img{width:100%;aspect-ratio:1/1;background:var(--paper);overflow:hidden;}
+  .photo-card-img img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-card-info{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;}
+  .photo-card-pb{align-self:flex-start;font-size:11px;color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:1px 8px;margin-bottom:2px;}
+  .photo-card-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .photo-card-date{font-size:12px;color:var(--stone);}
+  @media (max-width:640px){
+    .photo-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+  }
+
   #search-input{
     flex:1 1 200px;min-width:160px;padding:8px 10px;border:1px solid var(--rule);
     border-radius:3px;background:var(--surface);color:var(--ink);font:inherit;
@@ -131,6 +171,11 @@
   .app-version{color:var(--stone);margin-left:auto;}
 
   #main-content{flex:1;padding:24px 32px 100px;max-width:1120px;width:100%;margin:0 auto;}
+  #detail.fade-in{animation:detail-fade-in 150ms ease;}
+  @keyframes detail-fade-in{from{opacity:0;}to{opacity:1;}}
+  @media (prefers-reduced-motion:reduce){
+    #detail.fade-in{animation:none;}
+  }
   .empty-hint{color:var(--stone);font-size:15px;padding:16px 8px;margin:0;}
   .empty-hint-block{
     display:flex;flex-direction:column;align-items:center;gap:8px;
@@ -166,6 +211,7 @@
   }
   .cal-chip-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   .cal-chip-thumb{width:14px;height:14px;border-radius:2px;object-fit:cover;flex-shrink:0;}
+  .cal-chip-sport-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
   .cal-chip.status-registered,.cal-chip.status-completed{color:var(--trail);}
   .cal-chip.status-considering,.cal-chip.status-lottery_pending{color:var(--contour);}
   .cal-chip.status-dns,.cal-chip.status-dnf{color:var(--flag);}
@@ -185,13 +231,18 @@
   .cal-list-item{
     display:flex;align-items:center;gap:10px;width:100%;text-align:left;
     border:1px solid var(--rule);border-radius:4px;background:var(--surface);
-    padding:14px 14px;font:inherit;cursor:pointer;min-height:48px;
+    padding:12px 14px;font:inherit;cursor:pointer;min-height:48px;
   }
   .cal-list-thumb{width:34px;height:34px;border-radius:5px;object-fit:cover;flex-shrink:0;}
+  .cal-list-sport-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
   .cal-list-item.selected{background:var(--ink);border-color:var(--ink);}
   .cal-list-item.selected .cal-list-name{color:var(--surface);}
+  .cal-list-item.selected .cal-list-meta{color:var(--stone);}
   .cal-list-item.selected .stamp{filter:brightness(1.6);}
-  .cal-list-name{font-size:15px;color:var(--ink);}
+  .cal-list-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+  .cal-list-name-row{display:flex;align-items:center;gap:8px;min-width:0;}
+  .cal-list-name{font-size:15px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cal-list-meta{font-size:12px;color:var(--stone);}
 
   /* ---------- Career summary ---------- */
   .career-summary-wrap{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--rule);}
@@ -236,11 +287,47 @@
   .elevation-profile{margin:4px 2px 18px;}
   .elevation-profile-head{display:flex;justify-content:space-between;color:var(--stone);margin-bottom:6px;}
   .elevation-svg{width:100%;height:110px;display:block;}
+  .elevation-legend{display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--stone);}
+  .elevation-legend-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+  .elevation-legend-bar{width:60px;height:4px;border-radius:2px;flex-shrink:0;background:linear-gradient(90deg,rgb(76,154,114),rgb(217,177,92),rgb(184,69,31),rgb(122,24,24));}
 
   /* ---------- Route map ---------- */
   .route-map-wrap{margin:4px 2px 18px;}
   .route-map-head{color:var(--stone);margin-bottom:6px;}
   .route-map{width:100%;height:280px;border-radius:4px;border:1px solid var(--rule);background:var(--paper);z-index:0;}
+
+  /* ---------- Cover photo focal point picker ---------- */
+  .focal-point-body{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin:14px 0;}
+  .focal-point-stage{
+    position:relative;flex:1 1 320px;max-width:420px;overflow:hidden;
+    border-radius:4px;border:1px solid var(--rule);cursor:crosshair;touch-action:none;background:var(--paper);
+  }
+  .focal-point-stage img{width:100%;height:100%;display:block;object-fit:fill;}
+  .focal-point-marker{
+    position:absolute;width:26px;height:26px;border:2.5px solid #fff;border-radius:50%;
+    box-shadow:0 0 0 1.5px rgba(0,0,0,0.55),0 2px 6px rgba(0,0,0,0.35);
+    transform:translate(-50%,-50%);pointer-events:none;
+  }
+  .focal-point-marker::after{
+    content:'';position:absolute;top:50%;left:50%;width:4px;height:4px;border-radius:50%;
+    background:#fff;transform:translate(-50%,-50%);
+  }
+  .focal-preview-col{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
+  .focal-preview-col .small{color:var(--stone);}
+  .focal-preview-thumb{width:90px;height:90px;border-radius:5px;overflow:hidden;border:1px solid var(--rule);display:block;}
+  .focal-preview-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  @media (max-width:640px){
+    .focal-point-body{flex-direction:column;align-items:stretch;}
+    .focal-point-stage{max-width:none;}
+  }
+  [data-theme="dark"] .route-map .leaflet-tile-pane{filter:invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);}
+  [data-theme="dark"] .route-map .leaflet-control-layers,
+  [data-theme="dark"] .route-map .leaflet-control-zoom a,
+  [data-theme="dark"] .route-map .leaflet-control-attribution{
+    background:#1E232A;color:#C7CCD1;border-color:#333;
+  }
+  [data-theme="dark"] .route-map .leaflet-control-zoom a{color:#C7CCD1;}
+  [data-theme="dark"] .route-map .leaflet-control-attribution a{color:#8FB8A8;}
 
   /* ---------- Shoe management ---------- */
   .shoe-add-row{display:flex;gap:8px;margin-bottom:16px;}
@@ -368,7 +455,7 @@
     white-space:nowrap;
   }
   .quick-nav a:hover{border-color:var(--trail);color:var(--ink);}
-  .detail-header{position:relative;padding-bottom:22px;margin-bottom:6px;border-bottom:2px solid var(--ink);}
+  .detail-header{position:relative;padding-bottom:22px;margin-bottom:6px;border-bottom:3px solid var(--ink);transition:border-color 0.2s;}
   .detail-header.has-cover{
     padding:20px 22px 26px;border-radius:10px;border-bottom:none;
     box-shadow:inset 0 0 0 1px var(--rule);overflow:hidden;
@@ -434,6 +521,18 @@
     margin-bottom:10px;background:var(--surface);
   }
   .repeat-row .field{flex:1 1 150px;min-width:130px;}
+  .repeat-row.reorderable{padding-left:38px;}
+  .reorder-controls{position:absolute;top:8px;left:8px;bottom:8px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .drag-handle{color:var(--stone);cursor:grab;padding:2px;touch-action:none;}
+  .drag-handle svg{width:15px;height:15px;display:block;}
+  .drag-handle:active{cursor:grabbing;}
+  .reorder-btn{background:none;border:none;color:var(--stone);padding:2px;cursor:pointer;border-radius:2px;}
+  .reorder-btn svg{width:13px;height:13px;display:block;}
+  .reorder-btn:hover:not(:disabled){color:var(--ink);background:var(--paper);}
+  .reorder-btn:disabled{opacity:0.25;cursor:default;}
+  .repeat-row.dragging{opacity:0.4;}
+  .repeat-row.drag-over-top{box-shadow:inset 0 3px 0 0 var(--trail);}
+  .repeat-row.drag-over-bottom{box-shadow:inset 0 -3px 0 0 var(--trail);}
   .row-remove{
     position:absolute;top:6px;right:8px;width:22px;height:22px;border:none;
     background:none;color:var(--stone);font-size:19px;line-height:1;
@@ -568,6 +667,9 @@
         <span id="cal-label" class="cal-label mono"></span>
         <button id="cal-next" class="btn-ghost" data-i18n-title="ui.calNext" aria-label="下個月">›</button>
         <button id="cal-today" class="btn-ghost" data-i18n="ui.today">今天</button>
+        <button id="cal-view-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.gridViewToggle" title="切換檢視" aria-label="切換為獎牌牆檢視">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </button>
       </div>
       <input id="search-input" type="search" data-i18n-placeholder="ui.searchPlaceholder" placeholder="搜尋賽事名稱、城市…">
       <div id="filter-chips" class="chips"></div>
@@ -598,6 +700,7 @@
 <div id="pacing-modal" class="modal-overlay" hidden></div>
 <div id="help-modal" class="modal-overlay" hidden></div>
 <div id="recovery-modal" class="modal-overlay" hidden></div>
+<div id="focal-point-modal" class="modal-overlay" hidden></div>
 <div class="help-fab-wrap">
   <span id="help-fab-caption" class="help-fab-caption" data-i18n="ui.helpCaption">有問題找我！</span>
   <button id="btn-help" class="help-fab" aria-label="使用說明" title="使用說明"></button>
@@ -795,6 +898,18 @@ function labelFor(options,value,ns){
   return ns?t('opt.'+ns+'.'+value,o.label):o.label;
 }
 function statusLabel(v){return labelFor(STATUS_OPTIONS,v,'status');}
+function formatDistanceCompact(km){
+  if(km==null) return null;
+  const rounded=Math.round(km*10)/10;
+  return (Number.isInteger(rounded)?rounded:rounded.toFixed(1))+'K';
+}
+function raceTerrainMetaHtml(r){
+  const parts=[];
+  const d=formatDistanceCompact(r.route.distanceKm);
+  if(d) parts.push(d);
+  if(r.route.elevationGainM!=null) parts.push(`+${Math.round(r.route.elevationGainM)}m`);
+  return parts.length?`<span class="cal-list-meta mono">${parts.join(' · ')}</span>`:'';
+}
 function sportLabel(v){return labelFor(SPORT_OPTIONS,v,'sport');}
 function secToHMS(sec){
   if(sec==null||sec==='') return '';
@@ -879,6 +994,7 @@ const EMPTY_STATE_ICONS={
   shoes:`<path d="M3 17.5c0-1.6.9-3 2.4-3.6l5.7-2.4a1.3 1.3 0 0 1 1.5.3l1.8 1.9c.4.4 1 .6 1.5.5l2.6-.6a2 2 0 0 1 2.4 2l.1 1c.1.9-.6 1.7-1.5 1.7H4a1 1 0 0 1-1-1z" fill="currentColor" stroke="none"/><path d="M2.5 17.5h19"/>`,
   trash:`<path d="M4 7h16"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M9 4h6l1 3H8z"/>`,
   history:`<path d="M21 3v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 9"/><path d="M3 21v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 15"/>`,
+  photos:`<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7l1.4-2.4A1 1 0 0 1 10.3 4h3.4a1 1 0 0 1 .9.6L16 7"/><circle cx="12" cy="13.5" r="3.5"/>`,
 };
 function emptyStateBlock(iconKey,text){
   const inner=EMPTY_STATE_ICONS[iconKey]||'';
@@ -891,6 +1007,13 @@ function sportIconKey(sportType){
   if(sportType==='trail_running'||sportType==='ultra_marathon') return 'trail';
   if(sportType==='triathlon'||sportType==='duathlon'||sportType==='cycling') return 'triathlon';
   return 'runner';
+}
+function sportColorVar(sportType){
+  return `var(--sport-${sportType||'other'},var(--trail))`;
+}
+function focalPointStyle(race){
+  const fp=race.coverImageFocalPoint||{x:50,y:50};
+  return `object-position:${fp.x}% ${fp.y}%`;
 }
 function sportIconSvg(key,sizePx){
   const inner=SPORT_ICON_INNER[key]||SPORT_ICON_INNER.runner;
@@ -911,7 +1034,7 @@ function emptyRace(name,sportType,status,raceDate){
   const now=new Date().toISOString();
   return {
     id:uid(),name:name||'',alias:'',series:'',status:status||'considering',sportType:sportType||'road_running',raceFormat:'solo',
-    coverImage:'',coverImageAspect:null,officialUrl:'',deletedAt:null,
+    coverImage:'',coverImageAspect:null,coverImageFocalPoint:{x:50,y:50},officialUrl:'',deletedAt:null,
     schedule:{raceDate:raceDate||'',startTime:'',registrationOpenDate:'',registrationCloseDate:'',lotteryResultDate:''},
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
@@ -942,9 +1065,9 @@ function emptyRace(name,sportType,status,raceDate){
 const today0=new Date();
 const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',confirmDelete:false,
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
-  user:null};
+  viewMode:'calendar',user:null};
 let currentRace=null;
-const APP_VERSION='v2.12.0';
+const APP_VERSION='v2.16.0';
 
 /* ============================================================
    多語系（i18n）
@@ -994,6 +1117,7 @@ const JA={
   'ui.appTitle':'レース記録','ui.appTagline':'エントリーからゴールまでの完全な記録',
   'ui.newRace':'+ 大会を追加','ui.searchPlaceholder':'大会名・都市で検索…','ui.today':'今日',
   'ui.sampleData':'サンプルデータ',
+  'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'カバー写真付きの完走レースがまだありません。完走したらぜひ写真を追加して、メダル棚を育てましょう！',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
   'ui.importExcel':'Excelを読み込む','ui.exportJson':'JSONを書き出す','ui.exportIcs':'カレンダーリマインダーを書き出す',
   'ui.clearAll':'すべてのデータを削除','ui.clearAllConfirm':'本当に削除しますか？もう一度押してください',
@@ -1038,6 +1162,14 @@ const JA={
   'ui.careerTotalRaces':'完走レース数','ui.careerMarathonPB':'フルマラソン自己ベスト','ui.careerYearDistance':'年間走行距離',
   'ui.yearlyChartTitle':'年別完走数',
   'ui.elevationProfileTitle':'標高変化グラフ','ui.routeMapTitle':'コースマップ',
+  'ui.mapStandard':'標準地図','ui.mapTerrain':'地形図',
+  'ui.dragToReorder':'ドラッグして並べ替え','ui.moveUp':'上に移動','ui.moveDown':'下に移動',
+  'ui.gradientGentle':'緩やか','ui.gradientSteep':'急勾配 (≥25%)',
+  'ui.coverFocalPoint':'フォーカス位置を調整',
+  'ui.focalPointTitle':'カバー写真のフォーカス位置を調整',
+  'ui.focalPointHint':'カレンダーのマス、一覧、メダル棚の小さいサムネイルは正方形に切り抜かれます。下の写真をクリックまたはドラッグして、一番大事な部分を照準に合わせてください。右側のプレビューがリアルタイムで更新されます。',
+  'ui.focalPreviewLabel':'サムネイルプレビュー',
+  'ui.templateAutoApplied':'装備テンプレートを自動的に適用しました',
   // ---- 賽事詳情 - 區塊標題 ----
   'ui.sectionBasic':'基本情報と日程','ui.sectionRoute':'コースと地形','ui.sectionWeather':'気象',
   'ui.sectionLogistics':'予算と旅程','ui.sectionPrep':'装備・補給・戦略（レース前の準備）',
@@ -1127,6 +1259,7 @@ const JA={
         <li>上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え、「今日」で当月に戻ります。スマートフォンでは自動的に当月のレース一覧表示になります。</li>
         <li>フィルターは2段階：まず「すべて／今後の予定／過去の記録」を選択し、「今後の予定」または「過去の記録」を選ぶと詳細ステータスが展開されます（ボタンが一度に多く表示されすぎないように）。</li>
         <li>検索欄でレース名や都市名で絞り込みできます。5件以上記録するとキャリアデータ（完走数、フルマラソン自己ベスト、年間走行距離）が表示されます。</li>
+        <li>「今日」ボタンの隣のグリッドアイコンで「メダル棚」表示に切り替えられます。カバー写真付きの完走レースをカード形式で表示します。</li>
       </ul>
       <h3>レースの追加と管理</h3>
       <ul>
@@ -1255,6 +1388,7 @@ const EN={
   'ui.appTitle':'Race Log','ui.appTagline':'Your complete record, from sign-up to finish line',
   'ui.newRace':'+ New Race','ui.searchPlaceholder':'Search by race name or city…','ui.today':'Today',
   'ui.sampleData':'Sample Data',
+  'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No completed races with cover photos yet. Add a photo once you finish one and start building your trophy wall!',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
   'ui.importExcel':'Import Excel','ui.exportJson':'Export JSON','ui.exportIcs':'Export Calendar Reminders',
   'ui.clearAll':'Clear All Data','ui.clearAllConfirm':'Are you sure? Click again to confirm',
@@ -1298,6 +1432,14 @@ const EN={
   'ui.careerTotalRaces':'Races finished','ui.careerMarathonPB':'Marathon PB','ui.careerYearDistance':'Distance this year',
   'ui.yearlyChartTitle':'Races Completed by Year',
   'ui.elevationProfileTitle':'Elevation Profile','ui.routeMapTitle':'Route Map',
+  'ui.mapStandard':'Standard Map','ui.mapTerrain':'Terrain Map',
+  'ui.dragToReorder':'Drag to reorder','ui.moveUp':'Move up','ui.moveDown':'Move down',
+  'ui.gradientGentle':'Gentle','ui.gradientSteep':'Steep (≥25%)',
+  'ui.coverFocalPoint':'Adjust Focal Point',
+  'ui.focalPointTitle':'Adjust Cover Photo Focal Point',
+  'ui.focalPointHint':'Small thumbnails (calendar cells, lists, the trophy wall) crop the photo to a square. Click or drag on the photo below to move the most important part to the crosshair — the preview on the right updates live.',
+  'ui.focalPreviewLabel':'Thumbnail preview',
+  'ui.templateAutoApplied':'Equipment template applied automatically',
   'ui.sectionBasic':'Basic Info & Schedule','ui.sectionRoute':'Course & Terrain','ui.sectionWeather':'Weather',
   'ui.sectionLogistics':'Budget & Logistics','ui.sectionPrep':'Gear, Nutrition & Strategy (Pre-race)',
   'ui.sectionPost':'Results & Post-race Data','ui.seriesComparison':'Series Comparison (Year over Year)',
@@ -1376,6 +1518,7 @@ const EN={
         <li>Use <span class="mono">‹ Year Month ›</span> at the top to change months, and "Today" to jump back to the current month. On mobile it automatically switches to a list of this month's races.</li>
         <li>Filters have two levels: pick "All / Upcoming / History" first — tapping "Upcoming" or "History" reveals the more specific statuses underneath, so the bar isn't crowded with options at once.</li>
         <li>The search box filters by race name or city. Once you've logged 5+ races, a career stats strip appears (races finished, marathon PB, distance this year).</li>
+        <li>The grid icon next to "Today" switches to a "trophy wall" view — a photo-card grid of completed races that have a cover photo.</li>
       </ul>
       <h3>Creating & Managing Races</h3>
       <ul>
@@ -1562,6 +1705,7 @@ function migrateRace(r){
   if(r.series==null) r.series='';
   if(r.coverImage==null) r.coverImage='';
   if(r.coverImageAspect===undefined) r.coverImageAspect=null;
+  if(!r.coverImageFocalPoint) r.coverImageFocalPoint={x:50,y:50};
   if(r.officialUrl==null) r.officialUrl='';
   if(r.deletedAt===undefined) r.deletedAt=null;
   if(r.lottery==null) r.lottery={applicants:null,winners:null,winRatePct:null,wasSelected:false};
@@ -1985,8 +2129,32 @@ const STARTER_TEMPLATES=[
     {itemName:'運動錶',category:'other',isMandatory:false},
     {itemName:'能量膠/運動飲料',category:'nutrition',isMandatory:false},
   ]},
+  {name:'自行車標配',items:[
+    {itemName:'安全帽',category:'mandatory_gear',isMandatory:true},
+    {itemName:'補胎工具組',category:'mandatory_gear',isMandatory:true},
+    {itemName:'水壺',category:'nutrition',isMandatory:true},
+    {itemName:'卡鞋',category:'shoes',isMandatory:false},
+    {itemName:'車錶/功率計',category:'other',isMandatory:false},
+    {itemName:'風鏡',category:'apparel',isMandatory:false},
+    {itemName:'手套',category:'apparel',isMandatory:false},
+    {itemName:'能量膠/運動飲料',category:'nutrition',isMandatory:false},
+  ]},
 ];
 
+// 依運動種類自動套用對應的裝備範本（僅在裝備清單還是空的時候才會套用，
+// 不會覆蓋使用者已經自己填好的內容）。索引對應 STARTER_TEMPLATES 陣列。
+const SPORT_TEMPLATE_INDEX={
+  road_running:0,trail_running:1,ultra_marathon:1,obstacle_race:1,
+  triathlon:2,duathlon:2,cycling:3,
+};
+function autoApplyEquipmentTemplate(race){
+  if(race.equipmentChecklist&&race.equipmentChecklist.length>0) return false;
+  const idx=SPORT_TEMPLATE_INDEX[race.sportType];
+  const tmpl=(idx!=null)?STARTER_TEMPLATES[idx]:null;
+  if(!tmpl) return false;
+  race.equipmentChecklist=tmpl.items.map(it=>Object.assign({isPacked:false,notes:''},it));
+  return true;
+}
 const SHOES_KEY='shoes-v1';
 let shoes=[];
 async function loadShoes(){
@@ -2085,6 +2253,18 @@ function renderField(race,cfg,ns){
   return `<label class="field${cfg.wide?' wide':''}" for="${id}"><span>${label}${cfg.unit?`<i>(${cfg.unit})</i>`:''}</span>${input}</label>`;
 }
 
+const REORDER_HANDLE_SVG=`<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>`;
+const REORDER_UP_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>`;
+const REORDER_DOWN_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
+const REORDERABLE_LISTS=['equipmentChecklist','nutritionSchedule','splits'];
+function reorderControlsHtml(listKey,i,total){
+  if(!REORDERABLE_LISTS.includes(listKey)||total<2) return '';
+  return `<span class="reorder-controls">
+    <span class="drag-handle" draggable="true" data-list="${listKey}" data-index="${i}" title="${t('ui.dragToReorder','拖曳排序')}" aria-hidden="true">${REORDER_HANDLE_SVG}</span>
+    <button type="button" class="reorder-btn" data-action="move-item-up" data-list="${listKey}" data-index="${i}" ${i===0?'disabled':''} aria-label="${t('ui.moveUp','上移')}">${REORDER_UP_SVG}</button>
+    <button type="button" class="reorder-btn" data-action="move-item-down" data-list="${listKey}" data-index="${i}" ${i===total-1?'disabled':''} aria-label="${t('ui.moveDown','下移')}">${REORDER_DOWN_SVG}</button>
+  </span>`;
+}
 function renderRepeatable(race,listKey){
   const meta=LIST_META[listKey];
   const items=race[listKey]||[];
@@ -2092,7 +2272,8 @@ function renderRepeatable(race,listKey){
     <div class="subsection-head"><h3>${t('list.'+listKey,meta.title)}</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="${listKey}">${t('ui.addItem','+ 新增')}</button></div>
     <div class="repeat-rows">
       ${items.length?items.map((it,i)=>`
-        <div class="repeat-row">
+        <div class="repeat-row${REORDERABLE_LISTS.includes(listKey)&&items.length>1?' reorderable':''}">
+          ${reorderControlsHtml(listKey,i,items.length)}
           <button type="button" class="row-remove" data-action="remove-item" data-list="${listKey}" data-index="${i}" title="${t('ui.delete','刪除')}">×</button>
           ${meta.fields.map(f=>renderField(race,Object.assign({},f,{path:`${listKey}.${i}.${f.path}`,labelPath:f.path}),listKey)).join('')}
         </div>`).join(''):emptyStateBlock(listKey,t('ui.notYetAdded','尚未新增'))}
@@ -2136,7 +2317,8 @@ function renderEquipmentSection(race){
       </div>`:''}
     <div class="repeat-rows">
       ${items.length?items.map((it,i)=>`
-        <div class="repeat-row">
+        <div class="repeat-row${items.length>1?' reorderable':''}">
+          ${reorderControlsHtml('equipmentChecklist',i,items.length)}
           <button type="button" class="row-remove" data-action="remove-item" data-list="equipmentChecklist" data-index="${i}" title="${t('ui.delete','刪除')}">×</button>
           ${EQUIP_FIELDS.map(f=>renderField(race,Object.assign({},f,{path:`equipmentChecklist.${i}.${f.path}`,labelPath:f.path}),'equipmentChecklist')).join('')}
         </div>`).join(''):emptyStateBlock('equipmentChecklist',t('ui.notYetAdded','尚未新增'))}
@@ -2234,6 +2416,25 @@ function renderSplitAnalysis(race){
   </div>`;
 }
 
+const GRADIENT_COLOR_STOPS=[
+  {pct:0,rgb:[76,154,114]},
+  {pct:8,rgb:[217,177,92]},
+  {pct:15,rgb:[184,69,31]},
+  {pct:25,rgb:[122,24,24]},
+];
+function gradientColor(absPct){
+  const stops=GRADIENT_COLOR_STOPS;
+  const p=Math.min(Math.max(absPct,0),stops[stops.length-1].pct);
+  for(let i=0;i<stops.length-1;i++){
+    if(p>=stops[i].pct&&p<=stops[i+1].pct){
+      const ratio=(p-stops[i].pct)/(stops[i+1].pct-stops[i].pct);
+      const c=stops[i].rgb.map((v,idx)=>Math.round(v+(stops[i+1].rgb[idx]-v)*ratio));
+      return `rgb(${c[0]},${c[1]},${c[2]})`;
+    }
+  }
+  const last=stops[stops.length-1].rgb;
+  return `rgb(${last[0]},${last[1]},${last[2]})`;
+}
 function elevationProfileHtml(race){
   let pts=(race.route.elevationProfile&&race.route.elevationProfile.length>=2)?race.route.elevationProfile
     :(race.checkpoints||[]).filter(c=>c.elevationM!=null&&c.distanceKm!=null).map(c=>({distanceKm:c.distanceKm,elevationM:c.elevationM}));
@@ -2244,14 +2445,30 @@ function elevationProfileHtml(race){
   const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
   const sx=x=>pad+(x-minX)/((maxX-minX)||1)*(w-2*pad);
   const sy=y=>h-pad-(y-minY)/((maxY-minY)||1)*(h-2*pad);
-  const linePoints=pts.map(p=>sx(p.distanceKm).toFixed(1)+','+sy(p.elevationM).toFixed(1)).join(' ');
-  const areaPoints=`${sx(minX).toFixed(1)},${(h-pad).toFixed(1)} ${linePoints} ${sx(maxX).toFixed(1)},${(h-pad).toFixed(1)}`;
+  const baseline=(h-pad).toFixed(1);
+  const segments=[];
+  for(let i=1;i<pts.length;i++){
+    const p0=pts[i-1],p1=pts[i];
+    const distM=(p1.distanceKm-p0.distanceKm)*1000;
+    const gradPct=distM>0?((p1.elevationM-p0.elevationM)/distM)*100:0;
+    segments.push({
+      x1:sx(p0.distanceKm),y1:sy(p0.elevationM),x2:sx(p1.distanceKm),y2:sy(p1.elevationM),
+      color:gradientColor(Math.abs(gradPct)),
+    });
+  }
+  const areaPolys=segments.map(s=>`<polygon points="${s.x1.toFixed(1)},${baseline} ${s.x1.toFixed(1)},${s.y1.toFixed(1)} ${s.x2.toFixed(1)},${s.y2.toFixed(1)} ${s.x2.toFixed(1)},${baseline}" fill="${s.color}" opacity="0.18"/>`).join('');
+  const lines=segments.map(s=>`<line x1="${s.x1.toFixed(1)}" y1="${s.y1.toFixed(1)}" x2="${s.x2.toFixed(1)}" y2="${s.y2.toFixed(1)}" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round"/>`).join('');
   return `<div class="elevation-profile">
     <div class="elevation-profile-head small"><span>${t('ui.elevationProfileTitle','海拔變化圖')}</span><span class="mono">${Math.round(minY)}–${Math.round(maxY)} 公尺</span></div>
     <svg viewBox="0 0 ${w} ${h}" class="elevation-svg" preserveAspectRatio="none">
-      <polygon points="${areaPoints}" fill="var(--trail)" opacity="0.14"/>
-      <polyline points="${linePoints}" fill="none" stroke="var(--trail)" stroke-width="2"/>
+      ${areaPolys}
+      ${lines}
     </svg>
+    <div class="elevation-legend small">
+      <span class="elevation-legend-swatch" style="background:${gradientColor(0)}"></span>${t('ui.gradientGentle','平緩')}
+      <span class="elevation-legend-bar"></span>
+      <span class="elevation-legend-swatch" style="background:${gradientColor(25)}"></span>${t('ui.gradientSteep','陡峭 (≥25%)')}
+    </div>
   </div>`;
 }
 
@@ -2286,8 +2503,18 @@ function initRouteMap(race){
   if(!container||!race.route.trackPoints||race.route.trackPoints.length<2||typeof L==='undefined') return;
   const pts=race.route.trackPoints.map(p=>[p.lat,p.lon]);
   currentRouteMap=L.map(container,{scrollWheelZoom:false});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:18,attribution:'&copy; OpenStreetMap contributors',
+  const standardLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:19,attribution:'&copy; OpenStreetMap contributors',
+  });
+  const terrainLayer=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
+    maxZoom:17,attribution:'&copy; OpenStreetMap contributors, &copy; OpenTopoMap (CC-BY-SA)',
+  });
+  // 越野／登山相關賽事預設用地形圖磚，路跑、鐵人三項等預設用一般地圖
+  const preferTerrain=['trail_running','ultra_marathon','obstacle_race'].includes(race.sportType);
+  (preferTerrain?terrainLayer:standardLayer).addTo(currentRouteMap);
+  L.control.layers({
+    [t('ui.mapStandard','標準地圖')]:standardLayer,
+    [t('ui.mapTerrain','地形圖')]:terrainLayer,
   }).addTo(currentRouteMap);
   const polyline=L.polyline(pts,{color:'#2E6B49',weight:3}).addTo(currentRouteMap);
   L.circleMarker(pts[0],{radius:5,color:'#2E6B49',fillColor:'#2E6B49',fillOpacity:1}).addTo(currentRouteMap);
@@ -2582,10 +2809,32 @@ function renderCareerSummary(){
   </div>`;
 }
 
+function renderPhotoGrid(){
+  const withPhotos=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.coverImage);
+  withPhotos.sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
+  if(withPhotos.length===0){
+    return `<div class="photo-grid-wrap">${emptyStateBlock('photos',t('ui.photoGridEmpty','還沒有已完賽且有封面照片的賽事，完賽後幫它加張照片，累積你的獎牌牆吧！'))}</div>`;
+  }
+  return `<div class="photo-grid-wrap"><div class="photo-grid">${withPhotos.map(r=>`
+    <button type="button" class="photo-card${r.id===state.selectedId?' selected':''}" data-id="${r.id}" title="${escapeHtml(r.name)}">
+      <div class="photo-card-img"><img src="${r.coverImage}" alt="" loading="lazy" style="${focalPointStyle(r)}"></div>
+      <div class="photo-card-info">
+        ${r.results.isPb?`<span class="photo-card-pb">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
+        <span class="photo-card-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span>
+        <span class="photo-card-date mono">${r.schedule.raceDate||''}${r.results.chipTimeSeconds?' · '+secToHMS(r.results.chipTimeSeconds):''}</span>
+      </div>
+    </button>`).join('')}</div></div>`;
+}
 function renderCalendar(){
   const y=state.calendarYear,m=state.calendarMonth;
   calLabelEl.textContent=monthLabel(y,m);
   renderFilterChips();
+  const viewToggleBtn=document.getElementById('cal-view-toggle');
+  if(viewToggleBtn) viewToggleBtn.classList.toggle('active',state.viewMode==='grid');
+  if(state.viewMode==='grid'){
+    calendarEl.innerHTML=`${renderCareerSummary()}${renderPhotoGrid()}`;
+    return;
+  }
   const racesByDate=buildRacesByDate(filteredRaces());
   const todayISOStr=todayISO();
 
@@ -2610,7 +2859,7 @@ function renderCalendar(){
     const extra=dayRaces.length-shown.length;
     cells.push(`<div class="cal-cell${muted?' muted':''}${isToday?' today':''}${isWeekend?' weekend':''}">
       <span class="cal-daynum">${cellD}</span>
-      ${shown.map(r=>`<button type="button" class="cal-chip status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" title="${escapeHtml(r.name)}">${r.coverImage?`<img class="cal-chip-thumb" src="${r.coverImage}" alt="">`:''}<span class="cal-chip-text">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span></button>`).join('')}
+      ${shown.map(r=>`<button type="button" class="cal-chip status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" title="${escapeHtml(r.name)}">${r.coverImage?`<img class="cal-chip-thumb" src="${r.coverImage}" alt="" style="${focalPointStyle(r)}">`:`<span class="cal-chip-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}<span class="cal-chip-text">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span></button>`).join('')}
       ${extra>0?`<span class="cal-more">+${extra}</span>`:''}
     </div>`);
     // 手機清單檢視只列本月、有賽事的日期，避免小螢幕上格子太擠、觸控熱區太小
@@ -2619,9 +2868,14 @@ function renderCalendar(){
         <div class="cal-list-date mono${isToday?' today':''}">${cellD}<span class="cal-list-weekday">${weekdayLabels()[new Date(cellY,cellM,cellD).getDay()]}</span></div>
         <div class="cal-list-races">
           ${dayRaces.map(r=>`<button type="button" class="cal-list-item status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
-            ${r.coverImage?`<img class="cal-list-thumb" src="${r.coverImage}" alt="">`:''}
-            <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
-            <span class="cal-list-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span>
+            ${r.coverImage?`<img class="cal-list-thumb" src="${r.coverImage}" alt="" style="${focalPointStyle(r)}">`:`<span class="cal-list-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}
+            <span class="cal-list-text">
+              <span class="cal-list-name-row">
+                <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
+                <span class="cal-list-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span>
+              </span>
+              ${raceTerrainMetaHtml(r)}
+            </span>
           </button>`).join('')}
         </div>
       </div>`);
@@ -2640,6 +2894,7 @@ function coverUploadHtml(race){
   if(race.coverImage){
     return `<div class="cover-upload">
       <button type="button" class="btn-ghost" data-action="open-cover-picker">${t('ui.coverChange','更換封面照片')}</button>
+      <button type="button" class="btn-ghost" data-action="open-focal-point">${t('ui.coverFocalPoint','調整焦點')}</button>
       <button type="button" class="btn-text danger" data-action="remove-cover">${t('ui.coverRemove','移除照片')}</button>
     </div>`;
   }
@@ -2651,13 +2906,14 @@ function detailHeaderHtml(race){
   const chip=(race.status==='completed'&&race.results.chipTimeSeconds)?` ・ ${t('field.post.results.chipTimeSeconds','晶片時間')} ${secToHMS(race.results.chipTimeSeconds)}`:'';
   const hasCover=!!race.coverImage;
   const isPortraitCover=hasCover&&race.coverImageAspect&&race.coverImageAspect<0.85;
-  return `<header class="detail-header${hasCover?' has-cover':''}${isPortraitCover?' portrait-cover':''}">
+  const sportBorder=hasCover?'':` style="border-bottom-color:${sportColorVar(race.sportType)}"`;
+  return `<header class="detail-header${hasCover?' has-cover':''}${isPortraitCover?' portrait-cover':''}"${sportBorder}>
     ${hasCover?`<div class="dh-cover-bg"><img src="${race.coverImage}" alt=""><div class="dh-cover-overlay"></div></div>`:''}
     <div class="dh-content">
       <div class="dh-top">
         <div class="dh-badges">
           <span class="stamp status-${race.status}">${statusLabel(race.status)}</span>
-          <span class="sport-icon-wrap" title="${sportLabel(race.sportType)}">${sportIconSvg(sportIconKey(race.sportType),30)}</span>
+          <span class="sport-icon-wrap" style="color:${sportColorVar(race.sportType)}" title="${sportLabel(race.sportType)}">${sportIconSvg(sportIconKey(race.sportType),30)}</span>
           ${race.results.isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
         </div>
         <div class="dh-actions">
@@ -2727,7 +2983,7 @@ function renderDetail(){
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
       </div>
       <div class="section-body">${SECTION_POST.map(f=>renderField(race,f,'post')).join('')}</div>
-      ${renderShoeSelector(race)}
+      ${race.sportType!=='cycling'?renderShoeSelector(race):''}
       ${renderRepeatable(race,'splits')}
       ${renderRepeatable(race,'mediaLinks')}
     </details>
@@ -2800,6 +3056,9 @@ function scrollDetailIntoView(){
 function selectRace(id,{scroll}={scroll:true}){
   state.selectedId=id;state.creating=false;state.confirmDelete=false;
   renderAll();
+  detailEl.classList.remove('fade-in');
+  void detailEl.offsetWidth; // 強制觸發 reflow 讓動畫可以重新播放
+  detailEl.classList.add('fade-in');
   if(scroll) scrollDetailIntoView();
 }
 
@@ -2846,6 +3105,14 @@ document.getElementById('cal-today').addEventListener('click',()=>{
   const t=new Date();
   state.calendarYear=t.getFullYear();state.calendarMonth=t.getMonth();
   renderCalendar();
+});
+document.getElementById('cal-view-toggle').addEventListener('click',()=>{
+  state.viewMode=state.viewMode==='grid'?'calendar':'grid';
+  renderCalendar();
+});
+document.addEventListener('click',e=>{
+  const photoCard=e.target.closest('.photo-card');
+  if(photoCard) selectRace(photoCard.dataset.id);
 });
 
 /* ============================================================
@@ -3031,18 +3298,36 @@ detailEl.addEventListener('change',async e=>{
   else if(t.dataset.kind==='duration') value=hmsToSec(t.value);
   else if(t.type==='number') value=(t.value===''?null:Number(t.value));
   else value=t.value;
+  const prevStatus=path==='status'?currentRace.status:null;
   setPath(currentRace,path,value);
   currentRace.updatedAt=new Date().toISOString();
   if(path==='schedule.raceDate'&&value){
     const d=new Date(value+'T00:00:00');
     if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
   }
+  // 換運動種類時，如果裝備清單還是空的，自動帶入對應的標準範本（不會覆蓋已填的內容）
+  const templateApplied=(path==='sportType')&&autoApplyEquipmentTemplate(currentRace);
   showSaveStatus('saving');
   await persist();
   renderCalendar();
-  const needsFullRerender=(path==='status'||path==='series'||path.startsWith('results.')||path.startsWith('lottery.'));
+  const needsFullRerender=(path==='status'||path==='series'||path==='sportType'||path.startsWith('results.')||path.startsWith('lottery.'));
   if(needsFullRerender){renderDetail();}else{updateDetailHeaderBits();}
   showSaveStatus('saved');
+  if(templateApplied){
+    const el=document.createElement('div');
+    el.className='foreground-toast';
+    el.innerHTML=`<strong>${window.t('ui.templateAutoApplied','已自動套用裝備範本')}</strong>`;
+    document.body.appendChild(el);
+    setTimeout(()=>{ el.remove(); },4000);
+  }
+  // 從賽前狀態切成「已完賽」時，自動捲動到賽後紀錄區塊（該區塊本來就會依狀態自動展開），讓填寫動線更順暢
+  if(path==='status'&&value==='completed'&&prevStatus!=='completed'){
+    const postSection=document.getElementById('section-post');
+    if(postSection){
+      postSection.open=true;
+      postSection.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }
 });
 
 detailEl.addEventListener('click',e=>{
@@ -3060,6 +3345,26 @@ detailEl.addEventListener('click',e=>{
     currentRace[listKey].splice(idx,1);
     currentRace.updatedAt=new Date().toISOString();
     persist();renderDetail();return;
+  }
+  const moveUpBtn=e.target.closest('[data-action="move-item-up"]');
+  if(moveUpBtn&&currentRace){
+    const arr=currentRace[moveUpBtn.dataset.list],idx=Number(moveUpBtn.dataset.index);
+    if(arr&&idx>0){
+      [arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];
+      currentRace.updatedAt=new Date().toISOString();
+      persist();renderDetail();
+    }
+    return;
+  }
+  const moveDownBtn=e.target.closest('[data-action="move-item-down"]');
+  if(moveDownBtn&&currentRace){
+    const arr=currentRace[moveDownBtn.dataset.list],idx=Number(moveDownBtn.dataset.index);
+    if(arr&&idx<arr.length-1){
+      [arr[idx],arr[idx+1]]=[arr[idx+1],arr[idx]];
+      currentRace.updatedAt=new Date().toISOString();
+      persist();renderDetail();
+    }
+    return;
   }
   const delBtn=e.target.closest('[data-action="delete-race"]');
   if(delBtn){
@@ -3093,6 +3398,7 @@ detailEl.addEventListener('click',e=>{
     if(officialUrl) race.officialUrl=officialUrl;
     if(createStagedActivity) applyActivitySummaryToRace(race,createStagedActivity.summary);
     if(createStagedCover){ race.coverImage=createStagedCover.dataUrl; race.coverImageAspect=createStagedCover.aspect; }
+    autoApplyEquipmentTemplate(race);
     state.races.push(race);
     state.selectedId=race.id;state.creating=false;
     resetCreateStaging();
@@ -3919,6 +4225,7 @@ function helpModalHtml(){
         <li>上方 <span class="mono">‹ 年 月 ›</span> 切換月份，「今天」跳回當月；手機（寬度較窄）會自動改成當月賽事清單，方便點按。</li>
         <li>篩選分兩層：先選「全部／即將到來／歷史紀錄」，點「即將到來」或「歷史紀錄」後才會展開細分狀態，避免按鈕一次擠太多。</li>
         <li>搜尋框可用賽事名稱或城市過濾；累積 5 場以上會出現生涯數據（總完賽場次、全馬 PB、當年里程）。</li>
+        <li>「今天」旁邊的方格圖示可切換「獎牌牆」檢視，以相片卡片呈現已完賽且有封面照片的賽事。</li>
       </ul>
       <h3>新增與管理賽事</h3>
       <ul>
@@ -3967,6 +4274,92 @@ function helpModalHtml(){
   </div>`;
 }
 const helpModalEl_getter=()=>document.getElementById('help-modal');
+/* ============================================================
+   封面照片焦點調整
+   小縮圖（行事曆格子、清單、獎牌牆）用 object-fit:cover 會裁成正方形，
+   這裡讓使用者用滑鼠/觸控直接在完整照片上點選或拖曳，決定裁切時
+   要保留哪個位置，存成百分比座標（跟 CSS object-position 直接對應）。
+   ============================================================ */
+let focalPointDraft=null;
+function focalPointModalHtml(race){
+  const fp=race.coverImageFocalPoint||{x:50,y:50};
+  const aspect=race.coverImageAspect||1.5;
+  return `<div class="modal-panel">
+    <h2>${t('ui.focalPointTitle','調整封面照片焦點')}</h2>
+    <p class="modal-hint">${t('ui.focalPointHint','行事曆格子、清單、獎牌牆的小縮圖會把照片裁成正方形。點選或拖曳下方照片，把最重要的部分移到準心位置，右側縮圖預覽會即時更新。')}</p>
+    <div class="focal-point-body">
+      <div class="focal-point-stage" id="focal-point-stage" style="aspect-ratio:${aspect}">
+        <img src="${race.coverImage}" alt="" id="focal-point-img" draggable="false">
+        <div class="focal-point-marker" id="focal-point-marker" style="left:${fp.x}%;top:${fp.y}%"></div>
+      </div>
+      <div class="focal-preview-col">
+        <span class="small">${t('ui.focalPreviewLabel','縮圖預覽')}</span>
+        <span class="focal-preview-thumb"><img src="${race.coverImage}" id="focal-preview-img" style="object-position:${fp.x}% ${fp.y}%"></span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-primary" data-action="save-focal-point">${t('ui.apply','套用')}</button>
+      <button type="button" class="btn-ghost" data-action="close-focal-point">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+}
+function updateFocalPointUI(x,y){
+  focalPointDraft={x,y};
+  const marker=document.getElementById('focal-point-marker');
+  const previewImg=document.getElementById('focal-preview-img');
+  if(marker){ marker.style.left=x+'%'; marker.style.top=y+'%'; }
+  if(previewImg){ previewImg.style.objectPosition=`${x}% ${y}%`; }
+}
+function focalPosFromEvent(stage,e){
+  const rect=stage.getBoundingClientRect();
+  let x=((e.clientX-rect.left)/rect.width)*100;
+  let y=((e.clientY-rect.top)/rect.height)*100;
+  x=Math.round(Math.max(0,Math.min(100,x)));
+  y=Math.round(Math.max(0,Math.min(100,y)));
+  return {x,y};
+}
+function setupFocalPointDrag(){
+  const stage=document.getElementById('focal-point-stage');
+  if(!stage) return;
+  let dragging=false;
+  stage.addEventListener('pointerdown',e=>{
+    dragging=true;
+    try{ stage.setPointerCapture(e.pointerId); }catch(err){}
+    const{x,y}=focalPosFromEvent(stage,e);
+    updateFocalPointUI(x,y);
+  });
+  stage.addEventListener('pointermove',e=>{
+    if(!dragging) return;
+    const{x,y}=focalPosFromEvent(stage,e);
+    updateFocalPointUI(x,y);
+  });
+  stage.addEventListener('pointerup',()=>{ dragging=false; });
+  stage.addEventListener('pointercancel',()=>{ dragging=false; });
+}
+function openFocalPointModal(){
+  if(!currentRace||!currentRace.coverImage) return;
+  const modal=document.getElementById('focal-point-modal');
+  modal.innerHTML=focalPointModalHtml(currentRace);
+  modal.hidden=false;
+  setupFocalPointDrag();
+}
+function closeFocalPointModal(){
+  const modal=document.getElementById('focal-point-modal');
+  modal.hidden=true;modal.innerHTML='';focalPointDraft=null;
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-action="open-focal-point"]')){ openFocalPointModal(); return; }
+  if(e.target.closest('[data-action="close-focal-point"]')){ closeFocalPointModal(); return; }
+  if(e.target.closest('[data-action="save-focal-point"]')){
+    if(currentRace&&focalPointDraft){
+      currentRace.coverImageFocalPoint={x:focalPointDraft.x,y:focalPointDraft.y};
+      currentRace.updatedAt=new Date().toISOString();
+      persist();renderCalendar();renderDetail();
+    }
+    closeFocalPointModal();
+  }
+});
+
 function openHelpModal(){
   helpModalEl_getter().innerHTML=helpModalHtml();
   helpModalEl_getter().hidden=false;
@@ -4292,9 +4685,66 @@ async function init(){
   checkStorageQuota();
   updateTopbarHeightVar();
 }
+/* ============================================================
+   清單拖曳排序（裝備清單／補給時程／分段配速）
+   滑鼠可以直接拖曳把手排序；由於原生拖放無法用鍵盤操作，
+   同時提供上移／下移按鈕作為鍵盤與觸控裝置都能用的替代方案。
+   ============================================================ */
+let dragReorderState=null;
+document.addEventListener('dragstart',e=>{
+  const handle=e.target.closest('.drag-handle');
+  if(!handle) return;
+  const row=handle.closest('.repeat-row');
+  dragReorderState={list:handle.dataset.list,index:parseInt(handle.dataset.index,10)};
+  try{ e.dataTransfer.setDragImage(row,20,20); }catch(err){}
+  e.dataTransfer.effectAllowed='move';
+  try{ e.dataTransfer.setData('text/plain',''); }catch(err){}
+  row.classList.add('dragging');
+});
+document.addEventListener('dragend',()=>{
+  document.querySelectorAll('.repeat-row.dragging').forEach(r=>r.classList.remove('dragging'));
+  document.querySelectorAll('.repeat-row.drag-over-top,.repeat-row.drag-over-bottom').forEach(r=>r.classList.remove('drag-over-top','drag-over-bottom'));
+  dragReorderState=null;
+});
+document.addEventListener('dragover',e=>{
+  if(!dragReorderState) return;
+  const row=e.target.closest('.repeat-row');
+  if(!row||!row.closest('.repeat-rows')) return;
+  e.preventDefault();
+  document.querySelectorAll('.repeat-row.drag-over-top,.repeat-row.drag-over-bottom').forEach(r=>{ if(r!==row) r.classList.remove('drag-over-top','drag-over-bottom'); });
+  const rect=row.getBoundingClientRect();
+  const isTopHalf=(e.clientY-rect.top)<rect.height/2;
+  row.classList.toggle('drag-over-top',isTopHalf);
+  row.classList.toggle('drag-over-bottom',!isTopHalf);
+});
+document.addEventListener('drop',e=>{
+  if(!dragReorderState||!currentRace) return;
+  const row=e.target.closest('.repeat-row');
+  if(!row){ dragReorderState=null; return; }
+  e.preventDefault();
+  const rowsContainer=row.closest('.repeat-rows');
+  const rows=[...rowsContainer.children];
+  let targetIndex=rows.indexOf(row);
+  const rect=row.getBoundingClientRect();
+  const isTopHalf=(e.clientY-rect.top)<rect.height/2;
+  if(!isTopHalf) targetIndex++;
+  const {list,index:fromIndex}=dragReorderState;
+  const arr=currentRace[list];
+  if(arr&&fromIndex!==targetIndex&&fromIndex>=0&&fromIndex<arr.length){
+    const [item]=arr.splice(fromIndex,1);
+    let insertAt=targetIndex;
+    if(fromIndex<targetIndex) insertAt--;
+    insertAt=Math.max(0,Math.min(insertAt,arr.length));
+    arr.splice(insertAt,0,item);
+    currentRace.updatedAt=new Date().toISOString();
+    persist();renderDetail();
+  }
+  dragReorderState=null;
+});
+
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
-  const modalIds=['import-modal','gpx-modal','paste-modal','shoe-modal','pacing-modal','help-modal','recovery-modal'];
+  const modalIds=['import-modal','gpx-modal','paste-modal','shoe-modal','pacing-modal','help-modal','recovery-modal','focal-point-modal'];
   for(const id of modalIds){
     const el=document.getElementById(id);
     if(el&&!el.hidden){
