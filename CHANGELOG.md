@@ -2,6 +2,10 @@
 
 版本號顯示在網站右下角。這份紀錄從 v1.0.0（第一個完整可用版本）開始；之後每次功能異動都會在這裡加一筆，並同步更新 [USAGE.md](./USAGE.md) 與 [README.md](./README.md) 對應段落。
 
+## v2.31.0
+
+- **改用 IndexedDB 儲存（原本是 localStorage）**：本機資料改存在 IndexedDB（經由開源套件 idb-keyval，CDN 免費載入），額度通常是數百 MB 到數 GB，不會再有 localStorage 那種 ~5MB 就見底的問題。CDN 連不到時（網路問題、被封鎖）自動退回原本的 localStorage，確保這個核心功能不會因為外部套件載入失敗就整個壞掉。第一次用新版開啟網站時，會自動偵測並搬移舊版留在 localStorage 裡的資料到 IndexedDB，只搬一次，不會遺失既有資料，也不會每次開啟都重跑一次搬移。因為 `persist`／`loadRaces` 這幾個核心函式先前就已經是非同步（為了支援 Claude 內建 artifact 預覽環境而設計），這次改動不需要大規模調整呼叫端程式碼；唯一原本是同步寫法的 `loadSyncOverwrites`／`persistSyncOverwrites`（同步覆蓋紀錄）已一併改成非同步。移除了原本針對 localStorage ~5MB 額度設計的「儲存空間接近上限」黃色主動預警（改用 IndexedDB 後這個假設不再成立），保留真正存檔失敗時的紅色錯誤提示。
+
 ## v2.30.1
 
 - **加入專案授權**：新增 `LICENSE` 檔案，採用 PolyForm Noncommercial License 1.0.0（官方原文，未經改寫），個人/研究/教育/非營利等非商業用途可自由使用、修改、散布，不授權商業性使用。頂部導覽列版本號旁新增「© 2026 劉恩龍 LIU EN LUNG」版權標示；使用說明視窗底部新增「版權與授權」段落並附授權連結；README.md 新增授權段落。原本的 GNU AGPLv3 與「All Rights Reserved」都沒有採用——AGPLv3 是可以商用的（只是要求原始碼公開，不是禁止商用），跟「杜絕商業炒作」這個目標不完全吻合；「All Rights Reserved」則會連非商業的社群使用都一併擋掉，跟「與社群良性交流」互相矛盾。PolyForm Noncommercial 是專門為「非商業用途開放、商業用途禁止」這個組合設計的授權條款，比較貼近原始需求。

@@ -30,7 +30,7 @@
 ## 技術架構
 
 - 純靜態網頁：一個 `index.html`，內嵌 CSS 與 JavaScript，無建置流程、無框架
-- 儲存：`localStorage`（獨立架站時）或 Claude 內建 artifact 儲存（預覽環境），Firebase Firestore 為選用的雲端同步層
+- 儲存：IndexedDB（獨立架站時，經由開源套件 idb-keyval，CDN 連不到時自動退回 `localStorage`）或 Claude 內建 artifact 儲存（預覽環境），Firebase Firestore 為選用的雲端同步層
 - 外部函式庫皆透過 CDN 載入：SheetJS（Excel 解析）、Firebase JS SDK（選用）
 - GPX/TCX 解析、海拔剖面、配速計算、分享圖／配速手環產生（Canvas）皆為純前端運算，資料不會上傳到任何第三方伺服器
 

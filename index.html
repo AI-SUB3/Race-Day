@@ -25,6 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
 <style>
   :root{
     --paper:#E6E9E6;
@@ -1332,7 +1333,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.30.1';
+const APP_VERSION='v2.31.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1965,23 +1966,69 @@ const EN={
 const STORAGE_KEY='races-v1';
 const TEMPLATES_KEY='equipment-templates-v1';
 // window.storage 只存在於 Claude 內建的 artifact 預覽環境；獨立架站（如 GitHub Pages）
-// 或直接開檔案時並不存在，此時自動改用瀏覽器原生的 localStorage，兩種環境都能正常儲存。
+// 或直接開檔案時並不存在，此時改用下方的 IndexedDB（經由 idb-keyval）/localStorage 邏輯。
 const hasArtifactStorage=(typeof window.storage!=='undefined')&&(typeof window.storage.get==='function');
 
 /* ============================================================
-   本機儲存空間狀態提示
-   localStorage 在部分瀏覽器（尤其 Safari）額度可能只有 ~5MB，
-   賽事一多、又加上封面照片，有機會真的存不下去；
-   存檔失敗過去只會印在 console，使用者完全不會知道——
-   這裡改成明確告知，並在接近額度時提前預警。
+   IndexedDB 儲存（經由 idb-keyval）
+   localStorage 通常只有 5-10MB 額度，賽事一多、又加上封面照片，
+   容易真的存不下去。IndexedDB 是所有現代瀏覽器內建的資料庫機制，
+   額度通常是數百 MB 到數 GB（視裝置可用空間而定），資料一樣完全
+   存在使用者自己的裝置上，不需要任何外部伺服器或費用。
+
+   如果 CDN 連不到 idb-keyval（網路問題、被封鎖等），自動退回
+   localStorage，確保這個核心儲存功能不會因為外部套件載入失敗就
+   整個壞掉。讀取時一律先查 IndexedDB，查無資料才保底查一次
+   localStorage——這樣即使搬移過程中途失敗，也不會憑空遺失資料。
    ============================================================ */
-const STORAGE_WARNING_BYTES=3*1024*1024;
-function estimateStorageBytes(){
-  try{
-    const raw=localStorage.getItem(STORAGE_KEY);
-    return raw?new Blob([raw]).size:0;
-  }catch(err){ return 0; }
+const hasIdbKeyval=(typeof idbKeyval!=='undefined')&&(typeof idbKeyval.get==='function');
+async function idbGet(key){
+  if(hasIdbKeyval){
+    try{
+      const val=await idbKeyval.get(key);
+      if(val!=null) return val;
+    }catch(err){
+      console.error('IndexedDB 讀取失敗，改讀 localStorage：'+key,err);
+    }
+  }
+  const raw=localStorage.getItem(key);
+  return raw==null?undefined:raw;
 }
+async function idbSet(key,value){
+  if(hasIdbKeyval){
+    await idbKeyval.set(key,value);
+    try{ localStorage.removeItem(key); }catch(err){}
+    return;
+  }
+  localStorage.setItem(key,value);
+}
+const IDB_MIGRATION_FLAG='idb-migration-v1-done';
+async function migrateLocalStorageToIdb(){
+  if(!hasIdbKeyval) return;
+  if(localStorage.getItem(IDB_MIGRATION_FLAG)) return;
+  const keysToMigrate=[STORAGE_KEY,TEMPLATES_KEY,SHOES_KEY,SYNC_OVERWRITES_KEY];
+  for(const key of keysToMigrate){
+    const raw=localStorage.getItem(key);
+    if(raw!=null){
+      try{
+        await idbKeyval.set(key,raw);
+        localStorage.removeItem(key);
+      }catch(err){
+        console.error('搬移資料到 IndexedDB 失敗，保留在 localStorage：'+key,err);
+      }
+    }
+  }
+  try{ localStorage.setItem(IDB_MIGRATION_FLAG,'1'); }catch(err){}
+}
+
+/* ============================================================
+   本機儲存空間狀態提示
+   存檔失敗（不管是哪種儲存機制）不該只印在 console 讓使用者
+   完全不知情——這裡在失敗時明確告知。原本這裡還有「接近容量上限」
+   的主動預警，是針對 localStorage 通常只有 ~5MB 的額度設計的；
+   改用 IndexedDB 之後額度通常是數百 MB 到數 GB，這個預警已經沒有
+   實際意義，所以移除，只保留真正存檔失敗時的錯誤提示。
+   ============================================================ */
 function storageBannerEl(){
   let el=document.getElementById('storage-banner');
   if(!el){
@@ -2000,14 +2047,6 @@ function showStorageBanner(kind,message){
   el.className='storage-banner '+kind;
   el.innerHTML=`<span>${message}</span>${kind==='warning'?`<button type="button" data-action="dismiss-storage-banner">${t('ui.dismiss','知道了')}</button>`:''}`;
   el.hidden=false;
-}
-function checkStorageQuota(){
-  if(hasArtifactStorage) return;
-  if(sessionStorage.getItem('storage-warning-dismissed')) return;
-  const bytes=estimateStorageBytes();
-  if(bytes>STORAGE_WARNING_BYTES){
-    showStorageBanner('warning',tf('ui.storageWarning',`本機資料已使用約 ${(bytes/1024/1024).toFixed(1)} MB，瀏覽器儲存空間有上限，建議定期「匯出 JSON」備份，或考慮移除部分賽事的封面照片。`,(bytes/1024/1024).toFixed(1)));
-  }
 }
 function showStorageError(){
   showStorageBanner('error',t('ui.storageError','本機儲存失敗！瀏覽器儲存空間可能已滿，最新的修改目前沒有真的存起來。請立即「匯出 JSON」備份，並考慮清除部分資料或移除封面照片後再試一次。'));
@@ -2195,7 +2234,7 @@ async function loadRaces(){
       const res=await window.storage.get(STORAGE_KEY,false);
       state.races=(res&&res.value)?JSON.parse(res.value):[];
     }else{
-      const raw=localStorage.getItem(STORAGE_KEY);
+      const raw=await idbGet(STORAGE_KEY);
       state.races=raw?JSON.parse(raw):[];
     }
     state.races=state.races.map(migrateRace);
@@ -2208,10 +2247,9 @@ async function persist(){
     if(hasArtifactStorage){
       await window.storage.set(STORAGE_KEY,JSON.stringify(state.races),false);
     }else{
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(state.races));
+      await idbSet(STORAGE_KEY,JSON.stringify(state.races));
     }
     hideStorageBanner();
-    checkStorageQuota();
   }catch(err){
     console.error('本機儲存失敗',err);
     showStorageError();
@@ -2396,7 +2434,7 @@ async function loadTemplates(){
       const res=await window.storage.get(TEMPLATES_KEY,false);
       templates=(res&&res.value)?JSON.parse(res.value):[];
     }else{
-      const raw=localStorage.getItem(TEMPLATES_KEY);
+      const raw=await idbGet(TEMPLATES_KEY);
       templates=raw?JSON.parse(raw):[];
     }
   }catch(err){
@@ -2408,7 +2446,7 @@ async function persistTemplates(){
     if(hasArtifactStorage){
       await window.storage.set(TEMPLATES_KEY,JSON.stringify(templates),false);
     }else{
-      localStorage.setItem(TEMPLATES_KEY,JSON.stringify(templates));
+      await idbSet(TEMPLATES_KEY,JSON.stringify(templates));
     }
   }catch(err){
     console.error('範本儲存失敗',err);
@@ -2492,7 +2530,7 @@ async function loadShoes(){
       const res=await window.storage.get(SHOES_KEY,false);
       shoes=(res&&res.value)?JSON.parse(res.value):[];
     }else{
-      const raw=localStorage.getItem(SHOES_KEY);
+      const raw=await idbGet(SHOES_KEY);
       shoes=raw?JSON.parse(raw):[];
     }
   }catch(err){
@@ -2504,7 +2542,7 @@ async function persistShoes(){
     if(hasArtifactStorage){
       await window.storage.set(SHOES_KEY,JSON.stringify(shoes),false);
     }else{
-      localStorage.setItem(SHOES_KEY,JSON.stringify(shoes));
+      await idbSet(SHOES_KEY,JSON.stringify(shoes));
     }
   }catch(err){
     console.error('鞋款儲存失敗',err);
@@ -2525,14 +2563,26 @@ function computeShoeStats(shoeId){
 const TRASH_RETENTION_DAYS=30;
 const SYNC_OVERWRITES_KEY='sync-overwrites-v1';
 let syncOverwrites=[];
-function loadSyncOverwrites(){
+async function loadSyncOverwrites(){
   try{
-    const raw=localStorage.getItem(SYNC_OVERWRITES_KEY);
-    syncOverwrites=raw?JSON.parse(raw):[];
+    if(hasArtifactStorage){
+      const res=await window.storage.get(SYNC_OVERWRITES_KEY,false);
+      syncOverwrites=(res&&res.value)?JSON.parse(res.value):[];
+    }else{
+      const raw=await idbGet(SYNC_OVERWRITES_KEY);
+      syncOverwrites=raw?JSON.parse(raw):[];
+    }
   }catch(err){ syncOverwrites=[]; }
 }
-function persistSyncOverwrites(){
-  try{ localStorage.setItem(SYNC_OVERWRITES_KEY,JSON.stringify(syncOverwrites.slice(0,20))); }catch(err){}
+async function persistSyncOverwrites(){
+  try{
+    const trimmed=JSON.stringify(syncOverwrites.slice(0,20));
+    if(hasArtifactStorage){
+      await window.storage.set(SYNC_OVERWRITES_KEY,trimmed,false);
+    }else{
+      await idbSet(SYNC_OVERWRITES_KEY,trimmed);
+    }
+  }catch(err){}
 }
 function purgeOldTrash(){
   const cutoff=Date.now()-TRASH_RETENTION_DAYS*86400000;
@@ -5623,7 +5673,8 @@ async function init(){
   applyStaticTranslations();
   detailEl.innerHTML=`<p class="empty-hint">${t('ui.loading','載入中…')}</p>`;
   renderAuthArea();
-  loadSyncOverwrites();
+  await migrateLocalStorageToIdb();
+  await loadSyncOverwrites();
   await Promise.all([loadRaces(),loadTemplates(),loadShoes()]);
   if(templates.length===0){
     templates=STARTER_TEMPLATES.map(t=>({id:uid(),name:t.name,items:t.items}));
@@ -5631,7 +5682,6 @@ async function init(){
   }
   if(purgeOldTrash()) persist();
   renderAll();
-  checkStorageQuota();
   updateTopbarHeightVar();
   updateOfflineIndicator();
 }
