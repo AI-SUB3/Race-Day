@@ -23,6 +23,7 @@
 - **推播通知（選用，需額外部署）**：Firebase Cloud Messaging + Cloud Functions 排程，賽事倒數一個月／一週直接推送到手機，見 [USAGE.md](./USAGE.md#5a-推播通知選用需要額外部署)
 - **成績分享圖**：一鍵產生可下載的賽事成績卡片
 - **多語系**：繁體中文／日本語／English，右上角可切換；使用者自行輸入的資料不受影響，維持原文
+- **資料安全網**：刪除賽事進垃圾桶（30 天內可還原），多裝置同步衝突不會靜默覆蓋（舊版本可在「資料復原」找回）
 - **深色模式**、**PWA 加入主畫面**（含自訂圖示）
 - **Firebase 雲端同步（選用）**：Google 登入後跨裝置同步，本機儲存永遠是主要資料來源，未設定完全不影響使用
 
@@ -71,3 +72,7 @@
 ## 版本紀錄
 
 見 [CHANGELOG.md](./CHANGELOG.md)。
+
+## 授權
+
+© 2026 劉恩龍 LIU EN LUNG. 本專案採用 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) 授權——個人使用、研究、教育、非營利等非商業用途皆可自由使用、修改、散布；不授權任何商業性使用。完整條款見 [`LICENSE`](./LICENSE)。
