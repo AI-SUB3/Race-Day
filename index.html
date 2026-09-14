@@ -47,6 +47,10 @@
     --sport-obstacle_race:#6B6339;
     --sport-other:#8B8D82;
     --focus-glow:rgba(46,107,73,0.28);
+    --stamp-bg-trail:rgba(46,107,73,0.12);
+    --stamp-bg-contour:rgba(58,90,140,0.1);
+    --stamp-bg-flag:rgba(184,69,31,0.12);
+    --stamp-bg-gold:rgba(176,141,46,0.14);
   }
   [data-theme="dark"]{
     --paper:#0D1013;
@@ -69,6 +73,10 @@
     --sport-obstacle_race:#A89F5C;
     --sport-other:#9BA3A0;
     --focus-glow:rgba(76,154,114,0.35);
+    --stamp-bg-trail:rgba(76,154,114,0.18);
+    --stamp-bg-contour:rgba(123,159,209,0.16);
+    --stamp-bg-flag:rgba(224,120,80,0.18);
+    --stamp-bg-gold:rgba(217,177,92,0.2);
   }
   [data-theme="dark"] .empty-state-icons,
   [data-theme="dark"] .sport-icon-wrap{color:var(--trail);}
@@ -148,7 +156,7 @@
     text-transform:uppercase;letter-spacing:0.03em;border-bottom:2px solid var(--rule);
     position:sticky;top:0;background:var(--paper);
   }
-  .table-view th.num,.table-view td.num{text-align:right;}
+  table th.num,table td.num{text-align:right;}
   .table-view td{padding:6px 10px;border-bottom:1px solid var(--rule);}
   .table-view-row{cursor:pointer;}
   .table-view-row:hover{background:var(--surface);}
@@ -314,8 +322,8 @@
   .results-dashboard.is-pb{border-color:var(--gold);}
   .results-dashboard-main{display:flex;align-items:baseline;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
   .results-big-time{font-size:44px;font-weight:700;letter-spacing:-0.01em;}
-  .pb-badge{display:inline-block;padding:3px 11px;border:1.5px solid var(--gold);color:var(--gold);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
-  .taper-badge{display:inline-block;padding:3px 11px;border:1.5px solid var(--contour);color:var(--contour);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
+  .pb-badge{display:inline-block;padding:3px 11px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
+  .taper-badge{display:inline-block;padding:3px 11px;color:var(--contour);background:var(--stamp-bg-contour);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
   .results-badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:16px;}
   .results-badge{display:flex;flex-direction:column;gap:3px;padding:9px 11px;background:var(--paper);border-radius:3px;}
   .results-badge-label{font-size:11px;color:var(--stone);}
@@ -507,13 +515,13 @@
 
   /* ---------- Stamp badge ---------- */
   .stamp{
-    display:inline-block;padding:2px 9px;border:1.5px solid currentColor;border-radius:2px;
+    display:inline-block;padding:2px 9px;border-radius:2px;
     font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.02em;
     transform:rotate(-2deg);white-space:nowrap;
   }
-  .stamp.status-registered,.stamp.status-completed{color:var(--trail);}
-  .stamp.status-considering,.stamp.status-lottery_pending{color:var(--contour);}
-  .stamp.status-dns,.stamp.status-dnf{color:var(--flag);}
+  .stamp.status-registered,.stamp.status-completed{color:var(--trail);background:var(--stamp-bg-trail);}
+  .stamp.status-considering,.stamp.status-lottery_pending{color:var(--contour);background:var(--stamp-bg-contour);}
+  .stamp.status-dns,.stamp.status-dnf{color:var(--flag);background:var(--stamp-bg-flag);}
 
   /* ---------- Buttons ---------- */
   button{cursor:pointer;}
@@ -1256,7 +1264,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.25.0';
+const APP_VERSION='v2.26.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2601,7 +2609,7 @@ function renderSeriesComparison(race){
       ${bestTime!=null?`<p class="series-best mono">${t('ui.seriesBest','系列最佳晶片時間')}：${secToHMS(bestTime)}</p>`:''}
       <div class="series-table-wrap">
         <table class="series-table">
-          <thead><tr><th>${t('ui.seriesYear','年份')}</th><th>${t('field.basic.schedule.raceDate','日期')}</th><th>${t('field.basic.status','狀態')}</th><th>${t('field.post.results.chipTimeSeconds','晶片時間')}</th><th>${t('field.basic.lottery.winRatePct','中籤率')}</th></tr></thead>
+          <thead><tr><th>${t('ui.seriesYear','年份')}</th><th>${t('field.basic.schedule.raceDate','日期')}</th><th>${t('field.basic.status','狀態')}</th><th class="num">${t('field.post.results.chipTimeSeconds','晶片時間')}</th><th class="num">${t('field.basic.lottery.winRatePct','中籤率')}</th></tr></thead>
           <tbody>
             ${seriesRaces.map(r=>{
               const year=(r.schedule.raceDate||'').slice(0,4)||'—';
@@ -2612,8 +2620,8 @@ function renderSeriesComparison(race){
                 <td class="mono">${year}${r.id===race.id?t('ui.seriesThisRace','（本場）'):''}</td>
                 <td class="mono">${r.schedule.raceDate||'—'}</td>
                 <td><span class="stamp status-${r.status}">${statusLabel(r.status)}</span></td>
-                <td class="mono${isPb?' pb-time':''}">${chipT!=null?secToHMS(chipT):'—'}${isPb?' <span class="pb-badge">PB</span>':''}</td>
-                <td class="mono">${rate!=null?rate+'%':'—'}</td>
+                <td class="mono num${isPb?' pb-time':''}">${chipT!=null?secToHMS(chipT):'—'}${isPb?' <span class="pb-badge">PB</span>':''}</td>
+                <td class="mono num">${rate!=null?rate+'%':'—'}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -2692,13 +2700,13 @@ function renderSplitsChart(race){
   const rows=splits.map(s=>{
     const fillPct=Math.max(4,Math.round(((maxPace-s.avgPaceSecPerKm)/range)*100));
     return `<tr>
-      <td class="mono">${formatDistanceCompact(s.distanceKm)||'—'}</td>
+      <td class="mono num">${formatDistanceCompact(s.distanceKm)||'—'}</td>
       <td class="splits-chart-pace-cell">
         <span class="splits-chart-bar" style="background:linear-gradient(to right, var(--trail) ${fillPct}%, transparent ${fillPct}%)">
           <span class="mono">${formatPace(s.avgPaceSecPerKm)}/km</span>
         </span>
       </td>
-      <td class="mono">${hrZoneHtml(s.avgHr,maxHr)}</td>
+      <td class="mono num">${hrZoneHtml(s.avgHr,maxHr)}</td>
     </tr>`;
   }).join('');
   return `<div class="splits-chart-wrap">
@@ -2707,7 +2715,7 @@ function renderSplitsChart(race){
       <thead><tr>
         <th>${t('ui.splitsChartDistance','距離')}</th>
         <th>${t('ui.resultPace','配速')}</th>
-        <th>${t('ui.resultAvgHr','心率')}</th>
+        <th class="num">${t('ui.resultAvgHr','心率')}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -5239,8 +5247,8 @@ function computePacingRows(targetSeconds,distanceKm,strategy,intervalKm){
   return rows;
 }
 function pacingTableHtml(rows){
-  return `<table class="series-table"><thead><tr><th>${t('ui.pacingDistanceCol','距離')}</th><th>${t('ui.pacingTimeCol','預計通過時間')}</th></tr></thead>
-    <tbody>${rows.map(r=>`<tr><td class="mono">${r.distanceKm} km</td><td class="mono">${secToHMS(r.cumulativeSeconds)}</td></tr>`).join('')}</tbody></table>`;
+  return `<table class="series-table"><thead><tr><th class="num">${t('ui.pacingDistanceCol','距離')}</th><th class="num">${t('ui.pacingTimeCol','預計通過時間')}</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td class="mono num">${r.distanceKm} km</td><td class="mono num">${secToHMS(r.cumulativeSeconds)}</td></tr>`).join('')}</tbody></table>`;
 }
 function pacingModalHtml(prefillTarget,prefillDistance,rows){
   return `<div class="modal-panel modal-panel-wide">
