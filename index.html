@@ -51,6 +51,7 @@
     --stamp-bg-contour:rgba(58,90,140,0.1);
     --stamp-bg-flag:rgba(184,69,31,0.12);
     --stamp-bg-gold:rgba(176,141,46,0.14);
+    --paper-glass:rgba(230,233,230,0.85);
   }
   [data-theme="dark"]{
     --paper:#0D1013;
@@ -77,6 +78,7 @@
     --stamp-bg-contour:rgba(123,159,209,0.16);
     --stamp-bg-flag:rgba(224,120,80,0.18);
     --stamp-bg-gold:rgba(217,177,92,0.2);
+    --paper-glass:rgba(13,16,19,0.82);
   }
   [data-theme="dark"] .empty-state-icons,
   [data-theme="dark"] .sport-icon-wrap{color:var(--trail);}
@@ -100,7 +102,8 @@
 
   /* ---------- Topbar ---------- */
   #topbar{
-    position:sticky;top:0;z-index:10;background:var(--paper);
+    position:sticky;top:0;z-index:10;background:var(--paper-glass);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     border-bottom:1px solid var(--rule);padding:18px 32px 14px;
   }
   .topbar-row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
@@ -557,7 +560,8 @@
 
   .quick-nav{
     display:flex;gap:8px;overflow-x:auto;padding:10px 2px;margin-bottom:14px;
-    position:sticky;top:var(--topbar-height,150px);z-index:8;background:var(--paper);
+    position:sticky;top:var(--topbar-height,150px);z-index:8;background:var(--paper-glass);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     scrollbar-width:none;
   }
   .quick-nav::-webkit-scrollbar{display:none;}
@@ -1270,7 +1274,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.26.1';
+const APP_VERSION='v2.27.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2770,12 +2774,22 @@ function elevationProfileHtml(race){
       color:gradientColor(Math.abs(gradPct)),
     });
   }
-  const areaPolys=segments.map(s=>`<polygon points="${s.x1.toFixed(1)},${baseline} ${s.x1.toFixed(1)},${s.y1.toFixed(1)} ${s.x2.toFixed(1)},${s.y2.toFixed(1)} ${s.x2.toFixed(1)},${baseline}" fill="${s.color}" opacity="0.18"/>`).join('');
+  const areaPolys=segments.map(s=>`<polygon points="${s.x1.toFixed(1)},${baseline} ${s.x1.toFixed(1)},${s.y1.toFixed(1)} ${s.x2.toFixed(1)},${s.y2.toFixed(1)} ${s.x2.toFixed(1)},${baseline}" fill="${s.color}"/>`).join('');
   const lines=segments.map(s=>`<line x1="${s.x1.toFixed(1)}" y1="${s.y1.toFixed(1)}" x2="${s.x2.toFixed(1)}" y2="${s.y2.toFixed(1)}" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round"/>`).join('');
+  const maskId='elev-fade-'+race.id;
   return `<div class="elevation-profile">
     <div class="elevation-profile-head small"><span>${t('ui.elevationProfileTitle','海拔變化圖')}</span><span class="mono">${Math.round(minY)}–${Math.round(maxY)} 公尺</span></div>
     <svg viewBox="0 0 ${w} ${h}" class="elevation-svg" preserveAspectRatio="none">
-      ${areaPolys}
+      <defs>
+        <linearGradient id="${maskId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+        </linearGradient>
+        <mask id="${maskId}-m">
+          <rect x="0" y="0" width="${w}" height="${h}" fill="url(#${maskId})"/>
+        </mask>
+      </defs>
+      <g mask="url(#${maskId}-m)">${areaPolys}</g>
       ${lines}
     </svg>
     <div class="elevation-legend small">
