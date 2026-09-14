@@ -1320,7 +1320,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.29.0';
+const APP_VERSION='v2.29.1';
 
 /* ============================================================
    多語系（i18n）
@@ -5563,18 +5563,28 @@ document.addEventListener('click',e=>{
    navigator.onLine 跟 online/offline 事件在部分瀏覽器／作業系統／
    網路環境組合下並不完全可靠，有時候明明已經連線，事件卻沒有正確
    觸發，導致提示卡在「離線中」。這裡疊加幾層修正：定時重新檢查、
-   分頁切回前景時重新檢查，加上使用者可以手動點掉的按鈕——手動關掉
-   後，只要真的偵測到連回線上、或是又發生一次新的離線事件，提示會
-   自動恢復正常運作，不會被永久關掉。
+   分頁切回前景時重新檢查，加上使用者可以手動點掉的按鈕。
+
+   之前的版本有個 bug：只要收到一次 offline 事件就會把「使用者關掉」
+   的狀態重置，但瀏覽器在還沒恢復連線的情況下，其實可能重複觸發好
+   幾次 offline 事件（不是每次都代表真的重新斷線一次）——結果就是
+   使用者點 X 關掉，幾乎馬上又被下一次 offline 事件打開，看起來像
+   「按了沒反應」。修正成只有「真的從連線狀態變回離線」（追蹤上一次
+   確認的狀態，不是每次事件都當作新的一次斷線）才會重置，關掉之後
+   除非真的偵測到連線恢復、或是從連線又變回離線一次，才會再跳出來。
    ============================================================ */
 let offlineIndicatorDismissed=false;
+let lastKnownOnlineState=null;
 function updateOfflineIndicator(){
   const el=document.getElementById('offline-indicator');
   if(!el) return;
-  if(navigator.onLine){
-    offlineIndicatorDismissed=false;
+  const isOnline=navigator.onLine;
+  if(isOnline){
+    if(lastKnownOnlineState===false) offlineIndicatorDismissed=false;
+    lastKnownOnlineState=true;
     el.hidden=true;
   }else{
+    lastKnownOnlineState=false;
     el.hidden=offlineIndicatorDismissed;
   }
 }
@@ -5583,7 +5593,7 @@ function dismissOfflineIndicator(){
   updateOfflineIndicator();
 }
 window.addEventListener('online',updateOfflineIndicator);
-window.addEventListener('offline',()=>{ offlineIndicatorDismissed=false; updateOfflineIndicator(); });
+window.addEventListener('offline',updateOfflineIndicator);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) updateOfflineIndicator(); });
 setInterval(updateOfflineIndicator,8000);
 
