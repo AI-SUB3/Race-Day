@@ -27,7 +27,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --paper:#EEF0EF;
+    --paper:#E6E9E6;
     --surface:#FAFAF8;
     --ink:#16231C;
     --ink-soft:#4B564E;
@@ -46,9 +46,10 @@
     --sport-swimming:#1E7FA8;
     --sport-obstacle_race:#6B6339;
     --sport-other:#8B8D82;
+    --focus-glow:rgba(46,107,73,0.28);
   }
   [data-theme="dark"]{
-    --paper:#12161A;
+    --paper:#0D1013;
     --surface:#1E232A;
     --ink:#EDEEE9;
     --ink-soft:#9BA3A0;
@@ -67,6 +68,7 @@
     --sport-swimming:#5FBEDB;
     --sport-obstacle_race:#A89F5C;
     --sport-other:#9BA3A0;
+    --focus-glow:rgba(76,154,114,0.35);
   }
   [data-theme="dark"] .empty-state-icons,
   [data-theme="dark"] .sport-icon-wrap{color:var(--trail);}
@@ -81,7 +83,7 @@
     line-height:1.6;
   }
   [data-lang="ja"] body{font-family:'Noto Sans JP',sans-serif;}
-  :focus-visible{outline:2px solid var(--contour);outline-offset:1px;}
+  :focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-glow);transition:box-shadow 0.15s ease;}
   h1,h2,h3{margin:0;font-weight:700;}
   .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .small{font-size:14px;}
@@ -225,7 +227,12 @@
   .cal-cell.today{border-color:var(--trail);border-width:1.5px;background:rgba(46,107,73,0.07);}
   [data-theme="dark"] .cal-cell.today{background:rgba(76,154,114,0.12);}
   .cal-daynum{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--ink-soft);}
-  .cal-cell.today .cal-daynum{color:var(--trail);font-weight:600;}
+  .cal-cell.today .cal-daynum{
+    color:#fff;font-weight:700;background:var(--trail);
+    width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    align-self:flex-start;
+  }
   .cal-chip{
     display:flex;align-items:center;gap:4px;width:100%;text-align:left;border:none;border-left:3px solid currentColor;
     background:rgba(22,35,28,0.05);border-radius:2px;padding:2px 5px;font:inherit;
@@ -586,9 +593,14 @@
   .detail-header h1 .alias{font-weight:400;color:var(--ink-soft);font-size:18px;}
   .dh-meta{color:var(--ink-soft);}
 
-  details.section{border-bottom:1px solid var(--rule);}
+  details.section{
+    background:var(--surface);border-radius:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom:14px;padding:0 20px;
+  }
+  [data-theme="dark"] details.section{box-shadow:0 2px 10px rgba(0,0,0,0.3);}
   details.section summary{
-    cursor:pointer;font-weight:600;font-size:17px;padding:16px 2px;
+    cursor:pointer;font-weight:600;font-size:17px;padding:16px 0;
     list-style:none;display:flex;align-items:center;justify-content:space-between;
     transition:color 0.15s ease;
   }
@@ -605,18 +617,20 @@
     details.section[open]>*:not(summary){animation:none;}
   }
 
-  .section-body{display:flex;flex-wrap:wrap;gap:16px 20px;padding:2px 2px 16px;}
+  .section-body{display:flex;flex-wrap:wrap;gap:22px 20px;padding:2px 0 16px;}
   .section-body .field{flex:1 1 200px;min-width:170px;margin-bottom:0;}
   .section-body .field.wide{flex-basis:100%;}
 
-  .field{display:flex;flex-direction:column;gap:5px;font-size:15px;color:var(--ink-soft);margin-bottom:12px;}
-  .field span{font-size:14px;}
+  .field{display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--ink-soft);margin-bottom:16px;}
+  .field span{font-size:14px;color:var(--stone);}
   .field span i{font-style:normal;color:var(--stone);margin-left:3px;}
   .field input,.field select,.field textarea{
     font:inherit;font-size:15px;
     padding:8px 10px;border:1px solid var(--rule);border-radius:3px;
     background:var(--surface);color:var(--ink);width:100%;
+    transition:border-color 0.15s ease;
   }
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--trail);}
   .field input[type="number"],.field input[data-kind="duration"]{font-family:'IBM Plex Mono',monospace;}
   .field textarea{resize:vertical;min-height:60px;}
   .field-inline{flex-direction:row;align-items:center;gap:8px;}
@@ -1242,7 +1256,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.23.0';
+const APP_VERSION='v2.25.0';
 
 /* ============================================================
    多語系（i18n）
