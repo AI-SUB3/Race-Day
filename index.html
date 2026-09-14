@@ -595,6 +595,11 @@
     border:1px solid var(--gold);border-radius:12px;padding:4px 10px;white-space:nowrap;
   }
   .offline-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;animation:save-pulse 1.4s ease-in-out infinite;}
+  .offline-dismiss-btn{
+    background:none;border:none;color:inherit;opacity:0.6;cursor:pointer;
+    font-size:11px;line-height:1;padding:1px 2px;margin-left:2px;
+  }
+  .offline-dismiss-btn:hover{opacity:1;}
   .sport-icon-wrap{display:inline-flex;color:var(--trail);}
   .sport-icon{display:block;}
   .detail-header h1{font-size:30px;line-height:1.3;}
@@ -791,6 +796,7 @@
         <span id="offline-indicator" class="offline-indicator" hidden>
           <span class="offline-dot"></span>
           <span data-i18n="ui.offlineMessage">離線中，變更將於連線後自動同步</span>
+          <button type="button" class="offline-dismiss-btn" data-action="dismiss-offline-indicator" data-i18n-title="ui.offlineDismissTitle" title="如果你其實已經連線，點這裡重新檢查">✕</button>
         </span>
         <div id="auth-area" class="auth-area"></div>
         <div class="new-race-stack">
@@ -1264,7 +1270,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.26.0';
+const APP_VERSION='v2.26.1';
 
 /* ============================================================
    多語系（i18n）
@@ -1390,6 +1396,7 @@ const JA={
   'ui.focalPreviewLabel':'サムネイルプレビュー',
   'ui.templateAutoApplied':'装備テンプレートを自動的に適用しました',
   'ui.offlineMessage':'オフラインです。変更は再接続後に自動的に同期されます',
+  'ui.offlineDismissTitle':'実はオンラインの場合はここをクリックして再確認',
   // ---- 賽事詳情 - 區塊標題 ----
   'ui.sectionBasic':'基本情報と日程','ui.sectionRoute':'コースと地形','ui.sectionWeather':'気象',
   'ui.sectionLogistics':'予算と旅程','ui.sectionPrep':'装備・補給・戦略（レース前の準備）',
@@ -1684,6 +1691,7 @@ const EN={
   'ui.focalPreviewLabel':'Thumbnail preview',
   'ui.templateAutoApplied':'Equipment template applied automatically',
   'ui.offlineMessage':'Offline — changes will sync once you\u2019re back online',
+  'ui.offlineDismissTitle':'If you\u2019re actually online, click to recheck',
   'ui.sectionBasic':'Basic Info & Schedule','ui.sectionRoute':'Course & Terrain','ui.sectionWeather':'Weather',
   'ui.sectionLogistics':'Budget & Logistics','ui.sectionPrep':'Gear, Nutrition & Strategy (Pre-race)',
   'ui.sectionPost':'Results & Post-race Data','ui.seriesComparison':'Series Comparison (Year over Year)',
@@ -3676,6 +3684,7 @@ document.addEventListener('click',e=>{
   if(dismissBtn){ state.focusDismissedId=dismissBtn.dataset.id; renderFocusPanel(); return; }
   const viewBtn=e.target.closest('[data-action="focus-view-race"]');
   if(viewBtn){ selectRace(viewBtn.dataset.id); return; }
+  if(e.target.closest('[data-action="dismiss-offline-indicator"]')){ dismissOfflineIndicator(); return; }
 });
 
 /* ============================================================
@@ -5365,14 +5374,33 @@ document.addEventListener('click',e=>{
    本機資料本來就一律先存 localStorage，跟連線與否無關；
    這裡純粹是讓使用者「看得到」目前離線、安心知道變更有存到本機，
    連線恢復後雲端同步會自動接續（沿用既有的重試機制）。
+
+   navigator.onLine 跟 online/offline 事件在部分瀏覽器／作業系統／
+   網路環境組合下並不完全可靠，有時候明明已經連線，事件卻沒有正確
+   觸發，導致提示卡在「離線中」。這裡疊加幾層修正：定時重新檢查、
+   分頁切回前景時重新檢查，加上使用者可以手動點掉的按鈕——手動關掉
+   後，只要真的偵測到連回線上、或是又發生一次新的離線事件，提示會
+   自動恢復正常運作，不會被永久關掉。
    ============================================================ */
+let offlineIndicatorDismissed=false;
 function updateOfflineIndicator(){
   const el=document.getElementById('offline-indicator');
   if(!el) return;
-  el.hidden=navigator.onLine;
+  if(navigator.onLine){
+    offlineIndicatorDismissed=false;
+    el.hidden=true;
+  }else{
+    el.hidden=offlineIndicatorDismissed;
+  }
+}
+function dismissOfflineIndicator(){
+  offlineIndicatorDismissed=true;
+  updateOfflineIndicator();
 }
 window.addEventListener('online',updateOfflineIndicator);
-window.addEventListener('offline',updateOfflineIndicator);
+window.addEventListener('offline',()=>{ offlineIndicatorDismissed=false; updateOfflineIndicator(); });
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) updateOfflineIndicator(); });
+setInterval(updateOfflineIndicator,8000);
 
 /* ============================================================
    初始化
