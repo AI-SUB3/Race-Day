@@ -135,6 +135,25 @@
   #cal-view-toggle{padding:6px 9px!important;}
   #cal-view-toggle svg{width:17px;height:17px;display:block;}
   #cal-view-toggle.active{background:var(--ink);color:var(--surface);}
+  #cal-table-toggle svg{width:17px;height:17px;display:block;}
+  #cal-table-toggle.active{background:var(--ink);color:var(--surface);}
+
+  /* ---------- Compact table view ---------- */
+  .table-view-wrap{overflow-x:auto;margin-top:4px;}
+  .table-view{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}
+  .table-view th{
+    text-align:left;padding:7px 10px;color:var(--stone);font-weight:600;font-size:11px;
+    text-transform:uppercase;letter-spacing:0.03em;border-bottom:2px solid var(--rule);
+    position:sticky;top:0;background:var(--paper);
+  }
+  .table-view th.num,.table-view td.num{text-align:right;}
+  .table-view td{padding:6px 10px;border-bottom:1px solid var(--rule);}
+  .table-view-row{cursor:pointer;}
+  .table-view-row:hover{background:var(--surface);}
+  .table-view-row.selected{background:var(--ink);color:var(--surface);}
+  .table-view-row.selected td{border-bottom-color:var(--ink-soft);}
+  .table-view-name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .table-view-row.selected .pb-badge{color:var(--gold);}
 
   /* ---------- Photo grid (trophy wall) ---------- */
   .photo-grid-wrap{margin-top:4px;}
@@ -142,9 +161,10 @@
   .photo-card{
     display:flex;flex-direction:column;border:1px solid var(--rule);border-radius:6px;overflow:hidden;
     background:var(--surface);cursor:pointer;padding:0;text-align:left;font:inherit;
-    transition:box-shadow 0.15s,border-color 0.15s;
+    transition:box-shadow 0.15s,border-color 0.15s,transform 0.15s ease;
   }
-  .photo-card:hover{border-color:var(--trail);box-shadow:0 4px 14px rgba(0,0,0,0.12);}
+  .photo-card:hover{border-color:var(--trail);box-shadow:0 4px 14px rgba(0,0,0,0.12);transform:translateY(-2px);}
+  .photo-card:active{transform:scale(0.98);}
   .photo-card.selected{border-color:var(--trail);border-width:2px;}
   .photo-card-img{width:100%;aspect-ratio:1/1;background:var(--paper);overflow:hidden;}
   .photo-card-img img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -210,7 +230,10 @@
     display:flex;align-items:center;gap:4px;width:100%;text-align:left;border:none;border-left:3px solid currentColor;
     background:rgba(22,35,28,0.05);border-radius:2px;padding:2px 5px;font:inherit;
     font-size:13px;color:var(--ink);cursor:pointer;
+    transition:transform 0.12s ease,box-shadow 0.12s ease;
   }
+  .cal-chip:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.14);}
+  .cal-chip:active{transform:scale(0.97);}
   .cal-chip-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   .cal-chip-thumb{width:14px;height:14px;border-radius:2px;object-fit:cover;flex-shrink:0;}
   .cal-chip-sport-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
@@ -234,7 +257,10 @@
     display:flex;align-items:center;gap:10px;width:100%;text-align:left;
     border:1px solid var(--rule);border-radius:4px;background:var(--surface);
     padding:12px 14px;font:inherit;cursor:pointer;min-height:48px;
+    transition:transform 0.15s ease,box-shadow 0.15s ease;
   }
+  .cal-list-item:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+  .cal-list-item:active{transform:scale(0.98);}
   .cal-list-thumb{width:34px;height:34px;border-radius:5px;object-fit:cover;flex-shrink:0;}
   .cal-list-sport-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
   .cal-list-item.selected{background:var(--ink);border-color:var(--ink);}
@@ -247,7 +273,8 @@
   .cal-list-meta{font-size:12px;color:var(--stone);}
 
   /* ---------- Career summary ---------- */
-  .career-summary-wrap{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--rule);}
+  .career-summary-wrap{display:flex;flex-direction:column;gap:16px;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--rule);}
+  .career-summary-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;}
   .career-summary{display:flex;gap:30px;flex-wrap:wrap;}
   .career-stat{display:flex;align-items:center;gap:10px;}
   .career-stat-icon{color:var(--trail);flex-shrink:0;opacity:0.85;}
@@ -260,6 +287,17 @@
   .yearly-chart-svg{height:100px;display:block;}
   .yearly-chart-count{font-size:11px;fill:var(--ink-soft);}
   .yearly-chart-year{font-size:11px;fill:var(--stone);}
+  .elevation-trend-wrap{max-width:100%;overflow-x:auto;}
+  .elevation-trend-svg{height:110px;display:block;}
+  .elevation-trend-label{font-size:10px;fill:var(--stone);}
+  .heatmap-wrap{max-width:100%;overflow-x:auto;}
+  .heatmap-row{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
+  .heatmap-year-label{width:36px;flex-shrink:0;font-size:11px;color:var(--stone);}
+  .heatmap-cells{display:flex;gap:3px;}
+  .heatmap-cell{width:18px;height:18px;border-radius:3px;background:var(--trail);flex-shrink:0;}
+  .heatmap-cell-empty{background:var(--rule);}
+  .heatmap-month-labels{display:flex;align-items:center;gap:8px;margin-top:2px;}
+  .heatmap-month-label{width:18px;text-align:center;font-size:9px;color:var(--stone);flex-shrink:0;}
   @media (max-width:640px){
     .yearly-chart-wrap{margin-left:0;width:100%;}
   }
@@ -270,6 +308,7 @@
   .results-dashboard-main{display:flex;align-items:baseline;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
   .results-big-time{font-size:44px;font-weight:700;letter-spacing:-0.01em;}
   .pb-badge{display:inline-block;padding:3px 11px;border:1.5px solid var(--gold);color:var(--gold);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
+  .taper-badge{display:inline-block;padding:3px 11px;border:1.5px solid var(--contour);color:var(--contour);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
   .results-badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:16px;}
   .results-badge{display:flex;flex-direction:column;gap:3px;padding:9px 11px;background:var(--paper);border-radius:3px;}
   .results-badge-label{font-size:11px;color:var(--stone);}
@@ -285,6 +324,15 @@
   .split-analysis.split-bad{border-color:var(--flag);}
   .split-analysis.split-bad .split-analysis-value{color:var(--flag);}
 
+  /* ---------- HR zones & splits chart ---------- */
+  .hr-zone-tag{display:inline-block;font-size:10px;font-weight:700;color:#fff;padding:1px 5px;border-radius:8px;vertical-align:middle;}
+  .splits-chart-wrap{margin:4px 2px 18px;}
+  .splits-chart-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .splits-chart-table th{text-align:left;padding:5px 8px;color:var(--stone);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--rule);}
+  .splits-chart-table td{padding:0 8px;border-bottom:1px solid var(--rule);}
+  .splits-chart-pace-cell{padding:0!important;}
+  .splits-chart-bar{display:flex;align-items:center;padding:6px 8px;height:100%;}
+
   /* ---------- Elevation profile ---------- */
   .elevation-profile{margin:4px 2px 18px;}
   .elevation-profile-head{display:flex;justify-content:space-between;color:var(--stone);margin-bottom:6px;}
@@ -297,6 +345,53 @@
   .route-map-wrap{margin:4px 2px 18px;}
   .route-map-head{color:var(--stone);margin-bottom:6px;}
   .route-map{width:100%;height:280px;border-radius:4px;border:1px solid var(--rule);background:var(--paper);z-index:0;}
+
+  /* ---------- Focus panel (備戰釘選) ---------- */
+  .focus-panel{
+    border:1.5px solid var(--gold);border-radius:8px;padding:18px 20px;margin-bottom:22px;
+    background:var(--surface);
+  }
+  .focus-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .focus-panel-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .focus-panel-label{
+    font-size:11px;font-weight:700;letter-spacing:0.04em;color:var(--gold);
+    border:1px solid var(--gold);border-radius:10px;padding:2px 8px;text-transform:uppercase;
+  }
+  .focus-panel-title h2{font-size:19px;}
+  .focus-panel-countdown{color:var(--ink-soft);font-size:14px;}
+  .focus-panel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px;}
+  .focus-panel-card{border:1px solid var(--rule);border-radius:5px;padding:12px 14px;background:var(--paper);}
+  .focus-panel-card-title{color:var(--stone);margin-bottom:8px;}
+  .focus-panel-card-value{font-size:20px;font-weight:700;margin-bottom:4px;}
+  .focus-panel-card-note{color:var(--ink-soft);margin:0;}
+  .focus-progress-bar{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;margin-bottom:6px;}
+  .focus-progress-fill{height:100%;background:var(--trail);border-radius:3px;transition:width 0.3s;}
+  .focus-weather-row{display:flex;gap:12px;flex-wrap:wrap;font-size:15px;font-weight:600;}
+  .focus-panel-view-btn{width:100%;justify-content:center;}
+  @media (max-width:640px){
+    .focus-panel-grid{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Media gallery strip ---------- */
+  .media-gallery-wrap{margin:4px 2px 22px;}
+  .media-gallery-head{color:var(--stone);margin-bottom:8px;}
+  .media-gallery-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity;}
+  .media-gallery-card{
+    position:relative;flex:0 0 auto;width:110px;height:110px;border-radius:6px;overflow:hidden;
+    border:1px solid var(--rule);background:var(--surface);scroll-snap-align:start;
+    display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--ink-soft);
+    transition:border-color 0.15s;
+  }
+  .media-gallery-card:hover{border-color:var(--trail);}
+  .media-gallery-card img{width:100%;height:100%;object-fit:cover;display:block;}
+  .media-gallery-fallback-icon{display:none;color:var(--stone);}
+  .media-gallery-fallback-icon svg{width:32px;height:32px;display:block;}
+  .media-gallery-card.media-gallery-fallback img{display:none;}
+  .media-gallery-card.media-gallery-fallback .media-gallery-fallback-icon{display:block;}
+  .media-gallery-link{flex-direction:column;gap:8px;padding:10px;}
+  .media-gallery-link-icon{color:var(--stone);}
+  .media-gallery-link-icon svg{width:28px;height:28px;display:block;}
+  .media-gallery-link-domain{font-size:12px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
 
   /* ---------- Cover photo focal point picker ---------- */
   .focal-point-body{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin:14px 0;}
@@ -480,6 +575,11 @@
   .save-status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
   .save-status[data-state="saving"] .save-status-dot{animation:save-pulse 1s ease-in-out infinite;}
   @keyframes save-pulse{0%,100%{opacity:0.3;}50%{opacity:1;}}
+  .offline-indicator{
+    display:flex;align-items:center;gap:6px;font-size:13px;color:var(--gold);
+    border:1px solid var(--gold);border-radius:12px;padding:4px 10px;white-space:nowrap;
+  }
+  .offline-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;animation:save-pulse 1.4s ease-in-out infinite;}
   .sport-icon-wrap{display:inline-flex;color:var(--trail);}
   .sport-icon{display:block;}
   .detail-header h1{font-size:30px;line-height:1.3;}
@@ -490,10 +590,20 @@
   details.section summary{
     cursor:pointer;font-weight:600;font-size:17px;padding:16px 2px;
     list-style:none;display:flex;align-items:center;justify-content:space-between;
+    transition:color 0.15s ease;
   }
+  details.section summary:hover{color:var(--trail);}
   details.section summary::-webkit-details-marker{display:none;}
   details.section summary::after{content:'+';font-family:'IBM Plex Mono',monospace;color:var(--stone);font-weight:400;}
   details.section[open] summary::after{content:'\2013';}
+  details.section[open]>*:not(summary){animation:details-reveal 0.22s ease;}
+  @keyframes details-reveal{
+    from{opacity:0;transform:translateY(-6px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    details.section[open]>*:not(summary){animation:none;}
+  }
 
   .section-body{display:flex;flex-wrap:wrap;gap:16px 20px;padding:2px 2px 16px;}
   .section-body .field{flex:1 1 200px;min-width:170px;margin-bottom:0;}
@@ -656,6 +766,10 @@
           </select>
           <span class="lang-caption small">支援：繁體中文・日本語・English</span>
         </div>
+        <span id="offline-indicator" class="offline-indicator" hidden>
+          <span class="offline-dot"></span>
+          <span data-i18n="ui.offlineMessage">離線中，變更將於連線後自動同步</span>
+        </span>
         <div id="auth-area" class="auth-area"></div>
         <div class="new-race-stack">
           <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
@@ -672,6 +786,9 @@
         <button id="cal-view-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.gridViewToggle" title="切換檢視" aria-label="切換為獎牌牆檢視">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         </button>
+        <button id="cal-table-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.tableViewToggle" title="切換為緊湊表格檢視" aria-label="切換為緊湊表格檢視">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14h18M9 4v16"/></svg>
+        </button>
       </div>
       <input id="search-input" type="search" data-i18n-placeholder="ui.searchPlaceholder" placeholder="搜尋賽事名稱、城市…">
       <div id="filter-chips" class="chips"></div>
@@ -679,6 +796,7 @@
     <div class="topbar-row3">
       <button id="btn-import" class="btn-text" data-i18n="ui.importExcel">匯入 Excel</button>
       <button id="btn-export" class="btn-text" data-i18n="ui.exportJson">匯出 JSON</button>
+      <button id="btn-export-csv" class="btn-text" data-i18n="ui.exportCsv" title="扁平化多表 CSV，適合 SQL／Python／Excel VBA 自動化">匯出 CSV（扁平化）</button>
       <button id="btn-import-json" class="btn-text" data-i18n="ui.importJson">匯入 JSON</button>
       <button id="btn-export-ics" class="btn-text" data-i18n="ui.exportIcs">匯出行事曆提醒</button>
       <button id="btn-recovery" class="btn-text" data-action="open-recovery"></button>
@@ -687,6 +805,7 @@
     </div>
   </header>
   <main id="main-content">
+    <section id="focus-panel-slot"></section>
     <section id="calendar"></section>
     <section id="detail"></section>
   </main>
@@ -968,9 +1087,11 @@ function progressBlockHtml(race){
   if(d==null) return '';
   const pct=progressPct(d);
   const urgent=d>=0&&d<=7;
+  const accent=race.coverImageAccentColor;
+  const fillStyle=`width:${pct}%`+(!urgent&&accent?`;background:rgb(${accent.r},${accent.g},${accent.b})`:'');
   return `<div class="progress-block">
     <div class="progress-label"><span>${adaptiveCountdown(d)}</span><span class="mono">${race.schedule.raceDate}</span></div>
-    <div class="progress-track"><div class="progress-fill${urgent?' urgent':''}" style="width:${pct}%"></div></div>
+    <div class="progress-track"><div class="progress-fill${urgent?' urgent':''}" style="${fillStyle}"></div></div>
   </div>`;
 }
 const SPORT_ICON_INNER={
@@ -1002,12 +1123,58 @@ const EMPTY_STATE_ICONS={
   trash:`<path d="M4 7h16"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M9 4h6l1 3H8z"/>`,
   history:`<path d="M21 3v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 9"/><path d="M3 21v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 15"/>`,
   photos:`<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7l1.4-2.4A1 1 0 0 1 10.3 4h3.4a1 1 0 0 1 .9.6L16 7"/><circle cx="12" cy="13.5" r="3.5"/>`,
+  document:`<path d="M6 2h9l4 4v16H6z"/><path d="M15 2v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/>`,
 };
 function emptyStateBlock(iconKey,text){
   const inner=EMPTY_STATE_ICONS[iconKey]||'';
   return `<div class="empty-hint-block">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>
     <p class="empty-hint">${text}</p>
+  </div>`;
+}
+/* ============================================================
+   多媒體相片網格
+   直接連到圖片檔（.jpg/.png/.gif/.webp/.avif）的連結會嘗試顯示縮圖；
+   其他連結（相簿首頁、社群貼文、PDF 等）無法在純前端取得預覽圖
+   （目標網站沒有開放跨網域讀取，瀏覽器基於安全性會擋下來），
+   改顯示對應類型的圖示卡片，一樣可以點擊開啟。
+   ============================================================ */
+function isDirectImageUrl(url){
+  if(!url) return false;
+  try{
+    const path=new URL(url).pathname;
+    return /\.(jpe?g|png|gif|webp|avif)$/i.test(path);
+  }catch(err){ return false; }
+}
+function mediaTypeIconSvg(type){
+  let key='mediaLinks';
+  if(type==='photo_album') key='photos';
+  else if(type==='brochure_pdf'||type==='gpx_track'||type==='certificate') key='document';
+  const inner=(type==='medal_photo')?CAREER_TROPHY_ICON.replace('<svg','<svg class="media-trophy"'):
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${EMPTY_STATE_ICONS[key]||''}</svg>`;
+  return inner;
+}
+function mediaGalleryHtml(race){
+  const items=(race.mediaLinks||[]).filter(m=>m.url);
+  if(!items.length) return '';
+  const cards=items.map(m=>{
+    const label=escapeHtml(m.notes||t('opt.mediatype.'+m.type,labelFor(MEDIA_TYPE_OPTIONS,m.type,'mediatype')));
+    if(isDirectImageUrl(m.url)){
+      return `<a class="media-gallery-card" href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" title="${label}">
+        <img src="${escapeHtml(m.url)}" alt="" loading="lazy" onerror="this.closest('.media-gallery-card').classList.add('media-gallery-fallback')">
+        <span class="media-gallery-fallback-icon">${mediaTypeIconSvg(m.type)}</span>
+      </a>`;
+    }
+    let domain='';
+    try{ domain=new URL(m.url).hostname.replace(/^www\./,''); }catch(err){ domain=m.url.slice(0,24); }
+    return `<a class="media-gallery-card media-gallery-link" href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" title="${label}">
+      <span class="media-gallery-link-icon">${mediaTypeIconSvg(m.type)}</span>
+      <span class="media-gallery-link-domain">${escapeHtml(domain)}</span>
+    </a>`;
+  }).join('');
+  return `<div class="media-gallery-wrap">
+    <div class="media-gallery-head small">${t('ui.mediaGalleryTitle','多媒體相簿')}</div>
+    <div class="media-gallery-strip">${cards}</div>
   </div>`;
 }
 function sportIconKey(sportType){
@@ -1042,7 +1209,7 @@ function emptyRace(name,sportType,status,raceDate){
   const now=new Date().toISOString();
   return {
     id:uid(),name:name||'',alias:'',series:'',status:status||'considering',sportType:sportType||'road_running',raceFormat:'solo',
-    coverImage:'',coverImageAspect:null,coverImageFocalPoint:{x:50,y:50},officialUrl:'',deletedAt:null,
+    coverImage:'',coverImageAspect:null,coverImageFocalPoint:{x:50,y:50},coverImageAccentColor:null,officialUrl:'',deletedAt:null,
     schedule:{raceDate:raceDate||'',startTime:'',registrationOpenDate:'',registrationCloseDate:'',lotteryResultDate:''},
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
@@ -1073,9 +1240,9 @@ function emptyRace(name,sportType,status,raceDate){
 const today0=new Date();
 const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',confirmDelete:false,
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
-  viewMode:'calendar',user:null};
+  viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.16.2';
+const APP_VERSION='v2.23.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1127,7 +1294,21 @@ const JA={
   'ui.sampleData':'サンプルデータ',
   'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'カバー写真付きの完走レースがまだありません。完走したらぜひ写真を追加して、メダル棚を育てましょう！',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
+  'ui.filterOverseas':'海外レース',
+  'ui.mediaGalleryTitle':'メディアギャラリー',
+  'ui.taperBadge':'テーパリング中',
+  'ui.focusPanelLabel':'直前準備',
+  'ui.focusCountdown':'あと {n} 日',
+  'ui.focusDismiss':'一時的に隠す',
+  'ui.focusEquipment':'装備の準備状況',
+  'ui.focusNoEquipment':'まだ装備リストがありません',
+  'ui.focusPacing':'ペース戦略',
+  'ui.focusNoGoals':'まだ目標タイムが設定されていません',
+  'ui.focusWeather':'天気予報',
+  'ui.focusNoWeather':'まだ気象予報が入力されていません',
+  'ui.focusViewRace':'大会の詳細を見る',
   'ui.importExcel':'Excelを読み込む','ui.exportJson':'JSONを書き出す','ui.exportIcs':'カレンダーリマインダーを書き出す',
+  'ui.exportCsv':'CSVを書き出す（フラット化）',
   'ui.clearAll':'すべてのデータを削除','ui.clearAllConfirm':'本当に削除しますか？もう一度押してください',
   'ui.cloudNotConfigured':'クラウド同期は未設定です','ui.signIn':'Googleでログインして同期','ui.signOut':'ログアウト',
   'ui.enableNotif':'プッシュ通知を有効にする','ui.notifEnabled':'通知は有効です',
@@ -1169,6 +1350,14 @@ const JA={
   'ui.weekday.0':'日','ui.weekday.1':'月','ui.weekday.2':'火','ui.weekday.3':'水','ui.weekday.4':'木','ui.weekday.5':'金','ui.weekday.6':'土',
   'ui.careerTotalRaces':'完走レース数','ui.careerMarathonPB':'フルマラソン自己ベスト','ui.careerYearDistance':'年間走行距離',
   'ui.yearlyChartTitle':'年別完走数',
+  'ui.elevationTrendTitle':'四半期別累積標高（トレンド）',
+  'ui.tableViewToggle':'コンパクト表表示に切り替え',
+  'ui.tableViewEmpty':'条件に一致する大会がありません',
+  'ui.tableColDate':'日付','ui.tableColName':'大会名','ui.tableColStatus':'状態',
+  'ui.tableColDistance':'距離(km)','ui.tableColElevation':'獲得標高(m)','ui.tableColTime':'完走タイム',
+  'ui.splitsChartTitle':'ペース区間チャート','ui.splitsChartDistance':'距離',
+  'ui.heatmapTitle':'参加ヒートマップ（月別走行距離）',
+  'ui.heatmapCellCount':'{a} レース、{b} km',
   'ui.elevationProfileTitle':'標高変化グラフ','ui.routeMapTitle':'コースマップ',
   'ui.mapStandard':'標準地図','ui.mapTerrain':'地形図',
   'ui.dragToReorder':'ドラッグして並べ替え','ui.moveUp':'上に移動','ui.moveDown':'下に移動',
@@ -1178,6 +1367,7 @@ const JA={
   'ui.focalPointHint':'カレンダーのマス、一覧、メダル棚の小さいサムネイルは正方形に切り抜かれます。下の写真をクリックまたはドラッグして、一番大事な部分を照準に合わせてください。右側のプレビューがリアルタイムで更新されます。',
   'ui.focalPreviewLabel':'サムネイルプレビュー',
   'ui.templateAutoApplied':'装備テンプレートを自動的に適用しました',
+  'ui.offlineMessage':'オフラインです。変更は再接続後に自動的に同期されます',
   // ---- 賽事詳情 - 區塊標題 ----
   'ui.sectionBasic':'基本情報と日程','ui.sectionRoute':'コースと地形','ui.sectionWeather':'気象',
   'ui.sectionLogistics':'予算と旅程','ui.sectionPrep':'装備・補給・戦略（レース前の準備）',
@@ -1399,7 +1589,21 @@ const EN={
   'ui.sampleData':'Sample Data',
   'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No completed races with cover photos yet. Add a photo once you finish one and start building your trophy wall!',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
+  'ui.filterOverseas':'Overseas',
+  'ui.mediaGalleryTitle':'Media Gallery',
+  'ui.taperBadge':'Tapering',
+  'ui.focusPanelLabel':'Race Prep',
+  'ui.focusCountdown':'{n} days to go',
+  'ui.focusDismiss':'Hide for now',
+  'ui.focusEquipment':'Packing Progress',
+  'ui.focusNoEquipment':'No equipment checklist yet',
+  'ui.focusPacing':'Pace Strategy',
+  'ui.focusNoGoals':'No target time set yet',
+  'ui.focusWeather':'Weather Forecast',
+  'ui.focusNoWeather':'No forecast entered yet',
+  'ui.focusViewRace':'View Full Race',
   'ui.importExcel':'Import Excel','ui.exportJson':'Export JSON','ui.exportIcs':'Export Calendar Reminders',
+  'ui.exportCsv':'Export CSV (Flattened)',
   'ui.clearAll':'Clear All Data','ui.clearAllConfirm':'Are you sure? Click again to confirm',
   'ui.cloudNotConfigured':'Cloud sync not configured','ui.signIn':'Sign in with Google to sync','ui.signOut':'Sign out',
   'ui.enableNotif':'Enable push notifications','ui.notifEnabled':'Notifications enabled',
@@ -1440,6 +1644,14 @@ const EN={
   'ui.weekday.0':'Sun','ui.weekday.1':'Mon','ui.weekday.2':'Tue','ui.weekday.3':'Wed','ui.weekday.4':'Thu','ui.weekday.5':'Fri','ui.weekday.6':'Sat',
   'ui.careerTotalRaces':'Races finished','ui.careerMarathonPB':'Marathon PB','ui.careerYearDistance':'Distance this year',
   'ui.yearlyChartTitle':'Races Completed by Year',
+  'ui.elevationTrendTitle':'Cumulative Elevation by Quarter',
+  'ui.tableViewToggle':'Switch to compact table view',
+  'ui.tableViewEmpty':'No races match the current filter',
+  'ui.tableColDate':'Date','ui.tableColName':'Race Name','ui.tableColStatus':'Status',
+  'ui.tableColDistance':'Distance(km)','ui.tableColElevation':'Elevation(m)','ui.tableColTime':'Finish Time',
+  'ui.splitsChartTitle':'Pace by Split','ui.splitsChartDistance':'Distance',
+  'ui.heatmapTitle':'Race Heatmap (Monthly Distance)',
+  'ui.heatmapCellCount':'{a} race(s), {b} km',
   'ui.elevationProfileTitle':'Elevation Profile','ui.routeMapTitle':'Route Map',
   'ui.mapStandard':'Standard Map','ui.mapTerrain':'Terrain Map',
   'ui.dragToReorder':'Drag to reorder','ui.moveUp':'Move up','ui.moveDown':'Move down',
@@ -1449,6 +1661,7 @@ const EN={
   'ui.focalPointHint':'Small thumbnails (calendar cells, lists, the trophy wall) crop the photo to a square. Click or drag on the photo below to move the most important part to the crosshair — the preview on the right updates live.',
   'ui.focalPreviewLabel':'Thumbnail preview',
   'ui.templateAutoApplied':'Equipment template applied automatically',
+  'ui.offlineMessage':'Offline — changes will sync once you\u2019re back online',
   'ui.sectionBasic':'Basic Info & Schedule','ui.sectionRoute':'Course & Terrain','ui.sectionWeather':'Weather',
   'ui.sectionLogistics':'Budget & Logistics','ui.sectionPrep':'Gear, Nutrition & Strategy (Pre-race)',
   'ui.sectionPost':'Results & Post-race Data','ui.seriesComparison':'Series Comparison (Year over Year)',
@@ -1716,6 +1929,7 @@ function migrateRace(r){
   if(r.coverImage==null) r.coverImage='';
   if(r.coverImageAspect===undefined) r.coverImageAspect=null;
   if(!r.coverImageFocalPoint) r.coverImageFocalPoint={x:50,y:50};
+  if(r.coverImageAccentColor===undefined) r.coverImageAccentColor=null;
   if(r.officialUrl==null) r.officialUrl='';
   if(r.deletedAt===undefined) r.deletedAt=null;
   if(r.lottery==null) r.lottery={applicants:null,winners:null,winRatePct:null,wasSelected:false};
@@ -2395,23 +2609,43 @@ function renderSeriesComparison(race){
   </details>`;
 }
 
+/* ============================================================
+   心率區間色彩（Z1~Z5，經典灰/藍/綠/橘/紅配色）
+   用「該場賽事自己的最大心率」當基準算百分比，
+   沒有填最大心率時就不上色，不會亂猜。
+   ============================================================ */
+function hrZoneInfo(hr,maxHr){
+  if(hr==null||!maxHr) return null;
+  const pct=hr/maxHr;
+  if(pct<0.6) return {zone:1,color:'var(--stone)'};
+  if(pct<0.7) return {zone:2,color:'var(--contour)'};
+  if(pct<0.8) return {zone:3,color:'var(--trail)'};
+  if(pct<0.9) return {zone:4,color:'var(--gold)'};
+  return {zone:5,color:'var(--flag)'};
+}
+function hrZoneHtml(hr,maxHr){
+  if(hr==null) return '—';
+  const info=hrZoneInfo(hr,maxHr);
+  if(!info) return `${hr} bpm`;
+  return `<span style="color:${info.color}">${hr} bpm</span> <span class="hr-zone-tag" style="background:${info.color}">Z${info.zone}</span>`;
+}
 function renderResultsDashboard(race){
   if(race.status!=='completed'||race.results.chipTimeSeconds==null) return '';
   const chipT=race.results.chipTimeSeconds;
   const isPb=!!race.results.isPb;
   const pace=race.route.distanceKm?formatPace(chipT/race.route.distanceKm):null;
   const badges=[];
-  if(pace) badges.push([t('ui.resultPace','配速'),pace+'/km']);
-  if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),race.results.overallRank+(race.results.overallParticipants?`／${race.results.overallParticipants}`:'')]);
-  if(race.results.ageGroupRank!=null) badges.push([t('field.post.results.ageGroupRank','分組名次'),race.results.ageGroupRank+(race.results.ageGroupParticipants?`／${race.results.ageGroupParticipants}`:'')]);
-  if(race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),race.performanceData.avgHr+' bpm']);
-  if(race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺']);
+  if(pace) badges.push([t('ui.resultPace','配速'),pace+'/km',false]);
+  if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),race.results.overallRank+(race.results.overallParticipants?`／${race.results.overallParticipants}`:''),false]);
+  if(race.results.ageGroupRank!=null) badges.push([t('field.post.results.ageGroupRank','分組名次'),race.results.ageGroupRank+(race.results.ageGroupParticipants?`／${race.results.ageGroupParticipants}`:''),false]);
+  if(race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),hrZoneHtml(race.performanceData.avgHr,race.performanceData.maxHr),true]);
+  if(race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺',false]);
   return `<div class="results-dashboard${isPb?' is-pb':''}">
     <div class="results-dashboard-main">
       <div class="results-big-time mono">${secToHMS(chipT)}</div>
       ${isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
     </div>
-    ${badges.length?`<div class="results-badge-grid">${badges.map(([label,val])=>`<div class="results-badge"><span class="results-badge-label">${label}</span><span class="results-badge-value mono">${escapeHtml(String(val))}</span></div>`).join('')}</div>`:''}
+    ${badges.length?`<div class="results-badge-grid">${badges.map(([label,val,isHtml])=>`<div class="results-badge"><span class="results-badge-label">${label}</span><span class="results-badge-value mono">${isHtml?val:escapeHtml(String(val))}</span></div>`).join('')}</div>`:''}
     <div class="results-dashboard-actions">
       <button type="button" class="btn-ghost" data-action="generate-share-image">${t('ui.generateShareImage','產生分享圖')}</button>
     </div>
@@ -2432,6 +2666,37 @@ function renderSplitAnalysis(race){
   return `<div class="split-analysis ${cls}">
     <span class="split-analysis-label">${label}</span>
     <span class="split-analysis-value mono">${pct>0?'+':''}${pct.toFixed(1)}%</span>
+  </div>`;
+}
+function renderSplitsChart(race){
+  const splits=(race.splits||[]).filter(s=>s.avgPaceSecPerKm!=null&&s.distanceKm!=null).slice().sort((a,b)=>a.distanceKm-b.distanceKm);
+  if(splits.length<2) return '';
+  const paces=splits.map(s=>s.avgPaceSecPerKm);
+  const minPace=Math.min(...paces),maxPace=Math.max(...paces);
+  const range=(maxPace-minPace)||1;
+  const maxHr=race.performanceData?race.performanceData.maxHr:null;
+  const rows=splits.map(s=>{
+    const fillPct=Math.max(4,Math.round(((maxPace-s.avgPaceSecPerKm)/range)*100));
+    return `<tr>
+      <td class="mono">${formatDistanceCompact(s.distanceKm)||'—'}</td>
+      <td class="splits-chart-pace-cell">
+        <span class="splits-chart-bar" style="background:linear-gradient(to right, var(--trail) ${fillPct}%, transparent ${fillPct}%)">
+          <span class="mono">${formatPace(s.avgPaceSecPerKm)}/km</span>
+        </span>
+      </td>
+      <td class="mono">${hrZoneHtml(s.avgHr,maxHr)}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="splits-chart-wrap">
+    <div class="yearly-chart-title small">${t('ui.splitsChartTitle','分段配速一覽')}</div>
+    <table class="splits-chart-table">
+      <thead><tr>
+        <th>${t('ui.splitsChartDistance','距離')}</th>
+        <th>${t('ui.resultPace','配速')}</th>
+        <th>${t('ui.resultAvgHr','心率')}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
   </div>`;
 }
 
@@ -2691,6 +2956,40 @@ function monthLabel(y,m){
   return `${y} 年 ${m+1} 月`;
 }
 
+function detectHomeCountry(){
+  const counts={};
+  let total=0;
+  state.races.forEach(r=>{
+    if(r.deletedAt) return;
+    const c=r.location&&r.location.country&&r.location.country.trim();
+    if(!c) return;
+    counts[c]=(counts[c]||0)+1;
+    total++;
+  });
+  let home=null,max=0;
+  Object.keys(counts).forEach(c=>{ if(counts[c]>max){ max=counts[c]; home=c; } });
+  // 只有某個國家明顯佔多數（超過一半）時才視為主場，避免出國比賽次數一多反而誤判成海外才是主場
+  if(!home||total===0||max/total<=0.5) return null;
+  return home;
+}
+function overseasCountries(){
+  const home=detectHomeCountry();
+  if(!home) return [];
+  const counts={};
+  state.races.forEach(r=>{
+    if(r.deletedAt) return;
+    const c=r.location&&r.location.country&&r.location.country.trim();
+    if(!c||c===home) return;
+    counts[c]=(counts[c]||0)+1;
+  });
+  return Object.keys(counts).map(c=>({country:c,count:counts[c]})).sort((a,b)=>b.count-a.count);
+}
+function isOverseasRace(r){
+  const home=detectHomeCountry();
+  if(!home) return false;
+  const c=r.location&&r.location.country&&r.location.country.trim();
+  return !!c&&c!==home;
+}
 const FILTER_PRIMARY=[
   {value:'all',labelKey:'ui.filterAll',label:'全部'},
   {value:'upcoming',labelKey:'ui.filterUpcoming',label:'即將到來'},
@@ -2708,22 +3007,32 @@ function isUpcomingRace(r,todayStr){
 function isHistoryRace(r,todayStr){
   return ['completed','dns','dnf'].includes(r.status)||(r.schedule.raceDate&&r.schedule.raceDate<todayStr);
 }
+function isInTaperPeriod(race,todayStr){
+  todayStr=todayStr||todayISO();
+  if(!race.trainingPlan||!race.trainingPlan.taperStartDate) return false;
+  if(!isUpcomingRace(race,todayStr)) return false;
+  return todayStr>=race.trainingPlan.taperStartDate;
+}
 function matchesFilter(r,filter,todayStr){
   if(r.deletedAt) return false;
   if(filter==='all') return true;
   if(filter==='upcoming') return isUpcomingRace(r,todayStr);
   if(filter==='history') return isHistoryRace(r,todayStr);
+  if(filter==='overseas') return isOverseasRace(r);
+  if(filter.indexOf('country:')===0) return isOverseasRace(r)&&(r.location.country||'').trim()===filter.slice(8);
   return r.status===filter;
 }
 function primaryPhaseFor(filterStatus){
-  if(filterStatus==='all'||filterStatus==='upcoming'||filterStatus==='history') return filterStatus;
+  if(filterStatus==='all'||filterStatus==='upcoming'||filterStatus==='history'||filterStatus==='overseas') return filterStatus;
+  if(filterStatus.indexOf('country:')===0) return 'overseas';
   if(FILTER_SECONDARY_MAP.upcoming.includes(filterStatus)) return 'upcoming';
   if(FILTER_SECONDARY_MAP.history.includes(filterStatus)) return 'history';
   return 'all';
 }
 function computeFilterCounts(){
   const todayStr=todayISO();
-  const allValues=['all','upcoming','history',...Object.keys(STATUS_CHIP_LABELS)];
+  const countries=overseasCountries();
+  const allValues=['all','upcoming','history','overseas',...Object.keys(STATUS_CHIP_LABELS),...countries.map(c=>'country:'+c.country)];
   const counts={};
   allValues.forEach(v=>{counts[v]=0;});
   state.races.forEach(r=>{
@@ -2733,14 +3042,24 @@ function computeFilterCounts(){
 }
 function renderFilterChips(){
   const counts=computeFilterCounts();
+  const countries=overseasCountries();
   const activePrimary=primaryPhaseFor(state.filterStatus);
-  const primaryHtml=FILTER_PRIMARY.map(f=>
+  const primaryList=FILTER_PRIMARY.concat(countries.length?[{value:'overseas',labelKey:'ui.filterOverseas',label:'海外賽事'}]:[]);
+  const primaryHtml=primaryList.map(f=>
     `<button class="chip chip-primary${activePrimary===f.value?' active':''}" data-status="${f.value}">${t(f.labelKey,f.label)}${counts[f.value]?` (${counts[f.value]})`:''}</button>`
   ).join('');
-  const secondaryValues=FILTER_SECONDARY_MAP[activePrimary]||[];
-  const secondaryHtml=secondaryValues.map(v=>
-    `<button class="chip chip-secondary${state.filterStatus===v?' active':''}" data-status="${v}">${t('opt.status.'+v, STATUS_CHIP_LABELS[v])}${counts[v]?` (${counts[v]})`:''}</button>`
-  ).join('');
+  let secondaryHtml;
+  if(activePrimary==='overseas'){
+    secondaryHtml=countries.map(c=>{
+      const v='country:'+c.country;
+      return `<button class="chip chip-secondary${state.filterStatus===v?' active':''}" data-status="${v}">${escapeHtml(c.country)}${counts[v]?` (${counts[v]})`:''}</button>`;
+    }).join('');
+  }else{
+    const secondaryValues=FILTER_SECONDARY_MAP[activePrimary]||[];
+    secondaryHtml=secondaryValues.map(v=>
+      `<button class="chip chip-secondary${state.filterStatus===v?' active':''}" data-status="${v}">${t('opt.status.'+v, STATUS_CHIP_LABELS[v])}${counts[v]?` (${counts[v]})`:''}</button>`
+    ).join('');
+  }
   filterChipsEl.innerHTML=`<div class="chips-primary">${primaryHtml}</div>${secondaryHtml?`<div class="chips-secondary">${secondaryHtml}</div>`:''}`;
 }
 function filteredRaces(){
@@ -2815,6 +3134,152 @@ function yearlyChartSvg(){
     <svg viewBox="0 0 ${w} ${h}" class="yearly-chart-svg" preserveAspectRatio="xMinYMid meet">${bars}</svg>
   </div>`;
 }
+/* ============================================================
+   備戰釘選（Focus Mode）
+   距離某場賽前狀態的賽事不到 14 天時，在主畫面最上方獨立顯示
+   裝備打包進度／配速策略／天氣預報，省去在清單裡找的步驟。
+   ============================================================ */
+function computeFocusRace(){
+  const todayStr=todayISO();
+  const cutoff=new Date(todayStr+'T00:00:00');
+  cutoff.setDate(cutoff.getDate()+14);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
+  const candidates=state.races.filter(r=>
+    !r.deletedAt&&
+    ['registered','lottery_pending','considering'].includes(r.status)&&
+    r.schedule.raceDate&&
+    r.schedule.raceDate>=todayStr&&
+    r.schedule.raceDate<=cutoffStr
+  );
+  if(!candidates.length) return null;
+  candidates.sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
+  return candidates[0];
+}
+function focusPanelHtml(){
+  const race=computeFocusRace();
+  if(!race||state.focusDismissedId===race.id) return '';
+  const todayStr=todayISO();
+  const days=Math.max(0,Math.round((new Date(race.schedule.raceDate+'T00:00:00')-new Date(todayStr+'T00:00:00'))/86400000));
+  const equip=race.equipmentChecklist||[];
+  const packedCount=equip.filter(i=>i.isPacked).length;
+  const equipPct=equip.length?Math.round(packedCount/equip.length*100):0;
+  const goalA=(race.goals||[]).find(g=>g.tier==='A');
+  const w=race.climateForecast||{};
+  const hasWeather=w.avgTempC!=null||w.rainProbabilityPct!=null||w.windSpeedKmh!=null;
+  return `<div class="focus-panel">
+    <div class="focus-panel-head">
+      <div class="focus-panel-title">
+        <span class="focus-panel-label">${t('ui.focusPanelLabel','備戰釘選')}</span>
+        <h2>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')}</h2>
+        <span class="focus-panel-countdown mono">${tf('ui.focusCountdown',`還有 ${days} 天`,days)}</span>
+        ${isInTaperPeriod(race,todayStr)?`<span class="taper-badge">${t('ui.taperBadge','進入減量期')}</span>`:''}
+      </div>
+      <button type="button" class="btn-text-small" data-action="dismiss-focus-panel" data-id="${race.id}">${t('ui.focusDismiss','暫時隱藏')}</button>
+    </div>
+    <div class="focus-panel-grid">
+      <div class="focus-panel-card">
+        <div class="focus-panel-card-title small">${t('ui.focusEquipment','裝備打包進度')}</div>
+        ${equip.length?`<div class="focus-progress-bar"><div class="focus-progress-fill" style="width:${equipPct}%"></div></div>
+          <div class="focus-panel-card-value mono">${packedCount} / ${equip.length}</div>`
+          :`<p class="empty-hint small">${t('ui.focusNoEquipment','尚未新增裝備清單')}</p>`}
+      </div>
+      <div class="focus-panel-card">
+        <div class="focus-panel-card-title small">${t('ui.focusPacing','配速策略')}</div>
+        ${goalA&&goalA.targetTimeSeconds!=null?`<div class="focus-panel-card-value mono">${secToHMS(goalA.targetTimeSeconds)}</div>
+          <p class="focus-panel-card-note small">${escapeHtml(goalA.paceStrategy||'')}</p>`
+          :`<p class="empty-hint small">${t('ui.focusNoGoals','尚未設定目標時間')}</p>`}
+      </div>
+      <div class="focus-panel-card">
+        <div class="focus-panel-card-title small">${t('ui.focusWeather','天氣預報')}</div>
+        ${hasWeather?`<div class="focus-weather-row mono">
+            ${w.avgTempC!=null?`<span>${w.avgTempC}°C</span>`:''}
+            ${w.rainProbabilityPct!=null?`<span>${t('field.weather.climateForecast.rainProbabilityPct','降雨機率')} ${w.rainProbabilityPct}%</span>`:''}
+            ${w.windSpeedKmh!=null?`<span>${t('field.weather.climateForecast.windSpeedKmh','風速')} ${w.windSpeedKmh}km/h</span>`:''}
+          </div>`
+          :`<p class="empty-hint small">${t('ui.focusNoWeather','尚未填寫氣象預報')}</p>`}
+      </div>
+    </div>
+    <button type="button" class="btn-ghost focus-panel-view-btn" data-action="focus-view-race" data-id="${race.id}">${t('ui.focusViewRace','查看完整賽事')} →</button>
+  </div>`;
+}
+function renderFocusPanel(){
+  const slot=document.getElementById('focus-panel-slot');
+  if(slot) slot.innerHTML=focusPanelHtml();
+}
+
+function computeQuarterlyElevationStats(){
+  const byQuarter={};
+  state.races.forEach(r=>{
+    if(r.deletedAt||r.status!=='completed'||!r.schedule.raceDate) return;
+    const d=r.schedule.raceDate;
+    const year=d.slice(0,4);
+    const month=parseInt(d.slice(5,7),10);
+    const q=Math.ceil(month/3);
+    const key=year+'-Q'+q;
+    if(!byQuarter[key]) byQuarter[key]={year,quarter:q,elevationM:0};
+    byQuarter[key].elevationM+=(r.route.elevationGainM||0);
+  });
+  return Object.keys(byQuarter).sort().map(k=>byQuarter[k]);
+}
+function elevationTrendChartSvg(){
+  const data=computeQuarterlyElevationStats();
+  if(data.length<2) return '';
+  const w=Math.max(320,data.length*56),h=110,pad=24,padBottom=22;
+  const maxElev=Math.max(...data.map(d=>d.elevationM),1);
+  const stepX=data.length>1?(w-2*pad)/(data.length-1):0;
+  const sy=v=>h-padBottom-(v/maxElev)*(h-pad-padBottom);
+  const points=data.map((d,i)=>({x:pad+i*stepX,y:sy(d.elevationM)}));
+  const linePoints=points.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+  const areaPoints=`${points[0].x.toFixed(1)},${(h-padBottom).toFixed(1)} ${linePoints} ${points[points.length-1].x.toFixed(1)},${(h-padBottom).toFixed(1)}`;
+  const labels=data.map((d,i)=>{
+    const anchor=i===0?'start':(i===data.length-1?'end':'middle');
+    const lx=i===0?points[i].x-10:(i===data.length-1?points[i].x+10:points[i].x);
+    return `<text x="${lx.toFixed(1)}" y="${h-4}" text-anchor="${anchor}" class="elevation-trend-label mono">${d.year.slice(2)} Q${d.quarter}</text>`;
+  }).join('');
+  const dots=data.map((d,i)=>`<circle cx="${points[i].x.toFixed(1)}" cy="${points[i].y.toFixed(1)}" r="3" fill="var(--gold)"/>`).join('');
+  return `<div class="elevation-trend-wrap">
+    <div class="yearly-chart-title small">${t('ui.elevationTrendTitle','累積爬升趨勢（每季）')}</div>
+    <svg viewBox="0 0 ${w} ${h}" class="elevation-trend-svg" preserveAspectRatio="none">
+      <polygon points="${areaPoints}" fill="var(--gold)" opacity="0.15"/>
+      <polyline points="${linePoints}" fill="none" stroke="var(--gold)" stroke-width="2"/>
+      ${dots}
+      ${labels}
+    </svg>
+  </div>`;
+}
+function computeMonthlyHeatmapData(){
+  const byMonth={};
+  state.races.forEach(r=>{
+    if(r.deletedAt||r.status!=='completed'||!r.schedule.raceDate) return;
+    const key=r.schedule.raceDate.slice(0,7);
+    if(!byMonth[key]) byMonth[key]={count:0,distanceKm:0};
+    byMonth[key].count++;
+    byMonth[key].distanceKm+=(r.route.distanceKm||0);
+  });
+  return byMonth;
+}
+function heatmapHtml(){
+  const data=computeMonthlyHeatmapData();
+  const keys=Object.keys(data);
+  if(keys.length<2) return '';
+  const years=[...new Set(keys.map(k=>k.slice(0,4)))].sort();
+  const maxDist=Math.max(...Object.values(data).map(d=>d.distanceKm),1);
+  const rows=years.map(year=>{
+    const cells=Array.from({length:12},(_,i)=>{
+      const key=year+'-'+String(i+1).padStart(2,'0');
+      const d=data[key];
+      const intensity=d?(0.18+0.82*(d.distanceKm/maxDist)):0;
+      const title=d?`${year}/${i+1}：${tf2('ui.heatmapCellCount','{a} 場、{b} 公里',d.count,d.distanceKm.toFixed(1))}`:`${year}/${i+1}`;
+      return `<span class="heatmap-cell${d?'':' heatmap-cell-empty'}" style="${d?`opacity:${intensity.toFixed(2)}`:''}" title="${escapeHtml(title)}"></span>`;
+    }).join('');
+    return `<div class="heatmap-row"><span class="heatmap-year-label mono">${year}</span><div class="heatmap-cells">${cells}</div></div>`;
+  }).join('');
+  return `<div class="heatmap-wrap">
+    <div class="yearly-chart-title small">${t('ui.heatmapTitle','參賽熱力圖（依月份里程）')}</div>
+    ${rows}
+    <div class="heatmap-month-labels"><span class="heatmap-year-label mono"></span><div class="heatmap-cells">${['1','2','3','4','5','6','7','8','9','10','11','12'].map(m=>`<span class="heatmap-month-label mono">${m}</span>`).join('')}</div></div>
+  </div>`;
+}
 function renderCareerSummary(){
   if(state.races.length<5) return '';
   const s=computeCareerStats();
@@ -2822,12 +3287,16 @@ function renderCareerSummary(){
   if(s.marathonPB!=null) items.push([CAREER_TROPHY_ICON,t('ui.careerMarathonPB','全馬 PB'),secToHMS(s.marathonPB)]);
   if(s.yearDistance>0) items.push([CAREER_ROUTE_ICON,t('ui.careerYearDistance','今年累計里程'),s.yearDistance.toFixed(1)+' 公里']);
   return `<div class="career-summary-wrap">
-    <div class="career-summary">${items.map(([icon,l,v])=>`
-      <div class="career-stat">
-        <span class="career-stat-icon">${icon}</span>
-        <div class="career-stat-text"><span class="career-stat-value mono">${v}</span><span class="career-stat-label">${l}</span></div>
-      </div>`).join('')}</div>
-    ${yearlyChartSvg()}
+    <div class="career-summary-row">
+      <div class="career-summary">${items.map(([icon,l,v])=>`
+        <div class="career-stat">
+          <span class="career-stat-icon">${icon}</span>
+          <div class="career-stat-text"><span class="career-stat-value mono">${v}</span><span class="career-stat-label">${l}</span></div>
+        </div>`).join('')}</div>
+      ${yearlyChartSvg()}
+    </div>
+    ${elevationTrendChartSvg()}
+    ${heatmapHtml()}
   </div>`;
 }
 
@@ -2847,14 +3316,51 @@ function renderPhotoGrid(){
       </div>
     </button>`).join('')}</div></div>`;
 }
+function renderTableView(){
+  const races=filteredRaces().slice().sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
+  if(!races.length){
+    return `<div class="table-view-wrap">${emptyStateBlock('trash',t('ui.tableViewEmpty','沒有符合篩選條件的賽事'))}</div>`;
+  }
+  const rows=races.map(r=>{
+    const dist=r.route.distanceKm!=null?r.route.distanceKm.toFixed(1):'—';
+    const elev=r.route.elevationGainM!=null?String(Math.round(r.route.elevationGainM)):'—';
+    const time=r.results.chipTimeSeconds!=null?secToHMS(r.results.chipTimeSeconds):'—';
+    return `<tr class="table-view-row${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
+      <td class="mono">${r.schedule.raceDate||'—'}</td>
+      <td class="table-view-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</td>
+      <td>${statusLabel(r.status)}</td>
+      <td class="mono num">${dist}</td>
+      <td class="mono num">${elev}</td>
+      <td class="mono num">${time}${r.results.isPb?' <span class="pb-badge">PB</span>':''}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="table-view-wrap"><table class="table-view">
+    <thead><tr>
+      <th>${t('ui.tableColDate','日期')}</th>
+      <th>${t('ui.tableColName','賽事名稱')}</th>
+      <th>${t('ui.tableColStatus','狀態')}</th>
+      <th class="num">${t('ui.tableColDistance','距離(km)')}</th>
+      <th class="num">${t('ui.tableColElevation','爬升(m)')}</th>
+      <th class="num">${t('ui.tableColTime','完賽時間')}</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
 function renderCalendar(){
   const y=state.calendarYear,m=state.calendarMonth;
   calLabelEl.textContent=monthLabel(y,m);
   renderFilterChips();
+  renderFocusPanel();
   const viewToggleBtn=document.getElementById('cal-view-toggle');
   if(viewToggleBtn) viewToggleBtn.classList.toggle('active',state.viewMode==='grid');
+  const tableToggleBtn=document.getElementById('cal-table-toggle');
+  if(tableToggleBtn) tableToggleBtn.classList.toggle('active',state.viewMode==='table');
   if(state.viewMode==='grid'){
     calendarEl.innerHTML=`${renderCareerSummary()}${renderPhotoGrid()}`;
+    return;
+  }
+  if(state.viewMode==='table'){
+    calendarEl.innerHTML=`${renderCareerSummary()}${renderTableView()}`;
     return;
   }
   const racesByDate=buildRacesByDate(filteredRaces());
@@ -2937,6 +3443,7 @@ function detailHeaderHtml(race){
           <span class="stamp status-${race.status}">${statusLabel(race.status)}</span>
           <span class="sport-icon-wrap" style="color:${sportColorVar(race.sportType)}" title="${sportLabel(race.sportType)}">${sportIconSvg(sportIconKey(race.sportType),30)}</span>
           ${race.results.isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
+          ${isInTaperPeriod(race)?`<span class="taper-badge">${t('ui.taperBadge','進入減量期')}</span>`:''}
         </div>
         <div class="dh-actions">
           <span id="save-status" class="save-status" data-state="idle"></span>
@@ -3000,6 +3507,7 @@ function renderDetail(){
       <summary>${t('ui.sectionPost','賽後紀錄與個人數據')}</summary>
       ${renderResultsDashboard(race)}
       ${renderSplitAnalysis(race)}
+      ${renderSplitsChart(race)}
       <div class="gpx-import-bar">
         <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX / FIT）')}</button>
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
@@ -3008,6 +3516,7 @@ function renderDetail(){
       ${(race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}
       ${renderRepeatable(race,'splits')}
       ${renderRepeatable(race,'mediaLinks')}
+      ${mediaGalleryHtml(race)}
     </details>
   `;
   destroyRouteMap();
@@ -3132,9 +3641,19 @@ document.getElementById('cal-view-toggle').addEventListener('click',()=>{
   state.viewMode=state.viewMode==='grid'?'calendar':'grid';
   renderCalendar();
 });
+document.getElementById('cal-table-toggle').addEventListener('click',()=>{
+  state.viewMode=state.viewMode==='table'?'calendar':'table';
+  renderCalendar();
+});
 document.addEventListener('click',e=>{
   const photoCard=e.target.closest('.photo-card');
   if(photoCard) selectRace(photoCard.dataset.id);
+  const tableRow=e.target.closest('.table-view-row');
+  if(tableRow) selectRace(tableRow.dataset.id);
+  const dismissBtn=e.target.closest('[data-action="dismiss-focus-panel"]');
+  if(dismissBtn){ state.focusDismissedId=dismissBtn.dataset.id; renderFocusPanel(); return; }
+  const viewBtn=e.target.closest('[data-action="focus-view-race"]');
+  if(viewBtn){ selectRace(viewBtn.dataset.id); return; }
 });
 
 /* ============================================================
@@ -3181,6 +3700,108 @@ function updateTopbarHeightVar(){
   },{passive:true});
   window.addEventListener('resize',updateTopbarHeightVar);
 })();
+
+/* ============================================================
+   扁平化多表 CSV 匯出
+   給要接 Python / SQL / Excel VBA 做自動化的人用：
+   一份賽事主表（races.csv，純量欄位攤平），加上每個清單各自一份
+   子表（checkpoints.csv、splits.csv...），都用 race_id 對回主表，
+   方便直接 JOIN 或用 pandas merge。GPS 座標／海拔剖面點位資料量大
+   且非分析用途，不列入匯出。CSV 開頭加 UTF-8 BOM，讓 Excel 開啟
+   中文/日文內容不會變亂碼。
+   ============================================================ */
+function csvEscape(v){
+  if(v==null) return '';
+  if(typeof v==='boolean') return v?'TRUE':'FALSE';
+  const s=String(v);
+  if(/[",\r\n]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function rowsToCsv(headers,rows){
+  const lines=[headers.map(csvEscape).join(',')];
+  rows.forEach(row=>{ lines.push(row.map(csvEscape).join(',')); });
+  return lines.join('\r\n');
+}
+function downloadCsvFile(filename,csvContent){
+  const blob=new Blob(['\uFEFF'+csvContent],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+}
+const RACES_CSV_COLUMNS=[
+  ['id','id'],['name','name'],['alias','alias'],['series','series'],['status','status'],
+  ['sportType','sportType'],['raceFormat','raceFormat'],['officialUrl','officialUrl'],
+  ['schedule_raceDate','schedule.raceDate'],['schedule_startTime','schedule.startTime'],
+  ['schedule_registrationOpenDate','schedule.registrationOpenDate'],['schedule_registrationCloseDate','schedule.registrationCloseDate'],
+  ['schedule_lotteryResultDate','schedule.lotteryResultDate'],
+  ['lottery_applicants','lottery.applicants'],['lottery_winners','lottery.winners'],
+  ['lottery_winRatePct','lottery.winRatePct'],['lottery_wasSelected','lottery.wasSelected'],
+  ['location_venueName','location.venueName'],['location_city','location.city'],['location_country','location.country'],
+  ['route_distanceKm','route.distanceKm'],['route_elevationGainM','route.elevationGainM'],['route_elevationLossM','route.elevationLossM'],
+  ['route_minAltitudeM','route.minAltitudeM'],['route_maxAltitudeM','route.maxAltitudeM'],['route_startAltitudeM','route.startAltitudeM'],
+  ['route_surface_pavedPct','route.surface.pavedPct'],['route_surface_trailPct','route.surface.trailPct'],['route_surface_stairsPct','route.surface.stairsPct'],
+  ['route_checkpointCount','route.checkpointCount'],['route_cutoffTimeSeconds','route.cutoffTimeSeconds'],
+  ['route_itraPoints','route.itraPoints'],['route_terrainNotes','route.terrainNotes'],
+  ['climateForecast_avgTempC','climateForecast.avgTempC'],['climateForecast_avgHumidityPct','climateForecast.avgHumidityPct'],
+  ['climateForecast_windDirection','climateForecast.windDirection'],['climateForecast_windSpeedKmh','climateForecast.windSpeedKmh'],
+  ['climateForecast_rainProbabilityPct','climateForecast.rainProbabilityPct'],
+  ['raceDayWeather_feelsLikeTempC','raceDayWeather.feelsLikeTempC'],['raceDayWeather_condition','raceDayWeather.condition'],
+  ['raceDayWeather_humidityPct','raceDayWeather.humidityPct'],['raceDayWeather_notes','raceDayWeather.notes'],
+  ['budget_registrationFee','budget.registrationFee'],['budget_currency','budget.currency'],
+  ['budget_paymentStatus','budget.paymentStatus'],['budget_chipDeposit','budget.chipDeposit'],
+  ['nutritionPlan_gelCount','nutritionPlan.gelCount'],['nutritionPlan_electrolyteTabletCount','nutritionPlan.electrolyteTabletCount'],
+  ['nutritionPlan_hydrationCapacityMl','nutritionPlan.hydrationCapacityMl'],['nutritionPlan_notes','nutritionPlan.notes'],
+  ['trainingPlan_planStartDate','trainingPlan.planStartDate'],['trainingPlan_planEndDate','trainingPlan.planEndDate'],
+  ['trainingPlan_taperStartDate','trainingPlan.taperStartDate'],['trainingPlan_weeklyMileageTargetKm','trainingPlan.weeklyMileageTargetKm'],
+  ['trainingPlan_keyWorkoutNotes','trainingPlan.keyWorkoutNotes'],['trainingPlan_externalPlanUrl','trainingPlan.externalPlanUrl'],
+  ['trainingPlan_notes','trainingPlan.notes'],
+  ['results_gunTimeSeconds','results.gunTimeSeconds'],['results_chipTimeSeconds','results.chipTimeSeconds'],
+  ['results_overallRank','results.overallRank'],['results_overallParticipants','results.overallParticipants'],
+  ['results_ageGroupRank','results.ageGroupRank'],['results_ageGroupParticipants','results.ageGroupParticipants'],
+  ['results_isPb','results.isPb'],['results_firstHalfSeconds','results.firstHalfSeconds'],['results_secondHalfSeconds','results.secondHalfSeconds'],
+  ['performanceData_avgHr','performanceData.avgHr'],['performanceData_maxHr','performanceData.maxHr'],
+  ['performanceData_avgCadence','performanceData.avgCadence'],['performanceData_avgPowerWatts','performanceData.avgPowerWatts'],
+  ['performanceData_dataSource','performanceData.dataSource'],['performanceData_notes','performanceData.notes'],
+  ['performanceData_shoeId','performanceData.shoeId'],
+  ['review_hitTheWallNotes','review.hitTheWallNotes'],['review_courseReview','review.courseReview'],
+  ['review_pros','review.pros'],['review_cons','review.cons'],['review_lessonsLearned','review.lessonsLearned'],
+  ['createdAt','createdAt'],['updatedAt','updatedAt'],
+];
+const CHILD_CSV_TABLES={
+  checkpoints:['name','distanceKm','cutoffTimeSeconds','elevationM','hasWater','hasFood','hasDropBag','notes'],
+  accommodations:['hotelName','address','checkIn','checkOut','distanceToStartKm','bookingStatus','cost','notes'],
+  transportation:['direction','mode','departureTime','pickupLocation','notes'],
+  companions:['name','role','contactInfo','notes'],
+  goals:['tier','targetTimeSeconds','paceStrategy'],
+  equipmentChecklist:['itemName','category','isMandatory','isPacked','notes'],
+  nutritionSchedule:['distanceKm','item','plannedAmount','consumed','notes'],
+  splits:['distanceKm','splitTimeSeconds','avgHr','avgPaceSecPerKm','elevationGainM','notes'],
+  mediaLinks:['type','url','notes'],
+};
+function buildRacesCsv(races){
+  const headers=RACES_CSV_COLUMNS.map(c=>c[0]);
+  const rows=races.map(r=>RACES_CSV_COLUMNS.map(c=>getPath(r,c[1])));
+  return rowsToCsv(headers,rows);
+}
+function buildChildCsv(races,listKey,fields){
+  const headers=['race_id','race_name',...fields];
+  const rows=[];
+  races.forEach(r=>{
+    (r[listKey]||[]).forEach(item=>{
+      rows.push([r.id,r.name,...fields.map(f=>item[f])]);
+    });
+  });
+  return rowsToCsv(headers,rows);
+}
+function exportFlattenedCsvSet(){
+  const races=state.races.filter(r=>!r.deletedAt);
+  downloadCsvFile('races.csv',buildRacesCsv(races));
+  Object.keys(CHILD_CSV_TABLES).forEach(listKey=>{
+    downloadCsvFile(listKey+'.csv',buildChildCsv(races,listKey,CHILD_CSV_TABLES[listKey]));
+  });
+}
+document.getElementById('btn-export-csv').addEventListener('click',exportFlattenedCsvSet);
 
 document.getElementById('btn-export').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(state.races,null,2)],{type:'application/json'});
@@ -3419,7 +4040,7 @@ detailEl.addEventListener('click',e=>{
     const race=emptyRace(name,sportType,status,raceDate);
     if(officialUrl) race.officialUrl=officialUrl;
     if(createStagedActivity) applyActivitySummaryToRace(race,createStagedActivity.summary);
-    if(createStagedCover){ race.coverImage=createStagedCover.dataUrl; race.coverImageAspect=createStagedCover.aspect; }
+    if(createStagedCover){ race.coverImage=createStagedCover.dataUrl; race.coverImageAspect=createStagedCover.aspect; race.coverImageAccentColor=createStagedCover.accentColor; }
     autoApplyEquipmentTemplate(race);
     state.races.push(race);
     state.selectedId=race.id;state.creating=false;
@@ -3737,6 +4358,34 @@ importModalEl.addEventListener('change',e=>{
    封面照片（本機處理：保留長寬比縮小、壓縮成 JPEG）
    不會上傳到任何伺服器，純瀏覽器端 Canvas 運算。
    ============================================================ */
+function extractDominantColor(ctx,w,h){
+  // 從畫面上取樣一部分像素（不用整張圖，效能考量），排除太灰、太暗、太亮的像素
+  // （通常是陰影、反光或天空這類不具代表性的區域），統計出現最多次的色彩區間當主色調。
+  try{
+    const sampleW=Math.min(w,60),sampleH=Math.min(h,60);
+    const data=ctx.getImageData(0,0,w,h).data;
+    const stepX=Math.max(1,Math.floor(w/sampleW)),stepY=Math.max(1,Math.floor(h/sampleH));
+    const buckets={};
+    for(let y=0;y<h;y+=stepY){
+      for(let x=0;x<w;x+=stepX){
+        const i=(y*w+x)*4;
+        const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+        if(a<128) continue;
+        const max=Math.max(r,g,b),min=Math.min(r,g,b);
+        const sat=max===0?0:(max-min)/max;
+        const lightness=(max+min)/2/255;
+        if(sat<0.15||lightness<0.12||lightness>0.92) continue;
+        const key=[Math.round(r/24)*24,Math.round(g/24)*24,Math.round(b/24)*24].join(',');
+        buckets[key]=(buckets[key]||0)+1;
+      }
+    }
+    let best=null,bestCount=0;
+    Object.keys(buckets).forEach(k=>{ if(buckets[k]>bestCount){ bestCount=buckets[k]; best=k; } });
+    if(!best) return null;
+    const [r,g,b]=best.split(',').map(Number);
+    return {r,g,b};
+  }catch(err){ return null; }
+}
 function processCoverImage(file){
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
@@ -3752,7 +4401,8 @@ function processCoverImage(file){
         canvas.width=w;canvas.height=h;
         const ctx=canvas.getContext('2d');
         ctx.drawImage(img,0,0,w,h);
-        resolve({dataUrl:canvas.toDataURL('image/jpeg',0.78),aspect:w/h});
+        const accentColor=extractDominantColor(ctx,w,h);
+        resolve({dataUrl:canvas.toDataURL('image/jpeg',0.78),aspect:w/h,accentColor});
       };
       img.onerror=()=>reject(new Error(t('ui.errImageLoad','無法讀取這張圖片')));
       img.src=e.target.result;
@@ -3781,6 +4431,7 @@ document.getElementById('cover-file-input').addEventListener('change',async e=>{
     const result=await processCoverImage(file);
     currentRace.coverImage=result.dataUrl;
     currentRace.coverImageAspect=result.aspect;
+    currentRace.coverImageAccentColor=result.accentColor;
     currentRace.updatedAt=new Date().toISOString();
     persist();renderCalendar();renderDetail();
   }catch(err){
@@ -3792,6 +4443,7 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="remove-cover"]')&&currentRace){
     currentRace.coverImage='';
     currentRace.coverImageAspect=null;
+    currentRace.coverImageAccentColor=null;
     currentRace.updatedAt=new Date().toISOString();
     persist();renderCalendar();renderDetail();
   }
@@ -4687,6 +5339,20 @@ document.addEventListener('click',e=>{
 });
 
 /* ============================================================
+   離線狀態偵測
+   本機資料本來就一律先存 localStorage，跟連線與否無關；
+   這裡純粹是讓使用者「看得到」目前離線、安心知道變更有存到本機，
+   連線恢復後雲端同步會自動接續（沿用既有的重試機制）。
+   ============================================================ */
+function updateOfflineIndicator(){
+  const el=document.getElementById('offline-indicator');
+  if(!el) return;
+  el.hidden=navigator.onLine;
+}
+window.addEventListener('online',updateOfflineIndicator);
+window.addEventListener('offline',updateOfflineIndicator);
+
+/* ============================================================
    初始化
    ============================================================ */
 async function init(){
@@ -4706,6 +5372,7 @@ async function init(){
   renderAll();
   checkStorageQuota();
   updateTopbarHeightVar();
+  updateOfflineIndicator();
 }
 /* ============================================================
    清單拖曳排序（裝備清單／補給時程／分段配速）
