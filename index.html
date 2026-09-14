@@ -846,7 +846,7 @@
         <span id="offline-indicator" class="offline-indicator" hidden>
           <span class="offline-dot"></span>
           <span data-i18n="ui.offlineMessage">離線中，變更將於連線後自動同步</span>
-          <button type="button" class="offline-dismiss-btn" data-action="dismiss-offline-indicator" data-i18n-title="ui.offlineDismissTitle" title="如果你其實已經連線，點這裡重新檢查">✕</button>
+          <button type="button" id="offline-dismiss-btn" class="offline-dismiss-btn" data-i18n-title="ui.offlineDismissTitle" title="如果你其實已經連線，點這裡重新檢查">✕</button>
         </span>
         <div id="auth-area" class="auth-area"></div>
         <div class="new-race-stack">
@@ -1320,7 +1320,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.29.1';
+const APP_VERSION='v2.29.2';
 
 /* ============================================================
    多語系（i18n）
@@ -3869,7 +3869,6 @@ document.addEventListener('click',e=>{
   if(dismissBtn){ state.focusDismissedId=dismissBtn.dataset.id; renderFocusPanel(); return; }
   const viewBtn=e.target.closest('[data-action="focus-view-race"]');
   if(viewBtn){ selectRace(viewBtn.dataset.id); return; }
-  if(e.target.closest('[data-action="dismiss-offline-indicator"]')){ dismissOfflineIndicator(); return; }
 });
 
 /* ============================================================
@@ -5563,35 +5562,33 @@ document.addEventListener('click',e=>{
    navigator.onLine 跟 online/offline 事件在部分瀏覽器／作業系統／
    網路環境組合下並不完全可靠，有時候明明已經連線，事件卻沒有正確
    觸發，導致提示卡在「離線中」。這裡疊加幾層修正：定時重新檢查、
-   分頁切回前景時重新檢查，加上使用者可以手動點掉的按鈕。
+   分頁切回前景時重新檢查。
 
-   之前的版本有個 bug：只要收到一次 offline 事件就會把「使用者關掉」
-   的狀態重置，但瀏覽器在還沒恢復連線的情況下，其實可能重複觸發好
-   幾次 offline 事件（不是每次都代表真的重新斷線一次）——結果就是
-   使用者點 X 關掉，幾乎馬上又被下一次 offline 事件打開，看起來像
-   「按了沒反應」。修正成只有「真的從連線狀態變回離線」（追蹤上一次
-   確認的狀態，不是每次事件都當作新的一次斷線）才會重置，關掉之後
-   除非真的偵測到連線恢復、或是從連線又變回離線一次，才會再跳出來。
+   之前兩版嘗試做「聰明」的自動復原邏輯（記錄狀態、只在真的變化時
+   重置關閉狀態），結果還是持續有回報說點 X 沒反應，而且橫跨 Chrome、
+   Edge、iPhone 三種完全不同的瀏覽器引擎都一樣──這種一致性代表問題
+   不太可能是單一瀏覽器的 navigator.onLine 怪癖，比較可能是這裡的
+   邏輯本身有問題，或是事件代理（document 層級監聽）被某些狀況卡住。
+   與其再疊加一層「聰明」判斷，這次直接簡化：按鈕改成直接綁定在按鈕
+   本身（不透過 document 事件代理），且「關掉」在這次頁面載入期間是
+   絕對值──關掉後，除非重新整理頁面，否則不會有任何自動邏輯再把它
+   打開。犧牲的是「同一次瀏覽期間又真的斷線一次」不會重新提醒，但
+   換來的是「按了就是真的關掉」這個更重要、更基本的保證。
    ============================================================ */
 let offlineIndicatorDismissed=false;
-let lastKnownOnlineState=null;
 function updateOfflineIndicator(){
+  if(offlineIndicatorDismissed) return;
   const el=document.getElementById('offline-indicator');
   if(!el) return;
-  const isOnline=navigator.onLine;
-  if(isOnline){
-    if(lastKnownOnlineState===false) offlineIndicatorDismissed=false;
-    lastKnownOnlineState=true;
-    el.hidden=true;
-  }else{
-    lastKnownOnlineState=false;
-    el.hidden=offlineIndicatorDismissed;
-  }
+  el.hidden=navigator.onLine;
 }
 function dismissOfflineIndicator(){
   offlineIndicatorDismissed=true;
-  updateOfflineIndicator();
+  const el=document.getElementById('offline-indicator');
+  if(el) el.hidden=true;
 }
+const offlineDismissBtnEl=document.getElementById('offline-dismiss-btn');
+if(offlineDismissBtnEl) offlineDismissBtnEl.addEventListener('click',dismissOfflineIndicator);
 window.addEventListener('online',updateOfflineIndicator);
 window.addEventListener('offline',updateOfflineIndicator);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) updateOfflineIndicator(); });
