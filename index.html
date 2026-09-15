@@ -1459,7 +1459,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.35.0';
+const APP_VERSION='v2.35.1';
 
 /* ============================================================
    多語系（i18n）
@@ -3388,6 +3388,115 @@ const BADGE_DEFINITIONS=[
         if(splits.length<3) return false;
         const last=splits[splits.length-1].avgPaceSecPerKm;
         return splits.every(s=>s.avgPaceSecPerKm>=last);
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 1. 探索與疆域類（新增） ----
+  {id:'safety_net',order:24,category:'explore',icon:'🦺',name:'安心羈絆',hint:'連續 10 場賽事的隨行人員名單中都填妥緊急聯絡人',
+    check(ctx){
+      const f=ctx.finished;
+      const hasEmergencyContact=r=>(r.companions||[]).some(c=>c.role==='emergency_contact');
+      if(f.length<10) return {unlocked:false,progress:Math.round(f.length/10*100),triggerRaceId:null};
+      for(let i=0;i<=f.length-10;i++){
+        const window=f.slice(i,i+10);
+        if(window.every(hasEmergencyContact)) return {unlocked:true,progress:100,triggerRaceId:window[9].id};
+      }
+      let best=0,cur=0;
+      for(const r of f){ if(hasEmergencyContact(r)){ cur++; best=Math.max(best,cur); }else{ cur=0; } }
+      return {unlocked:false,progress:Math.round(Math.min(best,10)/10*100),triggerRaceId:null};
+    }},
+  {id:'asia_crossover',order:25,category:'explore',icon:'🌏',name:'跨國連線',hint:'同一年度內擁有日本與韓國兩地的完賽紀錄',
+    check(ctx){
+      const byYear={};
+      ctx.completed.forEach(r=>{
+        const year=r.schedule.raceDate.slice(0,4);
+        const country=(r.location.country||'').trim();
+        if(!byYear[year]) byYear[year]={jp:false,kr:false,lastId:null};
+        if(country==='日本') byYear[year].jp=true;
+        if(country==='韓國'||country==='南韓') byYear[year].kr=true;
+        if(byYear[year].jp&&byYear[year].kr) byYear[year].lastId=r.id;
+      });
+      const hitYear=Object.values(byYear).find(y=>y.jp&&y.kr);
+      return {unlocked:!!hitYear,progress:hitYear?100:0,triggerRaceId:hitYear?hitYear.lastId:null};
+    }},
+  {id:'sakura_chaser',order:26,category:'explore',icon:'🌸',name:'櫻花追跡者',hint:'日本賽事且比賽日期落在 3 月至 4 月間',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        if((r.location.country||'').trim()!=='日本') return false;
+        const month=parseInt(r.schedule.raceDate.slice(5,7),10);
+        return month===3||month===4;
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'new_taipei_explorer',order:27,category:'explore',icon:'🗺️',name:'新北探旅',hint:'累積完成 3 場新北市在地賽事',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.location.city||'').trim()==='新北市');
+      return countUnlockedBadge(hits.length,3,hits[2]&&hits[2].id);
+    }},
+  {id:'loop_hell',order:28,category:'explore',icon:'🐹',name:'迴圈地獄',hint:'繞圈賽形式且完賽距離超過 42 公里',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.raceFormat==='loop'&&(r.route.distanceKm||0)>42);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'dnf_reflection',order:29,category:'explore',icon:'📝',name:'志在參加',hint:'DNF 賽事但檢討筆記寫滿超過 50 字',
+    check(ctx){
+      const hits=ctx.dnf.filter(r=>(r.review.lessonsLearned||'').trim().length>50);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 2. 地形與極限類（新增） ----
+  {id:'mixed_terrain_master',order:24,category:'terrain',icon:'⚖️',name:'全地形制霸',hint:'單場賽事柏油路比例與土路比例皆落在 30%~70% 之間',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        const p=r.route.surface.pavedPct,t=r.route.surface.trailPct;
+        return p!=null&&t!=null&&p>=30&&p<=70&&t>=30&&t<=70;
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'ahead_of_time',order:25,category:'terrain',icon:'⏱️',name:'游刃有餘',hint:'晶片時間小於全程關門時間的一半',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.route.cutoffTimeSeconds!=null&&r.results.chipTimeSeconds!=null&&r.results.chipTimeSeconds<r.route.cutoffTimeSeconds*0.5);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'speedway',order:26,category:'terrain',icon:'🛣️',name:'高速賽道',hint:'全馬距離且總爬升小於 100 公尺',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>isMarathonDist(r.route.distanceKm)&&r.route.elevationGainM!=null&&r.route.elevationGainM<100);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'overseas_ultra_trail',order:27,category:'terrain',icon:'⛩️',name:'海外野獸',hint:'越野賽事距離達 43 公里以上且地點位於海外',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>['trail_running','ultra_marathon'].includes(r.sportType)&&(r.route.distanceKm||0)>=43&&ctx.homeCountry&&r.location.country&&r.location.country.trim()!==ctx.homeCountry);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'waterfront_runner',order:28,category:'terrain',icon:'🌊',name:'水岸巡航',hint:'賽事名稱包含「湖」或「海岸」且距離達半馬以上',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>/湖|海岸/.test(r.name||'')&&(r.route.distanceKm||0)>=21);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'checkpoint_hunter',order:29,category:'terrain',icon:'🍽️',name:'補給站獵人',hint:'CP/補給站明細超過 5 個且全部提供食物',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        const cps=r.checkpoints||[];
+        return cps.length>5&&cps.every(c=>c.hasFood);
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'slide_attack',order:30,category:'terrain',icon:'🎢',name:'溜滑梯特攻',hint:'總下降比總爬升多出 300 公尺以上',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.route.elevationLossM!=null&&r.route.elevationGainM!=null&&(r.route.elevationLossM-r.route.elevationGainM)>300);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 3. 速度與戰略類（新增） ----
+  {id:'mirror_splits',order:17,category:'speed',icon:'🪞',name:'鏡像分段',hint:'前半程時間與後半程時間誤差在 30 秒以內',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.results.firstHalfSeconds!=null&&r.results.secondHalfSeconds!=null&&Math.abs(r.results.firstHalfSeconds-r.results.secondHalfSeconds)<=30);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'cruising_altitude',order:18,category:'speed',icon:'🚀',name:'無痛巡航',hint:'全馬賽事平均心率落在 Z2 區間，卻依然跑進 3 小時內',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        if(!isMarathonDist(r.route.distanceKm)||r.results.chipTimeSeconds==null||r.results.chipTimeSeconds>10800) return false;
+        const info=hrZoneInfo(r.performanceData.avgHr,r.performanceData.maxHr);
+        return info&&info.zone===2;
       });
       return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
     }},
