@@ -1459,7 +1459,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.34.3';
+const APP_VERSION='v2.35.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2812,10 +2812,30 @@ function buildBadgeContext(){
     .slice().sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
   const dnf=state.races.filter(r=>r.status==='dnf'&&!r.deletedAt&&r.schedule.raceDate)
     .slice().sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
-  return {completed,dnf,homeCountry:detectHomeCountry()};
+  const finished=state.races.filter(r=>['completed','dns','dnf'].includes(r.status)&&!r.deletedAt&&r.schedule.raceDate)
+    .slice().sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
+  return {completed,dnf,finished,homeCountry:detectHomeCountry()};
 }
 function isHalfMarathonDist(km){ return km!=null&&km>=20&&km<=22; }
 function isMarathonDist(km){ return km!=null&&km>=41&&km<=43.5; }
+// 偵測海拔剖面圖中「明顯」的山峰／谷底交替次數：方向反轉，且跟上一個
+// 轉折點的落差達到最小顯著高度（避免把微小雜訊誤判成一個山頭）才算數。
+function countElevationAlternations(profile,minProminenceM){
+  if(!profile||profile.length<3) return 0;
+  let alternations=0,direction=null,lastExtremeElev=profile[0].elevationM;
+  for(let i=1;i<profile.length;i++){
+    const diff=profile[i].elevationM-profile[i-1].elevationM;
+    const newDir=diff>0?'up':(diff<0?'down':direction);
+    if(direction&&newDir&&newDir!==direction){
+      if(Math.abs(profile[i-1].elevationM-lastExtremeElev)>=minProminenceM){
+        alternations++;
+        lastExtremeElev=profile[i-1].elevationM;
+      }
+    }
+    if(newDir) direction=newDir;
+  }
+  return alternations;
+}
 function countUnlockedBadge(count,target,triggerRace){
   return {unlocked:count>=target,progress:Math.min(100,Math.round(count/target*100)),triggerRaceId:count>=target?triggerRace:null};
 }
@@ -3258,19 +3278,116 @@ const BADGE_DEFINITIONS=[
       const hits=ctx.completed.filter(r=>r.sportType==='cycling'&&r.performanceData.avgPowerWatts!=null);
       return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
     }},
-  {id:'mandatory_gear_master',order:12,category:'crossover',icon:'🎒',name:'強制裝備達人',hint:'單場賽事強制裝備超過 8 項且全數打包完成',
+  {id:'mandatory_gear_master',order:12,category:'crossover',icon:'🎒',name:'強制裝備達人',hint:'單場賽事強制裝備超過 5 項且全數打包完成',
     check(ctx){
       const hits=ctx.completed.filter(r=>{
         const mandatory=(r.equipmentChecklist||[]).filter(i=>i.isMandatory);
-        return mandatory.length>8&&mandatory.every(i=>i.isPacked);
+        return mandatory.length>5&&mandatory.every(i=>i.isPacked);
       });
       return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
     }},
-  {id:'carb_bottomless_pit',order:14,category:'crossover',icon:'🔋',name:'碳水無底洞',hint:'能量膠數量超過 8 包，且補給時程每一項都確實補給',
+  {id:'carb_bottomless_pit',order:14,category:'crossover',icon:'🔋',name:'碳水無底洞',hint:'能量膠數量超過 5 包，且補給時程每一項都確實補給',
     check(ctx){
       const hits=ctx.completed.filter(r=>{
         const sched=r.nutritionSchedule||[];
-        return (r.nutritionPlan.gelCount||0)>8&&sched.length>0&&sched.every(i=>i.consumed);
+        return (r.nutritionPlan.gelCount||0)>5&&sched.length>0&&sched.every(i=>i.consumed);
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 1. 探索與疆域類（新增） ----
+  {id:'overseas_expedition',order:21,category:'explore',icon:'✈️',name:'跨海遠征',hint:'交通方式選擇「飛機」且順利完賽',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.transportation||[]).some(t=>t.mode==='flight'));
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'night_navigator',order:22,category:'explore',icon:'🌃',name:'星夜迷航',hint:'賽事名稱包含「夜間」或「定向越野」，且起跑時間在 17:00 之後',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        if(!/夜間|定向越野/.test(r.name||'')) return false;
+        const t=r.schedule.startTime;
+        if(!t) return false;
+        return parseInt(t.split(':')[0],10)>=17;
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'family_bond',order:23,category:'explore',icon:'🤝',name:'親情後盾',hint:'隨行人員名單中，有人標註為緊急聯絡人或加油團',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.companions||[]).some(c=>c.role==='emergency_contact'||c.role==='cheer_squad'));
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 2. 地形與極限類（新增） ----
+  {id:'sawtooth_maniac',order:18,category:'terrain',icon:'📉',name:'鋸齒狂人',hint:'海拔剖面圖連續出現 3 個以上明顯的山峰與谷底交替',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>countElevationAlternations(r.route.elevationProfile,50)>=3);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'alpine_air',order:19,category:'terrain',icon:'💨',name:'無氧稜線',hint:'賽事路線最高海拔突破 2,500 公尺',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.route.maxAltitudeM||0)>2500);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'itra_finisher',order:20,category:'terrain',icon:'🌍',name:'積分入帳',hint:'單場賽事的 ITRA/UTMB 點數大於 0',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.route.itraPoints||0)>0);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'new_year_back_to_back',order:21,category:'terrain',icon:'🎆',name:'跨年連鬥',hint:'同一個冬季的 12 月與隔年 1 月皆有完賽紀錄',
+    check(ctx){
+      const byYearMonth=new Set(ctx.completed.map(r=>r.schedule.raceDate.slice(0,7)));
+      let triggerRaceId=null;
+      for(const r of ctx.completed){
+        const ym=r.schedule.raceDate.slice(0,7);
+        const month=ym.slice(5,7);
+        if(month!=='01') continue;
+        const year=parseInt(ym.slice(0,4),10);
+        const prevDecember=(year-1)+'-12';
+        if(byYearMonth.has(prevDecember)){ triggerRaceId=r.id; break; }
+      }
+      return {unlocked:!!triggerRaceId,progress:triggerRaceId?100:0,triggerRaceId};
+    }},
+  {id:'unbroken_streak',order:22,category:'terrain',icon:'🛡️',name:'不敗金身',hint:'連續 10 場賽事皆完賽，期間沒有任何 DNS 或 DNF',
+    check(ctx){
+      const f=ctx.finished;
+      if(f.length<10) return {unlocked:false,progress:Math.round(f.length/10*100),triggerRaceId:null};
+      for(let i=0;i<=f.length-10;i++){
+        const window=f.slice(i,i+10);
+        if(window.every(r=>r.status==='completed')){
+          return {unlocked:true,progress:100,triggerRaceId:window[9].id};
+        }
+      }
+      // 沒有連續 10 場全部完賽，用目前最長的連續完賽紀錄估算進度
+      let best=0,cur=0;
+      for(const r of f){ if(r.status==='completed'){ cur++; best=Math.max(best,cur); }else{ cur=0; } }
+      return {unlocked:false,progress:Math.round(Math.min(best,10)/10*100),triggerRaceId:null};
+    }},
+  {id:'dawn_breaker',order:23,category:'terrain',icon:'🌅',name:'晨星領航員',hint:'起跑時間介於 04:00 到 06:00 之間且完賽',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        const t=r.schedule.startTime;
+        if(!t) return false;
+        const h=parseInt(t.split(':')[0],10);
+        return h>=4&&h<6;
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 3. 速度與戰略類（新增） ----
+  {id:'tapering_expert',order:14,category:'speed',icon:'🔋',name:'減量期大師',hint:'賽前設定減量期開始日，且該場賽事破 PB',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.trainingPlan.taperStartDate&&r.results.isPb);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'front_line_runner',order:15,category:'speed',icon:'🏃',name:'前線起跑',hint:'大會時間與晶片時間差距小於 15 秒',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.results.gunTimeSeconds!=null&&r.results.chipTimeSeconds!=null&&Math.abs(r.results.gunTimeSeconds-r.results.chipTimeSeconds)<15);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'late_surge_sniper',order:16,category:'speed',icon:'🦅',name:'終點狙擊手',hint:'分段配速紀錄中，最後一個區間的配速是全場最快',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        const splits=(r.splits||[]).filter(s=>s.avgPaceSecPerKm!=null);
+        if(splits.length<3) return false;
+        const last=splits[splits.length-1].avgPaceSecPerKm;
+        return splits.every(s=>s.avgPaceSecPerKm>=last);
       });
       return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
     }},
