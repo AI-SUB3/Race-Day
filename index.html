@@ -505,11 +505,24 @@
 
   /* ---------- Shoe management ---------- */
   .shoe-add-row{display:flex;gap:8px;margin-bottom:16px;}
-  .shoe-add-row input{flex:1;font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
-  .shoe-list{display:flex;flex-direction:column;gap:8px;}
-  .shoe-row{display:flex;align-items:center;gap:14px;padding:10px 12px;border:1px solid var(--rule);border-radius:3px;}
-  .shoe-row-name{flex:1;font-size:15px;}
-  .shoe-row-stats{color:var(--ink-soft);font-size:13px;}
+  .shoe-add-row input{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
+  .shoe-add-row input#new-shoe-name{flex:2;min-width:0;}
+  .shoe-add-row input#new-shoe-target{flex:1;min-width:0;}
+  .shoe-section-title{color:var(--stone);text-transform:uppercase;letter-spacing:0.06em;margin:18px 0 8px;}
+  .shoe-section-title:first-of-type{margin-top:0;}
+  .shoe-list{display:flex;flex-direction:column;gap:10px;}
+  .shoe-row{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--rule);border-radius:5px;}
+  .shoe-row-retired{filter:grayscale(100%);opacity:0.6;}
+  .shoe-row-top{display:flex;align-items:center;gap:10px;}
+  .shoe-row-name{flex:1;font-size:15px;font-weight:600;}
+  .shoe-retired-badge{display:inline-block;padding:2px 9px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .shoe-health-row{display:flex;align-items:center;gap:10px;}
+  .shoe-health-bar{flex:1;height:6px;border-radius:3px;background:var(--rule);overflow:hidden;}
+  .shoe-health-fill{height:100%;border-radius:3px;transition:width 0.3s;}
+  .shoe-health-status{flex-shrink:0;font-weight:600;white-space:nowrap;}
+  .shoe-row-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .shoe-row-stats{color:var(--ink-soft);}
+  .shoe-row-actions{display:flex;gap:14px;}
 
   /* ---------- Data recovery ---------- */
   .recovery-section{margin-bottom:24px;}
@@ -1327,7 +1340,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.31.2';
+const APP_VERSION='v2.32.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1483,7 +1496,13 @@ const JA={
   'ui.shoeHint':'レースで履いたシューズを記録し、完走レースの累計距離から交換時期の目安にできます（本アプリに記録されたレース距離のみ集計、練習分は含みません）。',
   'ui.shoeNamePlaceholder':'シューズ名（例：ASICS Metaspeed）','ui.shoeAdd':'追加','ui.shoeNoneYet':'まだシューズが登録されていません',
   'ui.shoeStats':'走行距離','ui.shoeManage':'シューズを管理','ui.raceShoe':'着用シューズ',
-  'ui.shoeStatsLine':'{a} レース・{b} km',
+  'ui.shoeStatsLine':'{a} レース・{b}',
+  'ui.shoeTargetPlaceholder':'想定寿命(km)',
+  'ui.shoeActiveSection':'現役','ui.shoeRetiredSection':'引退済み','ui.shoeRetiredBadge':'名誉引退',
+  'ui.shoeRetire':'引退させる','ui.shoeUnretire':'現役に戻す',
+  'ui.shoeStatusInService':'現役','ui.shoeStatusDecline':'ミッドソール劣化','ui.shoeStatusReplace':'交換推奨',
+  'ui.shoeAlert80':'お知らせ：{n} の累計距離が想定寿命の80%に達しました。そろそろ次の一足を検討しましょう！',
+  'ui.shoeAlert100':'お知らせ：{n} の累計距離が想定寿命の100%に達しました。早めの交換をおすすめします！',
   // ---- 成績儀表板 ----
   'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
   'ui.resultAvgHr':'平均心拍数','ui.resultElevGain':'累積標高',
@@ -1772,7 +1791,13 @@ const EN={
   'ui.shoeHint':'Track which shoes you wore for each race, and see accumulated race mileage per pair to help gauge when to retire them (only counts race distance logged in this app, not training miles).',
   'ui.shoeNamePlaceholder':'Shoe name, e.g. "ASICS Metaspeed"','ui.shoeAdd':'Add','ui.shoeNoneYet':'No shoes added yet',
   'ui.shoeStats':'Mileage','ui.shoeManage':'Manage shoes','ui.raceShoe':'Shoes worn',
-  'ui.shoeStatsLine':'{a} races · {b} km',
+  'ui.shoeStatsLine':'{a} races · {b}',
+  'ui.shoeTargetPlaceholder':'Target lifespan (km)',
+  'ui.shoeActiveSection':'Active','ui.shoeRetiredSection':'Retired','ui.shoeRetiredBadge':'Retired with honors',
+  'ui.shoeRetire':'Retire','ui.shoeUnretire':'Return to service',
+  'ui.shoeStatusInService':'In service','ui.shoeStatusDecline':'Midsole declining','ui.shoeStatusReplace':'Replace soon',
+  'ui.shoeAlert80':'Heads up: {n} has reached 80% of its target lifespan — start scouting your next pair!',
+  'ui.shoeAlert100':'Heads up: {n} has reached 100% of its target lifespan — time to retire it soon!',
   'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
   'ui.pbBadge':'Personal Best','ui.generateShareImage':'Generate share image',
@@ -2513,7 +2538,14 @@ function autoApplyEquipmentTemplate(race){
   return true;
 }
 const SHOES_KEY='shoes-v1';
+const DEFAULT_SHOE_TARGET_KM=600;
 let shoes=[];
+function migrateShoe(s){
+  if(s.targetKm==null) s.targetKm=DEFAULT_SHOE_TARGET_KM;
+  if(s.isRetired==null) s.isRetired=false;
+  if(s.notes==null) s.notes='';
+  return s;
+}
 async function loadShoes(){
   try{
     if(hasArtifactStorage){
@@ -2523,6 +2555,7 @@ async function loadShoes(){
       const raw=await idbGet(SHOES_KEY);
       shoes=raw?JSON.parse(raw):[];
     }
+    shoes=shoes.map(migrateShoe);
   }catch(err){
     shoes=[];
   }
@@ -2542,6 +2575,28 @@ function computeShoeStats(shoeId){
   const races=state.races.filter(r=>r.performanceData&&r.performanceData.shoeId===shoeId&&r.status==='completed'&&!r.deletedAt);
   const totalDistance=races.reduce((s,r)=>s+(r.route.distanceKm||0),0);
   return {totalRaces:races.length,totalDistance};
+}
+function shoeHealthPct(shoe,totalDistance){
+  const target=shoe.targetKm||DEFAULT_SHOE_TARGET_KM;
+  if(target<=0) return 0;
+  return (totalDistance/target)*100;
+}
+function shoeHealthColor(pct){
+  if(pct<=50) return 'var(--trail)';
+  if(pct>80) return 'var(--flag)';
+  const ratio=Math.round(((pct-50)/30)*100);
+  return `color-mix(in srgb, var(--gold) ${ratio}%, var(--trail))`;
+}
+function shoeHealthStatusKey(pct){
+  if(pct<=50) return 'inService';
+  if(pct<=80) return 'midsoleDecline';
+  return 'recommendReplace';
+}
+function shoeHealthStatusLabel(pct){
+  const key=shoeHealthStatusKey(pct);
+  if(key==='inService') return t('ui.shoeStatusInService','服役中');
+  if(key==='midsoleDecline') return t('ui.shoeStatusDecline','中底衰退');
+  return t('ui.shoeStatusReplace','建議汰換');
 }
 
 /* ============================================================
@@ -2969,7 +3024,9 @@ function renderRouteMapIfNeeded(race){
 }
 
 function renderShoeSelector(race){
-  const options=shoes.map(s=>`<option value="${s.id}" ${race.performanceData.shoeId===s.id?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
+  const boundId=race.performanceData.shoeId;
+  const visibleShoes=shoes.filter(s=>!s.isRetired||s.id===boundId);
+  const options=visibleShoes.map(s=>`<option value="${s.id}" ${boundId===s.id?'selected':''}>${escapeHtml(s.name)}${s.isRetired?` (${t('ui.shoeRetiredBadge','光榮退役')})`:''}</option>`).join('');
   return `<div class="subsection">
     <div class="subsection-head"><h3>${t('ui.shoeManageTitle','比賽鞋款')}</h3><button type="button" class="btn-ghost" data-action="open-shoe-modal">${t('ui.shoeManage','管理鞋款')}</button></div>
     <label class="field" for="f-shoe-select"><span>${t('ui.raceShoe','本場穿著鞋款')}</span>
@@ -4215,6 +4272,12 @@ detailEl.addEventListener('change',async e=>{
   else if(t.type==='number') value=(t.value===''?null:Number(t.value));
   else value=t.value;
   const prevStatus=path==='status'?currentRace.status:null;
+  // 完賽門檻提醒：在真正把狀態改成「已完賽」之前，先記錄這場賽事綁定的鞋款
+  // 「目前」（還沒把這場算進去）的累積里程百分比，等存檔完再跟新的百分比比較，
+  // 才能判斷是不是「剛好跨過」80%／100% 這兩個門檻，而不是每次開啟畫面都提醒。
+  const shoeForAlert=(path==='status'&&value==='completed'&&prevStatus!=='completed'&&currentRace.performanceData.shoeId)
+    ?shoes.find(s=>s.id===currentRace.performanceData.shoeId):null;
+  const oldShoePct=shoeForAlert?shoeHealthPct(shoeForAlert,computeShoeStats(shoeForAlert.id).totalDistance):null;
   setPath(currentRace,path,value);
   currentRace.updatedAt=new Date().toISOString();
   if(path==='schedule.raceDate'&&value){
@@ -4235,6 +4298,22 @@ detailEl.addEventListener('change',async e=>{
     el.innerHTML=`<strong>${window.t('ui.templateAutoApplied','已自動套用裝備範本')}</strong>`;
     document.body.appendChild(el);
     setTimeout(()=>{ el.remove(); },4000);
+  }
+  if(shoeForAlert&&oldShoePct!=null){
+    const newPct=shoeHealthPct(shoeForAlert,computeShoeStats(shoeForAlert.id).totalDistance);
+    let alertMsg=null;
+    if(oldShoePct<100&&newPct>=100){
+      alertMsg=window.tf('ui.shoeAlert100',`注意：您的 ${shoeForAlert.name} 累積里程已達設定壽命的 100%，建議儘快更換戰靴！`,shoeForAlert.name);
+    }else if(oldShoePct<80&&newPct>=80){
+      alertMsg=window.tf('ui.shoeAlert80',`注意：您的 ${shoeForAlert.name} 累積里程已達設定壽命的 80%，建議開始物色下一雙戰靴！`,shoeForAlert.name);
+    }
+    if(alertMsg){
+      const shoeToastEl=document.createElement('div');
+      shoeToastEl.className='foreground-toast';
+      shoeToastEl.innerHTML=`<strong>${alertMsg}</strong>`;
+      document.body.appendChild(shoeToastEl);
+      setTimeout(()=>{ shoeToastEl.remove(); },6000);
+    }
   }
   // 從賽前狀態切成「已完賽」時，自動捲動到賽後紀錄區塊（該區塊本來就會依狀態自動展開），讓填寫動線更順暢
   if(path==='status'&&value==='completed'&&prevStatus!=='completed'){
@@ -5433,23 +5512,49 @@ document.addEventListener('click',e=>{
    鞋款管理
    ============================================================ */
 function shoeModalHtml(){
+  const active=shoes.filter(s=>!s.isRetired);
+  const retired=shoes.filter(s=>s.isRetired);
+  function shoeRowHtml(s){
+    const stats=computeShoeStats(s.id);
+    const pct=shoeHealthPct(s,stats.totalDistance);
+    const barPct=Math.max(0,Math.min(100,pct));
+    const color=shoeHealthColor(pct);
+    const statusLabel=shoeHealthStatusLabel(pct);
+    const canDelete=stats.totalRaces===0;
+    return `<div class="shoe-row${s.isRetired?' shoe-row-retired':''}">
+      <div class="shoe-row-top">
+        <span class="shoe-row-name">${escapeHtml(s.name)}</span>
+        ${s.isRetired?`<span class="shoe-retired-badge">${t('ui.shoeRetiredBadge','光榮退役')}</span>`:''}
+      </div>
+      <div class="shoe-health-row">
+        <div class="shoe-health-bar"><div class="shoe-health-fill" style="width:${barPct}%;background:${color}"></div></div>
+        <span class="shoe-health-status small" style="color:${color}">${statusLabel}</span>
+      </div>
+      <div class="shoe-row-bottom">
+        <span class="shoe-row-stats mono small">${tf2('ui.shoeStatsLine',`${stats.totalRaces} 場・${stats.totalDistance.toFixed(1)} / ${s.targetKm||DEFAULT_SHOE_TARGET_KM} ${t('ui.unitKm','公里')}`,stats.totalRaces,`${stats.totalDistance.toFixed(1)} / ${s.targetKm||DEFAULT_SHOE_TARGET_KM} ${t('ui.unitKm','公里')}`)}</span>
+        <div class="shoe-row-actions">
+          ${s.isRetired
+            ?`<button type="button" class="btn-text-small" data-action="unretire-shoe" data-id="${s.id}">${t('ui.shoeUnretire','恢復服役')}</button>`
+            :`<button type="button" class="btn-text-small" data-action="retire-shoe" data-id="${s.id}">${t('ui.shoeRetire','退役')}</button>`}
+          ${canDelete?`<button type="button" class="btn-text-small danger" data-action="delete-shoe" data-id="${s.id}">${t('ui.delete','刪除')}</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
   return `<div class="modal-panel modal-panel-wide">
     <h2>${t('ui.shoeManageTitle','鞋款管理')}</h2>
     <p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。')}</p>
     <div class="shoe-add-row">
       <input type="text" id="new-shoe-name" placeholder="${t('ui.shoeNamePlaceholder','鞋款名稱，如「ASICS Metaspeed」')}">
+      <input type="number" id="new-shoe-target" placeholder="${t('ui.shoeTargetPlaceholder','預期壽命(km)')}" value="${DEFAULT_SHOE_TARGET_KM}" min="1" step="1">
       <button type="button" class="btn-primary" data-action="add-shoe">${t('ui.shoeAdd','新增')}</button>
     </div>
+    <div class="shoe-section-title small">${t('ui.shoeActiveSection','服役中')}</div>
     <div class="shoe-list">
-      ${shoes.length?shoes.map(s=>{
-        const stats=computeShoeStats(s.id);
-        return `<div class="shoe-row">
-          <span class="shoe-row-name">${escapeHtml(s.name)}</span>
-          <span class="shoe-row-stats mono">${tf2('ui.shoeStatsLine',`${stats.totalRaces} 場・${stats.totalDistance.toFixed(1)} 公里`,stats.totalRaces,stats.totalDistance.toFixed(1))}</span>
-          <button type="button" class="btn-ghost danger" data-action="delete-shoe" data-id="${s.id}">${t('ui.delete','刪除')}</button>
-        </div>`;
-      }).join(''):emptyStateBlock('shoes',t('ui.shoeNoneYet','尚未新增鞋款'))}
+      ${active.length?active.map(shoeRowHtml).join(''):emptyStateBlock('shoes',t('ui.shoeNoneYet','尚未新增鞋款'))}
     </div>
+    ${retired.length?`<div class="shoe-section-title small">${t('ui.shoeRetiredSection','已退役')}</div>
+    <div class="shoe-list">${retired.map(shoeRowHtml).join('')}</div>`:''}
     <div class="modal-actions"><button class="btn-ghost" data-action="close-shoe-modal">${t('ui.close','關閉')}</button></div>
   </div>`;
 }
@@ -5464,9 +5569,29 @@ shoeModalEl_getter().addEventListener('click',e=>{
   }
   if(e.target.closest('[data-action="add-shoe"]')){
     const input=document.getElementById('new-shoe-name');
+    const targetInput=document.getElementById('new-shoe-target');
     const name=input.value.trim();
     if(!name){input.focus();return;}
-    shoes.push({id:uid(),name,notes:''});
+    const targetKm=targetInput.value?Math.max(1,Math.round(Number(targetInput.value))):DEFAULT_SHOE_TARGET_KM;
+    shoes.push({id:uid(),name,targetKm,isRetired:false,notes:''});
+    persistShoes();
+    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    if(currentRace) renderDetail();
+    return;
+  }
+  if(e.target.closest('[data-action="retire-shoe"]')){
+    const id=e.target.closest('[data-action="retire-shoe"]').dataset.id;
+    const shoe=shoes.find(s=>s.id===id);
+    if(shoe) shoe.isRetired=true;
+    persistShoes();
+    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    if(currentRace) renderDetail();
+    return;
+  }
+  if(e.target.closest('[data-action="unretire-shoe"]')){
+    const id=e.target.closest('[data-action="unretire-shoe"]').dataset.id;
+    const shoe=shoes.find(s=>s.id===id);
+    if(shoe) shoe.isRetired=false;
     persistShoes();
     shoeModalEl_getter().innerHTML=shoeModalHtml();
     if(currentRace) renderDetail();
@@ -5474,6 +5599,7 @@ shoeModalEl_getter().addEventListener('click',e=>{
   }
   if(e.target.closest('[data-action="delete-shoe"]')){
     const id=e.target.closest('[data-action="delete-shoe"]').dataset.id;
+    if(computeShoeStats(id).totalRaces>0) return; // 保護：有綁定賽事紀錄的鞋款一律走退役，不允許直接刪除
     shoes=shoes.filter(s=>s.id!==id);
     state.races.forEach(r=>{ if(r.performanceData.shoeId===id) r.performanceData.shoeId=''; });
     persistShoes();persist();
