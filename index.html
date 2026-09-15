@@ -657,16 +657,6 @@
   .save-status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
   .save-status[data-state="saving"] .save-status-dot{animation:save-pulse 1s ease-in-out infinite;}
   @keyframes save-pulse{0%,100%{opacity:0.3;}50%{opacity:1;}}
-  .offline-indicator{
-    display:flex;align-items:center;gap:6px;font-size:13px;color:var(--gold);
-    border:1px solid var(--gold);border-radius:12px;padding:4px 10px;white-space:nowrap;
-  }
-  .offline-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;animation:save-pulse 1.4s ease-in-out infinite;}
-  .offline-dismiss-btn{
-    background:none;border:none;color:inherit;opacity:0.6;cursor:pointer;
-    font-size:11px;line-height:1;padding:1px 2px;margin-left:2px;
-  }
-  .offline-dismiss-btn:hover{opacity:1;}
   .sport-icon-wrap{display:inline-flex;color:var(--trail);}
   .sport-icon{display:block;}
   .detail-header h1{font-size:30px;line-height:1.3;}
@@ -860,11 +850,6 @@
           </select>
           <span class="lang-caption small">支援：繁體中文・日本語・English</span>
         </div>
-        <span id="offline-indicator" class="offline-indicator" hidden>
-          <span class="offline-dot"></span>
-          <span data-i18n="ui.offlineMessage">離線中，變更將於連線後自動同步</span>
-          <button type="button" id="offline-dismiss-btn" class="offline-dismiss-btn" data-i18n-title="ui.offlineDismissTitle" title="如果你其實已經連線，點這裡重新檢查">✕</button>
-        </span>
         <div id="auth-area" class="auth-area"></div>
         <div class="new-race-stack">
           <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
@@ -1342,7 +1327,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.31.1';
+const APP_VERSION='v2.31.2';
 
 /* ============================================================
    多語系（i18n）
@@ -1469,8 +1454,6 @@ const JA={
   'ui.focalPointHint':'カレンダーのマス、一覧、メダル棚の小さいサムネイルは正方形に切り抜かれます。下の写真をクリックまたはドラッグして、一番大事な部分を照準に合わせてください。右側のプレビューがリアルタイムで更新されます。',
   'ui.focalPreviewLabel':'サムネイルプレビュー',
   'ui.templateAutoApplied':'装備テンプレートを自動的に適用しました',
-  'ui.offlineMessage':'オフラインです。変更は再接続後に自動的に同期されます',
-  'ui.offlineDismissTitle':'実はオンラインの場合はここをクリックして再確認',
   // ---- 賽事詳情 - 區塊標題 ----
   'ui.sectionBasic':'基本情報と日程','ui.sectionRoute':'コースと地形','ui.sectionWeather':'気象',
   'ui.sectionLogistics':'予算と旅程','ui.sectionPrep':'装備・補給・戦略（レース前の準備）',
@@ -1766,8 +1749,6 @@ const EN={
   'ui.focalPointHint':'Small thumbnails (calendar cells, lists, the trophy wall) crop the photo to a square. Click or drag on the photo below to move the most important part to the crosshair — the preview on the right updates live.',
   'ui.focalPreviewLabel':'Thumbnail preview',
   'ui.templateAutoApplied':'Equipment template applied automatically',
-  'ui.offlineMessage':'Offline — changes will sync once you\u2019re back online',
-  'ui.offlineDismissTitle':'If you\u2019re actually online, click to recheck',
   'ui.sectionBasic':'Basic Info & Schedule','ui.sectionRoute':'Course & Terrain','ui.sectionWeather':'Weather',
   'ui.sectionLogistics':'Budget & Logistics','ui.sectionPrep':'Gear, Nutrition & Strategy (Pre-race)',
   'ui.sectionPost':'Results & Post-race Data','ui.seriesComparison':'Series Comparison (Year over Year)',
@@ -5635,47 +5616,6 @@ document.addEventListener('click',e=>{
 });
 
 /* ============================================================
-   離線狀態偵測
-   本機資料本來就一律先存 localStorage，跟連線與否無關；
-   這裡純粹是讓使用者「看得到」目前離線、安心知道變更有存到本機，
-   連線恢復後雲端同步會自動接續（沿用既有的重試機制）。
-
-   navigator.onLine 跟 online/offline 事件在部分瀏覽器／作業系統／
-   網路環境組合下並不完全可靠，有時候明明已經連線，事件卻沒有正確
-   觸發，導致提示卡在「離線中」。這裡疊加幾層修正：定時重新檢查、
-   分頁切回前景時重新檢查。
-
-   之前兩版嘗試做「聰明」的自動復原邏輯（記錄狀態、只在真的變化時
-   重置關閉狀態），結果還是持續有回報說點 X 沒反應，而且橫跨 Chrome、
-   Edge、iPhone 三種完全不同的瀏覽器引擎都一樣──這種一致性代表問題
-   不太可能是單一瀏覽器的 navigator.onLine 怪癖，比較可能是這裡的
-   邏輯本身有問題，或是事件代理（document 層級監聽）被某些狀況卡住。
-   與其再疊加一層「聰明」判斷，這次直接簡化：按鈕改成直接綁定在按鈕
-   本身（不透過 document 事件代理），且「關掉」在這次頁面載入期間是
-   絕對值──關掉後，除非重新整理頁面，否則不會有任何自動邏輯再把它
-   打開。犧牲的是「同一次瀏覽期間又真的斷線一次」不會重新提醒，但
-   換來的是「按了就是真的關掉」這個更重要、更基本的保證。
-   ============================================================ */
-let offlineIndicatorDismissed=false;
-function updateOfflineIndicator(){
-  if(offlineIndicatorDismissed) return;
-  const el=document.getElementById('offline-indicator');
-  if(!el) return;
-  el.hidden=navigator.onLine;
-}
-function dismissOfflineIndicator(){
-  offlineIndicatorDismissed=true;
-  const el=document.getElementById('offline-indicator');
-  if(el) el.hidden=true;
-}
-const offlineDismissBtnEl=document.getElementById('offline-dismiss-btn');
-if(offlineDismissBtnEl) offlineDismissBtnEl.addEventListener('click',dismissOfflineIndicator);
-window.addEventListener('online',updateOfflineIndicator);
-window.addEventListener('offline',updateOfflineIndicator);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) updateOfflineIndicator(); });
-setInterval(updateOfflineIndicator,8000);
-
-/* ============================================================
    初始化
    ============================================================ */
 async function init(){
@@ -5695,7 +5635,6 @@ async function init(){
   if(purgeOldTrash()) persist();
   renderAll();
   updateTopbarHeightVar();
-  updateOfflineIndicator();
 }
 /* ============================================================
    清單拖曳排序（裝備清單／補給時程／分段配速）
