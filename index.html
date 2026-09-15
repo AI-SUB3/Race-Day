@@ -107,6 +107,20 @@
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     border-bottom:1px solid var(--rule);padding:18px 32px 14px;
   }
+  /* topbar-row2（行事曆月份切換＋搜尋＋篩選）刻意不放在 #topbar 裡面，
+     而是放在 #main-content 最前面：sticky 定位只能在「自己的父層還沒
+     捲出畫面」的範圍內生效，如果 row2 還是嵌在只有三列高、捲一下就
+     整個滑走的 #topbar 裡，捲過那個高度後 row2 會被一起帶走，不會
+     真的固定住。移到 #main-content（跟頁面內容一樣長）底下，才能讓
+     它在整個頁面的捲動範圍內都維持固定。row3（匯入匯出這排按鈕、
+     版本號、版權宣告）不需要固定，跟著內容正常捲動即可。 */
+  .topbar-row2{
+    position:sticky;top:var(--topbar-height,90px);z-index:9;
+    background:var(--paper-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--rule);
+    margin:0 -32px 14px;padding:14px 32px;
+  }
+  .topbar-row3{padding-bottom:6px;}
   /* 手機上檢視單一賽事詳情（或新增賽事表單）時，頂部導覽列（搜尋、篩選、
      行事曆切換這些跟目前畫面無關的控制項）不再固定黏在頂端，改成跟著內容
      正常捲動，把螢幕空間讓給賽事內容本身；快速導覽列則改成直接貼齊頂端
@@ -114,6 +128,7 @@
      回到行事曆列表畫面時，頂部導覽列恢復原本的固定行為。 */
   @media (max-width:640px){
     body.viewing-detail #topbar{position:static;}
+    body.viewing-detail .topbar-row2{position:static;margin:0 0 14px;padding:14px 0;}
     body.viewing-detail .quick-nav{top:0;}
   }
   .topbar-row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
@@ -864,6 +879,7 @@
   @media (max-width:860px){
     #topbar{padding:16px 18px 12px;transition:padding 0.2s ease;}
     #main-content{padding:18px 18px 80px;}
+    .topbar-row2{margin:0 -18px 14px;padding:14px 18px;}
     .topbar-row1{flex-direction:column;align-items:stretch;gap:12px;}
     .topbar-actions{justify-content:space-between;}
     .auth-user{max-width:140px;}
@@ -970,6 +986,8 @@
         </div>
       </div>
     </div>
+  </header>
+  <main id="main-content">
     <div class="topbar-row2">
       <div class="cal-nav">
         <button id="cal-prev" class="btn-ghost" data-i18n-title="ui.calPrev" aria-label="上個月">‹</button>
@@ -997,8 +1015,6 @@
       <span id="app-version" class="app-version small mono"></span>
       <span id="app-copyright" class="app-version small mono">© 2026 劉恩龍 LIU EN LUNG</span>
     </div>
-  </header>
-  <main id="main-content">
     <section id="focus-panel-slot"></section>
     <section id="calendar"></section>
     <section id="detail"></section>
@@ -1440,7 +1456,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.34.1';
+const APP_VERSION='v2.34.2';
 
 /* ============================================================
    多語系（i18n）
