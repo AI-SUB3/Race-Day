@@ -371,6 +371,7 @@
     display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:'IBM Plex Mono',monospace;
   }
   .trophy-badge-name{font-size:10.5px;line-height:1.3;color:var(--ink-soft);}
+  .trophy-badge-caption{font-size:9.5px;line-height:1.3;color:var(--stone);margin-top:1px;}
   .trophy-badge.unlocked .trophy-badge-name{color:var(--ink);font-weight:600;}
   .trophy-badge-progress{width:100%;height:3px;border-radius:2px;background:var(--rule);overflow:hidden;margin-top:2px;}
   .trophy-badge-progress-fill{height:100%;background:var(--gold);border-radius:2px;}
@@ -1431,7 +1432,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.33.0';
+const APP_VERSION='v2.34.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1598,6 +1599,7 @@ const JA={
   'ui.trophyCabinetTitle':'トロフィーケース',
   'ui.trophyCat_explore':'探検と領域','ui.trophyCat_terrain':'地形と極限','ui.trophyCat_speed':'スピードと戦略','ui.trophyCat_crossover':'クロスオーバーと装備',
   'ui.badgeUnlockedLabel':'バッジ解除','ui.badgeCollect':'バッジを受け取る',
+  'ui.badgeUnlockCaption':'達成：{a}（{b}）','ui.badgeUnlockCaptionDate':'達成日：{n}',
   // ---- 成績儀表板 ----
   'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
   'ui.resultAvgHr':'平均心拍数','ui.resultElevGain':'累積標高',
@@ -1897,6 +1899,7 @@ const EN={
   'ui.trophyCabinetTitle':'Trophy Case',
   'ui.trophyCat_explore':'Exploration & Territory','ui.trophyCat_terrain':'Terrain & Extremes','ui.trophyCat_speed':'Speed & Strategy','ui.trophyCat_crossover':'Crossover & Gear',
   'ui.badgeUnlockedLabel':'Badge Unlocked','ui.badgeCollect':'Collect Badge',
+  'ui.badgeUnlockCaption':'Earned: {a} ({b})','ui.badgeUnlockCaptionDate':'Earned: {n}',
   'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
   'ui.pbBadge':'Personal Best','ui.generateShareImage':'Generate share image',
@@ -2780,7 +2783,9 @@ async function persistBadgeUnlocks(){
 function buildBadgeContext(){
   const completed=state.races.filter(r=>r.status==='completed'&&!r.deletedAt&&r.schedule.raceDate)
     .slice().sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
-  return {completed,homeCountry:detectHomeCountry()};
+  const dnf=state.races.filter(r=>r.status==='dnf'&&!r.deletedAt&&r.schedule.raceDate)
+    .slice().sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
+  return {completed,dnf,homeCountry:detectHomeCountry()};
 }
 function isHalfMarathonDist(km){ return km!=null&&km>=20&&km<=22; }
 function isMarathonDist(km){ return km!=null&&km>=41&&km<=43.5; }
@@ -3115,6 +3120,131 @@ const BADGE_DEFINITIONS=[
   {id:'biggest_fan_club',category:'crossover',icon:'👯',name:'最強應援團',hint:'單場賽事隨行人員超過 3 人',
     check(ctx){
       const hits=ctx.completed.filter(r=>(r.companions||[]).length>3);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 1. 探索與疆域類（新增：住宿、交通、天氣、後勤） ----
+  {id:'frontline_camp',category:'explore',icon:'⛺',name:'前線紮營',hint:'住宿距起點小於 1 公里且完賽',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.accommodations||[]).some(a=>a.distanceToStartKm!=null&&a.distanceToStartKm<1));
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'lone_wolf',category:'explore',icon:'🐺',name:'孤狼出征',hint:'海外賽事且沒有任何隨行人員',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.companions||[]).length===0&&ctx.homeCountry&&r.location.country&&r.location.country.trim()!==ctx.homeCountry);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'perfect_conditions',category:'explore',icon:'☀️',name:'天時地利',hint:'比賽當日體感溫度落在 5°C ~ 16°C 之間且完賽',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.raceDayWeather.feelsLikeTempC!=null&&r.raceDayWeather.feelsLikeTempC>=5&&r.raceDayWeather.feelsLikeTempC<=16);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'twd_warrior',category:'explore',icon:'💸',name:'台幣戰士',hint:'單場賽事報名費加住宿費總和超過 20,000 元',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        const accomCost=(r.accommodations||[]).reduce((s,a)=>s+(a.cost||0),0);
+        return ((r.budget.registrationFee||0)+accomCost)>20000;
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'japan_conqueror_prefectures',category:'explore',icon:'🌸',name:'東洋征途',hint:'完成 3 個不同道府縣的日本賽事',
+    check(ctx){
+      const cities=new Set();
+      let triggerRaceId=null;
+      for(const r of ctx.completed){
+        if((r.location.country||'').trim()!=='日本') continue;
+        const city=(r.location.city||'').trim();
+        if(city&&!cities.has(city)){ cities.add(city); if(cities.size>=3&&!triggerRaceId) triggerRaceId=r.id; }
+      }
+      return countUnlockedBadge(cities.size,3,triggerRaceId);
+    }},
+  {id:'orienteering_explorer',category:'explore',icon:'🧭',name:'定向尋寶員',hint:'賽事名稱包含「定向越野」且順利完賽',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.name||'').includes('定向越野'));
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'orienteering_rookie',category:'explore',icon:'🧭',name:'定向菜雞',hint:'賽事名稱包含「定向越野」但未能在關門時間內完賽（DNF）',
+    check(ctx){
+      const hits=ctx.dnf.filter(r=>(r.name||'').includes('定向越野'));
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 2. 地形與極限類（新增） ----
+  {id:'mud_lover',category:'terrain',icon:'🐗',name:'玩泥巴',hint:'當日氣候「雨」且土路比例超過 40% 並完賽',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.raceDayWeather.condition==='rainy'&&(r.route.surface.trailPct||0)>40);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'solo_assault_king',category:'terrain',icon:'⛰️',name:'單攻王',hint:'單場賽事總爬升超過 1,500 公尺',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.route.elevationGainM||0)>1500);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'sea_level_takeoff',category:'terrain',icon:'🌊',name:'海平面起飛',hint:'起點海拔低於 10 公尺且最高海拔突破 500 公尺',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.route.startAltitudeM!=null&&r.route.startAltitudeM<10&&(r.route.maxAltitudeM||0)>500);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'mid_mountain_beast',category:'terrain',icon:'⛰️',name:'中級山神獸',hint:'越野賽事距離 10~20 公里、總爬升卻突破 1,000 公尺',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>['trail_running','ultra_marathon'].includes(r.sportType)&&(r.route.distanceKm||0)>=10&&(r.route.distanceKm||0)<=20&&(r.route.elevationGainM||0)>1000);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'terrain_master',category:'terrain',icon:'🔥',name:'高反差地貌',hint:'單場賽事最高與最低海拔落差超過 500 公尺',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.route.maxAltitudeM!=null&&r.route.minAltitudeM!=null&&(r.route.maxAltitudeM-r.route.minAltitudeM)>500);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 3. 速度與戰略類（新增） ----
+  {id:'podium_finish',category:'speed',icon:'🎖️',name:'分組凸台',hint:'分組名次落在前 5 名內',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.results.ageGroupRank!=null&&r.results.ageGroupRank<=5);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'taper_pb',category:'speed',icon:'🧘',name:'無傷減量',hint:'賽前確實填寫減量期開始日與週跑量目標，並順利破 PB',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.trainingPlan.taperStartDate&&r.trainingPlan.weeklyMileageTargetKm!=null&&r.results.isPb);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'cruise_missile',category:'speed',icon:'🚀',name:'巡航導彈',hint:'扣除起步與衝刺段，中間所有分段配速誤差在 10 秒內',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        const splits=(r.splits||[]).filter(s=>s.avgPaceSecPerKm!=null);
+        if(splits.length<5) return false;
+        const middle=splits.slice(1,-1).map(s=>s.avgPaceSecPerKm);
+        if(middle.length<3) return false;
+        return (Math.max(...middle)-Math.min(...middle))<10;
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'all_in',category:'speed',icon:'🔋',name:'All-in',hint:'完賽平均心率達最大心率 85% 以上',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.performanceData.avgHr!=null&&r.performanceData.maxHr&&(r.performanceData.avgHr/r.performanceData.maxHr)>=0.85);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 4. 跨界與裝備類（新增） ----
+  {id:'poseidon',category:'crossover',icon:'🔱',name:'海神波賽頓',hint:'完成一場游泳賽事',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.sportType==='swimming');
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'watts_goingon',category:'crossover',icon:'⚡',name:'Watts goingon',hint:'自行車賽事填入平均功率數據',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>r.sportType==='cycling'&&r.performanceData.avgPowerWatts!=null);
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'mandatory_gear_master',category:'crossover',icon:'🎒',name:'強制裝備達人',hint:'單場賽事強制裝備超過 8 項且全數打包完成',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        const mandatory=(r.equipmentChecklist||[]).filter(i=>i.isMandatory);
+        return mandatory.length>8&&mandatory.every(i=>i.isPacked);
+      });
+      return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  {id:'carb_bottomless_pit',category:'crossover',icon:'🔋',name:'碳水無底洞',hint:'能量膠數量超過 8 包，且補給時程每一項都確實補給',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>{
+        const sched=r.nutritionSchedule||[];
+        return (r.nutritionPlan.gelCount||0)>8&&sched.length>0&&sched.every(i=>i.consumed);
+      });
       return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
     }},
 ];
@@ -4174,6 +4304,20 @@ function animateCareerTickers(){
 const BADGE_CATEGORY_LABELS={
   explore:'探索與疆域',terrain:'地形與極限',speed:'速度與戰略',crossover:'跨界與裝備',
 };
+function badgeUnlockCaption(badgeId){
+  const u=badgeUnlocks[badgeId];
+  if(!u) return '';
+  if(u.triggerRaceId){
+    const race=state.races.find(r=>r.id===u.triggerRaceId);
+    if(race){
+      const name=escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)');
+      const date=race.schedule.raceDate||'';
+      return tf2('ui.badgeUnlockCaption',`達成於：${name}（${date}）`,name,date);
+    }
+  }
+  if(u.unlockedAt) return tf('ui.badgeUnlockCaptionDate',`達成於：${u.unlockedAt.slice(0,10)}`,u.unlockedAt.slice(0,10));
+  return '';
+}
 function renderTrophyCabinet(){
   const ctx=buildBadgeContext();
   const unlockedCount=Object.keys(badgeUnlocks).length;
@@ -4192,9 +4336,11 @@ function renderTrophyCabinet(){
           ${badges.map(b=>{
             const unlocked=!!badgeUnlocks[b.id];
             if(unlocked){
+              const caption=badgeUnlockCaption(b.id);
               return `<div class="trophy-badge unlocked" title="${escapeHtml(b.name)}">
                 <span class="trophy-badge-icon">${b.icon}</span>
                 <span class="trophy-badge-name small">${escapeHtml(b.name)}</span>
+                ${caption?`<span class="trophy-badge-caption">${caption}</span>`:''}
               </div>`;
             }
             let result={progress:0};
