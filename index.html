@@ -1459,7 +1459,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.35.1';
+const APP_VERSION='v2.35.3';
 
 /* ============================================================
    多語系（i18n）
@@ -1641,6 +1641,9 @@ const JA={
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
+  'ui.excelErrorTitle':'ファイルを読み込めません','ui.excelErrorGeneric':'ファイルの解析に失敗しました。有効な Excel ファイル（.xlsx／.xls）か確認してください。',
+  'ui.excelErrorLibFailed':'Excel解析ツールの読み込みに失敗しました。ネット接続を確認してページを再読み込みしてから、もう一度お試しください（広告ブロッカーなどの拡張機能が原因の場合もあるので、一時的に無効にして試すのもおすすめです）。',
+  'ui.excelErrorNoSheets':'このファイルにはシートが見つかりませんでした。','ui.excelErrorPrefix':'このファイルを解析できません：',
   'ui.excelParse':'解析してプレビュー','ui.excelStep2Title':'Excelを読み込む — レース一覧の確認',
   'ui.excelSelectedCount':'{a} / {b} 件選択中。インポート前に名前・日付・距離・場所・ステータスを直接編集できます。チェックを外すとその行はスキップされます（距離の単位、DNF/DNSは念のため確認してください）。',
   'ui.excelBackToSheets':'‹ シート選択に戻る','ui.excelColDate':'日付','ui.excelColName':'大会名','ui.excelColDistance':'距離',
@@ -1938,6 +1941,9 @@ const EN={
   'ui.gpxApply':'Apply to this race','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
+  'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
+  'ui.excelErrorLibFailed':'The Excel parsing tool failed to load. Please check your connection and reload the page, then try again (an ad blocker or similar extension can sometimes cause this too — worth disabling temporarily to test).',
+  'ui.excelErrorNoSheets':'No sheets were found in this file.','ui.excelErrorPrefix':'Couldn\u2019t parse this file: ',
   'ui.excelParse':'Parse & Preview','ui.excelStep2Title':'Import Excel — Review Races',
   'ui.excelSelectedCount':'{a} / {b} selected. You can edit name, date, distance, location and status directly before importing; uncheck a row to skip it (worth double-checking distance units and DNF/DNS).',
   'ui.excelBackToSheets':'‹ Back to sheet selection','ui.excelColDate':'Date','ui.excelColName':'Race name','ui.excelColDistance':'Distance',
@@ -3545,6 +3551,15 @@ function checkRaceForBadgeUnboxing(raceId){
     const u=badgeUnlocks[id];
     return u&&!u.seen&&u.triggerRaceId===raceId;
   });
+  if(ids.length) queueBadgeUnboxing(ids);
+}
+// 有些徽章的達成條件不是綁定單一場賽事（例如累積使用滿 5 雙不同鞋款的
+// 「千足蜈蚣」、鞋款退役時累積里程滿壽命的「千里老兵」），這種徽章的
+// triggerRaceId 一律是 null，永遠不會被 checkRaceForBadgeUnboxing 配對到
+// ——如果沒有這個函式，這類徽章解鎖了也永遠不會播放開箱動畫。剛判定出
+// 新解鎖的徽章清單裡，只要是這種沒有對應賽事的，直接排進開箱佇列。
+function queueNoTriggerBadges(newlyUnlockedIds){
+  const ids=(newlyUnlockedIds||[]).filter(id=>badgeUnlocks[id]&&!badgeUnlocks[id].triggerRaceId);
   if(ids.length) queueBadgeUnboxing(ids);
 }
 function confettiHtml(){
@@ -5348,10 +5363,12 @@ detailEl.addEventListener('change',async e=>{
   }
   // 賽事完賽狀態下，任何欄位變動都可能剛好讓某個徽章達標（例如補填晶片時間、心率、天氣）
   // ——判定成本很低（純記憶體內的陣列比對），每次存檔都重新檢查一次，確保不會漏掉。
-  // 如果是「這場賽事自己觸發」的新徽章，直接在這裡立刻開箱，不用等使用者離開又點回來。
+  // 如果是「這場賽事自己觸發」的新徽章，直接在這裡立刻開箱，不用等使用者離開又點回來；
+  // 如果是沒有對應單一賽事的徽章（例如累積使用滿 5 雙鞋的「千足蜈蚣」），也一併立刻開箱，
+  // 不然這種徽章解鎖了會永遠沒有機會播放動畫。
   if(currentRace.status==='completed'){
     const newlyUnlocked=checkAndRecordBadgeUnlocks();
-    if(newlyUnlocked.length) checkRaceForBadgeUnboxing(currentRace.id);
+    if(newlyUnlocked.length){ checkRaceForBadgeUnboxing(currentRace.id); queueNoTriggerBadges(newlyUnlocked); }
   }
 });
 
@@ -5607,6 +5624,7 @@ function parseSheetRows(sheetName,rows,isCurated){
 let importWorkbook=null;
 let importSheetChecks={};
 let importCandidates=[];
+let importErrorMessage='';
 const importModalEl=document.getElementById('import-modal');
 
 document.getElementById('btn-import').addEventListener('click',()=>{
@@ -5614,17 +5632,29 @@ document.getElementById('btn-import').addEventListener('click',()=>{
 });
 document.getElementById('import-file-input').addEventListener('change',async e=>{
   const file=e.target.files[0];
-  if(!file) return;
-  const buf=await file.arrayBuffer();
-  importWorkbook=XLSX.read(buf,{type:'array',cellDates:true});
-  importSheetChecks={};
-  importWorkbook.SheetNames.forEach(n=>{importSheetChecks[n]=/^(19|20)\d{2}$/.test(n.trim());});
-  if(!Object.values(importSheetChecks).some(Boolean)){
-    importSheetChecks[importWorkbook.SheetNames[0]]=true;
-  }
-  importCandidates=[];
-  showImportModal('select-sheets');
   e.target.value='';
+  if(!file) return;
+  try{
+    if(typeof XLSX==='undefined'){
+      throw new Error(t('ui.excelErrorLibFailed','Excel 解析工具載入失敗，請檢查網路連線後重新整理頁面再試一次（部分廣告或追蹤攔截外掛也可能擋到這個工具，可以先暫時停用試試看）。'));
+    }
+    const buf=await file.arrayBuffer();
+    importWorkbook=XLSX.read(buf,{type:'array',cellDates:true});
+    if(!importWorkbook.SheetNames||!importWorkbook.SheetNames.length){
+      throw new Error(t('ui.excelErrorNoSheets','這個檔案裡沒有找到任何工作表。'));
+    }
+    importSheetChecks={};
+    importWorkbook.SheetNames.forEach(n=>{importSheetChecks[n]=/^(19|20)\d{2}$/.test(n.trim());});
+    if(!Object.values(importSheetChecks).some(Boolean)){
+      importSheetChecks[importWorkbook.SheetNames[0]]=true;
+    }
+    importCandidates=[];
+    showImportModal('select-sheets');
+  }catch(err){
+    console.error('Excel 匯入失敗',err);
+    importErrorMessage=t('ui.excelErrorPrefix','無法解析這個檔案：')+err.message;
+    showImportModal('error');
+  }
 });
 
 function parseCheckedSheets(){
@@ -5640,6 +5670,15 @@ function parseCheckedSheets(){
 }
 
 function importModalHtml(step){
+  if(step==='error'){
+    return `<div class="modal-panel">
+      <h2>${t('ui.excelErrorTitle','無法匯入這個檔案')}</h2>
+      <p class="modal-hint">${importErrorMessage||t('ui.excelErrorGeneric','檔案解析失敗，請確認是有效的 Excel 檔案（.xlsx／.xls）。')}</p>
+      <div class="modal-actions">
+        <button class="btn-ghost" data-action="close-import">${t('ui.close','關閉')}</button>
+      </div>
+    </div>`;
+  }
   if(step==='select-sheets'){
     return `<div class="modal-panel">
       <h2>${t('ui.excelStep1Title','匯入 Excel — 選擇工作表')}</h2>
@@ -5699,7 +5738,17 @@ function closeImportModal(){
 importModalEl.addEventListener('click',e=>{
   if(e.target.closest('[data-action="close-import"]')){closeImportModal();return;}
   if(e.target.closest('[data-action="back-sheets"]')){showImportModal('select-sheets');return;}
-  if(e.target.closest('[data-action="parse-sheets"]')){parseCheckedSheets();showImportModal('review');return;}
+  if(e.target.closest('[data-action="parse-sheets"]')){
+    try{
+      parseCheckedSheets();
+      showImportModal('review');
+    }catch(err){
+      console.error('Excel 工作表解析失敗',err);
+      importErrorMessage=t('ui.excelErrorPrefix','無法解析這個檔案：')+err.message;
+      showImportModal('error');
+    }
+    return;
+  }
   if(e.target.closest('[data-action="check-all"]')){importCandidates.forEach(c=>c.checked=true);showImportModal('review');return;}
   if(e.target.closest('[data-action="check-none"]')){importCandidates.forEach(c=>c.checked=false);showImportModal('review');return;}
   if(e.target.closest('[data-action="confirm-import"]')){
@@ -6662,6 +6711,7 @@ shoeModalEl_getter().addEventListener('click',e=>{
       persistShoes();
       shoeModalEl_getter().innerHTML=shoeModalHtml();
       if(currentRace) renderDetail();
+      queueNoTriggerBadges(checkAndRecordBadgeUnlocks());
     },900);
     return;
   }
@@ -6672,6 +6722,7 @@ shoeModalEl_getter().addEventListener('click',e=>{
     persistShoes();
     shoeModalEl_getter().innerHTML=shoeModalHtml();
     if(currentRace) renderDetail();
+    queueNoTriggerBadges(checkAndRecordBadgeUnlocks());
     return;
   }
   if(e.target.closest('[data-action="unretire-shoe"]')){
