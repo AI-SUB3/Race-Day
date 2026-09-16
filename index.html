@@ -468,10 +468,22 @@
   /* ---------- Elevation profile ---------- */
   .elevation-profile{margin:4px 2px 18px;}
   .elevation-profile-head{display:flex;justify-content:space-between;color:var(--stone);margin-bottom:6px;}
+  .elevation-svg-wrap{position:relative;}
   .elevation-svg{width:100%;height:110px;display:block;}
-  .elevation-legend{display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--stone);}
+  .elev-cursor{transition:opacity 0.1s ease;pointer-events:none;}
+  .elev-cp-tick{pointer-events:none;}
+  .elevation-tooltip{
+    position:absolute;top:4px;z-index:5;pointer-events:none;
+    background:var(--surface);border:1px solid var(--rule);border-radius:6px;
+    padding:8px 12px;box-shadow:0 4px 14px rgba(0,0,0,0.25);white-space:nowrap;
+  }
+  .elev-tooltip-dist{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;}
+  .elev-tooltip-row{display:flex;justify-content:space-between;gap:14px;font-size:12px;color:var(--ink-soft);}
+  .elev-tooltip-row span:last-child{color:var(--ink);}
+  .elevation-legend{display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--stone);flex-wrap:wrap;}
   .elevation-legend-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
   .elevation-legend-bar{width:60px;height:4px;border-radius:2px;flex-shrink:0;background:linear-gradient(90deg,rgb(76,154,114),rgb(217,177,92),rgb(184,69,31),rgb(122,24,24));}
+  .elevation-legend-cp-hint{margin-left:auto;}
 
   /* ---------- Route map ---------- */
   .route-map-wrap{margin:4px 2px 18px;}
@@ -1466,7 +1478,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.37.0';
+const APP_VERSION='v2.38.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1591,6 +1603,7 @@ const JA={
   'ui.heatmapTitle':'参加ヒートマップ（月別走行距離）',
   'ui.heatmapCellCount':'{a} レース、{b} km',
   'ui.elevationProfileTitle':'標高変化グラフ','ui.routeMapTitle':'コースマップ',
+  'ui.elevTooltipElevation':'標高','ui.elevTooltipGradient':'瞬間勾配','ui.elevationCpHint':'点線＝CP 地点',
   'ui.mapStandard':'標準地図','ui.mapTerrain':'地形図',
   'ui.dragToReorder':'ドラッグして並べ替え','ui.moveUp':'上に移動','ui.moveDown':'下に移動',
   'ui.gradientGentle':'緩やか','ui.gradientSteep':'急勾配 (≥25%)',
@@ -1912,6 +1925,7 @@ const EN={
   'ui.heatmapTitle':'Race Heatmap (Monthly Distance)',
   'ui.heatmapCellCount':'{a} race(s), {b} km',
   'ui.elevationProfileTitle':'Elevation Profile','ui.routeMapTitle':'Route Map',
+  'ui.elevTooltipElevation':'Elevation','ui.elevTooltipGradient':'Instant Grade','ui.elevationCpHint':'Dashed = CP',
   'ui.mapStandard':'Standard Map','ui.mapTerrain':'Terrain Map',
   'ui.dragToReorder':'Drag to reorder','ui.moveUp':'Move up','ui.moveDown':'Move down',
   'ui.gradientGentle':'Gentle','ui.gradientSteep':'Steep (≥25%)',
@@ -3944,27 +3958,172 @@ function elevationProfileHtml(race){
   const areaPolys=segments.map(s=>`<polygon points="${s.x1.toFixed(1)},${baseline} ${s.x1.toFixed(1)},${s.y1.toFixed(1)} ${s.x2.toFixed(1)},${s.y2.toFixed(1)} ${s.x2.toFixed(1)},${baseline}" fill="${s.color}"/>`).join('');
   const lines=segments.map(s=>`<line x1="${s.x1.toFixed(1)}" y1="${s.y1.toFixed(1)}" x2="${s.x2.toFixed(1)}" y2="${s.y2.toFixed(1)}" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round"/>`).join('');
   const maskId='elev-fade-'+race.id;
-  return `<div class="elevation-profile">
+
+  // CP 站點標記：在海拔圖上對應距離處畫一條小豎線，並標示這個 CP 是落在
+  // 「爬升後」還是「下坡後」。這裡刻意用「索引前後幾個點」而不是「距離
+  // 前後多少公里」來取窗口：海拔剖面資料點的間距差異很大（有些賽事只有
+  // 個位數的點，GPX 匯入最多也才降採樣到 50 點），固定公里數的窗口在點
+  // 很稀疏時常常一個點都篩不到、誤判成「持平」；改成固定抓最近點前後
+  // 各 2 個索引，不管點的實際間距多寬，只要資料點數夠就一定抓得到。
+  const cpTicks=(race.checkpoints||[]).filter(c=>c.distanceKm!=null&&c.distanceKm>=minX&&c.distanceKm<=maxX).map(cp=>{
+    const cx=sx(cp.distanceKm);
+    let nearestIdx=0,nearestDiff=Infinity;
+    pts.forEach((p,i)=>{ const diff=Math.abs(p.distanceKm-cp.distanceKm); if(diff<nearestDiff){ nearestDiff=diff; nearestIdx=i; } });
+    const before=pts.slice(Math.max(0,nearestIdx-2),nearestIdx+1);
+    const after=pts.slice(nearestIdx,Math.min(pts.length,nearestIdx+3));
+    const beforeTrend=before.length>=2?before[before.length-1].elevationM-before[0].elevationM:0;
+    const afterTrend=after.length>=2?after[after.length-1].elevationM-after[0].elevationM:0;
+    let arrow='→';
+    if(beforeTrend>5) arrow='↗'; else if(beforeTrend<-5) arrow='↘';
+    if(afterTrend>5&&beforeTrend<=5) arrow=arrow==='↘'?'⌄':'↗';
+    else if(afterTrend<-5&&beforeTrend>=-5) arrow=arrow==='↗'?'⌃':'↘';
+    return `<g class="elev-cp-tick" data-cp-name="${escapeHtml(cp.name||'CP')}">
+      <line x1="${cx.toFixed(1)}" y1="${pad}" x2="${cx.toFixed(1)}" y2="${baseline}" stroke="#fff" stroke-width="1.5" stroke-dasharray="2,2" opacity="0.85"/>
+      <circle cx="${cx.toFixed(1)}" cy="${pad+4}" r="3.5" fill="#fff" stroke="#16231C" stroke-width="1.2"/>
+      <text x="${cx.toFixed(1)}" y="${pad+18}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" stroke="#16231C" stroke-width="2.5" paint-order="stroke">${arrow}</text>
+    </g>`;
+  }).join('');
+
+  return `<div class="elevation-profile" data-race-id="${race.id}">
     <div class="elevation-profile-head small"><span>${t('ui.elevationProfileTitle','海拔變化圖')}</span><span class="mono">${Math.round(minY)}–${Math.round(maxY)} 公尺</span></div>
-    <svg viewBox="0 0 ${w} ${h}" class="elevation-svg" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="${maskId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/>
-          <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
-        </linearGradient>
-        <mask id="${maskId}-m">
-          <rect x="0" y="0" width="${w}" height="${h}" fill="url(#${maskId})"/>
-        </mask>
-      </defs>
-      <g mask="url(#${maskId}-m)">${areaPolys}</g>
-      ${lines}
-    </svg>
+    <div class="elevation-svg-wrap">
+      <svg viewBox="0 0 ${w} ${h}" class="elevation-svg" id="elevation-svg-${race.id}" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="${maskId}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+          <mask id="${maskId}-m">
+            <rect x="0" y="0" width="${w}" height="${h}" fill="url(#${maskId})"/>
+          </mask>
+        </defs>
+        <g mask="url(#${maskId}-m)">${areaPolys}</g>
+        ${lines}
+        ${cpTicks}
+        <g id="elev-cursor-${race.id}" class="elev-cursor" style="opacity:0">
+          <line x1="0" y1="${pad}" x2="0" y2="${baseline}" stroke="#EDEEE9" stroke-width="1.5"/>
+          <circle cx="0" cy="${pad}" r="5" fill="#D9B15C" stroke="#0D1013" stroke-width="1.5"/>
+        </g>
+        <rect x="0" y="0" width="${w}" height="${h}" fill="transparent" id="elev-hover-capture-${race.id}" style="cursor:crosshair"/>
+      </svg>
+      <div class="elevation-tooltip" id="elev-tooltip-${race.id}" hidden></div>
+    </div>
     <div class="elevation-legend small">
       <span class="elevation-legend-swatch" style="background:${gradientColor(0)}"></span>${t('ui.gradientGentle','平緩')}
       <span class="elevation-legend-bar"></span>
       <span class="elevation-legend-swatch" style="background:${gradientColor(25)}"></span>${t('ui.gradientSteep','陡峭 (≥25%)')}
+      ${cpTicks?`<span class="elevation-legend-cp-hint">${t('ui.elevationCpHint','虛線＝CP 站點')}</span>`:''}
     </div>
   </div>`;
+}
+// 海拔剖面圖與地圖游標聯動：滑鼠在海拔圖上移動時，同步在地圖上移動一個
+// 標記，顯示該點的累積里程、海拔、瞬時坡度。軌跡點（trackPoints，只有
+// 經緯度）跟海拔剖面點（elevationProfile，距離＋海拔）是分開匯入、各自
+// 降採樣的兩份資料，彼此沒有共同索引可以對應——所以用 haversine 公式
+// 重新算出軌跡點自己的累積距離，再依比例對應到海拔圖游標的位置，而不是
+// 假設兩個陣列的點數或間距一致。
+function computeTrackPointDistances(trackPoints){
+  const dists=[0];
+  for(let i=1;i<trackPoints.length;i++){
+    dists.push(dists[i-1]+haversineKm(trackPoints[i-1].lat,trackPoints[i-1].lon,trackPoints[i].lat,trackPoints[i].lon));
+  }
+  return dists;
+}
+function findNearestTrackPointIndex(distances,targetKm){
+  let lo=0,hi=distances.length-1;
+  while(lo<hi){
+    const mid=(lo+hi)>>1;
+    if(distances[mid]<targetKm) lo=mid+1; else hi=mid;
+  }
+  // 二分搜尋找到的是「第一個距離 >= 目標值」的點，等於永遠無條件進位到下一個點；
+  // 檢查它前面那一個點是不是其實離目標更近，兩者取近的，軌跡點很稀疏時
+  // （例如匯入的 GPX 本身取樣點很少）精準度會差比較多。
+  if(lo>0){
+    const prevDiff=Math.abs(distances[lo-1]-targetKm);
+    const curDiff=Math.abs(distances[lo]-targetKm);
+    if(prevDiff<curDiff) return lo-1;
+  }
+  return lo;
+}
+function setupElevationScrubbing(race){
+  let pts=(race.route.elevationProfile&&race.route.elevationProfile.length>=2)?race.route.elevationProfile
+    :(race.checkpoints||[]).filter(c=>c.elevationM!=null&&c.distanceKm!=null).map(c=>({distanceKm:c.distanceKm,elevationM:c.elevationM}));
+  pts=pts.filter(p=>p.elevationM!=null&&p.distanceKm!=null).sort((a,b)=>a.distanceKm-b.distanceKm);
+  if(pts.length<2) return;
+  const svg=document.getElementById('elevation-svg-'+race.id);
+  const captureRect=document.getElementById('elev-hover-capture-'+race.id);
+  const cursor=document.getElementById('elev-cursor-'+race.id);
+  const tooltip=document.getElementById('elev-tooltip-'+race.id);
+  if(!svg||!captureRect||!cursor||!tooltip) return;
+
+  const w=600,h=130,pad=6;
+  const xs=pts.map(p=>p.distanceKm),ys=pts.map(p=>p.elevationM);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const sx=x=>pad+(x-minX)/((maxX-minX)||1)*(w-2*pad);
+  const sy=y=>h-pad-(y-minY)/((maxY-minY)||1)*(h-2*pad);
+
+  const trackPoints=race.route.trackPoints||[];
+  const trackDistances=trackPoints.length>=2?computeTrackPointDistances(trackPoints):null;
+  const trackTotalKm=trackDistances?trackDistances[trackDistances.length-1]:0;
+  const profileTotalKm=maxX-minX;
+  const cursorLine=cursor.querySelector('line');
+  const cursorDot=cursor.querySelector('circle');
+
+  function elevationAt(distKm){
+    let i=1;
+    while(i<pts.length-1&&pts[i].distanceKm<distKm) i++;
+    const p0=pts[i-1],p1=pts[i];
+    const span=p1.distanceKm-p0.distanceKm;
+    const frac=span>0?(distKm-p0.distanceKm)/span:0;
+    const elev=p0.elevationM+(p1.elevationM-p0.elevationM)*frac;
+    const distM=span*1000;
+    const gradPct=distM>0?((p1.elevationM-p0.elevationM)/distM)*100:0;
+    return {elev,gradPct};
+  }
+  function handleMove(clientX){
+    const rect=svg.getBoundingClientRect();
+    if(!rect.width) return;
+    const relX=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
+    const distKm=minX+relX*(maxX-minX);
+    const {elev,gradPct}=elevationAt(distKm);
+    const cx=sx(distKm);
+
+    cursor.style.opacity='1';
+    cursorLine.setAttribute('x1',cx.toFixed(1));cursorLine.setAttribute('x2',cx.toFixed(1));
+    cursorDot.setAttribute('cx',cx.toFixed(1));cursorDot.setAttribute('cy',sy(elev).toFixed(1));
+
+    tooltip.hidden=false;
+    tooltip.innerHTML=`<div class="elev-tooltip-dist mono">${distKm.toFixed(1)} km</div>
+      <div class="elev-tooltip-row"><span>${t('ui.elevTooltipElevation','海拔')}</span><span class="mono">${Math.round(elev)} m</span></div>
+      <div class="elev-tooltip-row"><span>${t('ui.elevTooltipGradient','瞬時坡度')}</span><span class="mono">${gradPct>0?'+':''}${gradPct.toFixed(1)}%</span></div>`;
+    const leftPct=relX*100;
+    tooltip.style.left=leftPct+'%';
+    tooltip.style.transform=leftPct>70?'translateX(-100%)':(leftPct<5?'translateX(0)':'translateX(-50%)');
+
+    if(trackDistances&&currentRouteMap&&window.L){
+      const trackTargetKm=profileTotalKm>0?relX*trackTotalKm:0;
+      const idx=findNearestTrackPointIndex(trackDistances,trackTargetKm);
+      const pt=trackPoints[idx];
+      if(pt){
+        if(!elevScrubMapMarker){
+          elevScrubMapMarker=L.circleMarker([pt.lat,pt.lon],{radius:7,color:'#fff',weight:2,fillColor:'#D9B15C',fillOpacity:1}).addTo(currentRouteMap);
+        }else{
+          elevScrubMapMarker.setLatLng([pt.lat,pt.lon]);
+          if(!currentRouteMap.hasLayer(elevScrubMapMarker)) elevScrubMapMarker.addTo(currentRouteMap);
+        }
+      }
+    }
+  }
+  function handleLeave(){
+    cursor.style.opacity='0';
+    tooltip.hidden=true;
+    if(elevScrubMapMarker&&currentRouteMap&&currentRouteMap.hasLayer(elevScrubMapMarker)){
+      currentRouteMap.removeLayer(elevScrubMapMarker);
+    }
+  }
+  captureRect.addEventListener('pointermove',e=>handleMove(e.clientX));
+  captureRect.addEventListener('pointerleave',handleLeave);
+  captureRect.addEventListener('touchmove',e=>{ if(e.touches[0]){ handleMove(e.touches[0].clientX); e.preventDefault(); } },{passive:false});
 }
 
 /* ============================================================
@@ -3989,8 +4148,10 @@ function ensureLeafletLoaded(){
   return leafletLoadPromise;
 }
 let currentRouteMap=null;
+let elevScrubMapMarker=null;
 function destroyRouteMap(){
   if(currentRouteMap){ currentRouteMap.remove(); currentRouteMap=null; }
+  elevScrubMapMarker=null;
 }
 function initRouteMap(race){
   destroyRouteMap();
@@ -5156,6 +5317,7 @@ function renderDetail(){
   `;
   destroyRouteMap();
   renderRouteMapIfNeeded(race);
+  setupElevationScrubbing(race);
 }
 
 function updateDetailHeaderBits(){
