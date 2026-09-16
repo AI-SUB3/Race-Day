@@ -1500,7 +1500,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null,ghostCompareId:null};
 let currentRace=null;
-const APP_VERSION='v2.40.1';
+const APP_VERSION='v2.40.2';
 
 /* ============================================================
    多語系（i18n）
@@ -3987,7 +3987,13 @@ function ghostComparisonSvg(raceA,raceB){
   const w=600,h=180,padL=8,padR=8,padT=10,padB=10;
   const allDist=[...splitsA.map(s=>s.distanceKm),...splitsB.map(s=>s.distanceKm)];
   const allPace=[...splitsA.map(s=>s.avgPaceSecPerKm),...splitsB.map(s=>s.avgPaceSecPerKm)];
-  const minX=0,maxX=Math.max(...allDist);
+  // X 軸下限原本寫死是 0（代表「起點」），但如果兩場賽事的分段紀錄本來就只
+  // 集中在賽事的某一段（例如只補了最後幾公里的配速，或分段紀錄本來就沒有
+  // 從頭開始），把 0 當成下限會硬生生撐出一大段完全沒有資料的空白區域，
+  // 實際資料反而被擠壓成畫面邊緣一小條看起來像「壞掉」的線。改用資料本身
+  // 實際的最小距離當下限，跟海拔剖面圖用同一種做法，圖表才會確實對應到
+  // 資料涵蓋的範圍。
+  const minX=Math.min(...allDist),maxX=Math.max(...allDist);
   const paceMin=Math.min(...allPace),paceMax=Math.max(...allPace);
   const paceSpan=(paceMax-paceMin)||1;
   const minY=paceMin-paceSpan*0.08,maxY=paceMax+paceSpan*0.08;
