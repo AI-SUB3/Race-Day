@@ -536,6 +536,9 @@
   .progress-ring-fill{transition:stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1);}
   .progress-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
   .focus-weather-row{display:flex;gap:12px;flex-wrap:wrap;font-size:15px;font-weight:600;}
+  .focus-weather-live-note{color:var(--stone);margin-top:4px;}
+  .focus-weather-error{color:var(--flag);margin-top:4px;}
+  .focus-weather-gps-hint{color:var(--stone);margin-top:4px;}
   .focus-panel-view-btn{width:100%;justify-content:center;}
   @media (max-width:640px){
     .focus-panel-grid{grid-template-columns:1fr;}
@@ -1082,6 +1085,8 @@ const SECTION_BASIC=[
   {path:'raceFormat',label:'競賽形式',type:'select',options:FORMAT_OPTIONS},
   {path:'schedule.raceDate',label:'比賽日期',type:'date'},
   {path:'schedule.startTime',label:'起跑時間',type:'time'},
+  {path:'schedule.startWave',label:'起跑分區 / 波次',type:'text'},
+  {path:'bibNumber',label:'號碼布編號',type:'text'},
   {path:'schedule.registrationOpenDate',label:'報名開始日期',type:'date'},
   {path:'schedule.registrationCloseDate',label:'報名截止日期',type:'date'},
   {path:'schedule.lotteryResultDate',label:'抽籤結果公佈日',type:'date'},
@@ -1427,7 +1432,8 @@ function emptyRace(name,sportType,status,raceDate){
   return {
     id:uid(),name:name||'',alias:'',series:'',status:status||'considering',sportType:sportType||'road_running',raceFormat:'solo',
     coverImage:'',coverImageAspect:null,coverImageFocalPoint:{x:50,y:50},coverImageAccentColor:null,officialUrl:'',deletedAt:null,
-    schedule:{raceDate:raceDate||'',startTime:'',registrationOpenDate:'',registrationCloseDate:'',lotteryResultDate:''},
+    bibNumber:'',
+    schedule:{raceDate:raceDate||'',startTime:'',startWave:'',registrationOpenDate:'',registrationCloseDate:'',lotteryResultDate:''},
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
     route:{distanceKm:null,elevationGainM:null,elevationLossM:null,minAltitudeM:null,maxAltitudeM:null,startAltitudeM:null,
@@ -1447,6 +1453,7 @@ function emptyRace(name,sportType,status,raceDate){
     splits:[],
     review:{hitTheWallNotes:'',courseReview:'',pros:'',cons:'',lessonsLearned:''},
     mediaLinks:[],
+    liveForecast:null,
     createdAt:now,updatedAt:now,
   };
 }
@@ -1459,7 +1466,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.35.3';
+const APP_VERSION='v2.37.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1523,6 +1530,12 @@ const JA={
   'ui.focusPacing':'ペース戦略',
   'ui.focusNoGoals':'まだ目標タイムが設定されていません',
   'ui.focusWeather':'天気予報',
+  'ui.weatherPrecipProb':'降水確率','ui.weatherGust':'突風',
+  'ui.weatherLiveNote':'ライブ予報、{n}分前に更新',
+  'ui.weatherFetching':'取得中…','ui.weatherRefresh':'予報を更新','ui.weatherFetch':'ライブ予報を取得',
+  'ui.weatherNeedsGps':'GPX/FIT トラックを取り込むとライブ予報を取得できます',
+  'ui.weatherFetchError':'天気予報の取得に失敗しました。ネット接続を確認してもう一度お試しください。',
+  'ui.weatherErrorNoData':'この座標と日付では予報データが見つかりませんでした',
   'ui.focusNoWeather':'まだ気象予報が入力されていません',
   'ui.focusViewRace':'大会の詳細を見る',
   'ui.importExcel':'Excelを読み込む','ui.exportJson':'JSONを書き出す','ui.exportIcs':'カレンダーリマインダーを書き出す',
@@ -1631,6 +1644,11 @@ const JA={
   'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
   'ui.resultAvgHr':'平均心拍数','ui.resultElevGain':'累積標高',
   'ui.pbBadge':'自己ベスト PB','ui.generateShareImage':'シェア画像を作成',
+  'ui.downloadDossier':'作戦カードをダウンロード','ui.dossierLabel':'レース前作戦カード',
+  'ui.dossierCutoffs':'CP／関門時間','ui.dossierMoreCps':'他 {n} 箇所の関門は非表示',
+  'ui.dossierEmergencyContact':'緊急連絡先','ui.dossierNutrition':'補給プラン',
+  'ui.dossierEmptyHint':'ゼッケン番号、CP関門時間、緊急連絡先、補給プランがまだ未入力です。レース詳細ページで入力すると、このカードがもっと役立ちます',
+  'ui.dossierSuffix':'-作戦カード.png','ui.unitPacks':'個','ui.unitTablets':'錠',
   'ui.splitPositive':'ポジティブスプリット（後半失速）','ui.splitNegative':'ネガティブスプリット（後半加速）',
   // ---- GPX/TCX 匯入 ----
   'ui.gpxImportBtn':'アクティビティファイルを読み込む（GPX / TCX / FIT）',
@@ -1757,6 +1775,7 @@ const JA={
   'field.basic.series':'シリーズ名（年別比較用、同じシリーズは同じ名前で）',
   'field.basic.status':'ステータス','field.basic.sportType':'主な種目','field.basic.raceFormat':'形式',
   'field.basic.schedule.raceDate':'レース日','field.basic.schedule.startTime':'スタート時刻',
+  'field.basic.schedule.startWave':'スタートウェーブ／組','field.basic.bibNumber':'ゼッケン番号',
   'field.basic.schedule.registrationOpenDate':'エントリー開始日','field.basic.schedule.registrationCloseDate':'エントリー締切日',
   'field.basic.schedule.lotteryResultDate':'抽選結果発表日',
   'field.basic.lottery.applicants':'抽選応募者数','field.basic.lottery.winners':'抽選当選枠／当選者数',
@@ -1833,6 +1852,12 @@ const EN={
   'ui.focusPacing':'Pace Strategy',
   'ui.focusNoGoals':'No target time set yet',
   'ui.focusWeather':'Weather Forecast',
+  'ui.weatherPrecipProb':'Rain chance','ui.weatherGust':'Gust',
+  'ui.weatherLiveNote':'Live forecast, updated {n} min ago',
+  'ui.weatherFetching':'Fetching…','ui.weatherRefresh':'Refresh forecast','ui.weatherFetch':'Fetch live forecast',
+  'ui.weatherNeedsGps':'Import a GPX/FIT track to fetch a live forecast',
+  'ui.weatherFetchError':'Failed to fetch the weather forecast. Please check your connection and try again.',
+  'ui.weatherErrorNoData':'No forecast data found for this location and date',
   'ui.focusNoWeather':'No forecast entered yet',
   'ui.focusViewRace':'View Full Race',
   'ui.importExcel':'Import Excel','ui.exportJson':'Export JSON','ui.exportIcs':'Export Calendar Reminders',
@@ -1933,6 +1958,11 @@ const EN={
   'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
   'ui.pbBadge':'Personal Best','ui.generateShareImage':'Generate share image',
+  'ui.downloadDossier':'Download pre-race card','ui.dossierLabel':'Pre-Race Dossier',
+  'ui.dossierCutoffs':'Checkpoints / Cutoffs','ui.dossierMoreCps':'{n} more cutoffs not shown',
+  'ui.dossierEmergencyContact':'Emergency Contact','ui.dossierNutrition':'Nutrition Plan',
+  'ui.dossierEmptyHint':'No bib number, checkpoints, emergency contact, or nutrition plan yet. Fill these in on the race detail page and this card will be more useful.',
+  'ui.dossierSuffix':'-pre-race-card.png','ui.unitPacks':'pcs','ui.unitTablets':'tabs',
   'ui.splitPositive':'Positive split (slowed down)','ui.splitNegative':'Negative split (sped up)',
   'ui.gpxImportBtn':'Import activity file (GPX / TCX / FIT)',
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
@@ -2055,6 +2085,7 @@ const EN={
   'field.basic.series':'Race Series (for year-over-year comparison — use the same name each year)',
   'field.basic.status':'Status','field.basic.sportType':'Primary Sport','field.basic.raceFormat':'Format',
   'field.basic.schedule.raceDate':'Race Date','field.basic.schedule.startTime':'Start Time',
+  'field.basic.schedule.startWave':'Start Wave / Corral','field.basic.bibNumber':'Bib Number',
   'field.basic.schedule.registrationOpenDate':'Registration Opens','field.basic.schedule.registrationCloseDate':'Registration Closes',
   'field.basic.schedule.lotteryResultDate':'Lottery Result Date',
   'field.basic.lottery.applicants':'Lottery Applicants','field.basic.lottery.winners':'Lottery Slots / Winners',
@@ -2225,6 +2256,9 @@ function migrateRace(r){
   if(r.results&&r.results.firstHalfSeconds===undefined) r.results.firstHalfSeconds=null;
   if(r.results&&r.results.secondHalfSeconds===undefined) r.results.secondHalfSeconds=null;
   if(r.performanceData&&r.performanceData.shoeId===undefined) r.performanceData.shoeId='';
+  if(r.liveForecast===undefined) r.liveForecast=null;
+  if(r.bibNumber==null) r.bibNumber='';
+  if(r.schedule&&r.schedule.startWave==null) r.schedule.startWave='';
   return r;
 }
 
@@ -4117,6 +4151,171 @@ async function downloadShareImage(race){
 }
 
 /* ============================================================
+   賽前作戰卡 / 鎖屏桌布產生器
+   9:16 直式圖片，把號碼布、起跑分區時間、CP 關門時間、緊急聯絡人、
+   補給配方濃縮成一張高對比卡片，設成手機鎖屏桌布後不用解鎖就能
+   快速確認關門點。手機的時鐘/通知通常疊在畫面最上方、主畫面指示
+   條疊在最下方，所以核心資訊集中畫在中段，上下各留一段安全邊界。
+   ============================================================ */
+function canvasWrapTextCentered(ctx,text,cx,y,maxWidth,lineHeight,maxLines){
+  ctx.textAlign='center';
+  const endY=canvasWrapText(ctx,text,cx,y,maxWidth,lineHeight,maxLines);
+  ctx.textAlign='left';
+  return endY;
+}
+async function buildDossierCanvas(race){
+  try{ await document.fonts.ready; }catch(e){}
+  const W=1080,H=1920;
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const uiFont=canvasFontFamily();
+  const monoFont='"IBM Plex Mono",monospace';
+
+  ctx.fillStyle='#0D1013';
+  ctx.fillRect(0,0,W,H);
+
+  let y=220;
+  ctx.textAlign='center';
+  ctx.fillStyle='#6B7178';
+  ctx.font=`26px ${uiFont}`;
+  ctx.fillText(t('ui.dossierLabel','賽前作戰卡'),W/2,y);
+  y+=64;
+
+  ctx.fillStyle='#EDEEE9';
+  ctx.font=`bold 46px ${uiFont}`;
+  y=canvasWrapTextCentered(ctx,race.name||t('ui.unnamedRace','(未命名賽事)'),W/2,y,W-140,58,2);
+  y+=44;
+
+  ctx.fillStyle='#9BA3A0';
+  ctx.font=`26px ${monoFont}`;
+  ctx.textAlign='center';
+  ctx.fillText(race.schedule.raceDate||'',W/2,y);
+  y+=70;
+
+  if(race.bibNumber){
+    ctx.fillStyle='#6B7178';ctx.font=`22px ${uiFont}`;ctx.textAlign='center';
+    ctx.fillText(t('field.basic.bibNumber','號碼布編號'),W/2,y);
+    y+=58;
+    ctx.fillStyle='#D9B15C';ctx.font=`bold 88px ${monoFont}`;
+    ctx.fillText(race.bibNumber,W/2,y);
+    y+=76;
+  }
+  const waveTimeParts=[race.schedule.startWave,race.schedule.startTime].filter(Boolean);
+  if(waveTimeParts.length){
+    ctx.fillStyle='#EDEEE9';ctx.font=`bold 38px ${monoFont}`;ctx.textAlign='center';
+    ctx.fillText(waveTimeParts.join('  ·  '),W/2,y);
+    y+=64;
+  }
+  y+=36;
+
+  const cps=(race.checkpoints||[]).filter(c=>c.cutoffTimeSeconds!=null);
+  const emergencyContacts=(race.companions||[]).filter(c=>c.role==='emergency_contact');
+  const np=race.nutritionPlan||{};
+  const nutritionItems=[];
+  if(np.gelCount) nutritionItems.push([t('field.prep.nutritionPlan.gelCount','能量膠數量'),np.gelCount+' '+t('ui.unitPacks','包')]);
+  if(np.electrolyteTabletCount) nutritionItems.push([t('field.prep.nutritionPlan.electrolyteTabletCount','電解質 / 鹽錠數量'),np.electrolyteTabletCount+' '+t('ui.unitTablets','錠')]);
+  if(np.hydrationCapacityMl) nutritionItems.push([t('field.prep.nutritionPlan.hydrationCapacityMl','水袋容量預估'),np.hydrationCapacityMl+' ml']);
+  const hasAnyDetail=!!race.bibNumber||waveTimeParts.length>0||cps.length>0||emergencyContacts.length>0||nutritionItems.length>0;
+
+  if(!hasAnyDetail){
+    ctx.fillStyle='#4C4F52';
+    ctx.font=`26px ${uiFont}`;
+    ctx.textAlign='center';
+    canvasWrapTextCentered(ctx,t('ui.dossierEmptyHint','還沒有填寫號碼布、CP 關門時間、緊急聯絡人或補給配方，先去賽事詳情頁填一些，這張卡片會更好用'),W/2,y+120,W-260,44,4);
+    ctx.textAlign='center';
+    ctx.fillStyle='#4C4F52';
+    ctx.font=`22px ${uiFont}`;
+    ctx.fillText(t('ui.appTitle','賽事紀錄'),W/2,H-120);
+    return canvas;
+  }
+
+  ctx.strokeStyle='#2A3038';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(90,y);ctx.lineTo(W-90,y);ctx.stroke();
+  y+=64;
+
+  ctx.textAlign='left';
+  if(cps.length){
+    ctx.fillStyle='#6B7178';ctx.font=`24px ${uiFont}`;
+    ctx.fillText(t('ui.dossierCutoffs','CP / 關門時間'),90,y);
+    y+=48;
+    const maxShow=8;
+    cps.slice(0,maxShow).forEach(cp=>{
+      const distParen=cp.distanceKm!=null?(currentLang==='en'?` (${cp.distanceKm}km)`:`（${cp.distanceKm}km）`):'';
+      const label=(cp.name||'CP')+distParen;
+      ctx.fillStyle='#EDEEE9';ctx.font=`30px ${uiFont}`;ctx.textAlign='left';
+      ctx.fillText(label,90,y,560);
+      ctx.fillStyle='#E07850';ctx.font=`bold 32px ${monoFont}`;ctx.textAlign='right';
+      ctx.fillText(secToHMS(cp.cutoffTimeSeconds),W-90,y);
+      y+=56;
+    });
+    ctx.textAlign='left';
+    if(cps.length>maxShow){
+      ctx.fillStyle='#6B7178';ctx.font=`22px ${uiFont}`;
+      ctx.fillText(tf('ui.dossierMoreCps','還有 {n} 個關門點未顯示',cps.length-maxShow),90,y);
+      y+=48;
+    }
+    y+=30;
+    ctx.strokeStyle='#2A3038';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(90,y);ctx.lineTo(W-90,y);ctx.stroke();
+    y+=64;
+  }
+
+  if(emergencyContacts.length){
+    ctx.fillStyle='#6B7178';ctx.font=`24px ${uiFont}`;
+    ctx.fillText(t('ui.dossierEmergencyContact','緊急聯絡人'),90,y);
+    y+=48;
+    emergencyContacts.forEach(c=>{
+      ctx.fillStyle='#EDEEE9';ctx.font=`bold 32px ${uiFont}`;ctx.textAlign='left';
+      ctx.fillText(c.name||'',90,y);
+      if(c.contactInfo){
+        ctx.fillStyle='#9BA3A0';ctx.font=`28px ${monoFont}`;ctx.textAlign='right';
+        ctx.fillText(c.contactInfo,W-90,y);
+      }
+      ctx.textAlign='left';
+      y+=52;
+    });
+    y+=30;
+    ctx.strokeStyle='#2A3038';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(90,y);ctx.lineTo(W-90,y);ctx.stroke();
+    y+=64;
+  }
+
+  if(nutritionItems.length){
+    ctx.fillStyle='#6B7178';ctx.font=`24px ${uiFont}`;
+    ctx.fillText(t('ui.dossierNutrition','補給配方'),90,y);
+    y+=52;
+    const colW=(W-180)/nutritionItems.length;
+    nutritionItems.forEach((it,i)=>{
+      const bx=90+i*colW;
+      ctx.fillStyle='#9BA3A0';ctx.font=`22px ${uiFont}`;
+      ctx.fillText(it[0],bx,y);
+      ctx.fillStyle='#4C9A72';ctx.font=`bold 32px ${monoFont}`;
+      ctx.fillText(it[1],bx,y+42);
+    });
+    y+=90;
+  }
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#4C4F52';
+  ctx.font=`22px ${uiFont}`;
+  ctx.fillText(t('ui.appTitle','賽事紀錄'),W/2,H-120);
+
+  return canvas;
+}
+async function downloadDossierImage(race){
+  const canvas=await buildDossierCanvas(race);
+  canvas.toBlob(blob=>{
+    if(!blob) return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=(race.name||'race').replace(/[\\/:*?"<>|]/g,'')+t('ui.dossierSuffix','-賽前作戰卡.png');
+    a.click();
+    URL.revokeObjectURL(url);
+  },'image/png');
+}
+
+/* ============================================================
    主畫面渲染
    ============================================================ */
 const calendarEl=document.getElementById('calendar');
@@ -4320,6 +4519,72 @@ function yearlyChartSvg(){
    距離某場賽前狀態的賽事不到 14 天時，在主畫面最上方獨立顯示
    裝備打包進度／配速策略／天氣預報，省去在清單裡找的步驟。
    ============================================================ */
+/* ============================================================
+   即時天氣（Open-Meteo，免費、免金鑰、支援瀏覽器端直接呼叫）
+   只有賽事已經匯入 GPS 軌跡（route.trackPoints，透過 GPX/TCX 匯入）
+   且距離開賽 7 天以內時才提供，用軌跡的第一個點當作查詢座標。
+   抓回來的資料存在賽事自己身上（liveForecast），避免每次打開備戰
+   釘選面板都重新打一次 API；使用者可以手動按「重新整理」強制更新。
+   ============================================================ */
+const OPEN_METEO_STALE_MS=3*60*60*1000; // 3 小時內的快取視為新鮮，不主動重新抓
+let weatherFetchingRaceId=null;
+let weatherFetchError='';
+function raceHasGpsTrack(race){
+  return !!(race.route.trackPoints&&race.route.trackPoints.length>0);
+}
+function raceWithinLiveForecastWindow(race){
+  if(!race.schedule.raceDate) return false;
+  const days=Math.round((new Date(race.schedule.raceDate+'T00:00:00')-new Date(todayISO()+'T00:00:00'))/86400000);
+  return days>=0&&days<=7;
+}
+async function fetchLiveWeatherForRace(raceId){
+  const race=state.races.find(r=>r.id===raceId);
+  if(!race||!raceHasGpsTrack(race)||!race.schedule.raceDate) return;
+  const pt=race.route.trackPoints[0];
+  weatherFetchingRaceId=raceId;
+  weatherFetchError='';
+  renderFocusPanel();
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${pt.lat}&longitude=${pt.lon}&hourly=temperature_2m,precipitation_probability,wind_gusts_10m&timezone=auto&start_date=${race.schedule.raceDate}&end_date=${race.schedule.raceDate}`;
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data.hourly||!data.hourly.time||!data.hourly.time.length){
+      throw new Error(t('ui.weatherErrorNoData','這個座標與日期沒有查到預報資料'));
+    }
+    race.liveForecast={
+      fetchedAt:new Date().toISOString(),
+      times:data.hourly.time,
+      temp:data.hourly.temperature_2m,
+      precipProb:data.hourly.precipitation_probability,
+      gust:data.hourly.wind_gusts_10m,
+    };
+    await persist();
+  }catch(err){
+    console.error('抓取即時天氣失敗',err);
+    weatherFetchError=t('ui.weatherFetchError','抓取即時天氣失敗，請確認網路連線後再試一次。');
+  }
+  weatherFetchingRaceId=null;
+  renderFocusPanel();
+}
+function liveForecastCompactHtml(live,race){
+  const startTime=race.schedule.startTime||'08:00';
+  const targetHour=parseInt(startTime.split(':')[0],10)||8;
+  let idx=0,bestDiff=Infinity;
+  live.times.forEach((tm,i)=>{
+    const hour=parseInt(tm.slice(11,13),10);
+    const diff=Math.abs(hour-targetHour);
+    if(diff<bestDiff){ bestDiff=diff; idx=i; }
+  });
+  const temp=live.temp[idx],precip=live.precipProb[idx],gust=live.gust[idx];
+  const minsAgo=Math.max(0,Math.round((Date.now()-new Date(live.fetchedAt).getTime())/60000));
+  return `<div class="focus-weather-row mono">
+      ${temp!=null?`<span>${temp}°C</span>`:''}
+      ${precip!=null?`<span>${t('ui.weatherPrecipProb','降雨機率')} ${precip}%</span>`:''}
+      ${gust!=null?`<span>${t('ui.weatherGust','陣風')} ${gust}km/h</span>`:''}
+    </div>
+    <p class="focus-weather-live-note small">${tf('ui.weatherLiveNote','即時預報，{n} 分鐘前更新',minsAgo)}</p>`;
+}
 function computeFocusRace(){
   const todayStr=todayISO();
   const cutoff=new Date(todayStr+'T00:00:00');
@@ -4410,12 +4675,17 @@ function focusPanelHtml(){
       </div>
       <div class="focus-panel-card">
         <div class="focus-panel-card-title small">${t('ui.focusWeather','天氣預報')}</div>
-        ${hasWeather?`<div class="focus-weather-row mono">
-            ${w.avgTempC!=null?`<span>${w.avgTempC}°C</span>`:''}
-            ${w.rainProbabilityPct!=null?`<span>${t('field.weather.climateForecast.rainProbabilityPct','降雨機率')} ${w.rainProbabilityPct}%</span>`:''}
-            ${w.windSpeedKmh!=null?`<span>${t('field.weather.climateForecast.windSpeedKmh','風速')} ${w.windSpeedKmh}km/h</span>`:''}
-          </div>`
-          :`<p class="empty-hint small">${t('ui.focusNoWeather','尚未填寫氣象預報')}</p>`}
+        ${race.liveForecast?liveForecastCompactHtml(race.liveForecast,race)
+          :(hasWeather?`<div class="focus-weather-row mono">
+              ${w.avgTempC!=null?`<span>${w.avgTempC}°C</span>`:''}
+              ${w.rainProbabilityPct!=null?`<span>${t('field.weather.climateForecast.rainProbabilityPct','降雨機率')} ${w.rainProbabilityPct}%</span>`:''}
+              ${w.windSpeedKmh!=null?`<span>${t('field.weather.climateForecast.windSpeedKmh','風速')} ${w.windSpeedKmh}km/h</span>`:''}
+            </div>`
+            :`<p class="empty-hint small">${t('ui.focusNoWeather','尚未填寫氣象預報')}</p>`)}
+        ${weatherFetchError&&weatherFetchingRaceId!==race.id?`<p class="focus-weather-error small">${escapeHtml(weatherFetchError)}</p>`:''}
+        ${raceHasGpsTrack(race)&&raceWithinLiveForecastWindow(race)
+          ?`<button type="button" class="btn-text-small" data-action="fetch-live-weather" data-id="${race.id}" ${weatherFetchingRaceId===race.id?'disabled':''}>${weatherFetchingRaceId===race.id?t('ui.weatherFetching','抓取中…'):(race.liveForecast?t('ui.weatherRefresh','重新整理預報'):t('ui.weatherFetch','抓取即時預報'))}</button>`
+          :(raceWithinLiveForecastWindow(race)?`<p class="focus-weather-gps-hint small">${t('ui.weatherNeedsGps','匯入 GPX/FIT 軌跡後即可抓取即時預報')}</p>`:'')}
       </div>
     </div>
     <button type="button" class="btn-ghost focus-panel-view-btn" data-action="focus-view-race" data-id="${race.id}">${t('ui.focusViewRace','查看完整賽事')} →</button>
@@ -4812,6 +5082,7 @@ function detailHeaderHtml(race){
         <div class="dh-actions">
           <span id="save-status" class="save-status" data-state="idle"></span>
           ${race.schedule.raceDate?`<button class="btn-ghost" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
+          ${['registered','lottery_pending','considering'].includes(race.status)?`<button class="btn-ghost" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
           <button class="btn-ghost" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
           <button class="btn-ghost" data-action="duplicate-race" title="${t('ui.duplicateRaceHint','複製地點、路線、裝備等欄位，建立新的一場（適合同系列跨年賽事）')}">${t('ui.duplicateRace','複製賽事')}</button>
           <button class="btn-ghost danger" data-action="delete-race">${state.confirmDelete?t('ui.deleteConfirm','確定刪除？再按一次'):t('ui.deleteRace','刪除賽事')}</button>
@@ -5022,6 +5293,8 @@ document.addEventListener('click',e=>{
   if(dismissBtn){ state.focusDismissedId=dismissBtn.dataset.id; renderFocusPanel(); return; }
   const viewBtn=e.target.closest('[data-action="focus-view-race"]');
   if(viewBtn){ selectRace(viewBtn.dataset.id); return; }
+  const fetchWeatherBtn=e.target.closest('[data-action="fetch-live-weather"]');
+  if(fetchWeatherBtn){ fetchLiveWeatherForRace(fetchWeatherBtn.dataset.id); return; }
 });
 
 /* ============================================================
@@ -6874,6 +7147,7 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-paste-modal"]')) openPasteModal();
   if(e.target.closest('[data-action="open-gpx-picker"]')) document.getElementById('gpx-file-input').click();
   if(e.target.closest('[data-action="generate-share-image"]')&&currentRace) downloadShareImage(currentRace);
+  if(e.target.closest('[data-action="download-dossier"]')&&currentRace) downloadDossierImage(currentRace);
   if(e.target.closest('[data-action="open-shoe-modal"]')) openShoeModal();
   if(e.target.closest('[data-action="open-pacing-modal"]')) openPacingModal();
 });
