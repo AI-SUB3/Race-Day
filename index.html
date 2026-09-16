@@ -880,6 +880,12 @@
     margin-bottom:10px;background:var(--surface);
   }
   .repeat-row .field{flex:1 1 150px;min-width:130px;}
+  /* datetime-local 這種輸入框瀏覽器原生會同時顯示日期、上午/下午、時:分跟一個
+     選擇器圖示，比一般文字輸入框需要的寬度多很多；重複列表裡欄位一多，
+     min-width 130px 常常不夠，時間的時:分部分會被裁掉看不到。這裡額外給
+     datetime-local 的欄位一個比較寬的下限，其他欄位不受影響。 */
+  .repeat-row .field:has(input[type="datetime-local"]){flex-basis:210px;min-width:200px;}
+  .repeat-row .field input[type="datetime-local"]{min-width:180px;}
   .repeat-row.reorderable{padding-left:38px;}
   .reorder-controls{position:absolute;top:8px;left:8px;bottom:8px;display:flex;flex-direction:column;align-items:center;gap:2px;}
   .drag-handle{color:var(--stone);cursor:grab;padding:2px;touch-action:none;}
@@ -1494,7 +1500,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null,ghostCompareId:null};
 let currentRace=null;
-const APP_VERSION='v2.40.0';
+const APP_VERSION='v2.40.1';
 
 /* ============================================================
    多語系（i18n）
