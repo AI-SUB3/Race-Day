@@ -1516,7 +1516,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.42.1';
+const APP_VERSION='v2.44.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1609,6 +1609,7 @@ const JA={
   'ui.storageWarning':'ローカルデータが約 {n} MB になりました。ブラウザの保存容量には上限があるため、定期的に「JSONを書き出す」でバックアップするか、一部の大会のカバー写真を削除することをおすすめします。',
   'ui.storageError':'ローカル保存に失敗しました！ブラウザの保存容量が上限に達している可能性があり、直前の変更が実際には保存されていません。今すぐ「JSONを書き出す」でバックアップし、データを整理するかカバー写真を削除してから再度お試しください。',
   'ui.pasteQuickFill':'データを貼り付けて入力','ui.exportRaceIcs':'カレンダーに追加',
+  'ui.openGoogleCalendar':'Googleカレンダーで開く','ui.exportRaceIcsDefaultName':'レース',
   'ui.createRace':'大会を作成','ui.cancel':'キャンセル','ui.close':'閉じる','ui.apply':'適用',
   'ui.selectAll':'すべて選択','ui.selectNone':'選択解除','ui.addItem':'+ 追加','ui.delete':'削除',
   'ui.notYetAdded':'まだ追加されていません','ui.noMatchingRaces':'条件に一致する大会がありません',
@@ -1699,6 +1700,8 @@ const JA={
   'ui.trophyCat_explore':'探検と領域','ui.trophyCat_terrain':'地形と極限','ui.trophyCat_speed':'スピードと戦略','ui.trophyCat_crossover':'クロスオーバーと装備',
   'ui.badgeUnlockedLabel':'バッジ解除','ui.badgeCollect':'バッジを受け取る',
   'ui.badgeDownloadShare':'達成画像をダウンロード','ui.badgeShareSuffix':'-バッジ達成.png',
+  'ui.badgeShareRaceStats':'レースデータ','ui.badgeShareRouteTrack':'コースの軌跡',
+  'ui.dossierStatDistance':'距離','ui.dossierStatElevation':'累積標高','ui.dossierStatTime':'ゴールタイム','ui.dossierStatPace':'平均ペース',
   'ui.badgeUnlockCaption':'達成：{a}（{b}）','ui.badgeUnlockCaptionDate':'達成日：{n}',
   // ---- 成績儀表板 ----
   'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
@@ -1941,6 +1944,7 @@ const EN={
   'ui.storageWarning':'Local data is now about {n} MB. Browser storage has a limit, so export a JSON backup regularly, or consider removing cover photos from some races.',
   'ui.storageError':'Local save failed! Your browser storage may be full, and your latest changes were not actually saved. Please export a JSON backup right away, then free up space by deleting some data or removing cover photos before trying again.',
   'ui.pasteQuickFill':'Paste to quick-fill','ui.exportRaceIcs':'Add calendar reminder',
+  'ui.openGoogleCalendar':'Open in Google Calendar','ui.exportRaceIcsDefaultName':'Race',
   'ui.createRace':'Create Race','ui.cancel':'Cancel','ui.close':'Close','ui.apply':'Apply',
   'ui.selectAll':'Select All','ui.selectNone':'Select None','ui.addItem':'+ Add','ui.delete':'Delete',
   'ui.notYetAdded':'Nothing added yet','ui.noMatchingRaces':'No races match the current filters',
@@ -2024,6 +2028,8 @@ const EN={
   'ui.trophyCat_explore':'Exploration & Territory','ui.trophyCat_terrain':'Terrain & Extremes','ui.trophyCat_speed':'Speed & Strategy','ui.trophyCat_crossover':'Crossover & Gear',
   'ui.badgeUnlockedLabel':'Badge Unlocked','ui.badgeCollect':'Collect Badge',
   'ui.badgeDownloadShare':'Download Achievement Image','ui.badgeShareSuffix':'-badge-achievement.png',
+  'ui.badgeShareRaceStats':'Race Data','ui.badgeShareRouteTrack':'Route Track',
+  'ui.dossierStatDistance':'Distance','ui.dossierStatElevation':'Elevation Gain','ui.dossierStatTime':'Finish Time','ui.dossierStatPace':'Avg Pace',
   'ui.badgeUnlockCaption':'Earned: {a} ({b})','ui.badgeUnlockCaptionDate':'Earned: {n}',
   'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
@@ -4634,6 +4640,41 @@ async function downloadDossierImage(race){
    方便直接發布到社群限時動態。可以在開箱當下下載，也可以事後
    從榮譽櫃裡任何一個已解鎖的徽章回頭下載。
    ============================================================ */
+// 在 canvas 上畫出純軌跡線條（去背，不含地圖底圖），經度依緯度餘弦修正，
+// 避免路線的實際形狀因為地圖投影被拉伸變形。起點用綠色圓點、終點用紅色
+// 圓點標示方向。
+function drawRouteTrackOnCanvas(ctx,trackPoints,cx,cy,maxW,maxH,color){
+  if(!trackPoints||trackPoints.length<2) return false;
+  const lats=trackPoints.map(p=>p.lat),lons=trackPoints.map(p=>p.lon);
+  const minLat=Math.min(...lats),maxLat=Math.max(...lats);
+  const minLon=Math.min(...lons),maxLon=Math.max(...lons);
+  const avgLat=(minLat+maxLat)/2;
+  const lonScale=Math.cos(avgLat*Math.PI/180)||1;
+  const spanLat=(maxLat-minLat)||0.0001;
+  const spanLon=((maxLon-minLon)*lonScale)||0.0001;
+  const scale=Math.min(maxW/spanLon,maxH/spanLat);
+  const drawW=spanLon*scale,drawH=spanLat*scale;
+  const offsetX=cx-drawW/2,offsetY=cy-drawH/2;
+  function project(p){
+    return [offsetX+(p.lon-minLon)*lonScale*scale,offsetY+(maxLat-p.lat)*scale];
+  }
+  ctx.save();
+  ctx.strokeStyle=color;ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.shadowColor='rgba(217,177,92,0.35)';ctx.shadowBlur=14;
+  ctx.beginPath();
+  trackPoints.forEach((p,i)=>{
+    const [x,y]=project(p);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.shadowBlur=0;
+  const [sx,sy]=project(trackPoints[0]);
+  const [ex,ey]=project(trackPoints[trackPoints.length-1]);
+  ctx.fillStyle='#4C9A72';ctx.beginPath();ctx.arc(sx,sy,11,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#B8451F';ctx.beginPath();ctx.arc(ex,ey,11,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+  return true;
+}
 async function buildBadgeShareCanvas(badgeId){
   const badge=BADGE_DEFINITIONS.find(b=>b.id===badgeId);
   if(!badge) return null;
@@ -4679,7 +4720,55 @@ async function buildBadgeShareCanvas(badgeId){
     ctx.fillStyle='#6B7178';
     ctx.font=`26px ${uiFont}`;
     ctx.textAlign='center';
-    canvasWrapTextCentered(ctx,caption,W/2,y,W-240,36,2);
+    y=canvasWrapTextCentered(ctx,caption,W/2,y,W-240,36,2);
+    y+=40;
+  }
+
+  // 達成這個徽章的那場賽事（如果有對應到單一賽事），把它的關鍵數據跟
+  // GPS 軌跡（去背，只留線條）一併畫在下方，讓成就圖不只是徽章本身，
+  // 也記錄下當時那場賽事的樣子。沒有對應賽事、或該賽事沒有軌跡資料時，
+  // 就對應地略過這兩段，不強行畫出空白區塊。
+  const triggerRaceId=badgeUnlocks[badgeId]&&badgeUnlocks[badgeId].triggerRaceId;
+  const triggerRace=triggerRaceId?state.races.find(r=>r.id===triggerRaceId):null;
+  if(triggerRace){
+    const stats=[];
+    if(triggerRace.route.distanceKm!=null) stats.push([t('ui.dossierStatDistance','距離'),triggerRace.route.distanceKm.toFixed(1)+' km']);
+    if(triggerRace.route.elevationGainM) stats.push([t('ui.dossierStatElevation','總爬升'),Math.round(triggerRace.route.elevationGainM)+' m']);
+    if(triggerRace.results.chipTimeSeconds!=null) stats.push([t('ui.dossierStatTime','完賽時間'),secToHMS(triggerRace.results.chipTimeSeconds)]);
+    if(triggerRace.results.chipTimeSeconds!=null&&triggerRace.route.distanceKm){
+      const paceSec=triggerRace.results.chipTimeSeconds/triggerRace.route.distanceKm;
+      stats.push([t('ui.dossierStatPace','平均配速'),secToHMS(Math.round(paceSec)).replace(/^0+:/,'')+'/km']);
+    }
+    if(stats.length){
+      ctx.strokeStyle='#2A3038';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(160,y);ctx.lineTo(W-160,y);ctx.stroke();
+      y+=54;
+      ctx.fillStyle='#6B7178';ctx.font=`24px ${uiFont}`;ctx.textAlign='center';
+      ctx.fillText(t('ui.badgeShareRaceStats','賽事數據'),W/2,y);
+      y+=50;
+      const cols=Math.min(stats.length,4);
+      const colW=(W-220)/cols;
+      stats.slice(0,4).forEach((s,i)=>{
+        const bx=110+colW*(i+0.5);
+        ctx.fillStyle='#9BA3A0';ctx.font=`22px ${uiFont}`;ctx.textAlign='center';
+        ctx.fillText(s[0],bx,y);
+        ctx.fillStyle='#D9B15C';ctx.font=`bold 32px "IBM Plex Mono",monospace`;
+        ctx.fillText(s[1],bx,y+42);
+      });
+      y+=100;
+    }
+    const trackPoints=triggerRace.route.trackPoints;
+    if(trackPoints&&trackPoints.length>=2){
+      ctx.strokeStyle='#2A3038';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(160,y);ctx.lineTo(W-160,y);ctx.stroke();
+      y+=54;
+      ctx.fillStyle='#6B7178';ctx.font=`24px ${uiFont}`;ctx.textAlign='center';
+      ctx.fillText(t('ui.badgeShareRouteTrack','路線軌跡'),W/2,y);
+      y+=40;
+      const trackAreaH=Math.min(560,H-160-y);
+      drawRouteTrackOnCanvas(ctx,trackPoints,W/2,y+trackAreaH/2,W-220,trackAreaH,'#D9B15C');
+      y+=trackAreaH+40;
+    }
   }
 
   ctx.textAlign='center';
@@ -5471,6 +5560,7 @@ function detailHeaderHtml(race){
         <div class="dh-actions">
           <span id="save-status" class="save-status" data-state="idle"></span>
           ${race.schedule.raceDate?`<button class="btn-ghost" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
+          ${race.schedule.raceDate?`<button class="btn-ghost" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
           ${['registered','lottery_pending','considering'].includes(race.status)?`<button class="btn-ghost" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
           <button class="btn-ghost" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
           <button class="btn-ghost" data-action="duplicate-race" title="${t('ui.duplicateRaceHint','複製地點、路線、裝備等欄位，建立新的一場（適合同系列跨年賽事）')}">${t('ui.duplicateRace','複製賽事')}</button>
@@ -5926,6 +6016,21 @@ function buildICS(races){
   const events=races.map(raceToICSEvent).filter(Boolean).join('\r\n');
   return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//賽事紀錄//RaceDay//ZH','CALSCALE:GREGORIAN',events,'END:VCALENDAR'].join('\r\n');
 }
+function buildGoogleCalendarUrl(race){
+  if(!race.schedule.raceDate) return null;
+  const dt=race.schedule.raceDate.replace(/-/g,'');
+  const startDate=new Date(race.schedule.raceDate+'T00:00:00');
+  const endDate=new Date(startDate.getTime()+86400000);
+  const endStr=endDate.getFullYear()+String(endDate.getMonth()+1).padStart(2,'0')+String(endDate.getDate()).padStart(2,'0');
+  const params=new URLSearchParams();
+  params.set('action','TEMPLATE');
+  params.set('text',race.name||t('ui.exportRaceIcsDefaultName','賽事'));
+  params.set('dates',`${dt}/${endStr}`);
+  const location=[race.location.venueName,race.location.city].filter(Boolean).join(' ');
+  if(location) params.set('location',location);
+  if(race.officialUrl) params.set('details',race.officialUrl);
+  return 'https://calendar.google.com/calendar/render?'+params.toString();
+}
 function downloadICS(icsText,filename){
   const blob=new Blob([icsText],{type:'text/calendar;charset=utf-8'});
   const url=URL.createObjectURL(blob);
@@ -5942,6 +6047,10 @@ document.getElementById('btn-export-ics').addEventListener('click',()=>{
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="export-race-ics"]')&&currentRace){
     downloadICS(buildICS([currentRace]),(currentRace.name||'賽事').replace(/[\\/:*?"<>|]/g,'')+'-提醒.ics');
+  }
+  if(e.target.closest('[data-action="open-google-calendar"]')&&currentRace){
+    const url=buildGoogleCalendarUrl(currentRace);
+    if(url) window.open(url,'_blank','noopener');
   }
 });
 
