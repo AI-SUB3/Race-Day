@@ -356,6 +356,7 @@
   .badge-unbox-label{color:var(--gold);text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin-bottom:6px;}
   .badge-unbox-name{font-size:22px;font-weight:700;margin-bottom:8px;}
   .badge-unbox-hint{color:var(--ink-soft);margin-bottom:22px;}
+  .badge-unbox-actions{display:flex;gap:10px;justify-content:center;}
   .confetti-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;border-radius:14px;}
   .confetti-piece{
     position:absolute;top:-20px;opacity:0.9;border-radius:1px;
@@ -399,6 +400,10 @@
   .trophy-badge-name{font-size:10.5px;line-height:1.3;color:var(--ink-soft);}
   .trophy-badge-condition{font-size:9.5px;line-height:1.3;color:var(--stone);}
   .trophy-badge-caption{font-size:9px;line-height:1.3;color:var(--stone);opacity:0.75;margin-top:1px;}
+  .trophy-badge-share-btn{
+    margin-top:5px;background:none;border:none;padding:0;font-size:9px;color:var(--trail);
+    text-decoration:underline;cursor:pointer;font-family:inherit;
+  }
   .trophy-badge.unlocked .trophy-badge-name{color:var(--ink);font-weight:600;}
   .trophy-badge-progress{width:100%;height:3px;border-radius:2px;background:var(--rule);overflow:hidden;margin-top:2px;}
   .trophy-badge-progress-fill{height:100%;background:var(--gold);border-radius:2px;}
@@ -1478,7 +1483,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.38.0';
+const APP_VERSION='v2.39.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1652,6 +1657,7 @@ const JA={
   'ui.trophyCabinetTitle':'トロフィーケース',
   'ui.trophyCat_explore':'探検と領域','ui.trophyCat_terrain':'地形と極限','ui.trophyCat_speed':'スピードと戦略','ui.trophyCat_crossover':'クロスオーバーと装備',
   'ui.badgeUnlockedLabel':'バッジ解除','ui.badgeCollect':'バッジを受け取る',
+  'ui.badgeDownloadShare':'達成画像をダウンロード','ui.badgeShareSuffix':'-バッジ達成.png',
   'ui.badgeUnlockCaption':'達成：{a}（{b}）','ui.badgeUnlockCaptionDate':'達成日：{n}',
   // ---- 成績儀表板 ----
   'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
@@ -1968,6 +1974,7 @@ const EN={
   'ui.trophyCabinetTitle':'Trophy Case',
   'ui.trophyCat_explore':'Exploration & Territory','ui.trophyCat_terrain':'Terrain & Extremes','ui.trophyCat_speed':'Speed & Strategy','ui.trophyCat_crossover':'Crossover & Gear',
   'ui.badgeUnlockedLabel':'Badge Unlocked','ui.badgeCollect':'Collect Badge',
+  'ui.badgeDownloadShare':'Download Achievement Image','ui.badgeShareSuffix':'-badge-achievement.png',
   'ui.badgeUnlockCaption':'Earned: {a} ({b})','ui.badgeUnlockCaptionDate':'Earned: {n}',
   'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
@@ -3637,9 +3644,15 @@ function showBadgeUnboxing(badgeId){
       <div class="badge-unbox-label small">${t('ui.badgeUnlockedLabel','徽章解鎖')}</div>
       <div class="badge-unbox-name">${escapeHtml(badge.name)}</div>
       <div class="badge-unbox-hint small">${escapeHtml(badge.hint)}</div>
-      <button type="button" class="btn-primary badge-unbox-collect">${t('ui.badgeCollect','收下徽章')}</button>
+      <div class="badge-unbox-actions">
+        <button type="button" class="btn-ghost badge-unbox-share" data-id="${badge.id}">${t('ui.badgeDownloadShare','下載成就圖')}</button>
+        <button type="button" class="btn-primary badge-unbox-collect">${t('ui.badgeCollect','收下徽章')}</button>
+      </div>
     </div>`;
   document.body.appendChild(overlay);
+  overlay.querySelector('.badge-unbox-share').addEventListener('click',()=>{
+    downloadBadgeShareImage(badgeId);
+  });
   overlay.querySelector('.badge-unbox-collect').addEventListener('click',()=>{
     overlay.classList.add('closing');
     setTimeout(()=>{
@@ -4477,6 +4490,80 @@ async function downloadDossierImage(race){
 }
 
 /* ============================================================
+   單一徽章分享卡：9:16 直式圖片，呼應開箱動畫的金色慶祝感，
+   方便直接發布到社群限時動態。可以在開箱當下下載，也可以事後
+   從榮譽櫃裡任何一個已解鎖的徽章回頭下載。
+   ============================================================ */
+async function buildBadgeShareCanvas(badgeId){
+  const badge=BADGE_DEFINITIONS.find(b=>b.id===badgeId);
+  if(!badge) return null;
+  try{ await document.fonts.ready; }catch(e){}
+  const W=1080,H=1920;
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const uiFont=canvasFontFamily();
+
+  ctx.fillStyle='#0D1013';
+  ctx.fillRect(0,0,W,H);
+  const glow=ctx.createRadialGradient(W/2,H*0.35,0,W/2,H*0.35,W*0.75);
+  glow.addColorStop(0,'rgba(217,177,92,0.20)');
+  glow.addColorStop(1,'rgba(217,177,92,0)');
+  ctx.fillStyle=glow;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#D9B15C';
+  ctx.font=`bold 30px ${uiFont}`;
+  ctx.fillText(t('ui.badgeUnlockedLabel','徽章解鎖'),W/2,270);
+
+  ctx.font='210px "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif';
+  ctx.fillText(badge.icon,W/2,560);
+
+  ctx.fillStyle='#EDEEE9';
+  ctx.font=`bold 60px ${uiFont}`;
+  let y=680;
+  y=canvasWrapTextCentered(ctx,badge.name,W/2,y,W-160,72,2);
+  y+=54;
+
+  ctx.fillStyle='#9BA3A0';
+  ctx.font=`28px ${uiFont}`;
+  y=canvasWrapTextCentered(ctx,badge.hint,W/2,y,W-240,42,3);
+  y+=70;
+
+  const caption=badgeUnlockCaption(badgeId);
+  if(caption){
+    ctx.strokeStyle='#2A3038';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(160,y);ctx.lineTo(W-160,y);ctx.stroke();
+    y+=56;
+    ctx.fillStyle='#6B7178';
+    ctx.font=`26px ${uiFont}`;
+    ctx.textAlign='center';
+    canvasWrapTextCentered(ctx,caption,W/2,y,W-240,36,2);
+  }
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#4C4F52';
+  ctx.font=`22px ${uiFont}`;
+  ctx.fillText(t('ui.appTitle','賽事紀錄'),W/2,H-120);
+
+  return canvas;
+}
+async function downloadBadgeShareImage(badgeId){
+  const canvas=await buildBadgeShareCanvas(badgeId);
+  if(!canvas) return;
+  const badge=BADGE_DEFINITIONS.find(b=>b.id===badgeId);
+  canvas.toBlob(blob=>{
+    if(!blob) return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=(badge?badge.name:'badge').replace(/[\\/:*?"<>|]/g,'')+t('ui.badgeShareSuffix','-徽章成就.png');
+    a.click();
+    URL.revokeObjectURL(url);
+  },'image/png');
+}
+
+/* ============================================================
    主畫面渲染
    ============================================================ */
 const calendarEl=document.getElementById('calendar');
@@ -5045,6 +5132,7 @@ function renderTrophyCabinet(){
                 <span class="trophy-badge-name small">${escapeHtml(b.name)}</span>
                 <span class="trophy-badge-condition">${escapeHtml(b.hint)}</span>
                 ${raceCaption?`<span class="trophy-badge-caption">${raceCaption}</span>`:''}
+                <button type="button" class="trophy-badge-share-btn" data-action="download-badge-share" data-id="${b.id}" title="${t('ui.badgeDownloadShare','下載成就圖')}">${t('ui.badgeDownloadShare','下載成就圖')}</button>
               </div>`;
             }
             let result={progress:0};
@@ -7310,6 +7398,8 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-gpx-picker"]')) document.getElementById('gpx-file-input').click();
   if(e.target.closest('[data-action="generate-share-image"]')&&currentRace) downloadShareImage(currentRace);
   if(e.target.closest('[data-action="download-dossier"]')&&currentRace) downloadDossierImage(currentRace);
+  const badgeShareBtn=e.target.closest('[data-action="download-badge-share"]');
+  if(badgeShareBtn) downloadBadgeShareImage(badgeShareBtn.dataset.id);
   if(e.target.closest('[data-action="open-shoe-modal"]')) openShoeModal();
   if(e.target.closest('[data-action="open-pacing-modal"]')) openPacingModal();
 });
