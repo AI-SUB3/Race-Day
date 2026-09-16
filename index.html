@@ -1500,7 +1500,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null,ghostCompareId:null};
 let currentRace=null;
-const APP_VERSION='v2.40.2';
+const APP_VERSION='v2.40.3';
 
 /* ============================================================
    多語系（i18n）
@@ -3955,14 +3955,44 @@ function renderSplitsChart(race){
    賽事的分段距離不需要完全對齊（例如一個是每 5km 一段、一個是每
    1km 一段），用線性內插對齊到共同的距離刻度上再比較。
    ============================================================ */
+// 很多人記分段習慣是每公里記一次「累積距離＋累積時間」（例如 Garmin
+// 自動分圈），不會另外手動算、填「這一段的平均配速」欄位——如果只認
+// avgPaceSecPerKm 這個欄位，這種紀錄方式下大部分分段都會被當成「沒有
+// 配速資料」整批濾掉，圖表上只剩下極少數真的有手動填配速的點，變成
+// 只在畫面邊緣擠出一小段看起來像壞掉的線。這裡改成：有填 avgPaceSecPerKm
+// 就直接用，沒填的話，只要這筆跟前一筆（依距離排序後緊鄰的前一筆）都有
+// 距離跟累積時間，就用兩者的差直接算出這一段的配速，不用使用者自己手動
+// 换算填入。
+function deriveGhostPaceSplits(rawSplits){
+  const withDist=(rawSplits||[]).filter(s=>s.distanceKm!=null).slice().sort((a,b)=>a.distanceKm-b.distanceKm);
+  const out=[];
+  for(let i=0;i<withDist.length;i++){
+    const s=withDist[i];
+    if(s.avgPaceSecPerKm!=null){ out.push({distanceKm:s.distanceKm,avgPaceSecPerKm:s.avgPaceSecPerKm}); continue; }
+    if(s.splitTimeSeconds==null) continue;
+    if(i===0){
+      // 第一筆分段沒有更前面的點可以取差值，假設賽事從距離 0、時間 0 開始，
+      // 直接用這筆本身的累積時間除以距離當作第一段的配速。
+      if(s.distanceKm>0) out.push({distanceKm:s.distanceKm,avgPaceSecPerKm:s.splitTimeSeconds/s.distanceKm});
+      continue;
+    }
+    const prev=withDist[i-1];
+    if(prev.splitTimeSeconds==null) continue;
+    const distDelta=s.distanceKm-prev.distanceKm;
+    const timeDelta=s.splitTimeSeconds-prev.splitTimeSeconds;
+    if(distDelta<=0||timeDelta<=0) continue;
+    out.push({distanceKm:s.distanceKm,avgPaceSecPerKm:timeDelta/distDelta});
+  }
+  return out;
+}
 function findGhostComparisonCandidates(race){
   if(!race.series||!race.series.trim()) return [];
   const key=race.series.trim();
-  const ownSplits=(race.splits||[]).filter(s=>s.avgPaceSecPerKm!=null&&s.distanceKm!=null);
+  const ownSplits=deriveGhostPaceSplits(race.splits);
   if(ownSplits.length<2) return [];
   return state.races.filter(r=>
     r.id!==race.id&&!r.deletedAt&&r.series&&r.series.trim()===key&&
-    (r.splits||[]).filter(s=>s.avgPaceSecPerKm!=null&&s.distanceKm!=null).length>=2
+    deriveGhostPaceSplits(r.splits).length>=2
   ).sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
 }
 function ghostInterpolatePace(splits,distKm){
@@ -3980,8 +4010,8 @@ function ghostInterpolatePace(splits,distKm){
   return last.avgPaceSecPerKm;
 }
 function ghostComparisonSvg(raceA,raceB){
-  const splitsA=(raceA.splits||[]).filter(s=>s.avgPaceSecPerKm!=null&&s.distanceKm!=null).sort((a,b)=>a.distanceKm-b.distanceKm);
-  const splitsB=(raceB.splits||[]).filter(s=>s.avgPaceSecPerKm!=null&&s.distanceKm!=null).sort((a,b)=>a.distanceKm-b.distanceKm);
+  const splitsA=deriveGhostPaceSplits(raceA.splits);
+  const splitsB=deriveGhostPaceSplits(raceB.splits);
   if(splitsA.length<2||splitsB.length<2) return '';
 
   const w=600,h=180,padL=8,padR=8,padT=10,padB=10;
