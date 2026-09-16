@@ -463,22 +463,13 @@
 
   /* ---------- HR zones & splits chart ---------- */
   .hr-zone-tag{display:inline-block;font-size:10px;font-weight:700;color:#fff;padding:1px 5px;border-radius:8px;vertical-align:middle;}
-  .splits-chart-wrap{margin:4px 2px 18px;overflow-x:auto;-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
+  .splits-chart-wrap{margin:4px 2px 18px;overflow-x:auto;}
+  .splits-chart-wrap.scroll-fade{-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
   .splits-chart-table{width:100%;border-collapse:collapse;font-size:13px;}
   .splits-chart-table th{text-align:left;padding:5px 8px;color:var(--stone);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--rule);}
   .splits-chart-table td{padding:0 8px;border-bottom:1px solid var(--rule);}
   .splits-chart-pace-cell{padding:0!important;}
 
-  /* ---------- Ghost comparison ---------- */
-  .ghost-chart-wrap{margin:16px 2px 18px;}
-  .ghost-chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-  .ghost-compare-select{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:3px 8px;color:var(--ink);font:inherit;}
-  .ghost-chart-svg{width:100%;height:130px;display:block;}
-  .ghost-chart-legend{display:flex;align-items:center;gap:14px;margin-top:8px;color:var(--stone);flex-wrap:wrap;}
-  .ghost-legend-swatch{display:inline-block;width:16px;height:2.5px;margin-right:5px;vertical-align:middle;}
-  .ghost-legend-swatch-a{background:var(--gold);}
-  .ghost-legend-swatch-b{background:var(--stone);background-image:linear-gradient(to right, var(--stone) 60%, transparent 60%);background-size:6px 2.5px;}
-  .ghost-legend-hint{margin-left:auto;}
   .splits-chart-bar{display:flex;align-items:center;padding:6px 8px;height:100%;}
 
   /* ---------- Elevation profile ---------- */
@@ -575,7 +566,8 @@
   /* ---------- Media gallery strip ---------- */
   .media-gallery-wrap{margin:4px 2px 22px;}
   .media-gallery-head{color:var(--stone);margin-bottom:8px;}
-  .media-gallery-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity;-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
+  .media-gallery-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity;}
+  .media-gallery-strip.scroll-fade{-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
   .media-gallery-card{
     position:relative;flex:0 0 auto;width:110px;height:110px;border-radius:6px;overflow:hidden;
     border:1px solid var(--rule);background:var(--surface);scroll-snap-align:start;
@@ -973,7 +965,8 @@
 
   /* ---------- Series comparison ---------- */
   .series-best{font-size:15px;margin:0 0 12px;}
-  .series-table-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
+  .series-table-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;}
+  .series-table-wrap.scroll-fade{-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
   .series-table{border-collapse:collapse;width:100%;font-size:14px;}
   .series-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);background:var(--paper);white-space:nowrap;}
   .series-table td{padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;}
@@ -1498,9 +1491,9 @@ function emptyRace(name,sportType,status,raceDate){
 const today0=new Date();
 const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',confirmDelete:false,
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
-  viewMode:'calendar',focusDismissedId:null,user:null,ghostCompareId:null};
+  viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.40.3';
+const APP_VERSION='v2.41.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1622,7 +1615,6 @@ const JA={
   'ui.tableColDate':'日付','ui.tableColName':'大会名','ui.tableColStatus':'状態',
   'ui.tableColDistance':'距離(km)','ui.tableColElevation':'獲得標高(m)','ui.tableColTime':'完走タイム',
   'ui.splitsChartTitle':'ペース区間チャート','ui.splitsChartDistance':'距離',
-  'ui.ghostComparisonTitle':'シリーズ内ペース比較','ui.ghostThisRace':'今回（{n}）','ui.ghostFasterHint':'緑＝今回が速い、赤＝今回が遅い',
   'ui.heatmapTitle':'参加ヒートマップ（月別走行距離）',
   'ui.heatmapCellCount':'{a} レース、{b} km',
   'ui.elevationProfileTitle':'標高変化グラフ','ui.routeMapTitle':'コースマップ',
@@ -1946,7 +1938,6 @@ const EN={
   'ui.tableColDate':'Date','ui.tableColName':'Race Name','ui.tableColStatus':'Status',
   'ui.tableColDistance':'Distance(km)','ui.tableColElevation':'Elevation(m)','ui.tableColTime':'Finish Time',
   'ui.splitsChartTitle':'Pace by Split','ui.splitsChartDistance':'Distance',
-  'ui.ghostComparisonTitle':'Same-Series Pace Overlay','ui.ghostThisRace':'This race ({n})','ui.ghostFasterHint':'Green = this race faster, Red = slower',
   'ui.heatmapTitle':'Race Heatmap (Monthly Distance)',
   'ui.heatmapCellCount':'{a} race(s), {b} km',
   'ui.elevationProfileTitle':'Elevation Profile','ui.routeMapTitle':'Route Map',
@@ -3947,151 +3938,6 @@ function renderSplitsChart(race){
   </div>`;
 }
 
-/* ============================================================
-   同系列賽事配速疊圖（Ghost Comparison）
-   同一個賽事系列（例如連續參賽的跨年賽事）如果本場與另一場都有
-   分段配速資料，把兩條配速曲線疊在同一張圖上比較，本場快的區間
-   上色成綠色、慢的區間上色成紅色，一眼看出哪個區段有突破。兩場
-   賽事的分段距離不需要完全對齊（例如一個是每 5km 一段、一個是每
-   1km 一段），用線性內插對齊到共同的距離刻度上再比較。
-   ============================================================ */
-// 很多人記分段習慣是每公里記一次「累積距離＋累積時間」（例如 Garmin
-// 自動分圈），不會另外手動算、填「這一段的平均配速」欄位——如果只認
-// avgPaceSecPerKm 這個欄位，這種紀錄方式下大部分分段都會被當成「沒有
-// 配速資料」整批濾掉，圖表上只剩下極少數真的有手動填配速的點，變成
-// 只在畫面邊緣擠出一小段看起來像壞掉的線。這裡改成：有填 avgPaceSecPerKm
-// 就直接用，沒填的話，只要這筆跟前一筆（依距離排序後緊鄰的前一筆）都有
-// 距離跟累積時間，就用兩者的差直接算出這一段的配速，不用使用者自己手動
-// 换算填入。
-function deriveGhostPaceSplits(rawSplits){
-  const withDist=(rawSplits||[]).filter(s=>s.distanceKm!=null).slice().sort((a,b)=>a.distanceKm-b.distanceKm);
-  const out=[];
-  for(let i=0;i<withDist.length;i++){
-    const s=withDist[i];
-    if(s.avgPaceSecPerKm!=null){ out.push({distanceKm:s.distanceKm,avgPaceSecPerKm:s.avgPaceSecPerKm}); continue; }
-    if(s.splitTimeSeconds==null) continue;
-    if(i===0){
-      // 第一筆分段沒有更前面的點可以取差值，假設賽事從距離 0、時間 0 開始，
-      // 直接用這筆本身的累積時間除以距離當作第一段的配速。
-      if(s.distanceKm>0) out.push({distanceKm:s.distanceKm,avgPaceSecPerKm:s.splitTimeSeconds/s.distanceKm});
-      continue;
-    }
-    const prev=withDist[i-1];
-    if(prev.splitTimeSeconds==null) continue;
-    const distDelta=s.distanceKm-prev.distanceKm;
-    const timeDelta=s.splitTimeSeconds-prev.splitTimeSeconds;
-    if(distDelta<=0||timeDelta<=0) continue;
-    out.push({distanceKm:s.distanceKm,avgPaceSecPerKm:timeDelta/distDelta});
-  }
-  return out;
-}
-function findGhostComparisonCandidates(race){
-  if(!race.series||!race.series.trim()) return [];
-  const key=race.series.trim();
-  const ownSplits=deriveGhostPaceSplits(race.splits);
-  if(ownSplits.length<2) return [];
-  return state.races.filter(r=>
-    r.id!==race.id&&!r.deletedAt&&r.series&&r.series.trim()===key&&
-    deriveGhostPaceSplits(r.splits).length>=2
-  ).sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
-}
-function ghostInterpolatePace(splits,distKm){
-  if(distKm<=splits[0].distanceKm) return splits[0].avgPaceSecPerKm;
-  const last=splits[splits.length-1];
-  if(distKm>=last.distanceKm) return last.avgPaceSecPerKm;
-  for(let i=1;i<splits.length;i++){
-    if(splits[i].distanceKm>=distKm){
-      const p0=splits[i-1],p1=splits[i];
-      const span=p1.distanceKm-p0.distanceKm;
-      const frac=span>0?(distKm-p0.distanceKm)/span:0;
-      return p0.avgPaceSecPerKm+(p1.avgPaceSecPerKm-p0.avgPaceSecPerKm)*frac;
-    }
-  }
-  return last.avgPaceSecPerKm;
-}
-function ghostComparisonSvg(raceA,raceB){
-  const splitsA=deriveGhostPaceSplits(raceA.splits);
-  const splitsB=deriveGhostPaceSplits(raceB.splits);
-  if(splitsA.length<2||splitsB.length<2) return '';
-
-  const w=600,h=180,padL=8,padR=8,padT=10,padB=10;
-  const allDist=[...splitsA.map(s=>s.distanceKm),...splitsB.map(s=>s.distanceKm)];
-  const allPace=[...splitsA.map(s=>s.avgPaceSecPerKm),...splitsB.map(s=>s.avgPaceSecPerKm)];
-  // X 軸下限原本寫死是 0（代表「起點」），但如果兩場賽事的分段紀錄本來就只
-  // 集中在賽事的某一段（例如只補了最後幾公里的配速，或分段紀錄本來就沒有
-  // 從頭開始），把 0 當成下限會硬生生撐出一大段完全沒有資料的空白區域，
-  // 實際資料反而被擠壓成畫面邊緣一小條看起來像「壞掉」的線。改用資料本身
-  // 實際的最小距離當下限，跟海拔剖面圖用同一種做法，圖表才會確實對應到
-  // 資料涵蓋的範圍。
-  const minX=Math.min(...allDist),maxX=Math.max(...allDist);
-  const paceMin=Math.min(...allPace),paceMax=Math.max(...allPace);
-  const paceSpan=(paceMax-paceMin)||1;
-  const minY=paceMin-paceSpan*0.08,maxY=paceMax+paceSpan*0.08;
-  const sx=x=>padL+(x-minX)/((maxX-minX)||1)*(w-padL-padR);
-  // 配速數字越小＝跑越快，畫在圖表越上面（sy 值越小），所以不能直接線性映射，
-  // 要讓「最快」對應到最小的 sy（頂部）。
-  const sy=y=>padT+(y-minY)/((maxY-minY)||1)*(h-padT-padB);
-
-  const lineA=splitsA.map(s=>`${sx(s.distanceKm).toFixed(1)},${sy(s.avgPaceSecPerKm).toFixed(1)}`).join(' ');
-  const lineB=splitsB.map(s=>`${sx(s.distanceKm).toFixed(1)},${sy(s.avgPaceSecPerKm).toFixed(1)}`).join(' ');
-
-  const overlapMinX=Math.max(splitsA[0].distanceKm,splitsB[0].distanceKm);
-  const overlapMaxX=Math.min(splitsA[splitsA.length-1].distanceKm,splitsB[splitsB.length-1].distanceKm);
-  let diffPolys='';
-  if(overlapMaxX>overlapMinX){
-    const steps=40;
-    const ptsA=[],ptsB=[];
-    for(let i=0;i<=steps;i++){
-      const x=overlapMinX+(overlapMaxX-overlapMinX)*(i/steps);
-      ptsA.push({x,y:ghostInterpolatePace(splitsA,x)});
-      ptsB.push({x,y:ghostInterpolatePace(splitsB,x)});
-    }
-    let segStart=0;
-    for(let i=1;i<=steps;i++){
-      const prevFaster=ptsA[i-1].y<=ptsB[i-1].y;
-      const curFaster=i<steps?(ptsA[i].y<=ptsB[i].y):prevFaster;
-      if(curFaster!==prevFaster||i===steps){
-        const segA=ptsA.slice(segStart,i+1);
-        const segB=ptsB.slice(segStart,i+1);
-        const topPath=segA.map(p=>`${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
-        const bottomPath=segB.slice().reverse().map(p=>`${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
-        const color=prevFaster?'rgba(76,154,114,0.25)':'rgba(196,0,29,0.18)';
-        diffPolys+=`<polygon points="${topPath} ${bottomPath}" fill="${color}"/>`;
-        segStart=i;
-      }
-    }
-  }
-  return `<svg viewBox="0 0 ${w} ${h}" class="ghost-chart-svg" preserveAspectRatio="none">
-    ${diffPolys}
-    <polyline points="${lineB}" fill="none" stroke="var(--stone)" stroke-width="2" stroke-dasharray="5,4"/>
-    <polyline points="${lineA}" fill="none" stroke="var(--gold)" stroke-width="2.5"/>
-  </svg>`;
-}
-function ghostComparisonHtml(race){
-  const candidates=findGhostComparisonCandidates(race);
-  if(!candidates.length) return '';
-  const chosenId=state.ghostCompareId&&candidates.some(c=>c.id===state.ghostCompareId)?state.ghostCompareId:candidates[0].id;
-  const compareRace=candidates.find(c=>c.id===chosenId);
-  const svg=ghostComparisonSvg(race,compareRace);
-  if(!svg) return '';
-  const yearA=(race.schedule.raceDate||'').slice(0,4)||'—';
-  const yearB=(compareRace.schedule.raceDate||'').slice(0,4)||'—';
-  return `<div class="ghost-chart-wrap">
-    <div class="ghost-chart-head">
-      <span class="yearly-chart-title small">${t('ui.ghostComparisonTitle','同系列配速疊圖')}</span>
-      ${candidates.length>1?`<select id="ghost-compare-select" class="ghost-compare-select mono small">
-        ${candidates.map(c=>`<option value="${c.id}" ${c.id===chosenId?'selected':''}>${(c.schedule.raceDate||'').slice(0,4)||'—'}</option>`).join('')}
-      </select>`:''}
-    </div>
-    ${svg}
-    <div class="ghost-chart-legend small">
-      <span><span class="ghost-legend-swatch ghost-legend-swatch-a"></span>${tf('ui.ghostThisRace','本場（{n}）',yearA)}</span>
-      <span><span class="ghost-legend-swatch ghost-legend-swatch-b"></span>${yearB}</span>
-      <span class="ghost-legend-hint">${t('ui.ghostFasterHint','綠色＝本場較快，紅色＝本場較慢')}</span>
-    </div>
-  </div>`;
-}
-
 const GRADIENT_COLOR_STOPS=[
   {pct:0,rgb:[76,154,114]},
   {pct:8,rgb:[217,177,92]},
@@ -5556,7 +5402,6 @@ function renderDetail(){
       ${renderResultsDashboard(race)}
       ${renderSplitAnalysis(race)}
       ${renderSplitsChart(race)}
-      ${ghostComparisonHtml(race)}
       <div class="gpx-import-bar">
         <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX / FIT）')}</button>
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
@@ -5571,6 +5416,17 @@ function renderDetail(){
   destroyRouteMap();
   renderRouteMapIfNeeded(race);
   setupElevationScrubbing(race);
+  applyScrollFadeClasses();
+}
+// 分段配速表、系列賽事比較表、媒體縮圖列這幾個區塊原本不管內容
+// 塞不塞得下都套用邊緣淡出效果（暗示「可以左右滑動看更多」），
+// 但內容其實沒有超出容器寬度時，這個效果會讓最左邊、最右邊的文字
+// 看起來像被吃掉一樣，容易被誤會成排版壞掉。改成只在真的有橫向
+// 捲動空間時才加上這個效果，內容本來就顯示得下就不套用。
+function applyScrollFadeClasses(){
+  document.querySelectorAll('.splits-chart-wrap, .media-gallery-strip, .series-table-wrap').forEach(el=>{
+    el.classList.toggle('scroll-fade',el.scrollWidth>el.clientWidth+1);
+  });
 }
 
 function updateDetailHeaderBits(){
@@ -5754,7 +5610,7 @@ function updateTopbarHeightVar(){
   window.addEventListener('scroll',()=>{
     if(!ticking){requestAnimationFrame(updateTopbarCompact);ticking=true;}
   },{passive:true});
-  window.addEventListener('resize',updateTopbarHeightVar);
+  window.addEventListener('resize',()=>{ updateTopbarHeightVar(); applyScrollFadeClasses(); });
 })();
 
 /* ============================================================
@@ -5992,11 +5848,6 @@ function showSaveStatus(kind){
 }
 detailEl.addEventListener('change',async e=>{
   const t=e.target;
-  if(t.id==='ghost-compare-select'){
-    state.ghostCompareId=t.value;
-    renderDetail();
-    return;
-  }
   const path=t.dataset.path;if(!path||!currentRace) return;
   let value;
   if(t.type==='checkbox') value=t.checked;
