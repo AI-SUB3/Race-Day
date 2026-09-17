@@ -562,6 +562,12 @@
   .focus-weather-live-note{color:var(--stone);margin-top:4px;}
   .focus-weather-error{color:var(--flag);margin-top:4px;}
   .focus-weather-gps-hint{color:var(--stone);margin-top:4px;}
+  .historical-weather-block{
+    background:var(--surface);border:1px solid var(--rule);border-radius:6px;
+    padding:12px 14px;margin-bottom:16px;
+  }
+  .historical-weather-title{color:var(--stone);margin-bottom:8px;}
+  .historical-weather-note{color:var(--stone);margin-top:6px;}
   .focus-panel-view-btn{width:100%;justify-content:center;}
   @media (max-width:640px){
     .focus-panel-grid{grid-template-columns:1fr;}
@@ -1556,6 +1562,7 @@ function emptyRace(name,sportType,status,raceDate){
     review:{hitTheWallNotes:'',courseReview:'',pros:'',cons:'',lessonsLearned:''},
     mediaLinks:[],
     liveForecast:null,
+    historicalWeather:null,
     createdAt:now,updatedAt:now,
   };
 }
@@ -1568,7 +1575,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.48.1';
+const APP_VERSION='v2.49.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1633,6 +1640,8 @@ const JA={
   'ui.focusNoGoals':'まだ目標タイムが設定されていません',
   'ui.focusWeather':'天気予報',
   'ui.weatherPrecipProb':'降水確率','ui.weatherGust':'突風',
+  'ui.historicalWeatherTitle':'レース当日の実際の天気（自動取得）','ui.weatherPrecipAmount':'降水量',
+  'ui.historicalWeatherSource':'データ提供：Open-Meteo 過去の気象データベース','ui.historicalWeatherPending':'レース当日の過去の天気を取得しています…',
   'ui.weatherLiveNote':'ライブ予報、{n}分前に更新',
   'ui.weatherFetching':'取得中…','ui.weatherRefresh':'予報を更新','ui.weatherFetch':'ライブ予報を取得',
   'ui.weatherNeedsGps':'GPX/FIT トラックを取り込むとライブ予報を取得できます',
@@ -1969,6 +1978,8 @@ const EN={
   'ui.focusNoGoals':'No target time set yet',
   'ui.focusWeather':'Weather Forecast',
   'ui.weatherPrecipProb':'Rain chance','ui.weatherGust':'Gust',
+  'ui.historicalWeatherTitle':'Actual Weather on Race Day (auto-fetched)','ui.weatherPrecipAmount':'Precipitation',
+  'ui.historicalWeatherSource':'Source: Open-Meteo Historical Weather Archive','ui.historicalWeatherPending':'Fetching historical weather for race day…',
   'ui.weatherLiveNote':'Live forecast, updated {n} min ago',
   'ui.weatherFetching':'Fetching…','ui.weatherRefresh':'Refresh forecast','ui.weatherFetch':'Fetch live forecast',
   'ui.weatherNeedsGps':'Import a GPX/FIT track to fetch a live forecast',
@@ -2469,6 +2480,7 @@ function migrateRace(r){
   if(r.results&&r.results.secondHalfSeconds===undefined) r.results.secondHalfSeconds=null;
   if(r.performanceData&&r.performanceData.shoeId===undefined) r.performanceData.shoeId='';
   if(r.liveForecast===undefined) r.liveForecast=null;
+  if(r.historicalWeather===undefined) r.historicalWeather=null;
   if(r.bibNumber==null) r.bibNumber='';
   if(r.schedule&&r.schedule.startWave==null) r.schedule.startWave='';
   return r;
@@ -5228,6 +5240,84 @@ function liveForecastCompactHtml(live,race){
     </div>
     <p class="focus-weather-live-note small">${tf('ui.weatherLiveNote','即時預報，{n} 分鐘前更新',minsAgo)}</p>`;
 }
+/* ============================================================
+   歷史天氣自動回填：賽事日期已經過去、已經匯入 GPS 軌跡、但還沒抓過
+   歷史天氣資料時，打開這場賽事的詳情頁會自動在背景查詢當天實際發生
+   過的天氣。這裡刻意用 Open-Meteo 的「歷史氣象回溯資料庫」端點
+   （archive-api.open-meteo.com），跟即時預報用的預報端點不是同一個：
+   預報端點回傳的是「降雨機率」這種只有對未來才有意義的統計值，歷史
+   資料庫回傳的則是「實際降雨量」這種已經發生過的量測／回算數值，
+   概念上不一樣，不能直接照抄即時預報那組參數名稱。抓到之後永久
+   快取（歷史資料不會變，不像即時預報有時效性，不需要重新整理）。
+   只有在「打開這場賽事的詳情頁」時才會觸發一次查詢，不會一次把
+   所有歷史賽事都打過去，靠使用者一次只能看一場賽事這件事本身
+   自然節流，不用額外寫節流邏輯。
+   ============================================================ */
+let historicalWeatherFetchingRaceId=null;
+function raceIsHistorical(race){
+  if(!race.schedule.raceDate) return false;
+  return race.schedule.raceDate<todayISO();
+}
+// 這次分頁工作階段裡已經嘗試過的賽事 id（不論成功或失敗）；如果只用
+// 「還沒抓到資料」當成觸發條件，抓取失敗時 historicalWeatherFetchingRaceId
+// 會被重設回 null 並觸發重新渲染，而重新渲染又會看到「還沒抓到資料、
+// 現在也沒有在抓取中」而立刻再次觸發抓取，形成抓取失敗→重新渲染→再次
+// 觸發抓取的無限迴圈，會對免費 API 發送大量不必要的請求。加上這個
+// session 層級的集合，同一次瀏覽階段裡每場賽事最多只會真正嘗試一次；
+// 重新整理頁面（開新的一次 session）才會再給一次機會。
+const historicalWeatherAttempted=new Set();
+async function fetchHistoricalWeatherForRace(raceId){
+  const race=state.races.find(r=>r.id===raceId);
+  if(!race||!raceHasGpsTrack(race)||!race.schedule.raceDate) return;
+  if(historicalWeatherAttempted.has(raceId)) return;
+  historicalWeatherAttempted.add(raceId);
+  const pt=race.route.trackPoints[0];
+  historicalWeatherFetchingRaceId=raceId;
+  if(currentRace&&currentRace.id===raceId) renderDetail();
+  try{
+    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${pt.lat}&longitude=${pt.lon}&hourly=temperature_2m,precipitation,wind_gusts_10m&timezone=auto&start_date=${race.schedule.raceDate}&end_date=${race.schedule.raceDate}`;
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data.hourly||!data.hourly.time||!data.hourly.time.length){
+      throw new Error('這個座標與日期沒有查到歷史天氣資料');
+    }
+    race.historicalWeather={
+      fetchedAt:new Date().toISOString(),
+      times:data.hourly.time,
+      temp:data.hourly.temperature_2m,
+      precip:data.hourly.precipitation,
+      gust:data.hourly.wind_gusts_10m,
+    };
+    await persist();
+  }catch(err){
+    console.error('抓取歷史天氣失敗',err);
+    // 歷史天氣是背景自動補的加分資訊，失敗了就默默放棄，不跳錯誤訊息
+    // 打擾使用者；這次瀏覽階段不會再自動重試，下次重新整理頁面才會。
+  }
+  historicalWeatherFetchingRaceId=null;
+  if(currentRace&&currentRace.id===raceId) renderDetail();
+}
+function historicalWeatherCompactHtml(hw,race){
+  const startTime=race.schedule.startTime||'08:00';
+  const targetHour=parseInt(startTime.split(':')[0],10)||8;
+  let idx=0,bestDiff=Infinity;
+  hw.times.forEach((tm,i)=>{
+    const hour=parseInt(tm.slice(11,13),10);
+    const diff=Math.abs(hour-targetHour);
+    if(diff<bestDiff){ bestDiff=diff; idx=i; }
+  });
+  const temp=hw.temp[idx],precip=hw.precip[idx],gust=hw.gust[idx];
+  return `<div class="historical-weather-block">
+    <div class="historical-weather-title small">${t('ui.historicalWeatherTitle','賽事當天實際天氣（自動查詢）')}</div>
+    <div class="focus-weather-row mono">
+      ${temp!=null?`<span>${temp}°C</span>`:''}
+      ${precip!=null?`<span>${t('ui.weatherPrecipAmount','降雨量')} ${precip}mm</span>`:''}
+      ${gust!=null?`<span>${t('ui.weatherGust','陣風')} ${gust}km/h</span>`:''}
+    </div>
+    <p class="historical-weather-note small">${t('ui.historicalWeatherSource','資料來源：Open-Meteo 歷史氣象回溯資料庫')}</p>
+  </div>`;
+}
 function computeFocusRace(){
   const todayStr=todayISO();
   const cutoff=new Date(todayStr+'T00:00:00');
@@ -5775,7 +5865,11 @@ function renderDetail(){
     </details>
     <details class="section" id="section-weather">
       <summary>${t('ui.sectionWeather','氣象')}</summary>
-      <div class="section-body">${SECTION_WEATHER.map(f=>renderField(race,f,'weather')).join('')}</div>
+      <div class="section-body">
+        ${race.historicalWeather?historicalWeatherCompactHtml(race.historicalWeather,race)
+          :(raceIsHistorical(race)&&raceHasGpsTrack(race)?`<p class="empty-hint small">${historicalWeatherFetchingRaceId===race.id?t('ui.weatherFetching','抓取中…'):t('ui.historicalWeatherPending','正在查詢賽事當天的歷史天氣…')}</p>`:'')}
+        ${SECTION_WEATHER.map(f=>renderField(race,f,'weather')).join('')}
+      </div>
     </details>
     <details class="section" id="section-logistics" ${openPre?'open':''}>
       <summary>${t('ui.sectionLogistics','預算與行程規劃')}</summary>
@@ -5814,6 +5908,9 @@ function renderDetail(){
   renderRouteMapIfNeeded(race);
   setupElevationScrubbing(race);
   applyScrollFadeClasses();
+  if(!race.historicalWeather&&historicalWeatherFetchingRaceId!==race.id&&raceIsHistorical(race)&&raceHasGpsTrack(race)){
+    fetchHistoricalWeatherForRace(race.id);
+  }
 }
 // 分段配速表、系列賽事比較表、媒體縮圖列這幾個區塊原本不管內容
 // 塞不塞得下都套用邊緣淡出效果（暗示「可以左右滑動看更多」），
