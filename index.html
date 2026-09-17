@@ -482,6 +482,9 @@
   .splits-chart-pace-cell{padding:0!important;}
 
   .splits-chart-bar{display:flex;align-items:center;padding:6px 8px;height:100%;}
+  .splits-gap-stack{display:flex;flex-direction:column;line-height:1.35;}
+  .splits-gap-primary{color:var(--ink);font-weight:700;font-size:13px;}
+  .splits-gap-secondary{color:var(--stone);}
 
   /* ---------- Elevation profile ---------- */
   .elevation-profile{margin:4px 2px 18px;}
@@ -1394,7 +1397,7 @@ const EQUIP_FIELDS=[
 const SPLIT_FIELDS=[
   {path:'distanceKm',label:'距離',type:'number',unit:'公里'},{path:'splitTimeSeconds',label:'分段時間',type:'duration'},
   {path:'avgHr',label:'平均心率',type:'number',unit:'bpm'},{path:'avgPaceSecPerKm',label:'平均配速',type:'duration'},
-  {path:'elevationGainM',label:'爬升',type:'number',unit:'公尺'},{path:'notes',label:'備註',type:'text'},
+  {path:'elevationGainM',label:'淨爬升（下坡請填負值）',type:'number',unit:'公尺'},{path:'notes',label:'備註',type:'text'},
 ];
 const MEDIA_FIELDS=[
   {path:'type',label:'類型',type:'select',options:MEDIA_TYPE_OPTIONS},
@@ -1666,7 +1669,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.57.0';
+const APP_VERSION='v2.58.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1793,6 +1796,7 @@ const JA={
   'ui.tableColDate':'日付','ui.tableColName':'大会名','ui.tableColStatus':'状態',
   'ui.tableColDistance':'距離(km)','ui.tableColElevation':'獲得標高(m)','ui.tableColTime':'完走タイム',
   'ui.splitsChartTitle':'ペース区間チャート','ui.splitsChartDistance':'距離',
+  'ui.splitsActualPace':'実際',
   'ui.heatmapTitle':'参加ヒートマップ（月別走行距離）',
   'ui.heatmapCellCount':'{a} レース、{b} km',
   'ui.elevationProfileTitle':'標高変化グラフ','ui.routeMapTitle':'コースマップ',
@@ -2070,7 +2074,7 @@ const JA={
   'field.equipmentChecklist.weightG':'重量','field.equipmentChecklist.isConsumable':'消耗品（水・補給食品など。ベース重量の計算から除外）',
   'field.equipmentChecklist.isMandatory':'必携装備','field.equipmentChecklist.isPacked':'準備済み','field.equipmentChecklist.notes':'備考',
   'field.splits.distanceKm':'距離','field.splits.splitTimeSeconds':'スプリットタイム','field.splits.avgHr':'平均心拍数',
-  'field.splits.avgPaceSecPerKm':'平均ペース','field.splits.elevationGainM':'上り','field.splits.notes':'備考',
+  'field.splits.avgPaceSecPerKm':'平均ペース','field.splits.elevationGainM':'正味標高差（下りはマイナス）','field.splits.notes':'備考',
   'field.mediaLinks.type':'種類','field.mediaLinks.url':'リンク','field.mediaLinks.notes':'備考',
   'field.nutritionSchedule.distanceKm':'距離／CP','field.nutritionSchedule.item':'補給内容',
   'field.nutritionSchedule.plannedAmount':'予定量','field.nutritionSchedule.consumed':'レース後：摂取済み','field.nutritionSchedule.notes':'備考',
@@ -2161,6 +2165,7 @@ const EN={
   'ui.tableColDate':'Date','ui.tableColName':'Race Name','ui.tableColStatus':'Status',
   'ui.tableColDistance':'Distance(km)','ui.tableColElevation':'Elevation(m)','ui.tableColTime':'Finish Time',
   'ui.splitsChartTitle':'Pace by Split','ui.splitsChartDistance':'Distance',
+  'ui.splitsActualPace':'actual',
   'ui.heatmapTitle':'Race Heatmap (Monthly Distance)',
   'ui.heatmapCellCount':'{a} race(s), {b} km',
   'ui.elevationProfileTitle':'Elevation Profile','ui.routeMapTitle':'Route Map',
@@ -2427,7 +2432,7 @@ const EN={
   'field.equipmentChecklist.weightG':'Weight','field.equipmentChecklist.isConsumable':'Consumable (water, food, etc. — excluded from base weight)',
   'field.equipmentChecklist.isMandatory':'Mandatory','field.equipmentChecklist.isPacked':'Packed','field.equipmentChecklist.notes':'Notes',
   'field.splits.distanceKm':'Distance','field.splits.splitTimeSeconds':'Split Time','field.splits.avgHr':'Avg Heart Rate',
-  'field.splits.avgPaceSecPerKm':'Avg Pace','field.splits.elevationGainM':'Elevation Gain','field.splits.notes':'Notes',
+  'field.splits.avgPaceSecPerKm':'Avg Pace','field.splits.elevationGainM':'Net Elevation Change (negative for downhill)','field.splits.notes':'Notes',
   'field.mediaLinks.type':'Type','field.mediaLinks.url':'URL','field.mediaLinks.notes':'Notes',
   'field.nutritionSchedule.distanceKm':'Distance / CP','field.nutritionSchedule.item':'Item',
   'field.nutritionSchedule.plannedAmount':'Planned Amount','field.nutritionSchedule.consumed':'Post-race: Consumed','field.nutritionSchedule.notes':'Notes',
@@ -4467,6 +4472,46 @@ function renderResultsDashboard(race){
   </div>`;
 }
 
+/* ============================================================
+   坡度校正配速（GAP，Grade Adjusted Pace）：把上下坡造成的配速差異
+   換算回「平地等效配速」，用簡化版的拋物線模型近似 Minetti 爬坡耗能
+   公式——這不是精確的生理學計算，是給一般跑者參考用的粗略估算，同一
+   個坡度不同人的實際耗能差異可能不小。
+   上坡：每增加 1% 坡度，配速大約慢 3.75%（3.3%~4% 區間的中間值）。
+   下坡：坡度在 -6% 左右時校正效果最大（跑起來相對最輕鬆，GAP 比實際
+   配速快最多）；比 -6% 更陡的下坡，因為煞車式的離心收縮耗能上升，
+   校正效果會開始回彈，用同一條拋物線自然涵蓋「先變輕鬆、陡到一定
+   程度後又變累」這個形狀，不用另外寫兩段式的判斷。
+   ============================================================ */
+const GAP_UPHILL_FACTOR=0.0375;
+const GAP_DOWNHILL_VERTEX_GRADE=-6;
+const GAP_DOWNHILL_VERTEX_BENEFIT=0.14;
+function gapPaceMultiplier(gradePct){
+  if(gradePct==null||!isFinite(gradePct)) return 1;
+  let m;
+  if(gradePct>=0){
+    m=1+gradePct*GAP_UPHILL_FACTOR;
+  }else{
+    const k=GAP_DOWNHILL_VERTEX_BENEFIT/(GAP_DOWNHILL_VERTEX_GRADE*GAP_DOWNHILL_VERTEX_GRADE);
+    m=1+k*Math.pow(gradePct-GAP_DOWNHILL_VERTEX_GRADE,2)-k*GAP_DOWNHILL_VERTEX_GRADE*GAP_DOWNHILL_VERTEX_GRADE;
+  }
+  // 保底範圍，避免 GPS 雜訊算出離譜的坡度時，GAP 數字整個失真到沒有參考價值
+  return Math.min(3,Math.max(0.75,m));
+}
+function splitGradePct(split){
+  if(split.elevationGainM==null||!split.distanceKm) return null;
+  return (split.elevationGainM/(split.distanceKm*1000))*100;
+}
+// GAP 是「算出來就顯示」的衍生值，不存進 splits 資料本身——這樣使用者
+// 之後手動修改某一段的「淨爬升」欄位，GAP 會自動跟著重算，不會出現
+// 改了爬升、GAP 卻還是舊數字的過期資料問題。
+function splitGapSecPerKm(split){
+  if(split.avgPaceSecPerKm==null) return null;
+  const grade=splitGradePct(split);
+  if(grade==null) return null;
+  return Math.round(split.avgPaceSecPerKm/gapPaceMultiplier(grade));
+}
+
 function computeSplitPercent(race){
   const h1=race.results.firstHalfSeconds,h2=race.results.secondHalfSeconds;
   if(h1==null||h2==null||h1<=0) return null;
@@ -4483,19 +4528,38 @@ function renderSplitAnalysis(race){
     <span class="split-analysis-value mono">${pct>0?'+':''}${pct.toFixed(1)}%</span>
   </div>`;
 }
+// 這裡故意不用 distanceKm 排序——distanceKm 存的是「這一段自己的長度」
+// （GPX 匯入固定是 1，TCX 圈數匯入則各圈長度不一定相同），拿它排序
+// 等於用長度而不是時間先後排，長度剛好都一樣時歪打正著看起來沒事，
+// 長度不一樣時就會把賽事順序整個打亂。分段清單本身就是使用者可以
+// 拖曳調整順序的清單（跟裝備清單、補給時程同一套機制），陣列本身
+// 存的順序才是正確的賽事先後順序，直接照陣列順序顯示就好。
 function renderSplitsChart(race){
-  const splits=(race.splits||[]).filter(s=>s.avgPaceSecPerKm!=null&&s.distanceKm!=null).slice().sort((a,b)=>a.distanceKm-b.distanceKm);
+  const splits=(race.splits||[]).filter(s=>s.avgPaceSecPerKm!=null&&s.distanceKm!=null);
   if(splits.length<2) return '';
-  const paces=splits.map(s=>s.avgPaceSecPerKm);
-  const minPace=Math.min(...paces),maxPace=Math.max(...paces);
+  // GAP 算得出來的話，長條圖長短跟顏色深淺以 GAP 為準，不是實際配速——
+  // 魔王坡段即使實際配速很慢，只要體感強度夠高，長條圖還是會顯得
+  // 「滿」，精準反映真實輸出，不會因為爬坡拖慢的數字被誤讀成「這段
+  // 跑得很鬆」。算不出 GAP（沒有海拔資料）的分段，退回用實際配速。
+  const gaps=splits.map(splitGapSecPerKm);
+  const displayPaces=splits.map((s,i)=>gaps[i]!=null?gaps[i]:s.avgPaceSecPerKm);
+  const minPace=Math.min(...displayPaces),maxPace=Math.max(...displayPaces);
   const range=(maxPace-minPace)||1;
-  const rows=splits.map(s=>{
-    const fillPct=Math.max(4,Math.round(((maxPace-s.avgPaceSecPerKm)/range)*100));
+  let cumKm=0;
+  const rows=splits.map((s,i)=>{
+    const rangeStart=cumKm,rangeEnd=cumKm+s.distanceKm;
+    cumKm=rangeEnd;
+    const fillPct=Math.max(4,Math.round(((maxPace-displayPaces[i])/range)*100));
+    const startLabel=formatDistanceCompact(rangeStart),endLabel=formatDistanceCompact(rangeEnd);
+    const distLabel=startLabel&&endLabel?`${startLabel.replace('K','')}-${endLabel}`:(endLabel||'—');
+    const paceHtml=gaps[i]!=null
+      ?`<span class="splits-gap-stack"><span class="mono splits-gap-primary">${formatPace(gaps[i])}/km</span><span class="splits-gap-secondary mono small">${formatPace(s.avgPaceSecPerKm)}/km ${t('ui.splitsActualPace','實際')}</span></span>`
+      :`<span class="mono">${formatPace(s.avgPaceSecPerKm)}/km</span>`;
     return `<tr>
-      <td class="mono num">${formatDistanceCompact(s.distanceKm)||'—'}</td>
+      <td class="mono num">${distLabel}</td>
       <td class="splits-chart-pace-cell">
         <span class="splits-chart-bar" style="background:linear-gradient(to right, var(--trail) ${fillPct}%, transparent ${fillPct}%)">
-          <span class="mono">${formatPace(s.avgPaceSecPerKm)}/km</span>
+          ${paceHtml}
         </span>
       </td>
       <td class="mono num">${hrZoneHtml(s.avgHr,race)}</td>
@@ -8104,11 +8168,17 @@ function computeElevationGain(elevations,threshold){
   if(peak>lastValley) gain+=peak-lastValley;
   return Math.round(gain);
 }
+// elevationGainM 這裡存的是「這一段的淨海拔變化」（可正可負：上坡是正、
+// 下坡是負），跟賽事整體的 route.elevationGainM（永遠是正值的總爬升）
+// 意義不同——分段配速要算坡度，需要知道這一公里淨上升還是淨下降多少，
+// 不是只看爬升的部分，下坡段如果只回報 0 或空值，坡度校正配速會整個
+// 失真。海拔資料用跟時間相同的內插方式抓分段邊界上的值，某些點缺海拔
+// 資料時，優雅地讓該分段的值維持 null，不強行湊數字。
 function computeSplitsFromPoints(pts){
   const valid=pts.filter(p=>p.lat!=null&&p.lon!=null);
   if(valid.length<2) return [];
   const splits=[];
-  let cumDist=0,splitStartTime=valid[0].time,hrSum=0,hrCount=0,nextBoundary=1;
+  let cumDist=0,splitStartTime=valid[0].time,splitStartEle=valid[0].ele!=null?valid[0].ele:null,hrSum=0,hrCount=0,nextBoundary=1;
   for(let i=1;i<valid.length;i++){
     const d=haversineKm(valid[i-1].lat,valid[i-1].lon,valid[i].lat,valid[i].lon);
     const prevCum=cumDist;
@@ -8118,9 +8188,14 @@ function computeSplitsFromPoints(pts){
       const frac=(nextBoundary-prevCum)/((cumDist-prevCum)||1);
       const t0=valid[i-1].time.getTime(),t1=valid[i].time.getTime();
       const crossTime=new Date(t0+(t1-t0)*frac);
+      let crossEle=null;
+      if(valid[i-1].ele!=null&&valid[i].ele!=null){
+        crossEle=valid[i-1].ele+(valid[i].ele-valid[i-1].ele)*frac;
+      }
       const splitTimeSeconds=Math.round((crossTime-splitStartTime)/1000);
-      splits.push({distanceKm:1,splitTimeSeconds,avgHr:hrCount?Math.round(hrSum/hrCount):null,avgPaceSecPerKm:splitTimeSeconds,elevationGainM:null,notes:''});
-      splitStartTime=crossTime;hrSum=0;hrCount=0;nextBoundary+=1;
+      const elevationGainM=(splitStartEle!=null&&crossEle!=null)?Math.round(crossEle-splitStartEle):null;
+      splits.push({distanceKm:1,splitTimeSeconds,avgHr:hrCount?Math.round(hrSum/hrCount):null,avgPaceSecPerKm:splitTimeSeconds,elevationGainM,notes:''});
+      splitStartTime=crossTime;splitStartEle=crossEle;hrSum=0;hrCount=0;nextBoundary+=1;
     }
   }
   return splits;
@@ -8320,6 +8395,21 @@ function parseTcxDoc(xml){
   });
   if(!laps.length) return summarizeTrackPoints(pts);
 
+  // 圈數資料本身沒有海拔欄位，用累積秒數去軌跡點裡找最接近那個時間點
+  // 的海拔（抓最近的一筆，不特別內插，軌跡點通常每幾秒一筆已經夠準）。
+  const ptsWithEleTime=pts.filter(p=>p.ele!=null&&p.time);
+  function eleNearTime(targetMs){
+    if(!ptsWithEleTime.length||targetMs==null) return null;
+    let best=ptsWithEleTime[0],bestDiff=Math.abs(ptsWithEleTime[0].time.getTime()-targetMs);
+    for(const p of ptsWithEleTime){
+      const diff=Math.abs(p.time.getTime()-targetMs);
+      if(diff<bestDiff){ best=p; bestDiff=diff; }
+    }
+    return best.ele;
+  }
+  const raceStartMs=pts.length&&pts[0].time?pts[0].time.getTime():null;
+  let cumLapTimeS=0,prevLapEndEle=raceStartMs!=null?eleNearTime(raceStartMs):null;
+
   let totalDistM=0,totalTimeS=0,hrSum=0,hrCount=0,maxHr=0;
   const splits=laps.map(lap=>{
     const distEl=findByLocalName(lap,'DistanceMeters'),timeEl=findByLocalName(lap,'TotalTimeSeconds');
@@ -8333,10 +8423,17 @@ function parseTcxDoc(xml){
     totalDistM+=dist;totalTimeS+=time;
     if(avgHr!=null){ hrSum+=avgHr; hrCount++; }
     if(mHr!=null&&mHr>maxHr) maxHr=mHr;
+    cumLapTimeS+=time;
+    let elevationGainM=null;
+    if(raceStartMs!=null){
+      const lapEndEle=eleNearTime(raceStartMs+cumLapTimeS*1000);
+      if(prevLapEndEle!=null&&lapEndEle!=null) elevationGainM=Math.round(lapEndEle-prevLapEndEle);
+      prevLapEndEle=lapEndEle;
+    }
     return {distanceKm:+(dist/1000).toFixed(2),splitTimeSeconds:Math.round(time),
       avgHr:avgHr!=null?Math.round(avgHr):null,
       avgPaceSecPerKm:dist>0?Math.round(time/(dist/1000)):null,
-      elevationGainM:null,notes:''};
+      elevationGainM,notes:''};
   });
   const elevations=pts.map(p=>p.ele).filter(e=>e!=null);
   const ptHrs=pts.map(p=>p.hr).filter(h=>h!=null);
