@@ -880,6 +880,7 @@
   .detail-header h1{font-size:30px;line-height:1.3;}
   .detail-header h1 .alias{font-weight:400;color:var(--ink-soft);font-size:18px;}
   .dh-meta{color:var(--ink-soft);}
+  .dh-gcal-quicklink{display:block;margin-top:4px;font-size:13px;}
 
   details.section{
     background:var(--surface);border-radius:8px;
@@ -1567,7 +1568,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.47.0';
+const APP_VERSION='v2.48.0';
 
 /* ============================================================
    多語系（i18n）
@@ -5745,6 +5746,7 @@ function detailHeaderHtml(race){
       <h1>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
       ${coverUploadHtml(race)}
       <div class="dh-meta mono">${race.schedule.raceDate||t('ui.dateNotSet','尚未設定日期')} ・ ${countdownLabel(race)}${chip}</div>
+      ${race.schedule.raceDate?`<button type="button" class="btn-text-small dh-gcal-quicklink" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
       ${sparklineSvg(race)}
       ${progressBlockHtml(race)}
     </div>
@@ -5838,7 +5840,7 @@ function emptyStateHtml(){
       ${sportIconSvg('triathlon',40)}
     </div>
     <p>${t('ui.selectRaceHint','點選上方行事曆中的賽事查看詳細紀錄，或建立一場新賽事。')}</p>
-    <button class="btn-primary" data-action="start-create">${t('ui.newRace','+ 新增賽事')}</button>
+    <button class="btn-primary${shouldShowFirstUseGlow()?' cta-glow':''}" data-action="start-create">${t('ui.newRace','+ 新增賽事')}</button>
   </div>`;
 }
 
@@ -5914,20 +5916,28 @@ function resetCreateStaging(){
    開始，都算完成引導，永久記在 localStorage 裡，之後就算把賽事全部
    刪光重新變回空清單，也不會再亮起來——這是「第一次用這個網站」的
    引導，不是「賽事清單目前是空的」的提示，兩者語意不一樣。
+   有兩個地方都會出現「新增賽事」按鈕：頂部工具列那個是固定不變的
+   靜態元素、用 JS 事後加上 class；空白狀態（還沒選任何賽事時）裡的
+   那個是每次重新渲染都會整段重寫的動態內容，改成在產生 HTML 的當下
+   直接判斷要不要帶上 class，不能只靠事後加 class（會在下一次重新
+   渲染時被整段覆蓋掉、消失不見）。
    ============================================================ */
 const FIRST_USE_GLOW_KEY='race-day-first-use-seen-v1';
-function checkAndShowFirstUseGlow(){
+function shouldShowFirstUseGlow(){
   try{
-    if(state.races.length>0) return;
-    if(localStorage.getItem(FIRST_USE_GLOW_KEY)) return;
-  }catch(err){ return; }
+    if(state.races.length>0) return false;
+    if(localStorage.getItem(FIRST_USE_GLOW_KEY)) return false;
+    return true;
+  }catch(err){ return false; }
+}
+function checkAndShowFirstUseGlow(){
+  if(!shouldShowFirstUseGlow()) return;
   const btn=document.getElementById('btn-new');
   if(btn) btn.classList.add('cta-glow');
 }
 function dismissFirstUseGlow(){
   try{ localStorage.setItem(FIRST_USE_GLOW_KEY,'1'); }catch(err){}
-  const btn=document.getElementById('btn-new');
-  if(btn) btn.classList.remove('cta-glow');
+  document.querySelectorAll('.cta-glow').forEach(el=>el.classList.remove('cta-glow'));
 }
 function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();logFeatureUse('race_create');dismissFirstUseGlow();}
 
