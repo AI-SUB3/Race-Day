@@ -1563,6 +1563,7 @@ function emptyRace(name,sportType,status,raceDate){
     mediaLinks:[],
     liveForecast:null,
     historicalWeather:null,
+    historicalAverageWeather:null,
     createdAt:now,updatedAt:now,
   };
 }
@@ -1575,7 +1576,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.49.2';
+const APP_VERSION='v2.50.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1639,10 +1640,10 @@ const JA={
   'ui.focusPacing':'ペース戦略',
   'ui.focusNoGoals':'まだ目標タイムが設定されていません',
   'ui.focusWeather':'天気予報',
-  'ui.weatherPrecipProb':'降水確率','ui.weatherGust':'突風',
+  'ui.weatherPrecipProb':'降水確率','ui.weatherGust':'突風','ui.weatherWindSpeed':'風速',
   'ui.historicalWeatherTitle':'レース当日の実際の天気（自動取得）','ui.weatherPrecipAmount':'降水量',
   'ui.historicalWeatherSource':'データ提供：Open-Meteo 過去の気象データベース','ui.historicalWeatherPending':'レース当日の過去の天気を取得しています…',
-  'ui.historicalWeatherAutofillNote':'下の「体感温度（実績）」と「当日の湿度」欄に自動入力しました（既に入力済みの値は上書きしません）',
+  'ui.historicalWeatherAutofillNote':'下の対応欄に自動入力しました（体感温度、当日の湿度、風速、風向；当日雨が降った場合は降水確率と当日の天候も自動入力；既に入力済みの値は上書きしません）',
   'ui.weatherLiveNote':'ライブ予報、{n}分前に更新',
   'ui.weatherFetching':'取得中…','ui.weatherRefresh':'予報を更新','ui.weatherFetch':'ライブ予報を取得',
   'ui.weatherNeedsGps':'GPX/FIT トラックを取り込むとライブ予報を取得できます',
@@ -1978,10 +1979,10 @@ const EN={
   'ui.focusPacing':'Pace Strategy',
   'ui.focusNoGoals':'No target time set yet',
   'ui.focusWeather':'Weather Forecast',
-  'ui.weatherPrecipProb':'Rain chance','ui.weatherGust':'Gust',
+  'ui.weatherPrecipProb':'Rain chance','ui.weatherGust':'Gust','ui.weatherWindSpeed':'Wind speed',
   'ui.historicalWeatherTitle':'Actual Weather on Race Day (auto-fetched)','ui.weatherPrecipAmount':'Precipitation',
   'ui.historicalWeatherSource':'Source: Open-Meteo Historical Weather Archive','ui.historicalWeatherPending':'Fetching historical weather for race day…',
-  'ui.historicalWeatherAutofillNote':'Auto-filled the "Actual Feels-like Temp" and "Race-day Humidity" fields below (existing values are not overwritten)',
+  'ui.historicalWeatherAutofillNote':'Auto-filled the matching fields below (feels-like temp, race-day humidity, wind speed, wind direction; if it rained that day, also fills rain chance and race-day condition; existing values are never overwritten)',
   'ui.weatherLiveNote':'Live forecast, updated {n} min ago',
   'ui.weatherFetching':'Fetching…','ui.weatherRefresh':'Refresh forecast','ui.weatherFetch':'Fetch live forecast',
   'ui.weatherNeedsGps':'Import a GPX/FIT track to fetch a live forecast',
@@ -2483,6 +2484,7 @@ function migrateRace(r){
   if(r.performanceData&&r.performanceData.shoeId===undefined) r.performanceData.shoeId='';
   if(r.liveForecast===undefined) r.liveForecast=null;
   if(r.historicalWeather===undefined) r.historicalWeather=null;
+  if(r.historicalAverageWeather===undefined) r.historicalAverageWeather=null;
   if(r.bibNumber==null) r.bibNumber='';
   if(r.schedule&&r.schedule.startWave==null) r.schedule.startWave='';
   return r;
@@ -5281,6 +5283,14 @@ function findClosestHourIndex(times,startTime){
 // 賽事詳情頁、只要有快取資料就檢查一次要不要回填，不管這份快取是剛
 // 抓的還是很久以前就抓好的，回傳有沒有實際改到東西，讓呼叫的地方決定
 // 要不要接著存檔，不會每次渲染都白白多寫一次。
+// 把風向角度（0~360，氣象學慣例：風「從」哪個方向吹來）轉成中文常見的
+// 16 方位風向文字（例如「東北風」），角度每 22.5 度一格。
+function degreesToCompassWindLabel(deg){
+  if(deg==null) return null;
+  const dirs=['北','北北東','東北','東北東','東','東南東','東南','南南東','南','南南西','西南','西南西','西','西北西','西北','北北西'];
+  const idx=Math.round((((deg%360)+360)%360)/22.5)%16;
+  return dirs[idx]+'風';
+}
 function applyHistoricalWeatherAutofill(race){
   const hw=race.historicalWeather;
   if(!hw||!hw.times||!hw.times.length) return false;
@@ -5294,6 +5304,29 @@ function applyHistoricalWeatherAutofill(race){
     race.raceDayWeather.humidityPct=Math.round(hw.humidity[idx]);
     changed=true;
   }
+  if(race.climateForecast.windSpeedKmh==null&&hw.windSpeed&&hw.windSpeed[idx]!=null){
+    race.climateForecast.windSpeedKmh=Math.round(hw.windSpeed[idx]*10)/10;
+    changed=true;
+  }
+  if(!race.climateForecast.windDirection&&hw.windDirection&&hw.windDirection[idx]!=null){
+    const label=degreesToCompassWindLabel(hw.windDirection[idx]);
+    if(label){ race.climateForecast.windDirection=label; changed=true; }
+  }
+  // 當天資料如果有查到降雨量（大於 0），代表那個時段確實下過雨，直接把
+  // 「降雨機率」填 100%、「當日氣候狀況」選「雨」——這是已經發生過的事，
+  // 不是預測，用二選一的「有下雨／沒下雨」直接對應到機率的兩個極端，
+  // 是使用者明確要求的簡化規則，跟其他欄位維持保守、不亂猜的原則不同。
+  const precipAtIdx=hw.precip&&hw.precip[idx];
+  if(precipAtIdx!=null&&precipAtIdx>0){
+    if(race.climateForecast.rainProbabilityPct==null){
+      race.climateForecast.rainProbabilityPct=100;
+      changed=true;
+    }
+    if(!race.raceDayWeather.condition){
+      race.raceDayWeather.condition='rainy';
+      changed=true;
+    }
+  }
   return changed;
 }
 async function fetchHistoricalWeatherForRace(raceId){
@@ -5305,7 +5338,7 @@ async function fetchHistoricalWeatherForRace(raceId){
   historicalWeatherFetchingRaceId=raceId;
   if(currentRace&&currentRace.id===raceId) renderDetail();
   try{
-    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${pt.lat}&longitude=${pt.lon}&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_gusts_10m&timezone=auto&start_date=${race.schedule.raceDate}&end_date=${race.schedule.raceDate}`;
+    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${pt.lat}&longitude=${pt.lon}&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_gusts_10m,wind_speed_10m,wind_direction_10m&timezone=auto&start_date=${race.schedule.raceDate}&end_date=${race.schedule.raceDate}`;
     const res=await fetch(url);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
@@ -5320,6 +5353,8 @@ async function fetchHistoricalWeatherForRace(raceId){
       humidity:data.hourly.relative_humidity_2m,
       precip:data.hourly.precipitation,
       gust:data.hourly.wind_gusts_10m,
+      windSpeed:data.hourly.wind_speed_10m,
+      windDirection:data.hourly.wind_direction_10m,
     };
     applyHistoricalWeatherAutofill(race);
     await persist();
@@ -5331,18 +5366,98 @@ async function fetchHistoricalWeatherForRace(raceId){
   historicalWeatherFetchingRaceId=null;
   if(currentRace&&currentRace.id===raceId) renderDetail();
 }
+/* ============================================================
+   「歷年平均氣溫／濕度」：跟上面「賽事當天實際天氣」是不同概念——
+   那個是單一天的實際量測值，這個是同一個地點、同一個月日，往前
+   五年（不含賽事當年，因為當年的實際值已經有單獨的卡片顯示）的
+   歷史平均。Open-Meteo 的歷史查詢端點是「一段連續日期」的查詢，
+   沒有「同一天橫跨多年」這種查詢方式，只能拆成 5 次個別查詢（每年
+   一次，各自查同一個月日），5 次平行送出、用 allSettled 而不是
+   all，任何一年查詢失敗都不影響其他年份，只要至少查到 1 年的資料
+   就能算出平均，不用 5 年都成功才有結果。閏年 2/29 這種在部分年份
+   根本不存在的日期，該年的查詢會自然失敗（當成那一年沒有資料處理），
+   不特別用 2/28 去湊，畢竟兩者本來就是不同的一天。
+   ============================================================ */
+let historicalAverageFetchingRaceId=null;
+const historicalAverageAttempted=new Set();
+function isValidCalendarDateStr(dateStr){
+  const d=new Date(dateStr+'T00:00:00Z');
+  if(isNaN(d)) return false;
+  const [y,m,day]=dateStr.split('-').map(Number);
+  return d.getUTCFullYear()===y&&(d.getUTCMonth()+1)===m&&d.getUTCDate()===day;
+}
+async function fetchHistoricalAverageWeatherForRace(raceId){
+  const race=state.races.find(r=>r.id===raceId);
+  if(!race||!raceHasGpsTrack(race)||!race.schedule.raceDate) return;
+  if(historicalAverageAttempted.has(raceId)) return;
+  historicalAverageAttempted.add(raceId);
+  const pt=race.route.trackPoints[0];
+  const [raceYearStr,monthStr,dayStr]=race.schedule.raceDate.split('-');
+  const raceYear=parseInt(raceYearStr,10);
+  // 用 Date 建構子的「自動進位」特性反過來偵測無效日期：例如閏年才有
+  // 的 2/29，套用到非閏年會被 JS 自動推移成 3/1，跟原本要求的月/日對
+  // 不起來，代表那個年份根本沒有這一天，直接跳過、不送出這個年份的
+  // 查詢（不會拿 2/28 去湊，畢竟是不同的一天，寧可平均少算一年）。
+  const years=[];
+  for(let i=1;i<=5;i++){
+    const y=raceYear-i;
+    const dateStr=`${y}-${monthStr}-${dayStr}`;
+    if(isValidCalendarDateStr(dateStr)) years.push({year:y,dateStr});
+  }
+  if(!years.length){ historicalAverageFetchingRaceId=null; return; }
+  historicalAverageFetchingRaceId=raceId;
+  if(currentRace&&currentRace.id===raceId) renderDetail();
+  try{
+    const results=await Promise.allSettled(years.map(async ({year:y,dateStr})=>{
+      const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${pt.lat}&longitude=${pt.lon}&daily=temperature_2m_mean,relative_humidity_2m_mean&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`;
+      const res=await fetch(url);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data=await res.json();
+      if(!data.daily||!data.daily.time||!data.daily.time.length) throw new Error('no data for '+y);
+      return {
+        year:y,
+        temp:data.daily.temperature_2m_mean[0],
+        humidity:data.daily.relative_humidity_2m_mean[0],
+      };
+    }));
+    const succeeded=results.filter(r=>r.status==='fulfilled').map(r=>r.value)
+      .filter(v=>v.temp!=null||v.humidity!=null);
+    if(!succeeded.length) throw new Error('五個年份都沒有查到資料');
+    const temps=succeeded.map(v=>v.temp).filter(v=>v!=null);
+    const humidities=succeeded.map(v=>v.humidity).filter(v=>v!=null);
+    race.historicalAverageWeather={
+      fetchedAt:new Date().toISOString(),
+      years:succeeded.map(v=>v.year),
+      avgTempC:temps.length?Math.round((temps.reduce((a,b)=>a+b,0)/temps.length)*10)/10:null,
+      avgHumidityPct:humidities.length?Math.round(humidities.reduce((a,b)=>a+b,0)/humidities.length):null,
+    };
+    if(race.climateForecast.avgTempC==null&&race.historicalAverageWeather.avgTempC!=null){
+      race.climateForecast.avgTempC=race.historicalAverageWeather.avgTempC;
+    }
+    if(race.climateForecast.avgHumidityPct==null&&race.historicalAverageWeather.avgHumidityPct!=null){
+      race.climateForecast.avgHumidityPct=race.historicalAverageWeather.avgHumidityPct;
+    }
+    await persist();
+  }catch(err){
+    console.error('抓取歷年平均氣溫濕度失敗',err);
+  }
+  historicalAverageFetchingRaceId=null;
+  if(currentRace&&currentRace.id===raceId) renderDetail();
+}
 function historicalWeatherCompactHtml(hw,race){
   const idx=findClosestHourIndex(hw.times,race.schedule.startTime);
-  const temp=hw.temp?.[idx],precip=hw.precip?.[idx],gust=hw.gust?.[idx];
-  const hasAutofillData=(hw.feelsLike&&hw.feelsLike[idx]!=null)||(hw.humidity&&hw.humidity[idx]!=null);
+  const temp=hw.temp?.[idx],precip=hw.precip?.[idx],gust=hw.gust?.[idx],windSpeed=hw.windSpeed?.[idx];
+  const hasAutofillData=(hw.feelsLike&&hw.feelsLike[idx]!=null)||(hw.humidity&&hw.humidity[idx]!=null)
+    ||(hw.windSpeed&&hw.windSpeed[idx]!=null)||(hw.windDirection&&hw.windDirection[idx]!=null)||(precip!=null&&precip>0);
   return `<div class="historical-weather-block">
     <div class="historical-weather-title small">${t('ui.historicalWeatherTitle','賽事當天實際天氣（自動查詢）')}</div>
     <div class="focus-weather-row mono">
       ${temp!=null?`<span>${temp}°C</span>`:''}
       ${precip!=null?`<span>${t('ui.weatherPrecipAmount','降雨量')} ${precip}mm</span>`:''}
       ${gust!=null?`<span>${t('ui.weatherGust','陣風')} ${gust}km/h</span>`:''}
+      ${windSpeed!=null?`<span>${t('ui.weatherWindSpeed','風速')} ${windSpeed}km/h</span>`:''}
     </div>
-    ${hasAutofillData?`<p class="historical-weather-note small">${t('ui.historicalWeatherAutofillNote','已自動帶入下方「實際體感溫度」與「當日濕度」欄位（原本已填寫的值不會被覆蓋）')}</p>`:''}
+    ${hasAutofillData?`<p class="historical-weather-note small">${t('ui.historicalWeatherAutofillNote','已自動帶入下方對應欄位（實際體感溫度、當日濕度、風速、風向；當天如果有降雨，也會一併帶入降雨機率與當日氣候狀況；原本已填寫的值都不會被覆蓋）')}</p>`:''}
     <p class="historical-weather-note small">${t('ui.historicalWeatherSource','資料來源：Open-Meteo 歷史氣象回溯資料庫')}</p>
   </div>`;
 }
@@ -5937,11 +6052,12 @@ function renderDetail(){
   setupElevationScrubbing(race);
   applyScrollFadeClasses();
   // 這裡有兩種情況都需要（重新）抓取：完全沒有快取過（第一次），或者
-  // 快取是在「體感溫度／濕度」這兩個欄位還沒加進抓取範圍之前存下來的
-  // 舊資料（缺了 feelsLike／humidity 這兩個陣列，不是陣列裡的值剛好是
-  // null，是整個欄位都不存在）——這種舊快取沒辦法靠回填補齊，因為
-  // 資料根本沒抓過，只能重新抓一次。
-  const hwMissingNewFields=race.historicalWeather&&(!race.historicalWeather.feelsLike||!race.historicalWeather.humidity);
+  // 快取是在某些欄位還沒加進抓取範圍之前存下來的舊資料（缺了整個欄位，
+  // 不是陣列裡的值剛好是 null）——這種舊快取沒辦法靠回填補齊，因為
+  // 資料根本沒抓過，只能重新抓一次。每次擴充抓取的變數範圍時，這裡
+  // 都要同步補上對應的檢查，不然舊資料會一直停在「缺了新欄位」的
+  // 狀態、回填邏輯永遠不會被觸發。
+  const hwMissingNewFields=race.historicalWeather&&(!race.historicalWeather.feelsLike||!race.historicalWeather.humidity||!race.historicalWeather.windSpeed||!race.historicalWeather.windDirection);
   if((!race.historicalWeather||hwMissingNewFields)&&historicalWeatherFetchingRaceId!==race.id&&raceIsHistorical(race)&&raceHasGpsTrack(race)){
     fetchHistoricalWeatherForRace(race.id);
   }else if(race.historicalWeather&&applyHistoricalWeatherAutofill(race)){
@@ -5949,6 +6065,11 @@ function renderDetail(){
     // 剛剛才第一次回填，存檔並重新渲染一次讓畫面反映出來。
     persist();
     renderDetail();
+  }
+  // 歷年平均氣溫濕度是獨立的另一個背景查詢（跟上面單日實際天氣分開
+  // 觸發、分開快取），兩者各自判斷各自的條件，不互相依賴。
+  if(!race.historicalAverageWeather&&historicalAverageFetchingRaceId!==race.id&&raceIsHistorical(race)&&raceHasGpsTrack(race)){
+    fetchHistoricalAverageWeatherForRace(race.id);
   }
 }
 // 分段配速表、系列賽事比較表、媒體縮圖列這幾個區塊原本不管內容
