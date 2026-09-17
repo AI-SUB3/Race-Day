@@ -38,6 +38,7 @@
     --flag:#B8451F;
     --stone:#8B8D82;
     --gold:#B08D2E;
+    --gold-rgb:176,141,46;
     --sport-road_running:#9C4A5C;
     --sport-trail_running:#2E6B49;
     --sport-ultra_marathon:#5B4A7A;
@@ -66,6 +67,7 @@
     --flag:#E07850;
     --stone:#6B7178;
     --gold:#D9B15C;
+    --gold-rgb:217,177,92;
     --sport-road_running:#D4788A;
     --sport-trail_running:#4C9A72;
     --sport-ultra_marathon:#9B87C4;
@@ -770,6 +772,16 @@
     padding:10px 16px;font:inherit;font-weight:500;font-size:15px;
   }
   .btn-primary:hover{opacity:0.88;}
+  /* 第一次使用時，引導視線去點「新增賽事」的呼吸光暈效果；使用者按過一次
+     （或已經有賽事資料）就永久不再出現，不是每次沒有賽事時都會亮。 */
+  @keyframes cta-glow-pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(var(--gold-rgb),0.55);}
+    50%{box-shadow:0 0 0 9px rgba(var(--gold-rgb),0);}
+  }
+  .cta-glow{animation:cta-glow-pulse 1.8s ease-in-out infinite;}
+  @media (prefers-reduced-motion: reduce){
+    .cta-glow{animation:none;box-shadow:0 0 0 3px rgba(var(--gold-rgb),0.5);}
+  }
   .btn-ghost{
     background:none;border:1px solid var(--rule);color:var(--ink);border-radius:3px;
     padding:6px 12px;font:inherit;font-size:14px;
@@ -1555,7 +1567,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.46.0';
+const APP_VERSION='v2.47.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2566,6 +2578,7 @@ function hasExampleRaces(){
   return state.races.some(r=>EXAMPLE_RACE_IDS.includes(r.id));
 }
 document.getElementById('btn-sample-data').addEventListener('click',()=>{
+  dismissFirstUseGlow();
   const existing=state.races.find(r=>EXAMPLE_RACE_IDS.includes(r.id)&&!r.deletedAt);
   if(existing){
     state.selectedId=existing.id;state.creating=false;
@@ -5894,7 +5907,29 @@ function resetCreateStaging(){
   createStagedActivity=null;createStagedActivityError=null;
   createStagedCover=null;createStagedCoverError=null;
 }
-function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();logFeatureUse('race_create');}
+/* ============================================================
+   第一次使用引導：完全沒有賽事資料、而且這台裝置這個瀏覽器也從沒
+   標記過「已經看過」時，「新增賽事」按鈕會有呼吸光暈效果引導視線；
+   使用者點過一次（不管後續是真的新增還是取消）、或用「範例資料」
+   開始，都算完成引導，永久記在 localStorage 裡，之後就算把賽事全部
+   刪光重新變回空清單，也不會再亮起來——這是「第一次用這個網站」的
+   引導，不是「賽事清單目前是空的」的提示，兩者語意不一樣。
+   ============================================================ */
+const FIRST_USE_GLOW_KEY='race-day-first-use-seen-v1';
+function checkAndShowFirstUseGlow(){
+  try{
+    if(state.races.length>0) return;
+    if(localStorage.getItem(FIRST_USE_GLOW_KEY)) return;
+  }catch(err){ return; }
+  const btn=document.getElementById('btn-new');
+  if(btn) btn.classList.add('cta-glow');
+}
+function dismissFirstUseGlow(){
+  try{ localStorage.setItem(FIRST_USE_GLOW_KEY,'1'); }catch(err){}
+  const btn=document.getElementById('btn-new');
+  if(btn) btn.classList.remove('cta-glow');
+}
+function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();logFeatureUse('race_create');dismissFirstUseGlow();}
 
 document.getElementById('btn-new').addEventListener('click',startCreate);
 
@@ -7957,6 +7992,7 @@ async function init(){
   checkAndRecordBadgeUnlocks();
   renderAll();
   updateTopbarHeightVar();
+  checkAndShowFirstUseGlow();
 }
 /* ============================================================
    清單拖曳排序（裝備清單／補給時程／分段配速）
