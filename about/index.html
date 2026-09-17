@@ -10,40 +10,54 @@
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
+    /* 淺色（預設） */
+    --paper:#E6E9E6; --surface2:#DEE2DC; --surface:#FAFAF8; --ink:#16231C; --ink-soft:#4B564E;
+    --rule:#D8DAD3; --trail:#2E6B49; --contour:#3A5A8C; --flag:#B8451F; --stone:#8B8D82; --gold:#B08D2E;
+    --gold-rgb:176,141,46; --shadow:rgba(30,35,30,0.12);
+  }
+  [data-theme="dark"]{
     --paper:#0D1013; --surface2:#161B21; --surface:#1E232A; --ink:#EDEEE9; --ink-soft:#9BA3A0;
     --rule:#2A3038; --trail:#4C9A72; --contour:#7B9FD1; --flag:#E07850; --stone:#6B7178; --gold:#D9B15C;
+    --gold-rgb:217,177,92; --shadow:rgba(0,0,0,0.42);
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
-  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Noto Sans TC', sans-serif; -webkit-font-smoothing:antialiased;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Noto Sans TC', sans-serif; -webkit-font-smoothing:antialiased; transition:background-color 0.2s ease, color 0.2s ease;}
   h1,h2{font-family:'LXGW WenKai TC', 'Noto Sans TC', serif; font-weight:700; margin:0;}
   p{margin:0;}
   a{color:var(--gold);}
-  a:hover{color:#EAC783;}
+  a:hover{color:var(--ink);}
   img{max-width:100%; height:auto; display:block;}
   .mono{font-family:'IBM Plex Mono', monospace;}
   .container{max-width:1120px; margin:0 auto; padding-inline:28px;}
   .btn-primary{
     display:inline-block; background:var(--gold); color:#241C0B; font-weight:700; font-size:17px;
-    padding:16px 32px; border-radius:6px; text-decoration:none;
+    padding:16px 32px; border-radius:6px; text-decoration:none; transition:background-color 0.2s ease;
   }
-  .btn-primary:hover{background:#EAC783; color:#241C0B;}
+  .btn-primary:hover{opacity:0.88;}
   .btn-ghost{
-    display:inline-block; color:var(--ink); font-weight:600; font-size:15px; padding:10px 20px;
-    border-radius:6px; border:1px solid var(--rule); text-decoration:none;
+    display:inline-flex; align-items:center; gap:8px; color:var(--ink); font-weight:600; font-size:15px; padding:10px 16px;
+    border-radius:6px; border:1px solid var(--rule); text-decoration:none; background:none; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif;
   }
   .btn-ghost:hover{border-color:var(--ink); color:var(--ink);}
-  .frame{border-radius:12px; overflow:hidden; border:1px solid var(--rule); box-shadow:0 22px 56px rgba(0,0,0,0.42);}
-  .band{border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);}
-  .split{display:flex; gap:60px; align-items:center;}
-  .split > *{flex:1; min-width:300px;}
+  .icon-toggle{
+    display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;
+    border-radius:6px; border:1px solid var(--rule); background:none; cursor:pointer; color:var(--ink);
+  }
+  .icon-toggle:hover{border-color:var(--ink);}
+  .icon-toggle svg{display:none;}
+  .icon-toggle .icon-moon{display:block;}
+  [data-theme="dark"] .icon-toggle .icon-sun{display:block;}
+  [data-theme="dark"] .icon-toggle .icon-moon{display:none;}
+  .frame{border-radius:12px; overflow:hidden; border:1px solid var(--rule); box-shadow:0 22px 56px var(--shadow);}
+  .band{border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); background:var(--surface2);}
+  :focus-visible{outline:2px solid var(--gold); outline-offset:3px;}
   @media (max-width:760px){
-    .split{flex-direction:column;}
     .hero-h1{font-size:36px !important;}
     .sect-h2{font-size:27px !important;}
     .proof-row{gap:26px !important;}
   }
-  :focus-visible{outline:2px solid var(--gold); outline-offset:3px;}
 </style>
 </head>
 <body>
@@ -57,7 +71,13 @@
         <span style="font-family:'LXGW WenKai TC',serif; font-weight:700; font-size:22px;">賽事紀錄</span>
         <span class="mono" style="font-size:12px; color:var(--stone);">Race Day</span>
       </div>
-      <a class="btn-ghost" href="https://ai-sub3.github.io/Race-Day/">前往網站</a>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button type="button" class="icon-toggle" id="theme-toggle" aria-label="切換淺色／深色主題">
+          <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg>
+          <svg class="icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"></path></svg>
+        </button>
+        <a class="btn-ghost" href="https://ai-sub3.github.io/Race-Day/">前往網站</a>
+      </div>
     </div>
   </div>
 
@@ -78,31 +98,32 @@
     </div>
 
     <div class="frame" style="margin-top:52px;">
-      <img src="images/calendar.png" alt="賽事紀錄網站的行事曆主畫面，顯示備戰中的賽事卡片與歷年完賽統計" width="1600" height="925">
+      <img id="img-calendar" src="images/calendar-light.png" data-light="images/calendar-light.png" data-dark="images/calendar.png"
+        alt="賽事紀錄網站的行事曆主畫面，顯示備戰中的賽事卡片與歷年完賽統計" width="1600" height="925">
     </div>
   </div>
 
   <!-- PROOF BAR -->
-  <div class="band" style="background:var(--surface2);">
+  <div class="band">
     <div class="container proof-row" style="display:flex; flex-wrap:wrap; gap:40px; justify-content:center; padding-block:34px;">
 
       <div style="display:flex; align-items:center; gap:14px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D9B15C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5"></path></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5"></path></svg>
         <div><div class="mono" style="font-size:21px; font-weight:600;">95</div><div style="font-size:13px; color:var(--ink-soft);">成就徽章</div></div>
       </div>
 
       <div style="display:flex; align-items:center; gap:14px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7B9FD1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h10"></path></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--contour)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h10"></path></svg>
         <div><div class="mono" style="font-size:21px; font-weight:600;">3</div><div style="font-size:13px; color:var(--ink-soft);">語言：繁中・日文・英文</div></div>
       </div>
 
       <div style="display:flex; align-items:center; gap:14px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4C9A72" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17V7a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"></path><path d="M14 5v5h5"></path></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--trail)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17V7a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"></path><path d="M14 5v5h5"></path></svg>
         <div><div class="mono" style="font-size:21px; font-weight:600;">Excel／GPX／FIT</div><div style="font-size:13px; color:var(--ink-soft);">一次匯入賽事與路線</div></div>
       </div>
 
       <div style="display:flex; align-items:center; gap:14px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E07850" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 19h14"></path></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--flag)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 19h14"></path></svg>
         <div><div class="mono" style="font-size:21px; font-weight:600;">100%</div><div style="font-size:13px; color:var(--ink-soft);">免費・開源・無廣告</div></div>
       </div>
 
@@ -122,7 +143,7 @@
   </div>
 
   <!-- BENEFIT 2 -->
-  <div class="band" style="background:var(--surface2);">
+  <div class="band">
     <div class="container" style="padding-block:92px;">
       <div style="max-width:640px;">
         <h2 class="sect-h2" style="font-size:32px; line-height:1.45;">路線還沒跑過，先讓數據幫你心裡有底</h2>
@@ -133,7 +154,8 @@
         </p>
       </div>
       <div class="frame" style="margin-top:40px;">
-        <img src="images/elevation.png" alt="海拔變化圖，游標拖曳顯示 9 公里處海拔 1055 公尺、瞬時坡度 5.6%" width="2000" height="383">
+        <img id="img-elevation" src="images/elevation-light.png" data-light="images/elevation-light.png" data-dark="images/elevation.png"
+          alt="海拔變化圖，游標拖曳顯示 9 公里處海拔 1055 公尺、瞬時坡度 5.6%" width="2000" height="383">
       </div>
     </div>
   </div>
@@ -149,15 +171,16 @@
       </p>
     </div>
     <div class="frame" style="margin-top:40px; max-width:760px;">
-      <img src="images/weather.png" alt="賽事氣象分頁，顯示自動查詢到的賽事當天實際天氣，以及自動帶入的風向、風速、降雨機率與氣候狀況欄位" width="2000" height="840">
+      <img id="img-weather" src="images/weather-light.png" data-light="images/weather-light.png" data-dark="images/weather.png"
+        alt="賽事氣象分頁，顯示自動查詢到的賽事當天實際天氣，以及自動帶入的風向、風速、降雨機率與氣候狀況欄位" width="2000" height="840">
     </div>
   </div>
 
   <!-- BENEFIT 4 -->
-  <div class="band" style="background:var(--surface2);">
+  <div class="band">
     <div class="container" style="padding-block:92px;">
-      <div class="split">
-        <div>
+      <div style="display:flex; gap:60px; align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:300px;">
           <h2 class="sect-h2" style="font-size:32px; line-height:1.45;">累積的不只是里程，還有成就感</h2>
           <p style="font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px;">
             95 個成就徽章橫跨探索、地形、速度、裝備四大類別，達成當下有開箱動畫慶祝。
@@ -165,7 +188,7 @@
             適合直接發到社群限時動態。鞋款也能個別追蹤累積里程，退役前提醒你換一雙。
           </p>
         </div>
-        <div class="frame" style="max-width:260px; margin-inline:auto;">
+        <div class="frame" style="flex:0 0 auto; width:260px; margin-inline:auto;">
           <img src="images/badge.png" alt="徽章成就分享圖，顯示「攀山羚羊」徽章、賽事數據與金色路線軌跡" width="1080" height="1920">
         </div>
       </div>
@@ -204,7 +227,7 @@
   </div>
 
   <!-- CLOSING CTA -->
-  <div class="band" style="background:var(--surface2);">
+  <div class="band">
     <div class="container" style="padding-block:84px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
       <h2 style="font-size:30px; line-height:1.4; max-width:480px;">下一場賽事，從現在開始記錄</h2>
       <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
@@ -219,5 +242,39 @@
   </div>
 
 </div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'race-day-showcase-theme';
+  var toggleImgs = ['img-calendar','img-elevation','img-weather'];
+  function applyTheme(theme){
+    if(theme === 'dark'){
+      document.documentElement.setAttribute('data-theme','dark');
+    }else{
+      document.documentElement.removeAttribute('data-theme');
+    }
+    toggleImgs.forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      var next = theme === 'dark' ? el.getAttribute('data-dark') : el.getAttribute('data-light');
+      if(next && el.getAttribute('src') !== next) el.setAttribute('src', next);
+    });
+  }
+  var saved = null;
+  try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
+  // 預設一律先顯示淺色版本，不管裝置本身的系統色彩偏好設定是什麼；
+  // 只有使用者自己在這個頁面上點過切換按鈕、留下記錄，回來的時候才會
+  // 照他上次選的來顯示。
+  applyTheme(saved === 'dark' ? 'dark' : 'light');
+
+  var btn = document.getElementById('theme-toggle');
+  btn.addEventListener('click', function(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var next = isDark ? 'light' : 'dark';
+    applyTheme(next);
+    try{ localStorage.setItem(STORAGE_KEY, next); }catch(e){}
+  });
+})();
+</script>
 </body>
 </html>
