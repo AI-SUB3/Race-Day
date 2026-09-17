@@ -438,6 +438,11 @@
   .elevation-trend-wrap{max-width:100%;overflow-x:auto;}
   .elevation-trend-svg{height:110px;display:block;}
   .elevation-trend-label{font-size:10px;fill:var(--stone);}
+  .climate-chart-wrap{max-width:100%;}
+  .climate-chart-svg{width:100%;height:200px;display:block;}
+  .climate-chart-axis-label{font-size:10px;fill:var(--stone);}
+  .climate-chart-slope{color:var(--flag);margin-top:8px;}
+  .climate-chart-sweetspot{color:var(--trail);margin-top:2px;}
   .heatmap-wrap{max-width:100%;overflow-x:auto;}
   .heatmap-row{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
   .heatmap-year-label{width:36px;flex-shrink:0;font-size:11px;color:var(--stone);}
@@ -958,7 +963,36 @@
 
   .subsection{padding:6px 2px 22px;}
   .subsection-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .subsection-head-actions{display:flex;align-items:center;gap:8px;}
   .subsection h3{font-size:15px;font-weight:600;color:var(--ink-soft);}
+
+  /* ---------- 裝備佈署看板（Kanban） ---------- */
+  .kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;}
+  .kanban-lane{
+    flex:0 0 220px;display:flex;flex-direction:column;gap:8px;padding:12px;
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper);transition:background-color 0.15s ease;
+  }
+  .kanban-lane.kanban-drag-over{background:var(--stamp-bg-trail);border-color:var(--trail);}
+  .kanban-lane.kanban-lane-full{background:var(--stamp-bg-flag);}
+  .kanban-lane-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .kanban-lane-title{color:var(--ink-soft);font-weight:600;}
+  .kanban-lane-progress{color:var(--stone);}
+  .kanban-lane-bar{height:4px;border-radius:2px;background:var(--rule);overflow:hidden;}
+  .kanban-lane-bar-fill{height:100%;background:var(--trail);border-radius:2px;}
+  .kanban-lane-empty{color:var(--stone);text-align:center;padding:14px 4px;border:1px dashed var(--rule);border-radius:4px;}
+  .kanban-cards{display:flex;flex-direction:column;gap:6px;min-height:8px;}
+  .kanban-card{
+    display:flex;align-items:center;gap:6px;padding:8px;border:1px solid var(--rule);border-radius:5px;
+    background:var(--surface);cursor:grab;
+  }
+  .kanban-card.kanban-dragging{opacity:0.4;}
+  .kanban-card-drag{flex:0 0 auto;color:var(--stone);width:16px;height:16px;}
+  .kanban-card-drag svg{width:100%;height:100%;}
+  .kanban-card-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .kanban-card-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .kanban-card-mandatory-tag{font-size:10px;color:var(--flag);font-weight:600;}
+  .kanban-card-packed{flex:0 0 auto;display:flex;}
+  .kanban-card-move{flex:0 0 auto;max-width:34px;font-size:10px;padding:2px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--stone);}
 
   .gear-weight-dash{
     display:flex;flex-direction:column;gap:8px;padding:16px;margin-bottom:14px;
@@ -1416,7 +1450,7 @@ const LIST_META={
   accommodations:{title:'住宿',fields:ACCOM_FIELDS,factory:()=>({hotelName:'',address:'',checkIn:'',checkOut:'',distanceToStartKm:null,bookingStatus:'considering',cost:null,notes:''})},
   transportation:{title:'交通',fields:TRANSPORT_FIELDS,factory:()=>({direction:'outbound',mode:'hsr',departureTime:'',pickupLocation:'',notes:''})},
   companions:{title:'隨行人員',fields:COMPANION_FIELDS,factory:()=>({name:'',role:'partner',contactInfo:'',notes:''})},
-  equipmentChecklist:{title:'裝備清單',fields:EQUIP_FIELDS,factory:()=>({itemName:'',category:'other',weightG:null,isConsumable:false,isMandatory:false,isPacked:false,notes:''})},
+  equipmentChecklist:{title:'裝備清單',fields:EQUIP_FIELDS,factory:()=>({itemName:'',category:'other',weightG:null,isConsumable:false,isMandatory:false,isPacked:false,location:'',notes:''})},
   nutritionSchedule:{title:'補給時程規劃',fields:NUTRITION_SCHEDULE_FIELDS,factory:()=>({distanceKm:null,item:'',plannedAmount:'',consumed:false,notes:''})},
   splits:{title:'分段配速',fields:SPLIT_FIELDS,factory:()=>({distanceKm:null,splitTimeSeconds:null,avgHr:null,avgPaceSecPerKm:null,elevationGainM:null,notes:''})},
   mediaLinks:{title:'多媒體與連結',fields:MEDIA_FIELDS,factory:()=>({type:'other',url:'',notes:''})},
@@ -1669,7 +1703,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.58.0';
+const APP_VERSION='v2.60.1';
 
 /* ============================================================
    多語系（i18n）
@@ -1791,6 +1825,12 @@ const JA={
   'ui.careerTotalElevation':'生涯累積標高','ui.unitRaces':'回','ui.unitKm':'km','ui.unitMeters':'m',
   'ui.yearlyChartTitle':'年別完走数',
   'ui.elevationTrendTitle':'四半期別累積標高（トレンド）',
+  'ui.climateChartTitle':'気候とパフォーマンスの散布図','ui.climateChartSlope':'気温が1°C上がるごとに、ペースは平均で約 {n} ポイント低下します',
+  'ui.climateChartSweetSpot':'最適な気温帯：{range}（高効率レース {n} 件から算出）',
+  'ui.unnamedItem':'(名称未設定の項目)','ui.equipmentViewList':'リスト表示に切り替え','ui.equipmentViewKanban':'配置ビュー（かんばん）に切り替え',
+  'ui.locUnassigned':'未分類','ui.locBody':'携行','ui.locStartBag':'スタート預け荷物','ui.locFinishBag':'フィニッシュ預け荷物',
+  'ui.locT1':'T1（スイム→バイク）','ui.locT2':'T2（バイク→ラン）','ui.locCpBag':'ドロップバッグ・{name}',
+  'ui.kanbanMoveTo':'移動先…','ui.kanbanLaneEmpty':'装備をここにドラッグ',
   'ui.tableViewToggle':'コンパクト表表示に切り替え',
   'ui.tableViewEmpty':'条件に一致する大会がありません',
   'ui.tableColDate':'日付','ui.tableColName':'大会名','ui.tableColStatus':'状態',
@@ -2160,6 +2200,12 @@ const EN={
   'ui.careerTotalElevation':'Lifetime elevation gain','ui.unitRaces':'races','ui.unitKm':'km','ui.unitMeters':'m',
   'ui.yearlyChartTitle':'Races Completed by Year',
   'ui.elevationTrendTitle':'Cumulative Elevation by Quarter',
+  'ui.climateChartTitle':'Climate vs. Performance','ui.climateChartSlope':'For every 1°C rise in temperature, pace slows by about {n} percentage points on average',
+  'ui.climateChartSweetSpot':'Sweet spot temperature range: {range} (based on {n} high-efficiency race(s))',
+  'ui.unnamedItem':'(Unnamed item)','ui.equipmentViewList':'Switch to list view','ui.equipmentViewKanban':'Switch to deployment view (Kanban)',
+  'ui.locUnassigned':'Unassigned','ui.locBody':'Carried on body','ui.locStartBag':'Start bag','ui.locFinishBag':'Finish bag',
+  'ui.locT1':'T1 (Swim→Bike)','ui.locT2':'T2 (Bike→Run)','ui.locCpBag':'Drop bag・{name}',
+  'ui.kanbanMoveTo':'Move to…','ui.kanbanLaneEmpty':'Drag gear here',
   'ui.tableViewToggle':'Switch to compact table view',
   'ui.tableViewEmpty':'No races match the current filter',
   'ui.tableColDate':'Date','ui.tableColName':'Race Name','ui.tableColStatus':'Status',
@@ -2647,8 +2693,10 @@ function migrateRace(r){
     r.equipmentChecklist.forEach(it=>{
       if(it.weightG===undefined) it.weightG=null;
       if(it.isConsumable===undefined) it.isConsumable=false;
+      if(it.location===undefined) it.location='';
     });
   }
+  backfillSplitElevationFromProfile(r);
   return r;
 }
 
@@ -2692,7 +2740,7 @@ function buildExampleRaces(){
     {tier:'B',targetTimeSeconds:hmsToSec('4:15:00'),paceStrategy:'全程平均配速 6:00/km'},
     {tier:'C',targetTimeSeconds:hmsToSec('4:30:00'),paceStrategy:'安全完賽，量力而為'},
   ];
-  marathon.equipmentChecklist=STARTER_TEMPLATES[0].items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:false,notes:''},it));
+  marathon.equipmentChecklist=STARTER_TEMPLATES[0].items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:false,location:'',notes:''},it));
   marathon.nutritionPlan={gelCount:4,electrolyteTabletCount:2,hydrationCapacityMl:500,notes:'每 10K 補一次膠'};
   marathon.nutritionSchedule=[
     {distanceKm:10,item:'能量膠',plannedAmount:'1 條',consumed:false,notes:''},
@@ -2729,7 +2777,7 @@ function buildExampleRaces(){
   ];
   trail.raceDayWeather={feelsLikeTempC:22,condition:'多雲偶陣雨',humidityPct:85,notes:'CP2 後下了場短暫雨，路面濕滑'};
   trail.budget={registrationFee:1800,currency:'TWD',paymentStatus:'paid',chipDeposit:0};
-  trail.equipmentChecklist=STARTER_TEMPLATES[1].items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:true,notes:''},it));
+  trail.equipmentChecklist=STARTER_TEMPLATES[1].items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:true,location:'',notes:''},it));
   trail.results={gunTimeSeconds:hmsToSec('3:32:10'),chipTimeSeconds:hmsToSec('3:30:05'),overallRank:118,overallParticipants:450,
     ageGroupRank:14,ageGroupParticipants:62,isPb:true,firstHalfSeconds:hmsToSec('1:38:00'),secondHalfSeconds:hmsToSec('1:52:05')};
   trail.performanceData={avgHr:152,maxHr:176,avgCadence:162,avgPowerWatts:null,dataSource:'運動手錶匯入 (GPX/TCX/FIT)',
@@ -3122,7 +3170,7 @@ function autoApplyEquipmentTemplate(race){
   const idx=SPORT_TEMPLATE_INDEX[race.sportType];
   const tmpl=(idx!=null)?STARTER_TEMPLATES[idx]:null;
   if(!tmpl) return false;
-  race.equipmentChecklist=tmpl.items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:false,notes:''},it));
+  race.equipmentChecklist=tmpl.items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:false,location:'',notes:''},it));
   return true;
 }
 /* ============================================================
@@ -4248,6 +4296,81 @@ function renderField(race,cfg,ns){
 }
 
 const REORDER_HANDLE_SVG=`<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>`;
+const EQUIP_VIEW_KANBAN_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="16" rx="1"/><rect x="10.5" y="4" width="6" height="10" rx="1"/><rect x="18" y="4" width="3" height="7" rx="1"/></svg>`;
+const EQUIP_VIEW_LIST_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>`;
+/* ============================================================
+   裝備佈署視圖（Kanban）：把裝備清單從一維的打包勾選，升級成依實體
+   放置位置分類的看板——隨身、起終點寄物袋、CP 轉換袋（依 checkpoints
+   陣列裡有勾選「可寄放裝備」的站點動態產生）、三鐵/二鐵賽事另外多出
+   T1／T2 轉換區。拖放（或用每張卡片自帶的下拉選單，觸控裝置或不方便
+   拖曳時的替代做法）把裝備移到對應的位置，賽前打包時一眼看出「這個
+   寄物袋裡到底放了什麼、還缺什麼」。
+   ============================================================ */
+let equipmentViewMode='list'; // 'list' | 'kanban'
+function equipmentLocationOptions(race){
+  const options=[
+    {value:'',label:t('ui.locUnassigned','尚未分類')},
+    {value:'body',label:t('ui.locBody','隨身攜帶')},
+    {value:'start_bag',label:t('ui.locStartBag','起點寄物袋')},
+  ];
+  if(race.sportType==='triathlon'||race.sportType==='duathlon'){
+    options.push({value:'t1',label:t('ui.locT1','T1 轉換區')});
+    options.push({value:'t2',label:t('ui.locT2','T2 轉換區')});
+  }
+  (race.checkpoints||[]).forEach((cp,i)=>{
+    if(cp.hasDropBag){
+      options.push({value:'cp:'+i,label:t('ui.locCpBag','轉換袋・{name}').replace('{name}',cp.name||('CP'+(i+1)))});
+    }
+  });
+  options.push({value:'finish_bag',label:t('ui.locFinishBag','終點寄物袋')});
+  return options;
+}
+function kanbanCardHtml(item,idx,locOptions){
+  const currentLoc=item.location||'';
+  const currentLabel=(locOptions.find(o=>o.value===currentLoc)||{}).label||'';
+  return `<div class="kanban-card" draggable="true" data-kanban-index="${idx}">
+    <span class="kanban-card-drag" aria-hidden="true">${REORDER_HANDLE_SVG}</span>
+    <div class="kanban-card-body">
+      <span class="kanban-card-name">${escapeHtml(item.itemName)||t('ui.unnamedItem','(未命名項目)')}</span>
+      ${item.isMandatory?`<span class="kanban-card-mandatory-tag">${t('field.equipmentChecklist.isMandatory','強制裝備')}</span>`:''}
+    </div>
+    <label class="kanban-card-packed" title="${t('field.equipmentChecklist.isPacked','已打包')}">
+      <input type="checkbox" data-action="kanban-toggle-packed" data-index="${idx}" ${item.isPacked?'checked':''}>
+    </label>
+    <select class="kanban-card-move" data-action="kanban-move-select" data-index="${idx}" aria-label="${t('ui.kanbanMoveTo','移動到…')}" title="${escapeHtml(currentLabel)}">
+      ${locOptions.map(o=>`<option value="${escapeHtml(o.value)}" ${o.value===currentLoc?'selected':''}>${escapeHtml(o.label)}</option>`).join('')}
+    </select>
+  </div>`;
+}
+function equipmentKanbanHtml(race){
+  const items=(race.equipmentChecklist||[]).map((it,i)=>({item:it,idx:i}));
+  const locOptions=equipmentLocationOptions(race);
+  const validValues=new Set(locOptions.map(o=>o.value));
+  // 項目的 location 如果指向一個現在已經不存在的位置（例如對應的 CP 被刪除、
+  // 或賽事種類從三鐵改掉導致 T1/T2 選項消失），視同「尚未分類」處理，落到
+  // 那一欄裡——裝備本身還在清單裡，只是需要使用者重新指定位置，不會因為
+  // 找不到對應的看板欄位就直接從畫面上消失不見。
+  const effectiveLocation=loc=>validValues.has(loc)?loc:'';
+  return `<div class="kanban-board">
+    ${locOptions.map(opt=>{
+      const laneItems=items.filter(x=>effectiveLocation(x.item.location||'')===opt.value);
+      const total=laneItems.length;
+      const packedCount=laneItems.filter(x=>x.item.isPacked).length;
+      const pct=total?Math.round(packedCount/total*100):0;
+      return `<div class="kanban-lane${total>10?' kanban-lane-full':''}" data-location="${escapeHtml(opt.value)}">
+        <div class="kanban-lane-head">
+          <span class="kanban-lane-title small">${escapeHtml(opt.label)}</span>
+          ${total?`<span class="kanban-lane-progress mono small">${packedCount}/${total}</span>`:''}
+        </div>
+        ${total?`<div class="kanban-lane-bar"><div class="kanban-lane-bar-fill" style="width:${pct}%"></div></div>`:''}
+        <div class="kanban-cards">
+          ${total?laneItems.map(x=>kanbanCardHtml(x.item,x.idx,locOptions)).join(''):`<div class="kanban-lane-empty small">${t('ui.kanbanLaneEmpty','拖曳裝備到這裡')}</div>`}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 const REORDER_UP_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>`;
 const REORDER_DOWN_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
 const REORDERABLE_LISTS=['equipmentChecklist','nutritionSchedule','splits'];
@@ -4353,10 +4476,18 @@ function gearWeightDashboardHtml(race){
 function renderEquipmentSection(race){
   const items=race.equipmentChecklist||[];
   const options=templates.map(tp=>`<option value="${tp.id}">${escapeHtml(tp.name)}（${tp.items.length}）</option>`).join('');
+  const isKanban=equipmentViewMode==='kanban';
+  const toggleTitle=isKanban?t('ui.equipmentViewList','切換為清單檢視'):t('ui.equipmentViewKanban','切換為佈署檢視（Kanban）');
   return `<div class="subsection">
-    <div class="subsection-head"><h3>${t('list.equipmentChecklist','裝備清單')}</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="equipmentChecklist">${t('ui.addItem','+ 新增')}</button></div>
+    <div class="subsection-head">
+      <h3>${t('list.equipmentChecklist','裝備清單')}</h3>
+      <div class="subsection-head-actions">
+        <button type="button" class="btn-ghost icon-btn" data-action="toggle-equipment-view" title="${toggleTitle}" aria-label="${toggleTitle}">${isKanban?EQUIP_VIEW_LIST_SVG:EQUIP_VIEW_KANBAN_SVG}</button>
+        <button type="button" class="btn-ghost" data-action="add-item" data-list="equipmentChecklist">${t('ui.addItem','+ 新增')}</button>
+      </div>
+    </div>
     ${gearWeightDashboardHtml(race)}
-    <div class="template-bar">
+    ${isKanban?'':`<div class="template-bar">
       <select id="template-select">${templates.length?options:`<option value="">${t('ui.templateSelectEmpty','尚無已存範本')}</option>`}</select>
       <button type="button" class="btn-ghost" data-action="apply-template" ${templates.length?'':'disabled'}>${t('ui.applyTemplate','套用範本')}</button>
       <button type="button" class="btn-ghost" data-action="save-template" ${items.length?'':'disabled'}>${t('ui.saveAsTemplate','另存為範本')}</button>
@@ -4367,15 +4498,17 @@ function renderEquipmentSection(race){
         <input type="text" id="template-name-input" placeholder="${t('ui.templateNamePlaceholder','範本名稱，如「路跑標配」「越野標配」')}">
         <button type="button" class="btn-primary" data-action="confirm-save-template">${t('ui.saveTemplate','儲存範本')}</button>
         <button type="button" class="btn-ghost" data-action="cancel-save-template">${t('ui.cancel','取消')}</button>
-      </div>`:''}
-    <div class="repeat-rows">
+      </div>`:''}`}
+    ${isKanban
+      ?(items.length?equipmentKanbanHtml(race):emptyStateBlock('equipmentChecklist',t('ui.notYetAdded','尚未新增')))
+      :`<div class="repeat-rows">
       ${items.length?items.map((it,i)=>`
         <div class="repeat-row${items.length>1?' reorderable':''}">
           ${reorderControlsHtml('equipmentChecklist',i,items.length)}
           <button type="button" class="row-remove" data-action="remove-item" data-list="equipmentChecklist" data-index="${i}" title="${t('ui.delete','刪除')}">×</button>
           ${EQUIP_FIELDS.map(f=>renderField(race,Object.assign({},f,{path:`equipmentChecklist.${i}.${f.path}`,labelPath:f.path}),'equipmentChecklist')).join('')}
         </div>`).join(''):emptyStateBlock('equipmentChecklist',t('ui.notYetAdded','尚未新增'))}
-    </div>
+    </div>`}
   </div>`;
 }
 
@@ -4510,6 +4643,42 @@ function splitGapSecPerKm(split){
   const grade=splitGradePct(split);
   if(grade==null) return null;
   return Math.round(split.avgPaceSecPerKm/gapPaceMultiplier(grade));
+}
+// GAP 上線之前匯入的賽事，分段資料裡的「淨爬升」從來沒有被算過、永遠是
+// null，即使已經有海拔剖面（route.elevationProfile，匯入 GPX/TCX 時就有
+// 存下來）也一樣，因為當初存分段的那段程式碼根本沒有寫這個計算——這會
+// 讓 GAP 對這些舊賽事完全不會顯示。這裡從賽事自己的海拔剖面（存的是
+// 「起點到這裡的累積距離、當下海拔」）內插出每一段的淨海拔變化，回頭把
+// 缺漏的分段資料補上，讓 GAP 上線以前匯入的賽事也能套用。只補「淨爬升」
+// 還是 null 的分段，使用者自己手動填過（即使填的是 0）的分段不會被覆蓋。
+function elevationAtCumulativeDistance(profile,distKm){
+  if(!profile||!profile.length) return null;
+  if(distKm<=profile[0].distanceKm) return profile[0].elevationM;
+  const last=profile[profile.length-1];
+  if(distKm>=last.distanceKm) return last.elevationM;
+  for(let i=1;i<profile.length;i++){
+    if(profile[i].distanceKm>=distKm){
+      const p0=profile[i-1],p1=profile[i];
+      const span=p1.distanceKm-p0.distanceKm;
+      const frac=span>0?(distKm-p0.distanceKm)/span:0;
+      return p0.elevationM+(p1.elevationM-p0.elevationM)*frac;
+    }
+  }
+  return last.elevationM;
+}
+function backfillSplitElevationFromProfile(race){
+  const profile=race.route&&race.route.elevationProfile;
+  const splits=race.splits;
+  if(!profile||profile.length<2||!splits||!splits.length) return;
+  let cumKm=0;
+  splits.forEach(s=>{
+    if(s.elevationGainM==null&&s.distanceKm!=null){
+      const startEle=elevationAtCumulativeDistance(profile,cumKm);
+      const endEle=elevationAtCumulativeDistance(profile,cumKm+s.distanceKm);
+      if(startEle!=null&&endEle!=null) s.elevationGainM=Math.round(endEle-startEle);
+    }
+    if(s.distanceKm!=null) cumKm+=s.distanceKm;
+  });
 }
 
 function computeSplitPercent(race){
@@ -6049,6 +6218,78 @@ function formatPace(secPerKm){
   const m=Math.floor(secPerKm/60),s=Math.round(secPerKm%60);
   return `${m}'${String(s).padStart(2,'0')}"`;
 }
+/* ============================================================
+   氣候與表現散佈圖矩陣：把不同距離的賽事，透過「相對於自己在同一種
+   經典距離下的 PB 配速差多少 %」正規化到同一個尺度上，才能把 10K、
+   半馬、全馬的表現放進同一張圖比較，不會因為距離不同、配速基數本來
+   就不一樣而失真。只收路跑（sportType==='road_running'）且已完賽的
+   資料——越野賽爬升造成的配速雜訊，會蓋過氣溫對配速的影響，混進來
+   會讓「氣溫每上升 1°C 配速掉多少 %」這個統計失去意義。
+   ============================================================ */
+const CLASSIC_DISTANCES=[
+  {key:'10k',label:'10K',min:8.5,max:11.5},
+  {key:'half',label:'半馬',min:20,max:22.5},
+  {key:'full',label:'全馬',min:41,max:43.5}, // 跟 computeCareerStats 的全馬 PB 判定範圍保持一致
+];
+function classifyClassicDistance(distanceKm){
+  if(distanceKm==null) return null;
+  const match=CLASSIC_DISTANCES.find(d=>distanceKm>=d.min&&distanceKm<=d.max);
+  return match?match.key:null;
+}
+// 每個「經典距離」分類各自找出自己的最快配速當 100% 效率基準，同一場
+// 賽事只會跟同樣距離分類的其他賽事比較，不會拿 10K 的配速去跟全馬比。
+function computeClimatePerformancePoints(){
+  const completed=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.sportType==='road_running'
+    &&r.route.distanceKm!=null&&r.results.chipTimeSeconds!=null&&r.raceDayWeather.feelsLikeTempC!=null);
+  const byCategory={};
+  completed.forEach(r=>{
+    const cat=classifyClassicDistance(r.route.distanceKm);
+    if(!cat) return;
+    (byCategory[cat]=byCategory[cat]||[]).push(r);
+  });
+  const points=[];
+  Object.keys(byCategory).forEach(cat=>{
+    const races=byCategory[cat];
+    const paces=races.map(r=>r.results.chipTimeSeconds/r.route.distanceKm);
+    const pbPace=Math.min(...paces);
+    races.forEach((r,i)=>{
+      const pace=paces[i];
+      const efficiencyPct=(pbPace/pace)*100;
+      points.push({
+        race:r,category:cat,tempC:r.raceDayWeather.feelsLikeTempC,
+        efficiencyPct,degradationPct:efficiencyPct-100,
+        isPb:pace<=pbPace,
+      });
+    });
+  });
+  return points;
+}
+// 最小平方法線性迴歸，x=體感溫度、y=配速衰退百分比（<=0）。資料點的
+// 溫度如果全部一樣（分母為 0）就沒有斜率可以算，回傳 null。
+function linearRegression(pts){
+  const n=pts.length;
+  if(n<2) return null;
+  let sumX=0,sumY=0,sumXY=0,sumX2=0;
+  pts.forEach(p=>{ sumX+=p.x; sumY+=p.y; sumXY+=p.x*p.y; sumX2+=p.x*p.x; });
+  const denom=n*sumX2-sumX*sumX;
+  if(denom===0) return null;
+  const slope=(n*sumXY-sumX*sumY)/denom;
+  const intercept=(sumY-slope*sumX)/n;
+  return {slope,intercept};
+}
+// 最佳作戰溫度帶：抓「PB 本身」或「效率 98% 以上」的賽事，取這些賽事
+// 體感溫度的最小～最大範圍。只有一筆符合條件時，補一點寬度讓色塊看
+// 得出來，不會變成一條細線。
+function computeSweetSpotBand(points){
+  const highEff=points.filter(p=>p.isPb||p.efficiencyPct>=98);
+  if(!highEff.length) return null;
+  const temps=highEff.map(p=>p.tempC);
+  let min=Math.min(...temps),max=Math.max(...temps);
+  if(max-min<1){ min-=1; max+=1; }
+  return {min,max,count:highEff.length};
+}
+
+
 function computeCareerStats(){
   const completed=state.races.filter(r=>r.status==='completed'&&!r.deletedAt);
   const marathonPB=completed
@@ -6582,6 +6823,69 @@ function computeMonthlyHeatmapData(){
   });
   return byMonth;
 }
+function climatePerformanceChartSvg(){
+  const points=computeClimatePerformancePoints();
+  if(points.length<3) return '';
+
+  const sweetSpot=computeSweetSpotBand(points);
+  const reg=linearRegression(points.map(p=>({x:p.tempC,y:p.degradationPct})));
+
+  const temps=points.map(p=>p.tempC);
+  let minTemp=Math.min(...temps),maxTemp=Math.max(...temps);
+  if(sweetSpot){ minTemp=Math.min(minTemp,sweetSpot.min); maxTemp=Math.max(maxTemp,sweetSpot.max); }
+  if(maxTemp-minTemp<2){ minTemp-=1; maxTemp+=1; }
+  const tempPad=(maxTemp-minTemp)*0.08;
+  minTemp-=tempPad; maxTemp+=tempPad;
+  const tempRange=maxTemp-minTemp;
+
+  const degs=points.map(p=>p.degradationPct);
+  let minDeg=Math.min(...degs,0);
+  // 讓趨勢線的兩端也落在可視範圍內，不會被畫到圖表邊界外面看不到
+  if(reg){
+    minDeg=Math.min(minDeg,reg.intercept+reg.slope*minTemp,reg.intercept+reg.slope*maxTemp);
+  }
+  if(minDeg>=0) minDeg=-1; // 保底：萬一收錄進來的賽事全部都是各自類別的 PB，degradation 全部是 0
+  const degRange=(0-minDeg)||1;
+
+  const w=560,h=240,padL=48,padR=20,padTop=20,padBottom=36;
+  const plotW=w-padL-padR,plotH=h-padTop-padBottom;
+  const sx=temp=>padL+((temp-minTemp)/tempRange)*plotW;
+  const sy=deg=>padTop+((0-deg)/degRange)*plotH;
+
+  const sweetSpotRect=sweetSpot
+    ?`<rect x="${sx(sweetSpot.min).toFixed(1)}" y="${padTop}" width="${(sx(sweetSpot.max)-sx(sweetSpot.min)).toFixed(1)}" height="${plotH}" fill="var(--trail)" opacity="0.14"/>`
+    :'';
+  const zeroY=sy(0).toFixed(1);
+  const zeroLine=`<line x1="${padL}" y1="${zeroY}" x2="${w-padR}" y2="${zeroY}" stroke="var(--rule)" stroke-width="1"/>`;
+  const trendLine=reg
+    ?`<line x1="${padL}" y1="${sy(reg.intercept+reg.slope*minTemp).toFixed(1)}" x2="${w-padR}" y2="${sy(reg.intercept+reg.slope*maxTemp).toFixed(1)}" stroke="var(--flag)" stroke-width="1.5" stroke-dasharray="5 4"/>`
+    :'';
+  const dots=points.map(p=>{
+    const cx=sx(p.tempC).toFixed(1),cy=sy(p.degradationPct).toFixed(1);
+    const degLabel=p.isPb?'PB':(p.degradationPct.toFixed(1)+'%');
+    const tipText=`${p.race.name||t('ui.unnamedRace','(未命名賽事)')}・${p.tempC.toFixed(1)}°C・${degLabel}`;
+    return `<circle cx="${cx}" cy="${cy}" r="${p.isPb?5:4}" fill="${p.isPb?'var(--gold)':'var(--contour)'}" opacity="0.82"><title>${escapeHtml(tipText)}</title></circle>`;
+  }).join('');
+  const axisLabels=`
+    <text x="${padL}" y="${h-10}" text-anchor="start" class="climate-chart-axis-label mono">${minTemp.toFixed(0)}°C</text>
+    <text x="${w-padR}" y="${h-10}" text-anchor="end" class="climate-chart-axis-label mono">${maxTemp.toFixed(0)}°C</text>
+    <text x="${padL-6}" y="${padTop+4}" text-anchor="end" class="climate-chart-axis-label mono">0%</text>
+    <text x="${padL-6}" y="${(padTop+plotH).toFixed(1)}" text-anchor="end" class="climate-chart-axis-label mono">${minDeg.toFixed(0)}%</text>`;
+
+  const slopeNote=reg
+    ?`<div class="climate-chart-slope small">${tf('ui.climateChartSlope','氣溫每升高 1°C，配速平均衰退約 {n} 個百分點',Math.abs(reg.slope).toFixed(2))}</div>`:'';
+  const sweetSpotNote=sweetSpot
+    ?`<div class="climate-chart-sweetspot small">${t('ui.climateChartSweetSpot','最佳作戰溫度帶：{range}（依 {n} 場高效率賽事推算）').replace('{range}',sweetSpot.min.toFixed(0)+'~'+sweetSpot.max.toFixed(0)+'°C').replace('{n}',sweetSpot.count)}</div>`:'';
+
+  return `<div class="climate-chart-wrap">
+    <div class="yearly-chart-title small">${t('ui.climateChartTitle','氣候與表現散佈圖')}</div>
+    <svg viewBox="0 0 ${w} ${h}" class="climate-chart-svg" preserveAspectRatio="xMidYMid meet">
+      ${sweetSpotRect}${zeroLine}${trendLine}${dots}${axisLabels}
+    </svg>
+    ${slopeNote}
+    ${sweetSpotNote}
+  </div>`;
+}
 function heatmapHtml(){
   const data=computeMonthlyHeatmapData();
   const keys=Object.keys(data);
@@ -6795,6 +7099,7 @@ function renderCareerSummary(){
     </div>
     ${yearInReviewButtonsHtml()}
     ${elevationTrendChartSvg()}
+    ${climatePerformanceChartSvg()}
     ${heatmapHtml()}
     ${renderTrophyCabinet()}
   </div>`;
@@ -7557,6 +7862,16 @@ function showSaveStatus(kind){
 }
 detailEl.addEventListener('change',async e=>{
   const t=e.target;
+  if(t.dataset.action==='kanban-move-select'){
+    const idx=parseInt(t.dataset.index,10);
+    const item=currentRace&&currentRace.equipmentChecklist&&currentRace.equipmentChecklist[idx];
+    if(item){
+      item.location=t.value;
+      currentRace.updatedAt=new Date().toISOString();
+      persist();renderDetail();
+    }
+    return;
+  }
   const path=t.dataset.path;if(!path||!currentRace) return;
   let value;
   if(t.type==='checkbox') value=t.checked;
@@ -7704,6 +8019,22 @@ detailEl.addEventListener('click',e=>{
       if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
     }
     persist();renderAll();return;
+  }
+  if(e.target.closest('[data-action="toggle-equipment-view"]')){
+    equipmentViewMode=equipmentViewMode==='kanban'?'list':'kanban';
+    renderDetail();
+    return;
+  }
+  const kanbanPackedBtn=e.target.closest('[data-action="kanban-toggle-packed"]');
+  if(kanbanPackedBtn){
+    const idx=parseInt(kanbanPackedBtn.dataset.index,10);
+    const item=currentRace&&currentRace.equipmentChecklist&&currentRace.equipmentChecklist[idx];
+    if(item){
+      item.isPacked=kanbanPackedBtn.checked;
+      currentRace.updatedAt=new Date().toISOString();
+      persist();renderDetail();
+    }
+    return;
   }
   if(e.target.closest('[data-action="apply-template"]')){
     const sel=document.getElementById('template-select');
@@ -9418,6 +9749,48 @@ document.addEventListener('drop',e=>{
     persist();renderDetail();
   }
   dragReorderState=null;
+});
+
+// 裝備佈署看板的拖放，跟上面既有的「清單內重新排序」是完全獨立的一套
+// 監聽器（用不同的 class 跟狀態變數），故意不共用——上面那套的邏輯是
+// 「在同一個陣列裡搬位置」，這裡要做的是「把項目搬到另一個位置分類」，
+// 兩者處理方式不一樣，混在一起改既有的、已經在正常運作的重新排序功能
+// 風險較高，用獨立的一套彼此不會互相干擾。
+let kanbanDragIndex=null;
+document.addEventListener('dragstart',e=>{
+  const card=e.target.closest('.kanban-card');
+  if(!card) return;
+  kanbanDragIndex=parseInt(card.dataset.kanbanIndex,10);
+  try{ e.dataTransfer.setDragImage(card,20,20); }catch(err){}
+  e.dataTransfer.effectAllowed='move';
+  try{ e.dataTransfer.setData('text/plain',''); }catch(err){}
+  card.classList.add('kanban-dragging');
+});
+document.addEventListener('dragend',()=>{
+  document.querySelectorAll('.kanban-card.kanban-dragging').forEach(c=>c.classList.remove('kanban-dragging'));
+  document.querySelectorAll('.kanban-lane.kanban-drag-over').forEach(l=>l.classList.remove('kanban-drag-over'));
+  kanbanDragIndex=null;
+});
+document.addEventListener('dragover',e=>{
+  if(kanbanDragIndex==null) return;
+  const lane=e.target.closest('.kanban-lane');
+  if(!lane) return;
+  e.preventDefault();
+  document.querySelectorAll('.kanban-lane.kanban-drag-over').forEach(l=>{ if(l!==lane) l.classList.remove('kanban-drag-over'); });
+  lane.classList.add('kanban-drag-over');
+});
+document.addEventListener('drop',e=>{
+  if(kanbanDragIndex==null||!currentRace) return;
+  const lane=e.target.closest('.kanban-lane');
+  if(!lane){ kanbanDragIndex=null; return; }
+  e.preventDefault();
+  const item=currentRace.equipmentChecklist&&currentRace.equipmentChecklist[kanbanDragIndex];
+  if(item){
+    item.location=lane.dataset.location;
+    currentRace.updatedAt=new Date().toISOString();
+    persist();renderDetail();
+  }
+  kanbanDragIndex=null;
 });
 
 document.addEventListener('keydown',e=>{
