@@ -1575,7 +1575,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.49.1';
+const APP_VERSION='v2.49.2';
 
 /* ============================================================
    多語系（i18n）
@@ -5271,6 +5271,31 @@ function findClosestHourIndex(times,startTime){
   });
   return idx;
 }
+// 把已經抓到的歷史天氣資料，回填進「實際體感溫度」「當日濕度」這兩個
+// 手動欄位（只填還是空的、不覆蓋已經填過的值）。獨立成一個函式、不是
+// 寫死在抓取成功的當下才執行，是因為這個功能是後來加上去的：在還沒有
+// 這段回填邏輯之前就已經抓過、快取起來的舊資料，不會因為升級後重新
+// 觸發一次抓取而得到回填（快取還在，不會重新抓），如果只在「剛抓到
+// 資料的那一刻」才回填，這種已經快取好的舊資料就永遠不會被回填、卡片
+// 卻仍然聲稱「已自動帶入」，變成文字說有做、實際上沒做。改成每次渲染
+// 賽事詳情頁、只要有快取資料就檢查一次要不要回填，不管這份快取是剛
+// 抓的還是很久以前就抓好的，回傳有沒有實際改到東西，讓呼叫的地方決定
+// 要不要接著存檔，不會每次渲染都白白多寫一次。
+function applyHistoricalWeatherAutofill(race){
+  const hw=race.historicalWeather;
+  if(!hw||!hw.times||!hw.times.length) return false;
+  let changed=false;
+  const idx=findClosestHourIndex(hw.times,race.schedule.startTime);
+  if(race.raceDayWeather.feelsLikeTempC==null&&hw.feelsLike&&hw.feelsLike[idx]!=null){
+    race.raceDayWeather.feelsLikeTempC=Math.round(hw.feelsLike[idx]*10)/10;
+    changed=true;
+  }
+  if(race.raceDayWeather.humidityPct==null&&hw.humidity&&hw.humidity[idx]!=null){
+    race.raceDayWeather.humidityPct=Math.round(hw.humidity[idx]);
+    changed=true;
+  }
+  return changed;
+}
 async function fetchHistoricalWeatherForRace(raceId){
   const race=state.races.find(r=>r.id===raceId);
   if(!race||!raceHasGpsTrack(race)||!race.schedule.raceDate) return;
@@ -5296,20 +5321,7 @@ async function fetchHistoricalWeatherForRace(raceId){
       precip:data.hourly.precipitation,
       gust:data.hourly.wind_gusts_10m,
     };
-    // 抓到資料後，「實際體感溫度」「當日濕度」這兩個手動欄位如果還是空的，
-    // 就用查到的數字直接幫忙填上（挑最接近起跑時刻的那一筆），省得使用者
-    // 自己對照自動查詢卡片上的數字再重打一次；已經填過的欄位不會覆蓋掉，
-    // 尊重使用者自己輸入或修改過的值。「歷年平均」那組欄位語意上是多年
-    // 平均值、「降雨機率」是機率，跟單一天的實際量測值概念不同，不會拿
-    // 單日資料去填那幾欄；「當日氣候狀況」是質化判斷（晴/陰/雨/霧），
-    // 光靠溫度濕度降雨量猜不準，留給使用者自己判斷比較保險。
-    const idx=findClosestHourIndex(race.historicalWeather.times,race.schedule.startTime);
-    if(race.raceDayWeather.feelsLikeTempC==null&&race.historicalWeather.feelsLike[idx]!=null){
-      race.raceDayWeather.feelsLikeTempC=Math.round(race.historicalWeather.feelsLike[idx]*10)/10;
-    }
-    if(race.raceDayWeather.humidityPct==null&&race.historicalWeather.humidity[idx]!=null){
-      race.raceDayWeather.humidityPct=Math.round(race.historicalWeather.humidity[idx]);
-    }
+    applyHistoricalWeatherAutofill(race);
     await persist();
   }catch(err){
     console.error('抓取歷史天氣失敗',err);
@@ -5321,7 +5333,8 @@ async function fetchHistoricalWeatherForRace(raceId){
 }
 function historicalWeatherCompactHtml(hw,race){
   const idx=findClosestHourIndex(hw.times,race.schedule.startTime);
-  const temp=hw.temp[idx],precip=hw.precip[idx],gust=hw.gust[idx];
+  const temp=hw.temp?.[idx],precip=hw.precip?.[idx],gust=hw.gust?.[idx];
+  const hasAutofillData=(hw.feelsLike&&hw.feelsLike[idx]!=null)||(hw.humidity&&hw.humidity[idx]!=null);
   return `<div class="historical-weather-block">
     <div class="historical-weather-title small">${t('ui.historicalWeatherTitle','賽事當天實際天氣（自動查詢）')}</div>
     <div class="focus-weather-row mono">
@@ -5329,7 +5342,7 @@ function historicalWeatherCompactHtml(hw,race){
       ${precip!=null?`<span>${t('ui.weatherPrecipAmount','降雨量')} ${precip}mm</span>`:''}
       ${gust!=null?`<span>${t('ui.weatherGust','陣風')} ${gust}km/h</span>`:''}
     </div>
-    <p class="historical-weather-note small">${t('ui.historicalWeatherAutofillNote','已自動帶入下方「實際體感溫度」與「當日濕度」欄位（原本已填寫的值不會被覆蓋）')}</p>
+    ${hasAutofillData?`<p class="historical-weather-note small">${t('ui.historicalWeatherAutofillNote','已自動帶入下方「實際體感溫度」與「當日濕度」欄位（原本已填寫的值不會被覆蓋）')}</p>`:''}
     <p class="historical-weather-note small">${t('ui.historicalWeatherSource','資料來源：Open-Meteo 歷史氣象回溯資料庫')}</p>
   </div>`;
 }
@@ -5923,8 +5936,19 @@ function renderDetail(){
   renderRouteMapIfNeeded(race);
   setupElevationScrubbing(race);
   applyScrollFadeClasses();
-  if(!race.historicalWeather&&historicalWeatherFetchingRaceId!==race.id&&raceIsHistorical(race)&&raceHasGpsTrack(race)){
+  // 這裡有兩種情況都需要（重新）抓取：完全沒有快取過（第一次），或者
+  // 快取是在「體感溫度／濕度」這兩個欄位還沒加進抓取範圍之前存下來的
+  // 舊資料（缺了 feelsLike／humidity 這兩個陣列，不是陣列裡的值剛好是
+  // null，是整個欄位都不存在）——這種舊快取沒辦法靠回填補齊，因為
+  // 資料根本沒抓過，只能重新抓一次。
+  const hwMissingNewFields=race.historicalWeather&&(!race.historicalWeather.feelsLike||!race.historicalWeather.humidity);
+  if((!race.historicalWeather||hwMissingNewFields)&&historicalWeatherFetchingRaceId!==race.id&&raceIsHistorical(race)&&raceHasGpsTrack(race)){
     fetchHistoricalWeatherForRace(race.id);
+  }else if(race.historicalWeather&&applyHistoricalWeatherAutofill(race)){
+    // 這份歷史天氣快取已經有完整欄位、只是還沒真正回填進手動欄位，
+    // 剛剛才第一次回填，存檔並重新渲染一次讓畫面反映出來。
+    persist();
+    renderDetail();
   }
 }
 // 分段配速表、系列賽事比較表、媒體縮圖列這幾個區塊原本不管內容
