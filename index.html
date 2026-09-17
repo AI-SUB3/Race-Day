@@ -1575,7 +1575,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.49.0';
+const APP_VERSION='v2.49.1';
 
 /* ============================================================
    多語系（i18n）
@@ -1642,6 +1642,7 @@ const JA={
   'ui.weatherPrecipProb':'降水確率','ui.weatherGust':'突風',
   'ui.historicalWeatherTitle':'レース当日の実際の天気（自動取得）','ui.weatherPrecipAmount':'降水量',
   'ui.historicalWeatherSource':'データ提供：Open-Meteo 過去の気象データベース','ui.historicalWeatherPending':'レース当日の過去の天気を取得しています…',
+  'ui.historicalWeatherAutofillNote':'下の「体感温度（実績）」と「当日の湿度」欄に自動入力しました（既に入力済みの値は上書きしません）',
   'ui.weatherLiveNote':'ライブ予報、{n}分前に更新',
   'ui.weatherFetching':'取得中…','ui.weatherRefresh':'予報を更新','ui.weatherFetch':'ライブ予報を取得',
   'ui.weatherNeedsGps':'GPX/FIT トラックを取り込むとライブ予報を取得できます',
@@ -1980,6 +1981,7 @@ const EN={
   'ui.weatherPrecipProb':'Rain chance','ui.weatherGust':'Gust',
   'ui.historicalWeatherTitle':'Actual Weather on Race Day (auto-fetched)','ui.weatherPrecipAmount':'Precipitation',
   'ui.historicalWeatherSource':'Source: Open-Meteo Historical Weather Archive','ui.historicalWeatherPending':'Fetching historical weather for race day…',
+  'ui.historicalWeatherAutofillNote':'Auto-filled the "Actual Feels-like Temp" and "Race-day Humidity" fields below (existing values are not overwritten)',
   'ui.weatherLiveNote':'Live forecast, updated {n} min ago',
   'ui.weatherFetching':'Fetching…','ui.weatherRefresh':'Refresh forecast','ui.weatherFetch':'Fetch live forecast',
   'ui.weatherNeedsGps':'Import a GPX/FIT track to fetch a live forecast',
@@ -5223,14 +5225,7 @@ async function fetchLiveWeatherForRace(raceId){
   renderFocusPanel();
 }
 function liveForecastCompactHtml(live,race){
-  const startTime=race.schedule.startTime||'08:00';
-  const targetHour=parseInt(startTime.split(':')[0],10)||8;
-  let idx=0,bestDiff=Infinity;
-  live.times.forEach((tm,i)=>{
-    const hour=parseInt(tm.slice(11,13),10);
-    const diff=Math.abs(hour-targetHour);
-    if(diff<bestDiff){ bestDiff=diff; idx=i; }
-  });
+  const idx=findClosestHourIndex(live.times,race.schedule.startTime);
   const temp=live.temp[idx],precip=live.precipProb[idx],gust=live.gust[idx];
   const minsAgo=Math.max(0,Math.round((Date.now()-new Date(live.fetchedAt).getTime())/60000));
   return `<div class="focus-weather-row mono">
@@ -5266,6 +5261,16 @@ function raceIsHistorical(race){
 // session 層級的集合，同一次瀏覽階段裡每場賽事最多只會真正嘗試一次；
 // 重新整理頁面（開新的一次 session）才會再給一次機會。
 const historicalWeatherAttempted=new Set();
+function findClosestHourIndex(times,startTime){
+  const targetHour=parseInt((startTime||'08:00').split(':')[0],10)||8;
+  let idx=0,bestDiff=Infinity;
+  times.forEach((tm,i)=>{
+    const hour=parseInt(tm.slice(11,13),10);
+    const diff=Math.abs(hour-targetHour);
+    if(diff<bestDiff){ bestDiff=diff; idx=i; }
+  });
+  return idx;
+}
 async function fetchHistoricalWeatherForRace(raceId){
   const race=state.races.find(r=>r.id===raceId);
   if(!race||!raceHasGpsTrack(race)||!race.schedule.raceDate) return;
@@ -5275,7 +5280,7 @@ async function fetchHistoricalWeatherForRace(raceId){
   historicalWeatherFetchingRaceId=raceId;
   if(currentRace&&currentRace.id===raceId) renderDetail();
   try{
-    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${pt.lat}&longitude=${pt.lon}&hourly=temperature_2m,precipitation,wind_gusts_10m&timezone=auto&start_date=${race.schedule.raceDate}&end_date=${race.schedule.raceDate}`;
+    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${pt.lat}&longitude=${pt.lon}&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_gusts_10m&timezone=auto&start_date=${race.schedule.raceDate}&end_date=${race.schedule.raceDate}`;
     const res=await fetch(url);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
@@ -5286,9 +5291,25 @@ async function fetchHistoricalWeatherForRace(raceId){
       fetchedAt:new Date().toISOString(),
       times:data.hourly.time,
       temp:data.hourly.temperature_2m,
+      feelsLike:data.hourly.apparent_temperature,
+      humidity:data.hourly.relative_humidity_2m,
       precip:data.hourly.precipitation,
       gust:data.hourly.wind_gusts_10m,
     };
+    // 抓到資料後，「實際體感溫度」「當日濕度」這兩個手動欄位如果還是空的，
+    // 就用查到的數字直接幫忙填上（挑最接近起跑時刻的那一筆），省得使用者
+    // 自己對照自動查詢卡片上的數字再重打一次；已經填過的欄位不會覆蓋掉，
+    // 尊重使用者自己輸入或修改過的值。「歷年平均」那組欄位語意上是多年
+    // 平均值、「降雨機率」是機率，跟單一天的實際量測值概念不同，不會拿
+    // 單日資料去填那幾欄；「當日氣候狀況」是質化判斷（晴/陰/雨/霧），
+    // 光靠溫度濕度降雨量猜不準，留給使用者自己判斷比較保險。
+    const idx=findClosestHourIndex(race.historicalWeather.times,race.schedule.startTime);
+    if(race.raceDayWeather.feelsLikeTempC==null&&race.historicalWeather.feelsLike[idx]!=null){
+      race.raceDayWeather.feelsLikeTempC=Math.round(race.historicalWeather.feelsLike[idx]*10)/10;
+    }
+    if(race.raceDayWeather.humidityPct==null&&race.historicalWeather.humidity[idx]!=null){
+      race.raceDayWeather.humidityPct=Math.round(race.historicalWeather.humidity[idx]);
+    }
     await persist();
   }catch(err){
     console.error('抓取歷史天氣失敗',err);
@@ -5299,14 +5320,7 @@ async function fetchHistoricalWeatherForRace(raceId){
   if(currentRace&&currentRace.id===raceId) renderDetail();
 }
 function historicalWeatherCompactHtml(hw,race){
-  const startTime=race.schedule.startTime||'08:00';
-  const targetHour=parseInt(startTime.split(':')[0],10)||8;
-  let idx=0,bestDiff=Infinity;
-  hw.times.forEach((tm,i)=>{
-    const hour=parseInt(tm.slice(11,13),10);
-    const diff=Math.abs(hour-targetHour);
-    if(diff<bestDiff){ bestDiff=diff; idx=i; }
-  });
+  const idx=findClosestHourIndex(hw.times,race.schedule.startTime);
   const temp=hw.temp[idx],precip=hw.precip[idx],gust=hw.gust[idx];
   return `<div class="historical-weather-block">
     <div class="historical-weather-title small">${t('ui.historicalWeatherTitle','賽事當天實際天氣（自動查詢）')}</div>
@@ -5315,6 +5329,7 @@ function historicalWeatherCompactHtml(hw,race){
       ${precip!=null?`<span>${t('ui.weatherPrecipAmount','降雨量')} ${precip}mm</span>`:''}
       ${gust!=null?`<span>${t('ui.weatherGust','陣風')} ${gust}km/h</span>`:''}
     </div>
+    <p class="historical-weather-note small">${t('ui.historicalWeatherAutofillNote','已自動帶入下方「實際體感溫度」與「當日濕度」欄位（原本已填寫的值不會被覆蓋）')}</p>
     <p class="historical-weather-note small">${t('ui.historicalWeatherSource','資料來源：Open-Meteo 歷史氣象回溯資料庫')}</p>
   </div>`;
 }
