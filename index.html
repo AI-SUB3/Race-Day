@@ -411,6 +411,11 @@
   .trophy-badge.unlocked .trophy-badge-name{color:var(--ink);font-weight:600;}
   .trophy-badge-progress{width:100%;height:3px;border-radius:2px;background:var(--rule);overflow:hidden;margin-top:2px;}
   .trophy-badge-progress-fill{height:100%;background:var(--gold);border-radius:2px;}
+  .trophy-badge-cat-tag{
+    position:absolute;top:4px;left:5px;font-size:8px;line-height:1;color:var(--stone);
+    text-transform:uppercase;letter-spacing:0.02em;
+  }
+  .trophy-filter-tabs{margin-bottom:12px;}
 
   @media (max-width:640px){
     .honor-card-value{font-size:38px;}
@@ -425,6 +430,8 @@
   .career-stat-label{font-size:12px;color:var(--stone);}
   .yearly-chart-wrap{margin-left:auto;max-width:100%;overflow-x:auto;}
   .yearly-chart-title{color:var(--stone);margin-bottom:2px;}
+  .year-in-review-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .year-in-review-label{color:var(--stone);}
   .yearly-chart-svg{height:100px;display:block;}
   .yearly-chart-count{font-size:11px;fill:var(--ink-soft);}
   .yearly-chart-year{font-size:11px;fill:var(--stone);}
@@ -654,6 +661,21 @@
   .shoe-target-edit{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .shoe-target-input{width:64px;font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--trail);border-radius:3px;background:var(--surface);color:var(--ink);}
   .shoe-row-actions{display:flex;align-items:center;gap:14px;}
+
+  .shoe-analysis{margin-top:4px;padding-top:12px;border-top:1px dashed var(--rule);display:flex;flex-direction:column;gap:12px;}
+  .shoe-analysis-stats{display:flex;gap:24px;flex-wrap:wrap;}
+  .shoe-analysis-stat{display:flex;flex-direction:column;gap:2px;}
+  .shoe-analysis-stat .mono{font-size:16px;font-weight:600;}
+  .shoe-analysis-table{width:100%;border-collapse:collapse;}
+  .shoe-analysis-table td{padding:5px 6px;border-bottom:1px solid var(--rule);}
+  .shoe-analysis-table td.num{text-align:right;}
+  .shoe-pb-tag{display:inline-block;padding:1px 6px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:8px;font-size:10px;font-weight:700;}
+  .shoe-degrade-block{padding:12px;border:1px solid var(--rule);border-radius:5px;background:var(--paper);}
+  .shoe-degrade-title{color:var(--stone);margin-bottom:10px;}
+  .shoe-degrade-row{display:flex;gap:24px;}
+  .shoe-degrade-col{display:flex;flex-direction:column;gap:2px;}
+  .shoe-degrade-value{font-size:18px;font-weight:700;}
+  .shoe-degrade-delta{color:var(--ink-soft);margin:10px 0 0;padding-top:10px;border-top:1px dashed var(--rule);}
 
   /* ---------- 個人資訊面板 ---------- */
   .profile-tabs{display:flex;gap:4px;border-bottom:1px solid var(--rule);margin-bottom:18px;}
@@ -935,6 +957,26 @@
   .subsection-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
   .subsection h3{font-size:15px;font-weight:600;color:var(--ink-soft);}
 
+  .gear-weight-dash{
+    display:flex;flex-direction:column;gap:8px;padding:16px;margin-bottom:14px;
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper);
+  }
+  .gear-weight-dash-title{color:var(--stone);}
+  .gear-weight-dash-row{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+  .gear-weight-donut-total{font-size:15px;font-weight:700;fill:var(--ink);}
+  .gear-weight-donut-unit{fill:var(--stone);}
+  .gear-weight-dash-stats{display:flex;flex-direction:column;gap:8px;}
+  .gear-weight-stat{display:flex;align-items:center;gap:8px;font-size:14px;}
+  .gear-weight-stat .mono{margin-left:auto;padding-left:16px;color:var(--ink);}
+  .gear-weight-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  .gear-weight-note{color:var(--stone);margin:0;}
+  .gear-weight-body-load{
+    display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding-top:10px;margin-top:2px;
+    border-top:1px dashed var(--rule);
+  }
+  .gear-weight-body-pct{font-size:18px;font-weight:700;color:var(--gold);}
+  .gear-weight-body-detail{color:var(--stone);margin-left:auto;}
+
   .repeat-rows .empty-hint{padding:0 0 8px;}
   .repeat-row{
     position:relative;display:flex;flex-wrap:wrap;gap:10px 16px;
@@ -1012,11 +1054,54 @@
     display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
   }
   .modal-overlay[hidden]{display:none;}
+
+  /* ---- 動態回顧輪播（Story Mode）：故意用寫死的深色，不跟著淺色/深色
+     主題變動，理由跟徽章成就圖卡一樣——這是沉浸式的相片瀏覽畫面，不是
+     一般表單頁面。 ---- */
+  .story-overlay{
+    position:fixed;inset:0;background:#000;z-index:200;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .story-overlay[hidden]{display:none;}
+  .story-slide-frame{
+    position:relative;width:100%;height:100%;max-width:480px;margin:0 auto;
+    overflow:hidden;background:#0D1013;
+  }
+  .story-progress-row{
+    position:absolute;top:0;left:0;right:0;display:flex;gap:4px;padding:12px 12px 0;z-index:10;
+  }
+  .story-progress-seg{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.3);overflow:hidden;}
+  .story-progress-fill{height:100%;background:#fff;width:0%;}
+  .story-progress-fill.filled{width:100%;}
+  .story-progress-fill.animating{transition:width linear;}
+  .story-close-btn{
+    position:absolute;top:20px;right:12px;z-index:11;background:none;border:none;color:#fff;
+    width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0.9;
+  }
+  .story-tap-zone{position:absolute;top:0;bottom:0;width:50%;z-index:5;background:none;border:none;padding:0;cursor:pointer;}
+  .story-tap-zone.left{left:0;}
+  .story-tap-zone.right{right:0;}
+  .story-slide{position:absolute;inset:0;}
+  .story-slide-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .story-slide-gradient{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.8) 100%);}
+  .story-slide-content{position:absolute;left:0;right:0;bottom:0;padding:28px 24px 46px;color:#fff;z-index:2;}
+  .story-slide-name{font-size:23px;font-weight:700;margin-bottom:6px;line-height:1.3;}
+  .story-slide-date{font-size:14px;opacity:0.8;margin-bottom:16px;}
+  .story-slide-stats{display:flex;gap:20px;flex-wrap:wrap;}
+  .story-slide-stat-label{font-size:11px;opacity:0.7;margin-bottom:2px;}
+  .story-slide-stat-value{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;}
+  .story-title-slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;color:#fff;background:#0D1013;padding:0 30px;
+  }
+  .story-title-year{font-family:'IBM Plex Mono',monospace;font-size:64px;font-weight:700;color:#D9B15C;}
+  .story-title-sub{font-size:16px;opacity:0.75;margin-top:14px;}
   .modal-panel{
     background:var(--surface);border-radius:4px;padding:28px 30px;max-width:440px;width:100%;
     max-height:86vh;overflow-y:auto;
   }
   .modal-panel-wide{max-width:960px;}
+  .report-prompt-fallback-textarea{width:100%;min-height:260px;font:inherit;font-size:13px;padding:10px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink);resize:vertical;margin-bottom:14px;}
   .modal-panel h2{font-size:20px;margin-bottom:10px;}
   .modal-hint{color:var(--ink-soft);font-size:15px;margin-bottom:16px;}
   .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
@@ -1104,6 +1189,7 @@
         <button id="cal-table-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.tableViewToggle" title="切換為緊湊表格檢視" aria-label="切換為緊湊表格檢視">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14h18M9 4v16"/></svg>
         </button>
+        <button id="btn-story-mode" class="btn-ghost" hidden></button>
       </div>
       <input id="search-input" type="search" data-i18n-placeholder="ui.searchPlaceholder" placeholder="搜尋賽事名稱、城市…">
       <div id="filter-chips" class="chips"></div>
@@ -1142,6 +1228,8 @@
 <div id="paste-modal" class="modal-overlay" hidden></div>
 <div id="shoe-modal" class="modal-overlay" hidden></div>
 <div id="profile-modal" class="modal-overlay" hidden></div>
+<div id="story-mode-overlay" class="story-overlay" hidden></div>
+<div id="report-prompt-fallback-modal" class="modal-overlay" hidden></div>
 <div id="pacing-modal" class="modal-overlay" hidden></div>
 <div id="help-modal" class="modal-overlay" hidden></div>
 <div id="recovery-modal" class="modal-overlay" hidden></div>
@@ -1195,6 +1283,7 @@ const SECTION_BASIC=[
   {path:'schedule.startTime',label:'起跑時間',type:'time'},
   {path:'schedule.startWave',label:'起跑分區 / 波次',type:'text'},
   {path:'bibNumber',label:'號碼布編號',type:'text'},
+  {path:'crewApparelNote',label:'應援指南：當天衣著描述（給親友辨識用，例：藍色背心、黑色短褲、螢光黃帽子）',type:'text',wide:true},
   {path:'schedule.registrationOpenDate',label:'報名開始日期',type:'date'},
   {path:'schedule.registrationCloseDate',label:'報名截止日期',type:'date'},
   {path:'schedule.lotteryResultDate',label:'抽籤結果公佈日',type:'date'},
@@ -1298,6 +1387,7 @@ const COMPANION_FIELDS=[
 ];
 const EQUIP_FIELDS=[
   {path:'itemName',label:'項目名稱',type:'text'},{path:'category',label:'分類',type:'select',options:EQUIP_CATEGORY_OPTIONS},
+  {path:'weightG',label:'重量',type:'number',unit:'克'},{path:'isConsumable',label:'消耗品（水、補給等，計算基礎重量時排除）',type:'checkbox'},
   {path:'isMandatory',label:'強制裝備',type:'checkbox'},{path:'isPacked',label:'已打包',type:'checkbox'},
   {path:'notes',label:'備註',type:'text'},
 ];
@@ -1323,7 +1413,7 @@ const LIST_META={
   accommodations:{title:'住宿',fields:ACCOM_FIELDS,factory:()=>({hotelName:'',address:'',checkIn:'',checkOut:'',distanceToStartKm:null,bookingStatus:'considering',cost:null,notes:''})},
   transportation:{title:'交通',fields:TRANSPORT_FIELDS,factory:()=>({direction:'outbound',mode:'hsr',departureTime:'',pickupLocation:'',notes:''})},
   companions:{title:'隨行人員',fields:COMPANION_FIELDS,factory:()=>({name:'',role:'partner',contactInfo:'',notes:''})},
-  equipmentChecklist:{title:'裝備清單',fields:EQUIP_FIELDS,factory:()=>({itemName:'',category:'other',isMandatory:false,isPacked:false,notes:''})},
+  equipmentChecklist:{title:'裝備清單',fields:EQUIP_FIELDS,factory:()=>({itemName:'',category:'other',weightG:null,isConsumable:false,isMandatory:false,isPacked:false,notes:''})},
   nutritionSchedule:{title:'補給時程規劃',fields:NUTRITION_SCHEDULE_FIELDS,factory:()=>({distanceKm:null,item:'',plannedAmount:'',consumed:false,notes:''})},
   splits:{title:'分段配速',fields:SPLIT_FIELDS,factory:()=>({distanceKm:null,splitTimeSeconds:null,avgHr:null,avgPaceSecPerKm:null,elevationGainM:null,notes:''})},
   mediaLinks:{title:'多媒體與連結',fields:MEDIA_FIELDS,factory:()=>({type:'other',url:'',notes:''})},
@@ -1540,7 +1630,7 @@ function emptyRace(name,sportType,status,raceDate){
   return {
     id:uid(),name:name||'',alias:'',series:'',status:status||'considering',sportType:sportType||'road_running',raceFormat:'solo',
     coverImage:'',coverImageAspect:null,coverImageFocalPoint:{x:50,y:50},coverImageAccentColor:null,officialUrl:'',deletedAt:null,
-    bibNumber:'',
+    bibNumber:'',crewApparelNote:'',
     schedule:{raceDate:raceDate||'',startTime:'',startWave:'',registrationOpenDate:'',registrationCloseDate:'',lotteryResultDate:''},
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
@@ -1576,7 +1666,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.50.0';
+const APP_VERSION='v2.57.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1761,6 +1851,28 @@ const JA={
   'ui.shoeAlert100':'お知らせ：{n} の累計距離が想定寿命の100%に達しました。早めの交換をおすすめします！',
   'ui.shoeEditTarget':'想定寿命を編集','ui.shoeHonorRetire':'✅ 引退として記録','ui.save':'保存',
   'ui.trophyCabinetTitle':'トロフィーケース',
+  'ui.trophyFilterAll':'すべて','ui.trophyFilterUnlocked':'解除済み','ui.trophyFilterInProgress':'進行中','ui.trophyFilterNotStarted':'未着手','ui.trophyFilterEmpty':'この条件に一致するバッジはありません',
+  'ui.yearInReviewLabel':'年間振り返り','ui.yearInReviewRaceCount':'完走レース {n} 件','ui.yearInReviewDistance':'総距離','ui.yearInReviewElevation':'総獲得標高',
+  'ui.yearInReviewPbCount':'自己ベスト更新回数','ui.yearInReviewNewBadges':'新規解除バッジ','ui.yearInReviewTopShoe':'最も履いたシューズ','ui.yearInReviewShoeDetail':'{count} 回・{km} km',
+  'ui.yearInReviewWeatherExtreme':'気象記録','ui.yearInReviewColdest':'最も寒かったレース','ui.yearInReviewHottest':'最も暑かったレース','ui.yearInReviewCta':'年間振り返りカード','ui.yearInReviewSuffix':'-年間振り返り.png',
+  'ui.storyModeButton':'{year} 年間振り返り','ui.storyTitleSub':'ハイライトレース {n} 件','ui.storyWeatherLabel':'当日の天気','ui.storyPrev':'前へ','ui.storyNext':'次へ',
+  'ui.gearWeightTitle':'装備重量','ui.gearWeightBase':'ベース重量','ui.gearWeightConsumable':'消耗品重量','ui.gearWeightPartial':'重量を入力済みの {n}/{total} 件のみ集計',
+  'ui.gearWeightBodyLoad':'体重に対する装備の割合','ui.gearWeightTotalCarry':'総負荷（体重＋装備）',
+  'ui.shoeAnalysisEmpty':'このシューズにはまだ完走記録がありません','ui.shoeAnalysisShow':'パフォーマンス分析','ui.shoeAnalysisHide':'分析を閉じる',
+  'ui.shoePbRate':'PB率','ui.shoeAvgPace':'平均ペース','ui.shoeDegradeTitle':'劣化クロス比較',
+  'ui.shoeDegradeEarly':'走行距離 {km}km 未満','ui.shoeDegradeLate':'走行距離 {km}km 以上',
+  'ui.shoeDegradeWorse':'走行距離が増えると、後半の失速幅が平均 {pct} ポイント大きくなっています','ui.shoeDegradeBetter':'走行距離が増えても、後半の失速幅は特に悪化していません',
+  'ui.copyReportPrompt':'振り返りAIプロンプトをコピー',
+  'ui.reportPromptIntro':'以下のレースデータを元に、レース後の振り返りを書くのを手伝ってください。まずInstagram投稿に適した短い文章（絵文字とハッシュタグ付き、200字以内）、次に段落分けした本格的なブログ記事（レース前の準備、レース展開、データ分析、振り返りを含む）をください。',
+  'ui.reportPromptRaceInfo':'レース情報','ui.reportPromptName':'レース名','ui.reportPromptDate':'日付','ui.reportPromptDistance':'距離','ui.reportPromptElevation':'獲得標高',
+  'ui.reportPromptTime':'ゴールタイム','ui.reportPromptPace':'平均ペース','ui.reportPromptIsPb':'自己ベスト（PB）を更新しました！',
+  'ui.reportPromptWeather':'天候','ui.reportPromptHumidity':'湿度',
+  'ui.reportPromptHr':'心拍数','ui.reportPromptAvgHr':'平均心拍数',
+  'ui.reportPromptSplits':'ラップペース','ui.reportPromptPaceRange':'ペース幅','ui.reportPromptNegSplit':'後半加速（ネガティブスプリット）','ui.reportPromptPosSplit':'後半失速（ポジティブスプリット）',
+  'ui.reportPromptNutrition':'補給状況','ui.reportPromptGels':'本のジェル','ui.reportPromptElectrolytes':'錠の電解質タブレット','ui.reportPromptHydration':'ml の水分','ui.reportPromptPlanned':'計画した補給',
+  'ui.reportPromptExecuted':'{total}箇所中{done}箇所で計画通り補給できました',
+  'ui.reportPromptReview':'振り返り','ui.reportPromptHitWall':'ウォールにぶつかった時の感想','ui.reportPromptCourseReview':'コースの感想','ui.reportPromptPros':'良かった点','ui.reportPromptCons':'改善点','ui.reportPromptLessons':'学んだこと',
+  'ui.reportPromptFallbackTitle':'以下の内容を手動でコピーしてください','ui.reportPromptFallbackHint':'クリップボードへの自動コピーに失敗しました。下のテキストを全選択してコピーしてください。','ui.reportPromptCopied':'クリップボードにコピーしました！',
   'ui.trophyCat_explore':'探検と領域','ui.trophyCat_terrain':'地形と極限','ui.trophyCat_speed':'スピードと戦略','ui.trophyCat_crossover':'クロスオーバーと装備',
   'ui.badgeUnlockedLabel':'バッジ解除','ui.badgeCollect':'バッジを受け取る',
   'ui.badgeDownloadShare':'達成画像をダウンロード','ui.badgeShareSuffix':'-バッジ達成.png',
@@ -1776,6 +1888,12 @@ const JA={
   'ui.dossierEmergencyContact':'緊急連絡先','ui.dossierNutrition':'補給プラン',
   'ui.dossierEmptyHint':'ゼッケン番号、CP関門時間、緊急連絡先、補給プランがまだ未入力です。レース詳細ページで入力すると、このカードがもっと役立ちます',
   'ui.dossierSuffix':'-作戦カード.png','ui.unitPacks':'個','ui.unitTablets':'錠',
+  'ui.downloadCrewGuide':'応援ガイドカードをダウンロード','ui.crewGuideLabel':'応援ガイド','ui.crewGuideStartTime':'スタート',
+  'ui.crewGuideEmptyHint':'まだCP情報が入力されていません。レース詳細の「ルート」タブでCPを追加すると、このカードがもっと役立ちます',
+  'ui.crewGuideHandoff':'渡すもの：','ui.crewGuideMoreCps':'他に {n} 箇所のCPは表示されていません',
+  'ui.crewGuideNoEtaHint':'到着予想時刻なし：「スケジュール」タブでスタート時刻を設定し、「目標タイム」にA目標を入力すると、各CPの予想時刻を自動計算できます',
+  'ui.crewGuideDisclaimer':'時刻は目標ペースに基づく推定です。実際の到着時刻は当日の状況により変動します（参考値）',
+  'ui.crewGuideSuffix':'-応援ガイド.png',
   'ui.splitPositive':'ポジティブスプリット（後半失速）','ui.splitNegative':'ネガティブスプリット（後半加速）',
   // ---- GPX/TCX 匯入 ----
   'ui.gpxImportBtn':'アクティビティファイルを読み込む（GPX / TCX / FIT）',
@@ -1903,6 +2021,7 @@ const JA={
   'field.basic.status':'ステータス','field.basic.sportType':'主な種目','field.basic.raceFormat':'形式',
   'field.basic.schedule.raceDate':'レース日','field.basic.schedule.startTime':'スタート時刻',
   'field.basic.schedule.startWave':'スタートウェーブ／組','field.basic.bibNumber':'ゼッケン番号',
+  'field.basic.crewApparelNote':'応援ガイド：当日の服装（例：青いベスト、黒いショートパンツ、蛍光イエローの帽子）',
   'field.basic.schedule.registrationOpenDate':'エントリー開始日','field.basic.schedule.registrationCloseDate':'エントリー締切日',
   'field.basic.schedule.lotteryResultDate':'抽選結果発表日',
   'field.basic.lottery.applicants':'抽選応募者数','field.basic.lottery.winners':'抽選当選枠／当選者数',
@@ -1948,6 +2067,7 @@ const JA={
   'field.transportation.departureTime':'出発時刻','field.transportation.pickupLocation':'集合場所','field.transportation.notes':'備考',
   'field.companions.name':'氏名','field.companions.role':'役割','field.companions.contactInfo':'連絡先','field.companions.notes':'備考',
   'field.equipmentChecklist.itemName':'アイテム名','field.equipmentChecklist.category':'カテゴリー',
+  'field.equipmentChecklist.weightG':'重量','field.equipmentChecklist.isConsumable':'消耗品（水・補給食品など。ベース重量の計算から除外）',
   'field.equipmentChecklist.isMandatory':'必携装備','field.equipmentChecklist.isPacked':'準備済み','field.equipmentChecklist.notes':'備考',
   'field.splits.distanceKm':'距離','field.splits.splitTimeSeconds':'スプリットタイム','field.splits.avgHr':'平均心拍数',
   'field.splits.avgPaceSecPerKm':'平均ペース','field.splits.elevationGainM':'上り','field.splits.notes':'備考',
@@ -2093,6 +2213,28 @@ const EN={
   'ui.shoeAlert100':'Heads up: {n} has reached 100% of its target lifespan — time to retire it soon!',
   'ui.shoeEditTarget':'Edit target lifespan','ui.shoeHonorRetire':'✅ Mark as Retired','ui.save':'Save',
   'ui.trophyCabinetTitle':'Trophy Case',
+  'ui.trophyFilterAll':'All','ui.trophyFilterUnlocked':'Unlocked','ui.trophyFilterInProgress':'In Progress','ui.trophyFilterNotStarted':'Not Started','ui.trophyFilterEmpty':'No badges match this filter',
+  'ui.yearInReviewLabel':'Year in Review','ui.yearInReviewRaceCount':'{n} races finished','ui.yearInReviewDistance':'Total Distance','ui.yearInReviewElevation':'Total Elevation',
+  'ui.yearInReviewPbCount':'PBs Broken','ui.yearInReviewNewBadges':'New Badges','ui.yearInReviewTopShoe':'Most-Worn Shoe','ui.yearInReviewShoeDetail':'{count} races・{km} km',
+  'ui.yearInReviewWeatherExtreme':'Weather Extremes','ui.yearInReviewColdest':'Coldest Race','ui.yearInReviewHottest':'Hottest Race','ui.yearInReviewCta':'Year in Review Card','ui.yearInReviewSuffix':'-year-in-review.png',
+  'ui.storyModeButton':'{year} Year in Review','ui.storyTitleSub':'{n} highlight races','ui.storyWeatherLabel':'Weather that day','ui.storyPrev':'Previous','ui.storyNext':'Next',
+  'ui.gearWeightTitle':'Gear Weight','ui.gearWeightBase':'Base Weight','ui.gearWeightConsumable':'Consumables','ui.gearWeightPartial':'Only counting {n}/{total} items with weight entered',
+  'ui.gearWeightBodyLoad':'Gear as % of Body Weight','ui.gearWeightTotalCarry':'Total Load (Body + Gear)',
+  'ui.shoeAnalysisEmpty':'No completed races on this shoe yet','ui.shoeAnalysisShow':'Performance Analysis','ui.shoeAnalysisHide':'Hide Analysis',
+  'ui.shoePbRate':'PB Rate','ui.shoeAvgPace':'Avg Pace','ui.shoeDegradeTitle':'Degradation Cross-Comparison',
+  'ui.shoeDegradeEarly':'Under {km}km on shoe','ui.shoeDegradeLate':'{km}km+ on shoe',
+  'ui.shoeDegradeWorse':'As mileage increases, late-race slowdown is {pct} points larger on average','ui.shoeDegradeBetter':'Late-race slowdown hasn\'t gotten noticeably worse with mileage',
+  'ui.copyReportPrompt':'Copy Race Report AI Prompt',
+  'ui.reportPromptIntro':'Please help me write a post-race reflection based on the following race data. First give me a short Instagram-ready caption (with appropriate emoji and hashtags, under 200 words), then a more complete, professionally-toned race report blog post (with sections covering pre-race prep, the race itself, data analysis, and reflection).',
+  'ui.reportPromptRaceInfo':'Race Info','ui.reportPromptName':'Race Name','ui.reportPromptDate':'Date','ui.reportPromptDistance':'Distance','ui.reportPromptElevation':'Elevation Gain',
+  'ui.reportPromptTime':'Finish Time','ui.reportPromptPace':'Average Pace','ui.reportPromptIsPb':'This was my personal best (PB)!',
+  'ui.reportPromptWeather':'Weather','ui.reportPromptHumidity':'Humidity',
+  'ui.reportPromptHr':'Heart Rate','ui.reportPromptAvgHr':'Average HR',
+  'ui.reportPromptSplits':'Splits','ui.reportPromptPaceRange':'Pace Range','ui.reportPromptNegSplit':'Negative split (faster second half)','ui.reportPromptPosSplit':'Positive split (slower second half)',
+  'ui.reportPromptNutrition':'Fueling','ui.reportPromptGels':'gels','ui.reportPromptElectrolytes':'electrolyte tablets','ui.reportPromptHydration':'ml fluids','ui.reportPromptPlanned':'Planned fueling',
+  'ui.reportPromptExecuted':'Followed the plan at {done}/{total} fueling points',
+  'ui.reportPromptReview':'Reflection','ui.reportPromptHitWall':'Hitting the wall','ui.reportPromptCourseReview':'Course notes','ui.reportPromptPros':'What went well','ui.reportPromptCons':'What to improve','ui.reportPromptLessons':'Lessons learned',
+  'ui.reportPromptFallbackTitle':'Please copy the text below manually','ui.reportPromptFallbackHint':'Automatic clipboard copy failed. Select all the text below and copy it manually.','ui.reportPromptCopied':'Copied to clipboard!',
   'ui.trophyCat_explore':'Exploration & Territory','ui.trophyCat_terrain':'Terrain & Extremes','ui.trophyCat_speed':'Speed & Strategy','ui.trophyCat_crossover':'Crossover & Gear',
   'ui.badgeUnlockedLabel':'Badge Unlocked','ui.badgeCollect':'Collect Badge',
   'ui.badgeDownloadShare':'Download Achievement Image','ui.badgeShareSuffix':'-badge-achievement.png',
@@ -2107,6 +2249,12 @@ const EN={
   'ui.dossierEmergencyContact':'Emergency Contact','ui.dossierNutrition':'Nutrition Plan',
   'ui.dossierEmptyHint':'No bib number, checkpoints, emergency contact, or nutrition plan yet. Fill these in on the race detail page and this card will be more useful.',
   'ui.dossierSuffix':'-pre-race-card.png','ui.unitPacks':'pcs','ui.unitTablets':'tabs',
+  'ui.downloadCrewGuide':'Download Crew Guide Card','ui.crewGuideLabel':'Crew Guide','ui.crewGuideStartTime':'Start',
+  'ui.crewGuideEmptyHint':'No checkpoint info yet — add some CPs on the Route tab to make this card more useful',
+  'ui.crewGuideHandoff':'Hand over: ','ui.crewGuideMoreCps':'{n} more checkpoints not shown',
+  'ui.crewGuideNoEtaHint':'No ETA available: set a start time on the Schedule tab and fill in a Goal A target time to auto-calculate arrival times at each checkpoint',
+  'ui.crewGuideDisclaimer':'Times are estimates based on target pace. Actual arrival times will vary with race-day conditions (reference only)',
+  'ui.crewGuideSuffix':'-crew-guide.png',
   'ui.splitPositive':'Positive split (slowed down)','ui.splitNegative':'Negative split (sped up)',
   'ui.gpxImportBtn':'Import activity file (GPX / TCX / FIT)',
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
@@ -2230,6 +2378,7 @@ const EN={
   'field.basic.status':'Status','field.basic.sportType':'Primary Sport','field.basic.raceFormat':'Format',
   'field.basic.schedule.raceDate':'Race Date','field.basic.schedule.startTime':'Start Time',
   'field.basic.schedule.startWave':'Start Wave / Corral','field.basic.bibNumber':'Bib Number',
+  'field.basic.crewApparelNote':'Crew Guide: Race-Day Outfit (for spotting you — e.g. blue vest, black shorts, neon yellow cap)',
   'field.basic.schedule.registrationOpenDate':'Registration Opens','field.basic.schedule.registrationCloseDate':'Registration Closes',
   'field.basic.schedule.lotteryResultDate':'Lottery Result Date',
   'field.basic.lottery.applicants':'Lottery Applicants','field.basic.lottery.winners':'Lottery Slots / Winners',
@@ -2275,6 +2424,7 @@ const EN={
   'field.transportation.departureTime':'Departure Time','field.transportation.pickupLocation':'Pickup Location','field.transportation.notes':'Notes',
   'field.companions.name':'Name','field.companions.role':'Role','field.companions.contactInfo':'Contact Info','field.companions.notes':'Notes',
   'field.equipmentChecklist.itemName':'Item Name','field.equipmentChecklist.category':'Category',
+  'field.equipmentChecklist.weightG':'Weight','field.equipmentChecklist.isConsumable':'Consumable (water, food, etc. — excluded from base weight)',
   'field.equipmentChecklist.isMandatory':'Mandatory','field.equipmentChecklist.isPacked':'Packed','field.equipmentChecklist.notes':'Notes',
   'field.splits.distanceKm':'Distance','field.splits.splitTimeSeconds':'Split Time','field.splits.avgHr':'Avg Heart Rate',
   'field.splits.avgPaceSecPerKm':'Avg Pace','field.splits.elevationGainM':'Elevation Gain','field.splits.notes':'Notes',
@@ -2486,7 +2636,14 @@ function migrateRace(r){
   if(r.historicalWeather===undefined) r.historicalWeather=null;
   if(r.historicalAverageWeather===undefined) r.historicalAverageWeather=null;
   if(r.bibNumber==null) r.bibNumber='';
+  if(r.crewApparelNote==null) r.crewApparelNote='';
   if(r.schedule&&r.schedule.startWave==null) r.schedule.startWave='';
+  if(Array.isArray(r.equipmentChecklist)){
+    r.equipmentChecklist.forEach(it=>{
+      if(it.weightG===undefined) it.weightG=null;
+      if(it.isConsumable===undefined) it.isConsumable=false;
+    });
+  }
   return r;
 }
 
@@ -2530,7 +2687,7 @@ function buildExampleRaces(){
     {tier:'B',targetTimeSeconds:hmsToSec('4:15:00'),paceStrategy:'全程平均配速 6:00/km'},
     {tier:'C',targetTimeSeconds:hmsToSec('4:30:00'),paceStrategy:'安全完賽，量力而為'},
   ];
-  marathon.equipmentChecklist=STARTER_TEMPLATES[0].items.map(it=>Object.assign({isPacked:false,notes:''},it));
+  marathon.equipmentChecklist=STARTER_TEMPLATES[0].items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:false,notes:''},it));
   marathon.nutritionPlan={gelCount:4,electrolyteTabletCount:2,hydrationCapacityMl:500,notes:'每 10K 補一次膠'};
   marathon.nutritionSchedule=[
     {distanceKm:10,item:'能量膠',plannedAmount:'1 條',consumed:false,notes:''},
@@ -2567,7 +2724,7 @@ function buildExampleRaces(){
   ];
   trail.raceDayWeather={feelsLikeTempC:22,condition:'多雲偶陣雨',humidityPct:85,notes:'CP2 後下了場短暫雨，路面濕滑'};
   trail.budget={registrationFee:1800,currency:'TWD',paymentStatus:'paid',chipDeposit:0};
-  trail.equipmentChecklist=STARTER_TEMPLATES[1].items.map(it=>Object.assign({isPacked:true,notes:''},it));
+  trail.equipmentChecklist=STARTER_TEMPLATES[1].items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:true,notes:''},it));
   trail.results={gunTimeSeconds:hmsToSec('3:32:10'),chipTimeSeconds:hmsToSec('3:30:05'),overallRank:118,overallParticipants:450,
     ageGroupRank:14,ageGroupParticipants:62,isPb:true,firstHalfSeconds:hmsToSec('1:38:00'),secondHalfSeconds:hmsToSec('1:52:05')};
   trail.performanceData={avgHr:152,maxHr:176,avgCadence:162,avgPowerWatts:null,dataSource:'運動手錶匯入 (GPX/TCX/FIT)',
@@ -2900,8 +3057,8 @@ const STARTER_TEMPLATES=[
     {itemName:'號碼布別針',category:'mandatory_gear',isMandatory:true},
     {itemName:'跑鞋',category:'shoes',isMandatory:true},
     {itemName:'凡士林/防磨膏',category:'other',isMandatory:false},
-    {itemName:'鹽錠',category:'nutrition',isMandatory:false},
-    {itemName:'能量膠',category:'nutrition',isMandatory:false},
+    {itemName:'鹽錠',category:'nutrition',isMandatory:false,isConsumable:true},
+    {itemName:'能量膠',category:'nutrition',isMandatory:false,isConsumable:true},
     {itemName:'帽子/太陽眼鏡',category:'apparel',isMandatory:false},
     {itemName:'GPS 運動錶',category:'other',isMandatory:false},
   ]},
@@ -2915,7 +3072,7 @@ const STARTER_TEMPLATES=[
     {itemName:'個人藥品',category:'other',isMandatory:false},
     {itemName:'保暖衣物',category:'apparel',isMandatory:false},
     {itemName:'越野杖',category:'other',isMandatory:false},
-    {itemName:'能量膠/補給食物',category:'nutrition',isMandatory:false},
+    {itemName:'能量膠/補給食物',category:'nutrition',isMandatory:false,isConsumable:true},
   ]},
   {name:'三鐵標配',items:[
     {itemName:'泳鏡',category:'other',isMandatory:true},
@@ -2926,17 +3083,17 @@ const STARTER_TEMPLATES=[
     {itemName:'三鐵服',category:'apparel',isMandatory:false},
     {itemName:'跑鞋',category:'shoes',isMandatory:true},
     {itemName:'運動錶',category:'other',isMandatory:false},
-    {itemName:'能量膠/運動飲料',category:'nutrition',isMandatory:false},
+    {itemName:'能量膠/運動飲料',category:'nutrition',isMandatory:false,isConsumable:true},
   ]},
   {name:'自行車標配',items:[
     {itemName:'安全帽',category:'mandatory_gear',isMandatory:true},
     {itemName:'補胎工具組',category:'mandatory_gear',isMandatory:true},
-    {itemName:'水壺',category:'nutrition',isMandatory:true},
+    {itemName:'水壺',category:'nutrition',isMandatory:true,isConsumable:true},
     {itemName:'卡鞋',category:'shoes',isMandatory:false},
     {itemName:'車錶/功率計',category:'other',isMandatory:false},
     {itemName:'風鏡',category:'apparel',isMandatory:false},
     {itemName:'手套',category:'apparel',isMandatory:false},
-    {itemName:'能量膠/運動飲料',category:'nutrition',isMandatory:false},
+    {itemName:'能量膠/運動飲料',category:'nutrition',isMandatory:false,isConsumable:true},
   ]},
   {name:'游泳標配',items:[
     {itemName:'泳鏡',category:'mandatory_gear',isMandatory:true},
@@ -2960,7 +3117,7 @@ function autoApplyEquipmentTemplate(race){
   const idx=SPORT_TEMPLATE_INDEX[race.sportType];
   const tmpl=(idx!=null)?STARTER_TEMPLATES[idx]:null;
   if(!tmpl) return false;
-  race.equipmentChecklist=tmpl.items.map(it=>Object.assign({isPacked:false,notes:''},it));
+  race.equipmentChecklist=tmpl.items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:false,notes:''},it));
   return true;
 }
 /* ============================================================
@@ -3093,6 +3250,49 @@ function computeShoeStats(shoeId){
   const races=state.races.filter(r=>r.performanceData&&r.performanceData.shoeId===shoeId&&r.status==='completed'&&!r.deletedAt);
   const totalDistance=races.reduce((s,r)=>s+(r.route.distanceKm||0),0);
   return {totalRaces:races.length,totalDistance};
+}
+// 戰靴勝率：穿這雙鞋跑過的每一場完賽賽事，抓 PB 率（幾場裡面破了幾次
+// PB，依 results.isPb 這個使用者自己勾選的欄位算，不是系統自動判斷）
+// 跟平均配速（用完賽時間除以距離，兩者都要有值才算得出來，缺一就跳過
+// 那一場，不會拿 0 去污染平均值）。
+function computeShoePerformanceStats(shoeId){
+  const races=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.performanceData&&r.performanceData.shoeId===shoeId);
+  if(!races.length) return null;
+  const pbCount=races.filter(r=>r.results.isPb).length;
+  const withPace=races.filter(r=>r.results.chipTimeSeconds!=null&&r.route.distanceKm);
+  const avgPaceSecPerKm=withPace.length?withPace.reduce((s,r)=>s+r.results.chipTimeSeconds/r.route.distanceKm,0)/withPace.length:null;
+  const sorted=races.slice().sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
+  return {totalRaces:races.length,pbCount,avgPaceSecPerKm,races:sorted};
+}
+// 衰退交叉比對：對每一場「穿這雙鞋、有填分段時間、日期已知」的完賽賽事，
+// 算出這雙鞋在「跑這一場之前」已經累積了多少公里（不含這場本身的距離，
+// 因為要看的是「鞋子已經多舊」對這場比賽表現的影響，不是這場本身對
+// 累積里程的貢獻），再對照 computeSplitPercent() 算出來的後半程掉速
+// 百分比。有足夠資料的話，用這雙鞋預期壽命的一半當分界，比較「還算
+// 新」跟「已經跑得比較舊」這兩組賽事的平均掉速幅度差多少。
+function computeShoeDegradation(shoeId){
+  const shoe=shoes.find(s=>s.id===shoeId);
+  if(!shoe) return null;
+  const races=state.races
+    .filter(r=>!r.deletedAt&&r.status==='completed'&&r.performanceData&&r.performanceData.shoeId===shoeId&&r.schedule.raceDate)
+    .sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
+  let cumKm=0;
+  const points=[];
+  races.forEach(r=>{
+    const splitPct=computeSplitPercent(r);
+    if(splitPct!=null) points.push({race:r,mileageBefore:cumKm,splitPct});
+    cumKm+=(r.route.distanceKm||0);
+  });
+  if(!points.length) return {points:[],threshold:null,early:null,late:null};
+  const threshold=(shoe.targetKm||DEFAULT_SHOE_TARGET_KM)/2;
+  const avg=arr=>arr.length?arr.reduce((s,p)=>s+p.splitPct,0)/arr.length:null;
+  const early=points.filter(p=>p.mileageBefore<threshold);
+  const late=points.filter(p=>p.mileageBefore>=threshold);
+  return {
+    points,threshold,
+    early:early.length?{count:early.length,avgSplitPct:avg(early)}:null,
+    late:late.length?{count:late.length,avgSplitPct:avg(late)}:null,
+  };
 }
 function shoeHealthPct(shoe,totalDistance){
   const target=shoe.targetKm||DEFAULT_SHOE_TARGET_KM;
@@ -4087,11 +4287,70 @@ function renderGoals(race){
   </div>`;
 }
 
+// 裝備輕量化儀表板：只算「有填重量」的項目，沒有填重量的項目不列入
+// 計算（不會把它當 0 克算，那樣總重量會失真）。基礎重量／消耗品重量
+// 是靠每個項目自己勾選的「消耗品」欄位分的，不是用既有的「分類」
+// 欄位去猜——「分類」欄位是給裝備種類用的（頭燈、服裝…），跟「這件
+// 東西賽事中會不會被吃喝掉」是兩個不同的概念，水袋容器本身是基礎
+// 重量、袋子裡裝的水才是消耗品，用既有分類欄位硬猜容易猜錯。
+function computeGearWeightStats(race){
+  const all=race.equipmentChecklist||[];
+  const withWeight=all.filter(i=>i.weightG!=null&&i.weightG>0);
+  if(!withWeight.length) return null;
+  const baseWeightG=withWeight.filter(i=>!i.isConsumable).reduce((s,i)=>s+i.weightG,0);
+  const consumableWeightG=withWeight.filter(i=>i.isConsumable).reduce((s,i)=>s+i.weightG,0);
+  return {
+    totalWeightG:baseWeightG+consumableWeightG,
+    baseWeightG,consumableWeightG,
+    itemsWithWeight:withWeight.length,
+    totalItemCount:all.length,
+  };
+}
+function gearWeightDonutSvg(stats){
+  const r=48,circumference=2*Math.PI*r;
+  const total=stats.totalWeightG||1;
+  const baseLen=circumference*(stats.baseWeightG/total);
+  const consumableLen=circumference-baseLen;
+  return `<svg viewBox="0 0 116 116" width="104" height="104" class="gear-weight-donut">
+    <circle cx="58" cy="58" r="${r}" fill="none" stroke="var(--rule)" stroke-width="14"/>
+    ${stats.baseWeightG>0?`<circle cx="58" cy="58" r="${r}" fill="none" stroke="var(--trail)" stroke-width="14"
+      stroke-dasharray="${baseLen} ${circumference-baseLen}" stroke-dashoffset="0" transform="rotate(-90 58 58)" stroke-linecap="butt"/>`:''}
+    ${stats.consumableWeightG>0?`<circle cx="58" cy="58" r="${r}" fill="none" stroke="var(--flag)" stroke-width="14"
+      stroke-dasharray="${consumableLen} ${circumference-consumableLen}" stroke-dashoffset="${-baseLen}" transform="rotate(-90 58 58)" stroke-linecap="butt"/>`:''}
+    <text x="58" y="54" text-anchor="middle" class="gear-weight-donut-total mono">${(stats.totalWeightG/1000).toFixed(2)}</text>
+    <text x="58" y="70" text-anchor="middle" class="gear-weight-donut-unit small">kg</text>
+  </svg>`;
+}
+function gearWeightDashboardHtml(race){
+  const stats=computeGearWeightStats(race);
+  if(!stats) return '';
+  const bodyKg=userProfile&&userProfile.weightKg;
+  const partialNote=stats.itemsWithWeight<stats.totalItemCount
+    ?`<p class="gear-weight-note small">${t('ui.gearWeightPartial','僅計算已填寫重量的 {n}/{total} 項裝備').replace('{n}',stats.itemsWithWeight).replace('{total}',stats.totalItemCount)}</p>`:'';
+  const bodyLoadHtml=bodyKg?`<div class="gear-weight-body-load">
+    <span class="small">${t('ui.gearWeightBodyLoad','裝備佔體重比例')}</span>
+    <span class="mono gear-weight-body-pct">${(stats.totalWeightG/1000/bodyKg*100).toFixed(1)}%</span>
+    <span class="gear-weight-body-detail small">${t('ui.gearWeightTotalCarry','總負重（人＋裝備）')} ${(bodyKg+stats.totalWeightG/1000).toFixed(1)} kg</span>
+  </div>`:'';
+  return `<div class="gear-weight-dash">
+    <div class="gear-weight-dash-title small">${t('ui.gearWeightTitle','裝備重量')}</div>
+    <div class="gear-weight-dash-row">
+      ${gearWeightDonutSvg(stats)}
+      <div class="gear-weight-dash-stats">
+        <div class="gear-weight-stat"><span class="gear-weight-dot" style="background:var(--trail)"></span><span>${t('ui.gearWeightBase','基礎重量')}</span><span class="mono">${(stats.baseWeightG/1000).toFixed(2)} kg</span></div>
+        <div class="gear-weight-stat"><span class="gear-weight-dot" style="background:var(--flag)"></span><span>${t('ui.gearWeightConsumable','消耗品重量')}</span><span class="mono">${(stats.consumableWeightG/1000).toFixed(2)} kg</span></div>
+      </div>
+    </div>
+    ${partialNote}
+    ${bodyLoadHtml}
+  </div>`;
+}
 function renderEquipmentSection(race){
   const items=race.equipmentChecklist||[];
   const options=templates.map(tp=>`<option value="${tp.id}">${escapeHtml(tp.name)}（${tp.items.length}）</option>`).join('');
   return `<div class="subsection">
     <div class="subsection-head"><h3>${t('list.equipmentChecklist','裝備清單')}</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="equipmentChecklist">${t('ui.addItem','+ 新增')}</button></div>
+    ${gearWeightDashboardHtml(race)}
     <div class="template-bar">
       <select id="template-select">${templates.length?options:`<option value="">${t('ui.templateSelectEmpty','尚無已存範本')}</option>`}</select>
       <button type="button" class="btn-ghost" data-action="apply-template" ${templates.length?'':'disabled'}>${t('ui.applyTemplate','套用範本')}</button>
@@ -4817,6 +5076,311 @@ async function downloadDossierImage(race){
 }
 
 /* ============================================================
+   親友應援與補給指南圖：跟賽前作戰卡是分開的另一張卡片，賽前作戰卡是
+   給跑者自己看的（關門時間、緊急聯絡人），這張是給在場邊等的親友看
+   的（幾點幾分會到哪個 CP、要遞什麼補給、怎麼從人群裡認出你）。
+   ============================================================ */
+// 把「起跑時刻」＋「距離起跑過了幾秒」換算成當下的時鐘時間；超過午夜
+// 會捲到隔天，用 dayOffset 標記，賽事橫跨兩個日曆日時（多半是超馬）
+// 卡片上才不會出現「兩個 14:30」這種讓親友搞混的情況。
+function formatClockTimeOffset(startTimeStr,offsetSeconds){
+  const parts=(startTimeStr||'').split(':').map(Number);
+  if(parts.length<2||isNaN(parts[0])||isNaN(parts[1])) return null;
+  const startMinutes=parts[0]*60+parts[1];
+  const totalMinutes=startMinutes+Math.round(offsetSeconds/60);
+  const DAY=24*60;
+  const dayOffset=Math.floor(totalMinutes/DAY);
+  const clockMinutes=((totalMinutes%DAY)+DAY)%DAY;
+  const hh=Math.floor(clockMinutes/60),mm=clockMinutes%60;
+  return {label:String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'),dayOffset};
+}
+// 把補給時程規劃（nutritionSchedule）裡的每一筆，依距離配對到最接近的
+// 那個 CP 站——兩邊本來就是分開填寫的欄位，距離不一定會完全對齊到小
+// 數點，用「最近的那個 CP」配對，比要求使用者兩邊填一模一樣的數字
+// 更貼近實際使用情境。
+function groupNutritionByCheckpoint(cps,nutritionSchedule){
+  const groups=cps.map(()=>[]);
+  (nutritionSchedule||[]).forEach(n=>{
+    if(n.distanceKm==null||!n.item) return;
+    let bestIdx=-1,bestDiff=Infinity;
+    cps.forEach((cp,i)=>{
+      if(cp.distanceKm==null) return;
+      const diff=Math.abs(cp.distanceKm-n.distanceKm);
+      if(diff<bestDiff){ bestDiff=diff; bestIdx=i; }
+    });
+    if(bestIdx>=0) groups[bestIdx].push(n);
+  });
+  return groups;
+}
+function computeCrewGuideCheckpoints(race){
+  const cps=(race.checkpoints||[]).filter(cp=>cp.distanceKm!=null).slice().sort((a,b)=>a.distanceKm-b.distanceKm);
+  if(!cps.length) return {checkpoints:[],hasEta:false};
+  const startTime=race.schedule.startTime;
+  const goalA=(race.goals||[]).find(g=>g.tier==='A');
+  const targetSeconds=goalA&&goalA.targetTimeSeconds;
+  const totalDistance=race.route.distanceKm;
+  const hasEta=!!(startTime&&targetSeconds&&totalDistance);
+  const nutritionGroups=groupNutritionByCheckpoint(cps,race.nutritionSchedule);
+  const checkpoints=cps.map((cp,i)=>{
+    let eta=null;
+    if(hasEta){
+      const elapsedSec=pacingTimeAtDistance(targetSeconds,totalDistance,'even',cp.distanceKm);
+      eta=formatClockTimeOffset(startTime,elapsedSec);
+    }
+    return {checkpoint:cp,eta,nutritionItems:nutritionGroups[i]};
+  });
+  return {checkpoints,hasEta};
+}
+async function buildCrewGuideCanvas(race){
+  try{ await document.fonts.ready; }catch(e){}
+  const W=1080,H=1920;
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const uiFont=canvasFontFamily();
+  const monoFont='"IBM Plex Mono",monospace';
+
+  ctx.fillStyle='#0D1013';
+  ctx.fillRect(0,0,W,H);
+
+  let y=180;
+  ctx.textAlign='center';
+  ctx.fillStyle='#6B7178';
+  ctx.font=`26px ${uiFont}`;
+  ctx.fillText(t('ui.crewGuideLabel','親友應援指南'),W/2,y);
+  y+=60;
+
+  ctx.fillStyle='#EDEEE9';
+  ctx.font=`bold 42px ${uiFont}`;
+  y=canvasWrapTextCentered(ctx,race.name||t('ui.unnamedRace','(未命名賽事)'),W/2,y,W-140,54,2);
+  y+=38;
+
+  ctx.fillStyle='#9BA3A0';
+  ctx.font=`24px ${monoFont}`;
+  ctx.fillText(race.schedule.raceDate||'',W/2,y);
+  y+=54;
+
+  const idParts=[];
+  if(race.bibNumber) idParts.push(t('field.basic.bibNumber','號碼布')+' '+race.bibNumber);
+  if(race.schedule.startTime) idParts.push(t('ui.crewGuideStartTime','起跑')+' '+race.schedule.startTime);
+  if(idParts.length){
+    ctx.fillStyle='#D9B15C';ctx.font=`bold 32px ${monoFont}`;
+    y=canvasWrapTextCentered(ctx,idParts.join('   ·   '),W/2,y,W-140,40,2);
+    y+=54;
+  }
+  if(race.crewApparelNote){
+    ctx.fillStyle='#7B9FD1';ctx.font=`24px ${uiFont}`;
+    y=canvasWrapTextCentered(ctx,race.crewApparelNote,W/2,y,W-200,34,2);
+    y+=16;
+  }
+  y+=24;
+
+  const {checkpoints,hasEta}=computeCrewGuideCheckpoints(race);
+
+  if(!checkpoints.length){
+    ctx.fillStyle='#4C4F52';ctx.font=`26px ${uiFont}`;
+    canvasWrapTextCentered(ctx,t('ui.crewGuideEmptyHint','還沒有填寫 CP 站資訊，先去賽事詳情頁的「路線」分頁新增幾個 CP，這張卡片會更好用'),W/2,y+120,W-260,44,4);
+    ctx.fillStyle='#4C4F52';ctx.font=`22px ${uiFont}`;
+    ctx.fillText(t('ui.appTitle','賽事紀錄'),W/2,H-100);
+    return canvas;
+  }
+
+  ctx.strokeStyle='#2A3038';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(80,y);ctx.lineTo(W-80,y);ctx.stroke();
+  y+=44;
+
+  const maxShow=8;
+  checkpoints.slice(0,maxShow).forEach(({checkpoint:cp,eta,nutritionItems})=>{
+    const rowTop=y;
+    ctx.textAlign='left';
+    ctx.fillStyle='#EDEEE9';ctx.font=`bold 30px ${uiFont}`;
+    const distLabel=cp.distanceKm!=null?` (${cp.distanceKm}km)`:'';
+    ctx.fillText((cp.name||'CP')+distLabel,80,y,eta?560:W-160);
+    if(eta){
+      ctx.textAlign='right';ctx.fillStyle='#D9B15C';ctx.font=`bold 34px ${monoFont}`;
+      ctx.fillText(eta.label+(eta.dayOffset>0?' +'+eta.dayOffset:''),W-80,y);
+    }
+    y+=42;
+    if(nutritionItems&&nutritionItems.length){
+      ctx.textAlign='left';ctx.fillStyle='#4C9A72';ctx.font=`22px ${uiFont}`;
+      const itemsText=t('ui.crewGuideHandoff','遞交：')+nutritionItems.map(n=>n.item+(n.plannedAmount?' × '+n.plannedAmount:'')).join('、');
+      y=canvasWrapText(ctx,itemsText,80,y,W-160,30,2);
+    }
+    y+=34;
+  });
+  ctx.textAlign='left';
+  if(checkpoints.length>maxShow){
+    ctx.fillStyle='#6B7178';ctx.font=`22px ${uiFont}`;
+    ctx.fillText(tf('ui.crewGuideMoreCps','還有 {n} 個 CP 站未顯示',checkpoints.length-maxShow),80,y);
+    y+=44;
+  }
+
+  if(!hasEta){
+    y+=10;
+    ctx.fillStyle='#6B7178';ctx.font=`20px ${uiFont}`;ctx.textAlign='center';
+    canvasWrapTextCentered(ctx,t('ui.crewGuideNoEtaHint','沒有預計抵達時間：需要先在「賽程」分頁設定起跑時間，並在「目標時間」填寫 A 目標，才能自動算出各站的預計時鐘時間'),W/2,y+30,W-220,32,3);
+    y+=110;
+  }
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#4C4F52';
+  ctx.font=`20px ${uiFont}`;
+  canvasWrapTextCentered(ctx,t('ui.crewGuideDisclaimer','時間為依目標配速估算，實際到站時間會依現場狀況調整，僅供參考'),W/2,H-190,W-260,28,3);
+  ctx.fillStyle='#4C4F52';ctx.font=`22px ${uiFont}`;
+  ctx.fillText(t('ui.appTitle','賽事紀錄'),W/2,H-80);
+
+  return canvas;
+}
+async function downloadCrewGuideImage(race){
+  const canvas=await buildCrewGuideCanvas(race);
+  if(!canvas) return;
+  canvas.toBlob(blob=>{
+    if(!blob) return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=(race.name||'race').replace(/[\\/:*?"<>|]/g,'')+t('ui.crewGuideSuffix','-應援指南.png');
+    a.click();
+    URL.revokeObjectURL(url);
+  },'image/png');
+}
+
+/* ============================================================
+   賽事復盤 AI 提示詞生成：把這場賽事的天氣、心率區間、分段配速、
+   掉速比例、補給狀況、撞牆期與其他賽後反思筆記，組合成一段可以直接
+   貼給 ChatGPT / Claude 的 prompt，請 AI 幫忙寫成 IG 貼文跟賽後
+   檢討網誌兩種版本。每個區塊都是資料驅動的——沒有填的欄位那整段
+   就不會出現在 prompt 裡，不會出現「天氣：（未填寫）」這種空欄位
+   要求 AI 憑空編造內容。
+   ============================================================ */
+const HR_ZONE_PROMPT_LABELS={
+  zh:['輕鬆恢復','有氧耐力','節奏跑','乳酸閾值','最大攝氧量'],
+  ja:['イージー回復','有酸素持久力','テンポ走','乳酸閾値','最大酸素摂取量'],
+  en:['Easy Recovery','Aerobic Endurance','Tempo','Lactate Threshold','VO2 Max'],
+};
+// 中日文用全形【】方框當區塊標題比較自然，英文則改用較常見的 markdown
+// 風格「## 」，貼給 AI 時兩種寫法都能被正確辨識成段落標題，只是視覺
+// 上比較符合各自語言使用者的閱讀習慣。
+function promptSectionHeader(label){
+  return currentLang==='en'?('## '+label):('【'+label+'】');
+}
+function buildRaceReportPrompt(race){
+  const lines=[];
+  lines.push(t('ui.reportPromptIntro','請你根據以下這場賽事的數據，幫我寫一篇賽後心得。請先給我一段適合發 Instagram 的短文（含適當表情符號與主題標籤，200 字以內），再給我一篇比較完整、專業口吻的賽後檢討網誌（分段落，包含賽前準備、比賽過程、數據分析、心得反思）。'));
+  lines.push('');
+
+  lines.push(promptSectionHeader(t('ui.reportPromptRaceInfo','賽事資訊')));
+  lines.push(t('ui.reportPromptName','賽事名稱')+'：'+(race.name||t('ui.unnamedRace','(未命名賽事)')));
+  if(race.schedule.raceDate) lines.push(t('ui.reportPromptDate','日期')+'：'+race.schedule.raceDate);
+  if(race.route.distanceKm!=null) lines.push(t('ui.reportPromptDistance','距離')+'：'+race.route.distanceKm+' km');
+  if(race.route.elevationGainM) lines.push(t('ui.reportPromptElevation','總爬升')+'：'+Math.round(race.route.elevationGainM)+' m');
+  if(race.results.chipTimeSeconds!=null) lines.push(t('ui.reportPromptTime','完賽時間')+'：'+secToHMS(race.results.chipTimeSeconds));
+  if(race.results.chipTimeSeconds!=null&&race.route.distanceKm){
+    const pace=formatPace(race.results.chipTimeSeconds/race.route.distanceKm);
+    if(pace) lines.push(t('ui.reportPromptPace','平均配速')+'：'+pace+'/km');
+  }
+  if(race.results.isPb) lines.push(t('ui.reportPromptIsPb','這是我的個人最佳成績（PB）！'));
+  lines.push('');
+
+  const w=race.raceDayWeather;
+  const weatherParts=[];
+  if(w.feelsLikeTempC!=null) weatherParts.push(w.feelsLikeTempC.toFixed(1)+'°C');
+  if(w.condition) weatherParts.push(t('opt.weather.'+w.condition,(WEATHER_OPTIONS.find(o=>o.value===w.condition)||{}).label||w.condition));
+  if(w.humidityPct!=null) weatherParts.push(t('ui.reportPromptHumidity','濕度')+' '+w.humidityPct+'%');
+  if(weatherParts.length||w.notes){
+    lines.push(promptSectionHeader(t('ui.reportPromptWeather','天氣狀況')));
+    if(weatherParts.length) lines.push(weatherParts.join('・'));
+    if(w.notes) lines.push(w.notes);
+    lines.push('');
+  }
+
+  const avgHr=race.performanceData.avgHr;
+  if(avgHr!=null){
+    lines.push(promptSectionHeader(t('ui.reportPromptHr','心率表現')));
+    let hrLine=t('ui.reportPromptAvgHr','平均心率')+' '+avgHr+' bpm';
+    const zoneInfo=hrZoneInfoForRace(avgHr,race);
+    if(zoneInfo&&zoneInfo.zone){
+      const labels=HR_ZONE_PROMPT_LABELS[currentLang]||HR_ZONE_PROMPT_LABELS.zh;
+      hrLine+=`（Zone ${zoneInfo.zone} ${labels[zoneInfo.zone-1]||''}）`;
+    }
+    lines.push(hrLine);
+    lines.push('');
+  }
+
+  const splitPct=computeSplitPercent(race);
+  const validSplits=(race.splits||[]).filter(s=>s.avgPaceSecPerKm!=null);
+  if(splitPct!=null||validSplits.length>=2){
+    lines.push(promptSectionHeader(t('ui.reportPromptSplits','分段配速')));
+    if(validSplits.length>=2){
+      const paces=validSplits.map(s=>s.avgPaceSecPerKm);
+      const minP=formatPace(Math.min(...paces)),maxP=formatPace(Math.max(...paces));
+      if(minP&&maxP) lines.push(t('ui.reportPromptPaceRange','配速範圍')+'：'+minP+' ~ '+maxP+'/km');
+    }
+    if(splitPct!=null){
+      const label=splitPct<0?t('ui.reportPromptNegSplit','後半程加速（負分段）'):t('ui.reportPromptPosSplit','後半程掉速（正分段）');
+      lines.push(label+'：'+(splitPct>0?'+':'')+splitPct.toFixed(1)+'%');
+    }
+    lines.push('');
+  }
+
+  const np=race.nutritionPlan;
+  const nsched=race.nutritionSchedule||[];
+  const nutritionParts=[];
+  if(np.gelCount) nutritionParts.push(np.gelCount+' '+t('ui.reportPromptGels','條能量膠'));
+  if(np.electrolyteTabletCount) nutritionParts.push(np.electrolyteTabletCount+' '+t('ui.reportPromptElectrolytes','顆鹽錠'));
+  if(np.hydrationCapacityMl) nutritionParts.push(np.hydrationCapacityMl+' ml '+t('ui.reportPromptHydration','水分'));
+  if(nutritionParts.length||nsched.length||np.notes){
+    lines.push(promptSectionHeader(t('ui.reportPromptNutrition','補給狀況')));
+    if(nutritionParts.length) lines.push(t('ui.reportPromptPlanned','計畫補給')+'：'+nutritionParts.join('・'));
+    if(nsched.length){
+      const consumed=nsched.filter(n=>n.consumed).length;
+      lines.push(t('ui.reportPromptExecuted','實際執行 {done}/{total} 個補給點依計畫進行').replace('{done}',consumed).replace('{total}',nsched.length));
+    }
+    if(np.notes) lines.push(np.notes);
+    lines.push('');
+  }
+
+  const rv=race.review;
+  const reviewParts=[];
+  if(rv.hitTheWallNotes) reviewParts.push([t('ui.reportPromptHitWall','撞牆期心得'),rv.hitTheWallNotes]);
+  if(rv.courseReview) reviewParts.push([t('ui.reportPromptCourseReview','賽道心得'),rv.courseReview]);
+  if(rv.pros) reviewParts.push([t('ui.reportPromptPros','做得好的地方'),rv.pros]);
+  if(rv.cons) reviewParts.push([t('ui.reportPromptCons','可以改進的地方'),rv.cons]);
+  if(rv.lessonsLearned) reviewParts.push([t('ui.reportPromptLessons','學到的教訓'),rv.lessonsLearned]);
+  if(reviewParts.length){
+    lines.push(promptSectionHeader(t('ui.reportPromptReview','賽後反思')));
+    reviewParts.forEach(([label,text])=>lines.push(label+'：'+text));
+  }
+
+  return lines.join('\n').trim();
+}
+function reportPromptFallbackModalHtml(text){
+  return `<div class="modal-panel">
+    <h2>${t('ui.reportPromptFallbackTitle','請手動複製以下內容')}</h2>
+    <p class="modal-hint">${t('ui.reportPromptFallbackHint','自動複製到剪貼簿失敗，請手動全選並複製下方文字。')}</p>
+    <textarea class="report-prompt-fallback-textarea" readonly>${escapeHtml(text)}</textarea>
+    <div class="modal-actions"><button type="button" class="btn-ghost" data-action="close-report-prompt-fallback">${t('ui.close','關閉')}</button></div>
+  </div>`;
+}
+async function copyRaceReportPrompt(raceId){
+  const race=state.races.find(r=>r.id===raceId);
+  if(!race) return;
+  const text=buildRaceReportPrompt(race);
+  try{
+    await navigator.clipboard.writeText(text);
+    const btn=document.querySelector(`[data-action="copy-report-prompt"][data-id="${raceId}"]`);
+    if(btn){
+      const original=btn.textContent;
+      btn.textContent=t('ui.reportPromptCopied','已複製到剪貼簿！');
+      setTimeout(()=>{ if(btn.isConnected) btn.textContent=original; },2200);
+    }
+  }catch(err){
+    console.error('複製到剪貼簿失敗',err);
+    const modal=document.getElementById('report-prompt-fallback-modal');
+    if(modal){ modal.innerHTML=reportPromptFallbackModalHtml(text); modal.hidden=false; }
+  }
+}
+
+/* ============================================================
    單一徽章分享卡：9:16 直式圖片，呼應開箱動畫的金色慶祝感，
    方便直接發布到社群限時動態。可以在開箱當下下載，也可以事後
    從榮譽櫃裡任何一個已解鎖的徽章回頭下載。
@@ -4972,6 +5536,302 @@ async function downloadBadgeShareImage(badgeId){
     URL.revokeObjectURL(url);
   },'image/png');
 }
+
+/* ============================================================
+   年度回顧長圖卡：擷取單一年份的完賽數據，畫成一張直式分享圖。
+   只統計「完賽」的賽事（跟 computeCareerStats／computeYearlyStats
+   同一個慣例），每個區塊（鞋款、極端天氣）只在那個年度真的有對應
+   資料時才畫出來，沒有資料就整段跳過，不畫空白或「—」佔位。
+   ============================================================ */
+function availableYearInReviewYears(){
+  const years=new Set();
+  state.races.forEach(r=>{
+    if(r.deletedAt||r.status!=='completed'||!r.schedule.raceDate) return;
+    years.add(r.schedule.raceDate.slice(0,4));
+  });
+  return Array.from(years).sort().reverse();
+}
+function computeYearInReviewStats(year){
+  const completed=state.races.filter(r=>r.status==='completed'&&!r.deletedAt&&r.schedule.raceDate&&r.schedule.raceDate.startsWith(year));
+  const totalDistance=completed.reduce((s,r)=>s+(r.route.distanceKm||0),0);
+  const totalElevation=completed.reduce((s,r)=>s+(r.route.elevationGainM||0),0);
+  const pbCount=completed.filter(r=>r.results.isPb).length;
+  const newBadgeCount=Object.keys(badgeUnlocks).filter(id=>{
+    const u=badgeUnlocks[id];
+    return u&&u.unlockedAt&&u.unlockedAt.slice(0,4)===year;
+  }).length;
+
+  const shoeAgg={};
+  completed.forEach(r=>{
+    const sid=r.performanceData&&r.performanceData.shoeId;
+    if(!sid) return;
+    if(!shoeAgg[sid]) shoeAgg[sid]={count:0,distance:0};
+    shoeAgg[sid].count++;
+    shoeAgg[sid].distance+=(r.route.distanceKm||0);
+  });
+  let topShoeId=null;
+  Object.keys(shoeAgg).forEach(sid=>{
+    if(!topShoeId||shoeAgg[sid].count>shoeAgg[topShoeId].count) topShoeId=sid;
+  });
+  const topShoe=topShoeId?{
+    shoe:shoes.find(s=>s.id===topShoeId)||null,
+    count:shoeAgg[topShoeId].count,
+    distance:shoeAgg[topShoeId].distance,
+  }:null;
+
+  const withTemp=completed.filter(r=>r.raceDayWeather&&r.raceDayWeather.feelsLikeTempC!=null);
+  let coldestRace=null,hottestRace=null;
+  withTemp.forEach(r=>{
+    const temp=r.raceDayWeather.feelsLikeTempC;
+    if(!coldestRace||temp<coldestRace.raceDayWeather.feelsLikeTempC) coldestRace=r;
+    if(!hottestRace||temp>hottestRace.raceDayWeather.feelsLikeTempC) hottestRace=r;
+  });
+  if(hottestRace&&coldestRace&&hottestRace.id===coldestRace.id) hottestRace=null;
+
+  return {year,raceCount:completed.length,totalDistance,totalElevation,pbCount,newBadgeCount,topShoe,coldestRace,hottestRace};
+}
+async function buildYearInReviewCanvas(year){
+  const s=computeYearInReviewStats(year);
+  if(!s.raceCount) return null;
+  try{ await document.fonts.ready; }catch(e){}
+  const W=1080,H=1920;
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const uiFont=canvasFontFamily();
+  const monoFont='"IBM Plex Mono",monospace';
+
+  ctx.fillStyle='#0D1013';
+  ctx.fillRect(0,0,W,H);
+  const glow=ctx.createRadialGradient(W/2,H*0.28,0,W/2,H*0.28,W*0.8);
+  glow.addColorStop(0,'rgba(217,177,92,0.18)');
+  glow.addColorStop(1,'rgba(217,177,92,0)');
+  ctx.fillStyle=glow;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#D9B15C';
+  ctx.font=`bold 28px ${uiFont}`;
+  ctx.fillText(t('ui.yearInReviewLabel','年度回顧'),W/2,190);
+
+  ctx.fillStyle='#EDEEE9';
+  ctx.font=`bold 150px ${monoFont}`;
+  ctx.fillText(year,W/2,360);
+
+  ctx.fillStyle='#9BA3A0';
+  ctx.font=`26px ${uiFont}`;
+  ctx.fillText(t('ui.yearInReviewRaceCount','{n} 場完賽紀錄').replace('{n}',s.raceCount),W/2,410);
+
+  let y=520;
+  const drawDivider=()=>{
+    ctx.strokeStyle='#2A3038';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(120,y);ctx.lineTo(W-120,y);ctx.stroke();
+    y+=54;
+  };
+  const drawStatRow=(items)=>{
+    const cols=items.length;
+    const colW=(W-220)/cols;
+    items.forEach((it,i)=>{
+      const bx=110+colW*(i+0.5);
+      ctx.fillStyle='#9BA3A0';ctx.font=`24px ${uiFont}`;ctx.textAlign='center';
+      ctx.fillText(it[0],bx,y);
+      ctx.fillStyle='#D9B15C';ctx.font=`bold 42px ${monoFont}`;
+      ctx.fillText(it[1],bx,y+52);
+    });
+    y+=118;
+  };
+
+  drawStatRow([
+    [t('ui.yearInReviewDistance','總里程'),s.totalDistance.toFixed(1)+' km'],
+    [t('ui.yearInReviewElevation','總爬升'),Math.round(s.totalElevation)+' m'],
+  ]);
+  drawStatRow([
+    [t('ui.yearInReviewPbCount','破 PB 次數'),String(s.pbCount)],
+    [t('ui.yearInReviewNewBadges','新解鎖徽章'),String(s.newBadgeCount)],
+  ]);
+
+  if(s.topShoe&&s.topShoe.shoe){
+    drawDivider();
+    ctx.fillStyle='#6B7178';ctx.font=`24px ${uiFont}`;ctx.textAlign='center';
+    ctx.fillText(t('ui.yearInReviewTopShoe','最常穿的鞋'),W/2,y);
+    y+=48;
+    ctx.fillStyle='#EDEEE9';ctx.font=`bold 34px ${uiFont}`;
+    y=canvasWrapTextCentered(ctx,s.topShoe.shoe.name,W/2,y,W-240,42,2);
+    y+=6;
+    ctx.fillStyle='#9BA3A0';ctx.font=`22px ${monoFont}`;
+    ctx.fillText(t('ui.yearInReviewShoeDetail','{count} 場・{km} km').replace('{count}',s.topShoe.count).replace('{km}',s.topShoe.distance.toFixed(0)),W/2,y+34);
+    y+=90;
+  }
+
+  if(s.coldestRace||s.hottestRace){
+    drawDivider();
+    ctx.fillStyle='#6B7178';ctx.font=`24px ${uiFont}`;ctx.textAlign='center';
+    ctx.fillText(t('ui.yearInReviewWeatherExtreme','氣候紀錄'),W/2,y);
+    y+=50;
+    const weatherItems=[s.coldestRace,s.hottestRace].filter(Boolean);
+    const colW=(W-220)/weatherItems.length;
+    weatherItems.forEach((r,i)=>{
+      const bx=110+colW*(i+0.5);
+      const isCold=r===s.coldestRace;
+      ctx.fillStyle='#9BA3A0';ctx.font=`22px ${uiFont}`;ctx.textAlign='center';
+      ctx.fillText(isCold?t('ui.yearInReviewColdest','最冷賽事'):t('ui.yearInReviewHottest','最熱賽事'),bx,y);
+      ctx.fillStyle=isCold?'#7B9FD1':'#E07850';ctx.font=`bold 36px ${monoFont}`;
+      ctx.fillText(r.raceDayWeather.feelsLikeTempC.toFixed(1)+'°C',bx,y+46);
+      ctx.fillStyle='#6B7178';ctx.font=`20px ${uiFont}`;
+      const name=r.name.length>10?r.name.slice(0,10)+'…':r.name;
+      ctx.fillText(name,bx,y+80);
+    });
+    y+=140;
+  }
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#4C4F52';
+  ctx.font=`22px ${uiFont}`;
+  ctx.fillText(t('ui.appTitle','賽事紀錄'),W/2,H-100);
+
+  return canvas;
+}
+async function downloadYearInReviewImage(year){
+  const canvas=await buildYearInReviewCanvas(year);
+  if(!canvas) return;
+  canvas.toBlob(blob=>{
+    if(!blob) return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=year+t('ui.yearInReviewSuffix','-年度回顧.png');
+    a.click();
+    URL.revokeObjectURL(url);
+  },'image/png');
+}
+
+/* ============================================================
+   動態回顧輪播（Story Mode）：全螢幕、一頁一頁播放的年度亮點，
+   只收「已完賽 + 有封面照片」的賽事（沒有照片的賽事沒辦法當成
+   沉浸式的相片畫面），開頭加一張純文字的年份標題頁。自動播放、
+   點左右兩側切換、也支援鍵盤左右鍵與 Esc。
+   ============================================================ */
+function getStoryModeRaces(year){
+  return state.races
+    .filter(r=>r.status==='completed'&&!r.deletedAt&&r.coverImage&&r.schedule.raceDate&&r.schedule.raceDate.startsWith(year))
+    .sort((a,b)=>(a.schedule.raceDate||'').localeCompare(b.schedule.raceDate||''));
+}
+function mostRecentStoryModeYear(){
+  const years=availableYearInReviewYears();
+  for(const y of years){ if(getStoryModeRaces(y).length) return y; }
+  return null;
+}
+function updateStoryModeButton(){
+  const btn=document.getElementById('btn-story-mode');
+  if(!btn) return;
+  const year=mostRecentStoryModeYear();
+  if(!year){ btn.hidden=true; return; }
+  btn.hidden=false;
+  btn.textContent=t('ui.storyModeButton','{year} 年度回顧').replace('{year}',year);
+  btn.dataset.year=year;
+}
+let storyMode={races:[],index:0,timer:null,year:null};
+const STORY_SLIDE_DURATION=5000;
+function storyOverlayEl(){ return document.getElementById('story-mode-overlay'); }
+function clearStoryTimer(){
+  if(storyMode.timer){ clearTimeout(storyMode.timer); storyMode.timer=null; }
+}
+function openStoryMode(year){
+  const races=getStoryModeRaces(year);
+  if(!races.length) return;
+  storyMode={races,index:0,timer:null,year};
+  storyOverlayEl().innerHTML=storySlideHtml();
+  storyOverlayEl().hidden=false;
+  document.body.style.overflow='hidden';
+  startStorySlide();
+}
+function closeStoryMode(){
+  clearStoryTimer();
+  storyOverlayEl().hidden=true;
+  storyOverlayEl().innerHTML='';
+  document.body.style.overflow='';
+}
+function goToStorySlide(newIndex){
+  clearStoryTimer();
+  if(newIndex<0) newIndex=0;
+  // 播完最後一頁（不管是自動播放還是手動點右邊）就直接關閉，不循環回開頭——
+  // 這是一份「今年的回顧」，播完了就結束，不是無限輪播的相簿。
+  if(newIndex>=storyMode.races.length+1){ closeStoryMode(); return; }
+  storyMode.index=newIndex;
+  storyOverlayEl().innerHTML=storySlideHtml();
+  startStorySlide();
+}
+function startStorySlide(){
+  // index 0 是純文字標題頁，1..n 才是賽事照片頁（races[index-1]）
+  requestAnimationFrame(()=>{
+    const fill=storyOverlayEl().querySelector('.story-progress-fill.current');
+    if(fill){
+      fill.classList.add('animating');
+      fill.style.transitionDuration=STORY_SLIDE_DURATION+'ms';
+      requestAnimationFrame(()=>{ fill.style.width='100%'; });
+    }
+  });
+  storyMode.timer=setTimeout(()=>goToStorySlide(storyMode.index+1),STORY_SLIDE_DURATION);
+}
+function storySlideHtml(){
+  const total=storyMode.races.length+1; // +1 給標題頁
+  const progressHtml=`<div class="story-progress-row">
+    ${Array.from({length:total}).map((_,i)=>`<div class="story-progress-seg"><div class="story-progress-fill${i<storyMode.index?' filled':''}${i===storyMode.index?' current':''}"></div></div>`).join('')}
+  </div>`;
+  const closeHtml=`<button type="button" class="story-close-btn" data-action="close-story-mode" aria-label="${t('ui.close','關閉')}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>`;
+  const tapZones=`<button type="button" class="story-tap-zone left" data-action="story-prev" aria-label="${t('ui.storyPrev','上一頁')}"></button>
+    <button type="button" class="story-tap-zone right" data-action="story-next" aria-label="${t('ui.storyNext','下一頁')}"></button>`;
+
+  let slideHtml;
+  if(storyMode.index===0){
+    slideHtml=`<div class="story-title-slide">
+      <div class="story-title-year mono">${storyMode.year}</div>
+      <div class="story-title-sub">${t('ui.storyTitleSub','{n} 場亮點賽事回顧').replace('{n}',storyMode.races.length)}</div>
+    </div>`;
+  }else{
+    const race=storyMode.races[storyMode.index-1];
+    const w=race.raceDayWeather;
+    const hasWeather=w&&(w.feelsLikeTempC!=null||w.condition);
+    const weatherText=hasWeather
+      ?[w.feelsLikeTempC!=null?w.feelsLikeTempC.toFixed(1)+'°C':null,w.condition?t('opt.weather.'+w.condition,(WEATHER_OPTIONS.find(o=>o.value===w.condition)||{}).label||w.condition):null].filter(Boolean).join('・')
+      :null;
+    slideHtml=`<div class="story-slide">
+      <img class="story-slide-bg" src="${race.coverImage}" alt="" style="${focalPointStyle(race)}">
+      <div class="story-slide-gradient"></div>
+      <div class="story-slide-content">
+        <div class="story-slide-name">${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')}</div>
+        <div class="story-slide-date">${escapeHtml(race.schedule.raceDate||'')}</div>
+        <div class="story-slide-stats">
+          ${race.route.distanceKm!=null?`<div><div class="story-slide-stat-label">${t('ui.dossierStatDistance','距離')}</div><div class="story-slide-stat-value">${race.route.distanceKm.toFixed(1)} km</div></div>`:''}
+          ${weatherText?`<div><div class="story-slide-stat-label">${t('ui.storyWeatherLabel','當天天氣')}</div><div class="story-slide-stat-value">${weatherText}</div></div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+  return `<div class="story-slide-frame">${progressHtml}${closeHtml}${tapZones}${slideHtml}</div>`;
+}
+storyOverlayEl().addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-story-mode"]')){ closeStoryMode(); return; }
+  if(e.target.closest('[data-action="story-prev"]')){ goToStorySlide(storyMode.index-1); return; }
+  if(e.target.closest('[data-action="story-next"]')){ goToStorySlide(storyMode.index+1); return; }
+});
+document.getElementById('report-prompt-fallback-modal').addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-report-prompt-fallback"]')){
+    const modal=document.getElementById('report-prompt-fallback-modal');
+    modal.hidden=true;modal.innerHTML='';
+  }
+});
+document.getElementById('btn-story-mode').addEventListener('click',()=>{
+  const year=document.getElementById('btn-story-mode').dataset.year;
+  if(year) openStoryMode(year);
+});
+document.addEventListener('keydown',e=>{
+  if(storyOverlayEl().hidden) return;
+  if(e.key==='Escape'){ closeStoryMode(); }
+  else if(e.key==='ArrowLeft'){ goToStorySlide(storyMode.index-1); }
+  else if(e.key==='ArrowRight'){ goToStorySlide(storyMode.index+1); }
+});
 
 /* ============================================================
    主畫面渲染
@@ -5732,49 +6592,119 @@ function badgeUnlockCaption(badgeId){
   if(u.unlockedAt) return tf('ui.badgeUnlockCaptionDate','達成於：{n}',u.unlockedAt.slice(0,10));
   return '';
 }
-function renderTrophyCabinet(){
+let trophyCabinetFilter='all'; // 'all' | 'unlocked' | 'in_progress' | 'not_started'
+const TROPHY_FILTER_OPTIONS=[
+  ['all','ui.trophyFilterAll','全部'],
+  ['unlocked','ui.trophyFilterUnlocked','已解鎖'],
+  ['in_progress','ui.trophyFilterInProgress','進行中'],
+  ['not_started','ui.trophyFilterNotStarted','未達成'],
+];
+// 把「這個徽章目前解鎖了沒、進度多少」統一算好一次，避免同一個徽章的
+// check() 在篩選、排序、渲染三個地方各被呼叫一次；已解鎖的徽章不需要
+// 重新判定，直接當作 100% 處理。
+function trophyBadgeStatusList(){
   const ctx=buildBadgeContext();
+  return BADGE_DEFINITIONS.map(b=>{
+    const unlocked=!!badgeUnlocks[b.id];
+    let progress=unlocked?100:0;
+    if(!unlocked){
+      try{ progress=(b.check(ctx)||{}).progress||0; }catch(err){}
+    }
+    return {badge:b,unlocked,progress};
+  });
+}
+function trophyItemMatchesFilter(item){
+  if(trophyCabinetFilter==='unlocked') return item.unlocked;
+  if(trophyCabinetFilter==='in_progress') return !item.unlocked&&item.progress>0;
+  if(trophyCabinetFilter==='not_started') return !item.unlocked&&item.progress===0;
+  return true;
+}
+function trophyBadgeCardHtml(item,opts){
+  const {badge:b,unlocked,progress}=item;
+  const showCatTag=opts&&opts.showCategoryTag;
+  const catTag=showCatTag?`<span class="trophy-badge-cat-tag small">${t('ui.trophyCat_'+b.category,BADGE_CATEGORY_LABELS[b.category])}</span>`:'';
+  if(unlocked){
+    const raceCaption=badgeUnlockCaption(b.id);
+    return `<div class="trophy-badge unlocked" title="${escapeHtml(b.name)}">
+      ${catTag}
+      <span class="trophy-badge-icon">${b.icon}</span>
+      <span class="trophy-badge-name small">${escapeHtml(b.name)}</span>
+      <span class="trophy-badge-condition">${escapeHtml(b.hint)}</span>
+      ${raceCaption?`<span class="trophy-badge-caption">${raceCaption}</span>`:''}
+      <button type="button" class="trophy-badge-share-btn" data-action="download-badge-share" data-id="${b.id}" title="${t('ui.badgeDownloadShare','下載成就圖')}">${t('ui.badgeDownloadShare','下載成就圖')}</button>
+    </div>`;
+  }
+  return `<div class="trophy-badge locked" title="${escapeHtml(b.hint)}">
+    ${catTag}
+    <span class="trophy-badge-icon trophy-badge-silhouette">?</span>
+    <span class="trophy-badge-name small">${escapeHtml(b.hint)}</span>
+    ${progress>0?`<div class="trophy-badge-progress"><div class="trophy-badge-progress-fill" style="width:${progress}%"></div></div>`:''}
+  </div>`;
+}
+function trophyCabinetBodyHtml(){
+  const all=trophyBadgeStatusList();
+  const categories=['explore','terrain','speed','crossover'];
+  const filterTabsHtml=`<div class="chips trophy-filter-tabs">
+    ${TROPHY_FILTER_OPTIONS.map(([val,key,label])=>
+      `<button type="button" class="chip${trophyCabinetFilter===val?' active':''}" data-action="set-trophy-filter" data-filter="${val}">${t(key,label)}</button>`
+    ).join('')}
+  </div>`;
+
+  let bodyHtml;
+  if(trophyCabinetFilter==='in_progress'){
+    // 「進行中」要幫使用者找出全部徽章裡「只差一步」的目標，所以這裡
+    // 不照類別分區塊、直接攤平成單一列表，按進度高到低排序（不這樣
+    // 做的話，真正最接近解鎖的徽章可能被埋在後面的類別區塊裡，使用者
+    // 得一區一區展開才看得到，違背這個篩選原本要解決的問題）。每張卡
+    // 額外加一個類別標籤，不分區塊還是看得出來是哪一類。
+    const items=all.filter(trophyItemMatchesFilter).sort((a,b)=>b.progress-a.progress);
+    bodyHtml=items.length
+      ?`<div class="trophy-grid">${items.map(it=>trophyBadgeCardHtml(it,{showCategoryTag:true})).join('')}</div>`
+      :'';
+  }else{
+    bodyHtml=categories.map(cat=>{
+      const catAll=all.filter(x=>x.badge.category===cat);
+      const items=catAll.filter(trophyItemMatchesFilter).slice().sort((a,b)=>(a.badge.order||0)-(b.badge.order||0));
+      if(!items.length) return '';
+      const catUnlocked=catAll.filter(x=>x.unlocked).length;
+      return `<details class="trophy-category" open>
+        <summary class="trophy-category-label small">
+          <span>${t('ui.trophyCat_'+cat,BADGE_CATEGORY_LABELS[cat])}</span>
+          <span class="mono">${catUnlocked} / ${catAll.length}</span>
+        </summary>
+        <div class="trophy-grid">
+          ${items.map(it=>trophyBadgeCardHtml(it)).join('')}
+        </div>
+      </details>`;
+    }).filter(Boolean).join('');
+  }
+  const emptyHtml=bodyHtml?'':`<p class="empty-hint small">${t('ui.trophyFilterEmpty','這個篩選條件下沒有符合的徽章')}</p>`;
+  return filterTabsHtml+bodyHtml+emptyHtml;
+}
+// 篩選按鈕只需要換掉榮譽櫃「內容」，外層 <details> 元素本身不動，
+// 使用者原本展開／收合的狀態才不會因為點篩選鈕而被重置。
+function refreshTrophyCabinetBody(){
+  const slot=document.getElementById('trophy-cabinet-body');
+  if(slot) slot.innerHTML=trophyCabinetBodyHtml();
+}
+function renderTrophyCabinet(){
   const unlockedCount=Object.keys(badgeUnlocks).length;
   const total=BADGE_DEFINITIONS.length;
-  const categories=['explore','terrain','speed','crossover'];
   return `<details class="trophy-cabinet-wrap">
     <summary class="trophy-cabinet-summary">
       <span>${t('ui.trophyCabinetTitle','榮譽櫃')}</span>
       <span class="mono small">${unlockedCount} / ${total}</span>
     </summary>
-    ${categories.map(cat=>{
-      const badges=BADGE_DEFINITIONS.filter(b=>b.category===cat).slice().sort((a,b)=>(a.order||0)-(b.order||0));
-      const catUnlocked=badges.filter(b=>!!badgeUnlocks[b.id]).length;
-      return `<details class="trophy-category" open>
-        <summary class="trophy-category-label small">
-          <span>${t('ui.trophyCat_'+cat,BADGE_CATEGORY_LABELS[cat])}</span>
-          <span class="mono">${catUnlocked} / ${badges.length}</span>
-        </summary>
-        <div class="trophy-grid">
-          ${badges.map(b=>{
-            const unlocked=!!badgeUnlocks[b.id];
-            if(unlocked){
-              const raceCaption=badgeUnlockCaption(b.id);
-              return `<div class="trophy-badge unlocked" title="${escapeHtml(b.name)}">
-                <span class="trophy-badge-icon">${b.icon}</span>
-                <span class="trophy-badge-name small">${escapeHtml(b.name)}</span>
-                <span class="trophy-badge-condition">${escapeHtml(b.hint)}</span>
-                ${raceCaption?`<span class="trophy-badge-caption">${raceCaption}</span>`:''}
-                <button type="button" class="trophy-badge-share-btn" data-action="download-badge-share" data-id="${b.id}" title="${t('ui.badgeDownloadShare','下載成就圖')}">${t('ui.badgeDownloadShare','下載成就圖')}</button>
-              </div>`;
-            }
-            let result={progress:0};
-            try{ result=b.check(ctx); }catch(err){}
-            return `<div class="trophy-badge locked" title="${escapeHtml(b.hint)}">
-              <span class="trophy-badge-icon trophy-badge-silhouette">?</span>
-              <span class="trophy-badge-name small">${escapeHtml(b.hint)}</span>
-              ${result.progress>0?`<div class="trophy-badge-progress"><div class="trophy-badge-progress-fill" style="width:${result.progress}%"></div></div>`:''}
-            </div>`;
-          }).join('')}
-        </div>
-      </details>`;
-    }).join('')}
+    <div id="trophy-cabinet-body">${trophyCabinetBodyHtml()}</div>
   </details>`;
+}
+function yearInReviewButtonsHtml(){
+  const years=availableYearInReviewYears();
+  if(!years.length) return '';
+  return `<div class="year-in-review-row">
+    <span class="year-in-review-label small">${t('ui.yearInReviewCta','年度回顧長圖卡')}</span>
+    ${years.slice(0,5).map(y=>`<button type="button" class="chip" data-action="download-year-review" data-year="${y}">${y}</button>`).join('')}
+  </div>`;
 }
 function renderCareerSummary(){
   if(state.races.length<5) return '';
@@ -5799,6 +6729,7 @@ function renderCareerSummary(){
         </div>`).join('')}</div>
       ${yearlyChartSvg()}
     </div>
+    ${yearInReviewButtonsHtml()}
     ${elevationTrendChartSvg()}
     ${heatmapHtml()}
     ${renderTrophyCabinet()}
@@ -5967,6 +6898,8 @@ function detailHeaderHtml(race){
               ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="export-race-ics">${t('ui.exportRaceIcs','匯出行事曆提醒（.ics檔）')}</button>`:''}
               ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
               ${['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
+              ${['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-crew-guide">${t('ui.downloadCrewGuide','下載親友應援指南圖')}</button>`:''}
+              ${race.status==='completed'?`<button type="button" class="action-menu-item" data-action="copy-report-prompt" data-id="${race.id}">${t('ui.copyReportPrompt','複製賽後檢討 AI 提示詞')}</button>`:''}
               <div class="action-menu-divider"></div>
               <button type="button" class="action-menu-item" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
               <button type="button" class="action-menu-item" data-action="duplicate-race" title="${t('ui.duplicateRaceHint','複製地點、路線、裝備等欄位，建立新的一場（適合同系列跨年賽事）')}">${t('ui.duplicateRace','複製賽事')}</button>
@@ -6142,7 +7075,7 @@ function renderCreateForm(){
 
 function renderAll(){
   document.body.classList.toggle('viewing-detail',!!(state.selectedId||state.creating));
-  renderCalendar();renderDetail();renderRecoveryButton();
+  renderCalendar();renderDetail();renderRecoveryButton();updateStoryModeButton();
 }
 function scrollDetailIntoView(){
   if(typeof detailEl.scrollIntoView==='function') detailEl.scrollIntoView({behavior:'smooth',block:'start'});
@@ -6252,6 +7185,8 @@ document.addEventListener('click',e=>{
   if(viewBtn){ selectRace(viewBtn.dataset.id); return; }
   const fetchWeatherBtn=e.target.closest('[data-action="fetch-live-weather"]');
   if(fetchWeatherBtn){ fetchLiveWeatherForRace(fetchWeatherBtn.dataset.id); return; }
+  const trophyFilterBtn=e.target.closest('[data-action="set-trophy-filter"]');
+  if(trophyFilterBtn){ trophyCabinetFilter=trophyFilterBtn.dataset.filter; refreshTrophyCabinetBody(); return; }
 });
 
 /* ============================================================
@@ -6372,7 +7307,7 @@ const CHILD_CSV_TABLES={
   transportation:['direction','mode','departureTime','pickupLocation','notes'],
   companions:['name','role','contactInfo','notes'],
   goals:['tier','targetTimeSeconds','paceStrategy'],
-  equipmentChecklist:['itemName','category','isMandatory','isPacked','notes'],
+  equipmentChecklist:['itemName','category','weightG','isConsumable','isMandatory','isPacked','notes'],
   nutritionSchedule:['distanceKm','item','plannedAmount','consumed','notes'],
   splits:['distanceKm','splitTimeSeconds','avgHr','avgPaceSecPerKm','elevationGainM','notes'],
   mediaLinks:['type','url','notes'],
@@ -6711,7 +7646,7 @@ detailEl.addEventListener('click',e=>{
     const tpl=templates.find(t=>t.id===sel.value);
     if(!tpl) return;
     currentRace.equipmentChecklist=(currentRace.equipmentChecklist||[]).concat(
-      tpl.items.map(it=>({itemName:it.itemName,category:it.category,isMandatory:it.isMandatory,isPacked:false,notes:''}))
+      tpl.items.map(it=>({itemName:it.itemName,category:it.category,weightG:it.weightG!=null?it.weightG:null,isConsumable:!!it.isConsumable,isMandatory:it.isMandatory,isPacked:false,notes:''}))
     );
     currentRace.updatedAt=new Date().toISOString();
     persist();renderDetail();return;
@@ -6729,7 +7664,7 @@ detailEl.addEventListener('click',e=>{
     const nameInput=document.getElementById('template-name-input');
     const name=nameInput.value.trim();
     if(!name){nameInput.focus();return;}
-    const items=(currentRace.equipmentChecklist||[]).map(it=>({itemName:it.itemName,category:it.category,isMandatory:it.isMandatory}));
+    const items=(currentRace.equipmentChecklist||[]).map(it=>({itemName:it.itemName,category:it.category,isMandatory:it.isMandatory,weightG:it.weightG!=null?it.weightG:undefined,isConsumable:it.isConsumable||undefined}));
     templates.push({id:uid(),name,items});
     state.savingTemplate=false;
     persistTemplates();renderDetail();return;
@@ -7852,6 +8787,56 @@ document.addEventListener('click',e=>{
    ============================================================ */
 let editingShoeTargetId=null;
 let shoeStampingId=null;
+let expandedShoeAnalysisId=null;
+function shoeAnalysisHtml(shoeId){
+  const perf=computeShoePerformanceStats(shoeId);
+  if(!perf) return `<p class="empty-hint small">${t('ui.shoeAnalysisEmpty','這雙鞋還沒有完賽紀錄')}</p>`;
+  const pbRateText=`${perf.pbCount} / ${perf.totalRaces}`;
+  const paceText=perf.avgPaceSecPerKm!=null?formatPace(perf.avgPaceSecPerKm)+'/km':'—';
+
+  const degrade=computeShoeDegradation(shoeId);
+  let degradeHtml='';
+  if(degrade&&degrade.early&&degrade.late){
+    const delta=degrade.late.avgSplitPct-degrade.early.avgSplitPct;
+    const thresholdKm=Math.round(degrade.threshold);
+    degradeHtml=`<div class="shoe-degrade-block">
+      <div class="shoe-degrade-title small">${t('ui.shoeDegradeTitle','衰退交叉比對')}</div>
+      <div class="shoe-degrade-row">
+        <div class="shoe-degrade-col">
+          <div class="small">${t('ui.shoeDegradeEarly','里程 {km} 公里前').replace('{km}',thresholdKm)}</div>
+          <div class="mono shoe-degrade-value">${degrade.early.avgSplitPct>0?'+':''}${degrade.early.avgSplitPct.toFixed(1)}%</div>
+          <div class="small">${degrade.early.count} ${t('ui.unitRaces','場')}</div>
+        </div>
+        <div class="shoe-degrade-col">
+          <div class="small">${t('ui.shoeDegradeLate','里程 {km} 公里後').replace('{km}',thresholdKm)}</div>
+          <div class="mono shoe-degrade-value">${degrade.late.avgSplitPct>0?'+':''}${degrade.late.avgSplitPct.toFixed(1)}%</div>
+          <div class="small">${degrade.late.count} ${t('ui.unitRaces','場')}</div>
+        </div>
+      </div>
+      <p class="shoe-degrade-delta small">${delta>0
+        ?t('ui.shoeDegradeWorse','里程增加後，後半程掉速平均多了 {pct} 個百分點').replace('{pct}',delta.toFixed(1))
+        :t('ui.shoeDegradeBetter','里程增加後，後半程掉速沒有變得更明顯')}</p>
+    </div>`;
+  }
+
+  const raceRows=perf.races.map(r=>{
+    const pace=r.results.chipTimeSeconds!=null&&r.route.distanceKm?formatPace(r.results.chipTimeSeconds/r.route.distanceKm)+'/km':'—';
+    return `<tr>
+      <td class="mono small">${escapeHtml(r.schedule.raceDate||'')}</td>
+      <td>${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}${r.results.isPb?` <span class="shoe-pb-tag">PB</span>`:''}</td>
+      <td class="mono num small">${pace}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="shoe-analysis">
+    <div class="shoe-analysis-stats">
+      <div class="shoe-analysis-stat"><span class="small">${t('ui.shoePbRate','PB 率')}</span><span class="mono">${pbRateText}</span></div>
+      <div class="shoe-analysis-stat"><span class="small">${t('ui.shoeAvgPace','平均配速')}</span><span class="mono">${paceText}</span></div>
+    </div>
+    ${degradeHtml}
+    <table class="shoe-analysis-table"><tbody>${raceRows}</tbody></table>
+  </div>`;
+}
 function shoeModalHtml(){
   const active=shoes.filter(s=>!s.isRetired);
   const retired=shoes.filter(s=>s.isRetired);
@@ -7874,6 +8859,7 @@ function shoeModalHtml(){
       :`<span class="shoe-row-stats mono small">${tf2('ui.shoeStatsLine',`${stats.totalRaces} 場・${stats.totalDistance.toFixed(1)} / ${s.targetKm||DEFAULT_SHOE_TARGET_KM} ${t('ui.unitKm','公里')}`,stats.totalRaces,`${stats.totalDistance.toFixed(1)} / ${s.targetKm||DEFAULT_SHOE_TARGET_KM} ${t('ui.unitKm','公里')}`)}
           ${!s.isRetired?`<button type="button" class="shoe-target-edit-btn" data-action="edit-shoe-target" data-id="${s.id}" title="${t('ui.shoeEditTarget','編輯預期壽命')}">✎</button>`:''}
         </span>`;
+    const isExpanded=expandedShoeAnalysisId===s.id;
     return `<div class="shoe-row${s.isRetired?' shoe-row-retired':''}${shoeStampingId===s.id?' shoe-row-stamping':''}" id="shoe-row-${s.id}">
       ${shoeStampingId===s.id?`<div class="shoe-stamp-overlay">${t('ui.shoeRetiredBadge','光榮退役')}</div>`:''}
       <div class="shoe-row-top">
@@ -7887,6 +8873,7 @@ function shoeModalHtml(){
       <div class="shoe-row-bottom">
         ${statLine}
         <div class="shoe-row-actions">
+          ${stats.totalRaces>0?`<button type="button" class="btn-text-small" data-action="toggle-shoe-analysis" data-id="${s.id}">${isExpanded?t('ui.shoeAnalysisHide','收起戰力分析'):t('ui.shoeAnalysisShow','戰力分析')}</button>`:''}
           ${s.isRetired
             ?`<button type="button" class="btn-text-small" data-action="unretire-shoe" data-id="${s.id}">${t('ui.shoeUnretire','恢復服役')}</button>`
             :(isFullyWorn
@@ -7895,6 +8882,7 @@ function shoeModalHtml(){
           ${canDelete?`<button type="button" class="btn-text-small danger" data-action="delete-shoe" data-id="${s.id}">${t('ui.delete','刪除')}</button>`:''}
         </div>
       </div>
+      ${isExpanded?shoeAnalysisHtml(s.id):''}
     </div>`;
   }
   return `<div class="modal-panel modal-panel-wide">
@@ -7921,7 +8909,14 @@ function openShoeModal(){
 }
 shoeModalEl_getter().addEventListener('click',e=>{
   if(e.target.closest('[data-action="close-shoe-modal"]')){
-    shoeModalEl_getter().hidden=true;shoeModalEl_getter().innerHTML='';return;
+    shoeModalEl_getter().hidden=true;shoeModalEl_getter().innerHTML='';expandedShoeAnalysisId=null;return;
+  }
+  const toggleAnalysisBtn=e.target.closest('[data-action="toggle-shoe-analysis"]');
+  if(toggleAnalysisBtn){
+    const id=toggleAnalysisBtn.dataset.id;
+    expandedShoeAnalysisId=expandedShoeAnalysisId===id?null:id;
+    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    return;
   }
   if(e.target.closest('[data-action="add-shoe"]')){
     const input=document.getElementById('new-shoe-name');
@@ -8104,16 +9099,21 @@ profileModalEl_getter().addEventListener('change',e=>{
 /* ============================================================
    配速試算與手環產生器
    ============================================================ */
-function computePacingRows(targetSeconds,distanceKm,strategy,intervalKm){
-  if(!targetSeconds||!distanceKm||!intervalKm) return [];
-  const avgPace=targetSeconds/distanceKm;
+// 抽出單點距離的配速時間計算，讓「配速試算表」（固定間隔）跟「應援指南
+// 卡」（CP 站實際距離，不是固定間隔）可以共用同一套配速插值公式，不用
+// 各自寫一份容易兜不起來的重複邏輯。
+function pacingTimeAtDistance(targetSeconds,totalDistanceKm,strategy,d){
+  const avgPace=targetSeconds/totalDistanceKm;
   const x=strategy==='negative'?0.04:(strategy==='positive'?-0.04:0);
   const p1=avgPace*(1+x),p2=avgPace*(1-x);
+  return p1*d+(p2-p1)*d*d/(2*totalDistanceKm);
+}
+function computePacingRows(targetSeconds,distanceKm,strategy,intervalKm){
+  if(!targetSeconds||!distanceKm||!intervalKm) return [];
   const rows=[];
   let d=intervalKm;
   while(d<distanceKm-0.05){
-    const t=p1*d+(p2-p1)*d*d/(2*distanceKm);
-    rows.push({distanceKm:+d.toFixed(1),cumulativeSeconds:Math.round(t)});
+    rows.push({distanceKm:+d.toFixed(1),cumulativeSeconds:Math.round(pacingTimeAtDistance(targetSeconds,distanceKm,strategy,d))});
     d+=intervalKm;
   }
   rows.push({distanceKm:+distanceKm.toFixed(2),cumulativeSeconds:Math.round(targetSeconds)});
@@ -8230,8 +9230,13 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-gpx-picker"]')) document.getElementById('gpx-file-input').click();
   if(e.target.closest('[data-action="generate-share-image"]')&&currentRace){ downloadShareImage(currentRace); logFeatureUse('export_share_image'); }
   if(e.target.closest('[data-action="download-dossier"]')&&currentRace){ downloadDossierImage(currentRace); logFeatureUse('export_dossier'); }
+  if(e.target.closest('[data-action="download-crew-guide"]')&&currentRace){ downloadCrewGuideImage(currentRace); logFeatureUse('export_crew_guide'); }
+  const copyPromptBtn=e.target.closest('[data-action="copy-report-prompt"]');
+  if(copyPromptBtn){ copyRaceReportPrompt(copyPromptBtn.dataset.id); logFeatureUse('export_report_prompt'); }
   const badgeShareBtn=e.target.closest('[data-action="download-badge-share"]');
   if(badgeShareBtn){ downloadBadgeShareImage(badgeShareBtn.dataset.id); logFeatureUse('export_badge_share'); }
+  const yearReviewBtn=e.target.closest('[data-action="download-year-review"]');
+  if(yearReviewBtn){ downloadYearInReviewImage(yearReviewBtn.dataset.year); logFeatureUse('export_year_review'); }
   if(e.target.closest('[data-action="open-shoe-modal"]')){ openShoeModal(); logFeatureUse('tool_shoe_manager'); }
   if(e.target.closest('[data-action="open-profile-modal"]')){ openProfileModal(); logFeatureUse('tool_profile_panel'); }
   if(e.target.closest('[data-action="open-pacing-modal"]')){ openPacingModal(); logFeatureUse('tool_pacing_calculator'); }
