@@ -53,6 +53,7 @@
     --stamp-bg-flag:rgba(184,69,31,0.12);
     --stamp-bg-gold:rgba(176,141,46,0.14);
     --paper-glass:rgba(230,233,230,0.85);
+    --hover-overlay:rgba(22,35,28,0.06);
   }
   [data-theme="dark"]{
     --paper:#0D1013;
@@ -80,6 +81,7 @@
     --stamp-bg-flag:rgba(224,120,80,0.18);
     --stamp-bg-gold:rgba(217,177,92,0.2);
     --paper-glass:rgba(13,16,19,0.82);
+    --hover-overlay:rgba(237,238,233,0.08);
   }
   [data-theme="dark"] .empty-state-icons,
   [data-theme="dark"] .sport-icon-wrap{color:var(--trail);}
@@ -786,6 +788,29 @@
   .btn-text{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:14px;padding:0;}
   .btn-text.danger{color:var(--flag);}
 
+  /* ---------- 下拉操作選單（把一排零散按鈕收成一個選單） ---------- */
+  .action-menu{position:relative;display:inline-block;}
+  .action-menu-trigger{display:inline-flex;align-items:center;gap:5px;}
+  .action-menu-chevron{flex-shrink:0;transition:transform 0.15s ease;}
+  .action-menu-trigger[aria-expanded="true"] .action-menu-chevron{transform:rotate(180deg);}
+  .action-menu-panel{
+    position:fixed;z-index:300;min-width:200px;
+    background:var(--surface);border:1px solid var(--rule);border-radius:8px;
+    box-shadow:0 10px 28px rgba(0,0,0,0.18);padding:6px;
+    display:flex;flex-direction:column;gap:1px;
+  }
+  .action-menu-panel[hidden]{display:none;}
+  .action-menu-item{
+    display:block;width:100%;text-align:left;background:none;border:none;border-radius:5px;
+    padding:9px 10px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;white-space:nowrap;
+  }
+  .action-menu-item:hover{background:var(--hover-overlay);}
+  .action-menu-item.danger{color:var(--flag);}
+  .action-menu-divider{height:1px;background:var(--rule);margin:5px 4px;}
+  @media (max-width:640px){
+    .action-menu-panel{max-width:calc(100vw - 16px);}
+  }
+
   /* ---------- Detail ---------- */
   #detail{padding-top:32px;border-top:1px solid var(--rule);margin-top:28px;}
   #detail:empty{display:none;}
@@ -819,6 +844,11 @@
   .dh-cover-bg img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;}
   .dh-cover-overlay{position:absolute;inset:0;background:var(--paper);opacity:0.86;}
   .dh-content{position:relative;z-index:1;}
+  /* 選單開著的時候暫時把這個祖先元素的堆疊順序拉高，讓裡面的下拉選單
+     面板不會被 quick-nav、topbar 這些屬於不同堆疊環境、z-index 沒那麼
+     高的元素蓋過去；選單一關閉就恢復原本的 z-index:1，不影響一般捲動
+     時 quick-nav 的黏性遮蓋效果。 */
+  .dh-content.menu-boost{z-index:300;}
   .detail-header.portrait-cover{min-height:360px;}
   .cover-upload{display:flex;gap:8px;margin:8px 0 12px;}
   .dh-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
@@ -1060,13 +1090,22 @@
       <div id="filter-chips" class="chips"></div>
     </div>
     <div class="topbar-row3">
-      <button id="btn-import" class="btn-text" data-i18n="ui.importExcel">匯入 Excel</button>
-      <button id="btn-export" class="btn-text" data-i18n="ui.exportJson">匯出 JSON</button>
-      <button id="btn-export-csv" class="btn-text" data-i18n="ui.exportCsv" title="扁平化多表 CSV，適合 SQL／Python／Excel VBA 自動化">匯出 CSV（扁平化）</button>
-      <button id="btn-import-json" class="btn-text" data-i18n="ui.importJson">匯入 JSON</button>
-      <button id="btn-export-ics" class="btn-text" data-i18n="ui.exportIcs">匯出行事曆提醒</button>
-      <button id="btn-recovery" class="btn-text" data-action="open-recovery"></button>
-      <button id="btn-clear" class="btn-text danger" data-i18n="ui.clearAll">清除全部資料</button>
+      <div class="action-menu">
+        <button type="button" class="btn-text action-menu-trigger" data-menu-trigger="data-mgmt-menu" data-i18n="ui.dataManagement" aria-haspopup="true" aria-expanded="false">資料管理
+          <svg class="action-menu-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="data-mgmt-menu" class="action-menu-panel" hidden>
+          <button id="btn-import" type="button" class="action-menu-item" data-i18n="ui.importExcel">匯入 Excel</button>
+          <button id="btn-import-json" type="button" class="action-menu-item" data-i18n="ui.importJson">匯入 JSON</button>
+          <div class="action-menu-divider"></div>
+          <button id="btn-export" type="button" class="action-menu-item" data-i18n="ui.exportJson">匯出 JSON</button>
+          <button id="btn-export-csv" type="button" class="action-menu-item" data-i18n="ui.exportCsv" title="扁平化多表 CSV，適合 SQL／Python／Excel VBA 自動化">匯出 CSV（扁平化）</button>
+          <button id="btn-export-ics" type="button" class="action-menu-item" data-i18n="ui.exportIcs">匯出行事曆提醒</button>
+          <div class="action-menu-divider"></div>
+          <button id="btn-recovery" type="button" class="action-menu-item" data-action="open-recovery"></button>
+          <button id="btn-clear" type="button" class="action-menu-item danger" data-i18n="ui.clearAll" data-keep-menu-open>清除全部資料</button>
+        </div>
+      </div>
       <span id="app-version" class="app-version small mono"></span>
       <span id="app-copyright" class="app-version small mono">© 2026 劉恩龍 LIU EN LUNG</span>
     </div>
@@ -1516,7 +1555,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.45.0';
+const APP_VERSION='v2.46.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1604,6 +1643,7 @@ const JA={
   'ui.navBasic':'基本','ui.navRoute':'コース','ui.navWeather':'気象','ui.navLogistics':'予算','ui.navPrep':'装備','ui.navPost':'結果',
   'ui.deleteRace':'大会を削除','ui.deleteConfirm':'本当に削除しますか？もう一度',
   'ui.duplicateRace':'大会を複製','ui.duplicateRaceHint':'場所・コース・装備などを引き継いで新しい大会を作成します（年次シリーズ大会に便利）',
+  'ui.moreActions':'その他の操作','ui.dataManagement':'データ管理',
   'ui.duplicateSuffix':'（コピー）',
   'ui.dismiss':'了解しました',
   'ui.storageWarning':'ローカルデータが約 {n} MB になりました。ブラウザの保存容量には上限があるため、定期的に「JSONを書き出す」でバックアップするか、一部の大会のカバー写真を削除することをおすすめします。',
@@ -1939,6 +1979,7 @@ const EN={
   'ui.navBasic':'Basic','ui.navRoute':'Course','ui.navWeather':'Weather','ui.navLogistics':'Budget','ui.navPrep':'Gear','ui.navPost':'Results',
   'ui.deleteRace':'Delete race','ui.deleteConfirm':'Are you sure? Click again to confirm',
   'ui.duplicateRace':'Duplicate Race','ui.duplicateRaceHint':'Carries over location, course, gear and more into a new race (handy for annual series races)',
+  'ui.moreActions':'More Actions','ui.dataManagement':'Data Management',
   'ui.duplicateSuffix':' (Copy)',
   'ui.dismiss':'Got it',
   'ui.storageWarning':'Local data is now about {n} MB. Browser storage has a limit, so export a JSON backup regularly, or consider removing cover photos from some races.',
@@ -2299,6 +2340,88 @@ function storageBannerEl(){
 function hideStorageBanner(){
   storageBannerEl().hidden=true;
 }
+/* ============================================================
+   下拉操作選單（通用機制）：data-menu-trigger="面板id" 的按鈕負責
+   開關對應的 .action-menu-panel；面板裡點一般項目後選單會自動收起
+   （其他監聽器仍會照常處理該項目自己的 data-action，這裡不會擋掉），
+   但標了 data-keep-menu-open 的項目例外（例如刪除/清除這種「點兩次
+   才會真的執行」的按鈕，選單要留著讓使用者看到確認文字再點第二次）。
+   面板刻意留在原本 DOM 位置（不搬到 body 底下）：這個 app 有些動作的
+   點擊監聽器是掛在特定容器上（例如 detailEl.addEventListener，不是
+   document），如果把面板搬到 body 底下，點擊事件就不會再往上冒泡經過
+   那個容器，對應的動作處理器會直接收不到這個點擊、完全沒反應。真正
+   的問題是賽事詳情頁裡幾層祖先元素各自建立了獨立的堆疊環境（stacking
+   context，例如 .dh-content 設了 position:relative + z-index:1），
+   面板本身的 z-index 再怎麼調高，都只在被困住的那個堆疊環境內部有效，
+   畫面上還是會被 quick-nav 這類在別的堆疊環境、z-index 沒那麼高的
+   元素蓋過去——這裡改成直接把幾個會造成這種夾層問題的祖先元素本身的
+   z-index 提高，讓面板所在的那個堆疊環境整體排到更上層，而不是搬動
+   面板在 DOM 裡的位置。
+   ============================================================ */
+function positionActionMenuPanel(trigger,panel){
+  const rect=trigger.getBoundingClientRect();
+  const panelRect=panel.getBoundingClientRect();
+  let left=rect.right-panelRect.width;
+  if(left<8) left=8;
+  if(left+panelRect.width>window.innerWidth-8) left=Math.max(8,window.innerWidth-8-panelRect.width);
+  let top=rect.bottom+6;
+  if(top+panelRect.height>window.innerHeight-8&&rect.top-panelRect.height-6>8){
+    top=rect.top-panelRect.height-6;
+  }
+  panel.style.left=left+'px';
+  panel.style.top=top+'px';
+}
+function findMenuBoostTarget(trigger){
+  // 目前只有賽事詳情頁的 .dh-content 有這種被祖先堆疊環境困住的問題；
+  // 之後如果其他地方的下拉選單也遇到同樣情況，把對應的選擇器加進這裡。
+  return trigger.closest('.dh-content');
+}
+function closeActionMenuPanel(panel){
+  panel.hidden=true;
+  panel.style.left='';panel.style.top='';
+  const ownerTrigger=document.querySelector(`[data-menu-trigger="${panel.id}"]`);
+  if(ownerTrigger){
+    ownerTrigger.setAttribute('aria-expanded','false');
+    const boostTarget=findMenuBoostTarget(ownerTrigger);
+    if(boostTarget) boostTarget.classList.remove('menu-boost');
+  }
+}
+function openActionMenuPanel(trigger,panel){
+  const boostTarget=findMenuBoostTarget(trigger);
+  if(boostTarget) boostTarget.classList.add('menu-boost');
+  panel.hidden=false;
+  positionActionMenuPanel(trigger,panel);
+  trigger.setAttribute('aria-expanded','true');
+}
+document.addEventListener('click',e=>{
+  const trigger=e.target.closest('[data-menu-trigger]');
+  if(trigger){
+    const panel=document.getElementById(trigger.dataset.menuTrigger);
+    if(!panel) return;
+    const willOpen=panel.hidden;
+    document.querySelectorAll('.action-menu-panel').forEach(p=>{ if(p!==panel&&!p.hidden) closeActionMenuPanel(p); });
+    if(willOpen) openActionMenuPanel(trigger,panel);
+    else closeActionMenuPanel(panel);
+    return;
+  }
+  const insidePanel=e.target.closest('.action-menu-panel');
+  if(insidePanel){
+    if(!e.target.closest('[data-keep-menu-open]')) closeActionMenuPanel(insidePanel);
+    else setTimeout(()=>{
+      // 刪除/清除這類項目點下去會觸發整個區塊重新渲染，用全新的 hidden
+      // 面板節點取代掉目前這個；重新渲染後把新節點重新定位、顯示出來，
+      // 選單才會維持開著讓使用者看到確認文字並點第二次。
+      const freshTrigger=document.querySelector(`[data-menu-trigger="${insidePanel.id}"]`);
+      const freshPanel=document.getElementById(insidePanel.id);
+      if(freshTrigger&&freshPanel&&freshPanel.hidden) openActionMenuPanel(freshTrigger,freshPanel);
+    },0);
+    return;
+  }
+  document.querySelectorAll('.action-menu-panel:not([hidden])').forEach(p=>closeActionMenuPanel(p));
+});
+window.addEventListener('resize',()=>{
+  document.querySelectorAll('.action-menu-panel:not([hidden])').forEach(p=>closeActionMenuPanel(p));
+});
 function showStorageBanner(kind,message){
   const el=storageBannerEl();
   el.className='storage-banner '+kind;
@@ -5588,12 +5711,22 @@ function detailHeaderHtml(race){
         </div>
         <div class="dh-actions">
           <span id="save-status" class="save-status" data-state="idle"></span>
-          ${race.schedule.raceDate?`<button class="btn-ghost" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
-          ${race.schedule.raceDate?`<button class="btn-ghost" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
-          ${['registered','lottery_pending','considering'].includes(race.status)?`<button class="btn-ghost" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
-          <button class="btn-ghost" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
-          <button class="btn-ghost" data-action="duplicate-race" title="${t('ui.duplicateRaceHint','複製地點、路線、裝備等欄位，建立新的一場（適合同系列跨年賽事）')}">${t('ui.duplicateRace','複製賽事')}</button>
-          <button class="btn-ghost danger" data-action="delete-race">${state.confirmDelete?t('ui.deleteConfirm','確定刪除？再按一次'):t('ui.deleteRace','刪除賽事')}</button>
+          <div class="action-menu">
+            <button type="button" class="btn-ghost action-menu-trigger" data-menu-trigger="dh-more-menu" aria-haspopup="true" aria-expanded="false">
+              ${t('ui.moreActions','更多操作')}
+              <svg class="action-menu-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div id="dh-more-menu" class="action-menu-panel" hidden>
+              ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
+              ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
+              ${['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
+              <div class="action-menu-divider"></div>
+              <button type="button" class="action-menu-item" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
+              <button type="button" class="action-menu-item" data-action="duplicate-race" title="${t('ui.duplicateRaceHint','複製地點、路線、裝備等欄位，建立新的一場（適合同系列跨年賽事）')}">${t('ui.duplicateRace','複製賽事')}</button>
+              <div class="action-menu-divider"></div>
+              <button type="button" class="action-menu-item danger" data-action="delete-race" data-keep-menu-open>${state.confirmDelete?t('ui.deleteConfirm','確定刪除？再按一次'):t('ui.deleteRace','刪除賽事')}</button>
+            </div>
+          </div>
         </div>
       </div>
       <h1>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
