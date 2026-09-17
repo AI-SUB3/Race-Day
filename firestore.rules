@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/races/{raceId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /users/{uid}/fcmTokens/{tokenId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // 功能點擊次數統計：單一共用文件，記錄「哪個功能被點了幾次」這種
+    // 完全不含個資的聚合數字。寫入刻意開放給所有訪客（含未登入），這樣
+    // 才能統計到所有使用者的點擊，不只是有登入 Google 帳號的人；讀取則
+    // 限制只有登入的人（也就是網站擁有者自己）能看，避免任意訪客直接
+    // 讀到完整的使用行為統計。
+    match /analytics/featureCounts {
+      allow read: if request.auth != null;
+      allow write: if true;
+    }
+  }
+}

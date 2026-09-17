@@ -1516,7 +1516,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.44.0';
+const APP_VERSION='v2.45.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2531,6 +2531,30 @@ let cloudSyncHasError=false;
 function cloudEnabled(){
   return !!(window.__cloud&&window.__cloud.enabled);
 }
+/* ============================================================
+   功能使用次數統計（用來之後分析哪些功能最常用、哪些最少用）
+   只有設定了 Firebase 才會運作，沒設定就完全不做事，不影響其他功能；
+   不需要登入也會記錄，這樣才能統計到所有訪客，不只是登入的人。本機先
+   累加、每隔一段時間或分頁要關閉/切到背景時才整批送出一次，避免每次
+   點擊都各自打一次網路請求。
+   ============================================================ */
+let pendingFeatureLogs={};
+let featureLogFlushTimer=null;
+function logFeatureUse(featureId){
+  if(!cloudEnabled()) return;
+  pendingFeatureLogs[featureId]=(pendingFeatureLogs[featureId]||0)+1;
+  if(!featureLogFlushTimer) featureLogFlushTimer=setTimeout(flushFeatureLogs,8000);
+}
+function flushFeatureLogs(){
+  featureLogFlushTimer=null;
+  if(!Object.keys(pendingFeatureLogs).length) return;
+  const toSend=pendingFeatureLogs;
+  pendingFeatureLogs={};
+  if(!cloudEnabled()) return;
+  window.__cloud.logFeatureUse(toSend).catch(err=>console.warn('功能使用次數紀錄失敗（不影響其他功能）',err));
+}
+window.addEventListener('beforeunload',()=>flushFeatureLogs());
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flushFeatureLogs(); });
 function scheduleCloudSync(){
   if(!state.user||!cloudEnabled()) return;
   clearTimeout(cloudSyncTimer);
@@ -2633,10 +2657,12 @@ function showSyncOverwriteNotice(count){
   document.body.appendChild(el);
   setTimeout(()=>{ el.remove(); },12000);
 }
+let signInAttemptInFlight=false;
 async function handleAuthChange(user){
   state.user=user;
   renderAuthArea();
   if(user){
+    if(signInAttemptInFlight){ signInAttemptInFlight=false; logFeatureUse('auth_google_signin'); }
     try{
       const cloudRaces=await window.__cloud.fetchAll(user.uid);
       pendingSyncOverwriteNotice=0;
@@ -2654,7 +2680,9 @@ document.addEventListener('click',e=>{
   if(e.target.closest('#btn-signin')){
     if(cloudEnabled()){
       authError=null;renderAuthArea();
+      signInAttemptInFlight=true;
       window.__cloud.signIn().catch(err=>{
+        signInAttemptInFlight=false;
         console.error('登入失敗',err);
         authError=authErrorMessage(err);
         renderAuthArea();
@@ -5037,6 +5065,7 @@ async function fetchLiveWeatherForRace(raceId){
       gust:data.hourly.wind_gusts_10m,
     };
     await persist();
+    logFeatureUse('weather_live_fetch');
   }catch(err){
     console.error('抓取即時天氣失敗',err);
     weatherFetchError=t('ui.weatherFetchError','抓取即時天氣失敗，請確認網路連線後再試一次。');
@@ -5732,7 +5761,7 @@ function resetCreateStaging(){
   createStagedActivity=null;createStagedActivityError=null;
   createStagedCover=null;createStagedCoverError=null;
 }
-function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();}
+function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();logFeatureUse('race_create');}
 
 document.getElementById('btn-new').addEventListener('click',startCreate);
 
@@ -5770,10 +5799,12 @@ document.getElementById('cal-today').addEventListener('click',()=>{
 document.getElementById('cal-view-toggle').addEventListener('click',()=>{
   state.viewMode=state.viewMode==='grid'?'calendar':'grid';
   renderCalendar();
+  if(state.viewMode==='grid') logFeatureUse('view_photo_wall');
 });
 document.getElementById('cal-table-toggle').addEventListener('click',()=>{
   state.viewMode=state.viewMode==='table'?'calendar':'table';
   renderCalendar();
+  if(state.viewMode==='table') logFeatureUse('view_table');
 });
 document.addEventListener('click',e=>{
   const photoCard=e.target.closest('.photo-card');
@@ -5933,7 +5964,7 @@ function exportFlattenedCsvSet(){
     downloadCsvFile(listKey+'.csv',buildChildCsv(races,listKey,CHILD_CSV_TABLES[listKey]));
   });
 }
-document.getElementById('btn-export-csv').addEventListener('click',exportFlattenedCsvSet);
+document.getElementById('btn-export-csv').addEventListener('click',()=>{ exportFlattenedCsvSet(); logFeatureUse('export_csv'); });
 
 document.getElementById('btn-export').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(state.races,null,2)],{type:'application/json'});
@@ -5941,6 +5972,7 @@ document.getElementById('btn-export').addEventListener('click',()=>{
   const a=document.createElement('a');
   a.href=url;a.download='races-export.json';a.click();
   URL.revokeObjectURL(url);
+  logFeatureUse('export_json_backup');
 });
 document.getElementById('btn-import-json').addEventListener('click',()=>{
   document.getElementById('json-file-input').click();
@@ -5957,6 +5989,7 @@ document.getElementById('json-file-input').addEventListener('change',async e=>{
     if(invalid) throw new Error(t('ui.errJsonInvalidRace','檔案裡有資料格式不正確的賽事'));
     const result=mergeRacesIntoState(parsed.map(migrateRace));
     persist();renderAll();
+    logFeatureUse('import_json_restore');
     const el=document.createElement('div');
     el.className='foreground-toast';
     el.innerHTML=`<strong>${t('ui.jsonImportDone','JSON 匯入完成')}</strong><span>${tf2('ui.jsonImportSummary',`新增 ${result.addedCount} 筆，${result.overwrittenCount} 筆版本衝突已保留舊版本在「資料復原」`,result.addedCount,result.overwrittenCount)}</span>`;
@@ -6043,14 +6076,16 @@ document.getElementById('btn-export-ics').addEventListener('click',()=>{
   const upcoming=state.races.filter(r=>r.schedule.raceDate&&isUpcomingRace(r,todayStr));
   if(!upcoming.length) return;
   downloadICS(buildICS(upcoming),'賽事提醒.ics');
+  logFeatureUse('export_ics_all');
 });
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="export-race-ics"]')&&currentRace){
     downloadICS(buildICS([currentRace]),(currentRace.name||'賽事').replace(/[\\/:*?"<>|]/g,'')+'-提醒.ics');
+    logFeatureUse('export_ics_single');
   }
   if(e.target.closest('[data-action="open-google-calendar"]')&&currentRace){
     const url=buildGoogleCalendarUrl(currentRace);
-    if(url) window.open(url,'_blank','noopener');
+    if(url){ window.open(url,'_blank','noopener'); logFeatureUse('export_google_calendar'); }
   }
 });
 
@@ -6210,6 +6245,7 @@ detailEl.addEventListener('click',e=>{
     state.races.push(copy);
     state.selectedId=copy.id;
     persist();renderAll();scrollDetailIntoView();
+    logFeatureUse('race_duplicate');
     return;
   }
   if(e.target.closest('[data-action="cancel-create"]')){state.creating=false;resetCreateStaging();renderAll();return;}
@@ -6550,6 +6586,7 @@ importModalEl.addEventListener('click',e=>{
     persist();
     closeImportModal();
     renderAll();
+    if(toImport.length) logFeatureUse('import_excel');
     return;
   }
 });
@@ -7011,6 +7048,7 @@ document.getElementById('gpx-file-input').addEventListener('change',async e=>{
     try{
       createStagedActivity={summary:await parseActivityFile(file),filename:file.name};
       createStagedActivityError=null;
+      logFeatureUse('import_gpx');
     }catch(err){
       createStagedActivity=null;
       createStagedActivityError=t('ui.errCannotParseThisFile','無法解析這個檔案：')+err.message;
@@ -7039,6 +7077,7 @@ gpxModalEl_getter().addEventListener('click',e=>{
       applyActivitySummaryToRace(currentRace,pendingGpxSummary);
       currentRace.updatedAt=new Date().toISOString();
       persist();renderCalendar();renderDetail();
+      logFeatureUse('import_gpx');
     }
     gpxModalEl_getter().hidden=true;gpxModalEl_getter().innerHTML='';pendingGpxSummary=null;
     return;
@@ -7096,6 +7135,7 @@ pasteModalEl_getter().addEventListener('click',e=>{
     currentRace.updatedAt=new Date().toISOString();
     persist();renderCalendar();renderDetail();
     pasteModalEl_getter().hidden=true;pasteModalEl_getter().innerHTML='';
+    logFeatureUse('race_paste_quickfill');
     return;
   }
 });
@@ -7753,13 +7793,13 @@ async function downloadWristbandImage(rows,race){
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-paste-modal"]')) openPasteModal();
   if(e.target.closest('[data-action="open-gpx-picker"]')) document.getElementById('gpx-file-input').click();
-  if(e.target.closest('[data-action="generate-share-image"]')&&currentRace) downloadShareImage(currentRace);
-  if(e.target.closest('[data-action="download-dossier"]')&&currentRace) downloadDossierImage(currentRace);
+  if(e.target.closest('[data-action="generate-share-image"]')&&currentRace){ downloadShareImage(currentRace); logFeatureUse('export_share_image'); }
+  if(e.target.closest('[data-action="download-dossier"]')&&currentRace){ downloadDossierImage(currentRace); logFeatureUse('export_dossier'); }
   const badgeShareBtn=e.target.closest('[data-action="download-badge-share"]');
-  if(badgeShareBtn) downloadBadgeShareImage(badgeShareBtn.dataset.id);
-  if(e.target.closest('[data-action="open-shoe-modal"]')) openShoeModal();
-  if(e.target.closest('[data-action="open-profile-modal"]')) openProfileModal();
-  if(e.target.closest('[data-action="open-pacing-modal"]')) openPacingModal();
+  if(badgeShareBtn){ downloadBadgeShareImage(badgeShareBtn.dataset.id); logFeatureUse('export_badge_share'); }
+  if(e.target.closest('[data-action="open-shoe-modal"]')){ openShoeModal(); logFeatureUse('tool_shoe_manager'); }
+  if(e.target.closest('[data-action="open-profile-modal"]')){ openProfileModal(); logFeatureUse('tool_profile_panel'); }
+  if(e.target.closest('[data-action="open-pacing-modal"]')){ openPacingModal(); logFeatureUse('tool_pacing_calculator'); }
 });
 
 /* ============================================================
@@ -7867,7 +7907,7 @@ init();
     getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
   import {
-    getFirestore, collection, doc, setDoc, deleteDoc, getDocs, writeBatch
+    getFirestore, collection, doc, setDoc, deleteDoc, getDocs, writeBatch, increment
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
   import {
     getMessaging, getToken, onMessage
@@ -7923,6 +7963,15 @@ init();
       snap.docs.forEach(d=>{ if(!keepIds.has(d.id)) batch.delete(d.ref); });
       races.forEach(r=>batch.set(doc(racesCol(uid), r.id), r));
       await batch.commit();
+    },
+    // 功能點擊次數統計：counts 是一次要送出的 {功能代號: 這次要加的次數}，
+    // 用 increment() 讓 Firestore 在伺服器端做原子加總，不管多少個訪客
+    // 同時點擊都不會互相覆蓋掉彼此的計數。不需要登入也能呼叫（規則裡
+    // 這個文件的寫入是開放的），這樣才能統計到所有訪客，不只是登入的人。
+    async logFeatureUse(counts){
+      const updates={};
+      Object.keys(counts).forEach(k=>{ updates[k]=increment(counts[k]); });
+      await setDoc(doc(db,'analytics','featureCounts'), updates, {merge:true});
     },
     async enableNotifications(uid){
       if(VAPID_KEY==='YOUR_VAPID_KEY') throw new Error(t('ui.errVapidNotSet','尚未設定 VAPID 金鑰'));
