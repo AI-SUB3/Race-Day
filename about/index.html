@@ -51,18 +51,38 @@
   /* ---- 排版共用類別（減少重複的 inline style） ---- */
   .section-pad{padding-block:92px;}
   .flex-row{display:flex; align-items:center; gap:14px;}
-  .body-copy{font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px;}
+  .body-copy{font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px; text-align:justify;}
   .copy-col{max-width:640px;}
+  .benefit-list{
+    margin:14px 0 0; padding-left:1.3em; font-size:16px; line-height:1.9; color:var(--ink-soft);
+  }
+  .benefit-list li{margin-top:10px; text-align:justify;}
+  .benefit-list li::marker{font-family:'IBM Plex Mono', monospace; font-weight:600; color:var(--gold);}
   .pill{
     display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule);
     border-radius:8px; padding:13px 20px; font-size:14px;
   }
-  .hero-h1{font-size:48px; line-height:1.4;}
-  .sect-h2{font-size:32px; line-height:1.45;}
+  .benefit-flex{display:flex; gap:60px; align-items:center; flex-wrap:wrap;}
+
+  /* 流體字級：字重會隨螢幕寬度平滑縮放，取代單一斷點的跳動 */
+  .hero-h1{font-size:clamp(30px, 5vw + 14px, 48px); line-height:1.42; text-wrap:balance;}
+  .sect-h2{font-size:clamp(23px, 2.6vw + 14px, 32px); line-height:1.45; text-wrap:balance;}
+
   @media (max-width:760px){
-    .hero-h1{font-size:36px;}
-    .sect-h2{font-size:27px;}
+    .section-pad{padding-block:64px;}
     .proof-row{gap:26px;}
+    .benefit-flex{gap:36px;}
+  }
+  @media (max-width:480px){
+    .container{padding-inline:18px;}
+    .section-pad{padding-block:52px;}
+    .proof-row{gap:20px; justify-content:flex-start;}
+    .pill{padding:11px 16px; font-size:13px;}
+    .body-copy{font-size:15px;}
+    .benefit-list{font-size:15px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition-duration:0.001ms !important; animation-duration:0.001ms !important;}
   }
 
   .btn-primary{
@@ -118,14 +138,15 @@
 
   <main>
     <!-- HERO -->
-    <section class="container" style="padding-top:84px; padding-bottom:68px;">
+    <section class="container" style="padding-top:clamp(48px, 10vw, 84px); padding-bottom:clamp(40px, 8vw, 68px);">
       <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:22px; max-width:720px; margin:0 auto;">
         <h1 class="hero-h1">
-          從報名到終點線，<br>把每一場賽事都好好記下來
+          從報名到終點線，把每一場賽事都好好記下來
         </h1>
-        <p style="font-size:18px; line-height:1.8; color:var(--ink-soft); max-width:600px;">
-          一個給路跑、越野跑、鐵人三項愛好者的賽事紀錄網站。行事曆管理報名進度、
-          自動查詢天氣與地形、累積成就徽章——不用登入、資料留在你的裝置上，隨時可以帶著走。
+        <p style="font-size:clamp(15px, 1.4vw + 13px, 18px); line-height:1.8; color:var(--ink-soft); max-width:600px; text-align:justify;">
+          一個給路跑、越野跑、鐵人三項愛好者的賽事紀錄網站。
+          行事曆管理報名進度、自動查詢天氣與地形、累積成就徽章
+          ——資料留在你的裝置上，隨時可以帶著走。
         </p>
         <div class="flex-row" style="gap:16px; flex-wrap:wrap; justify-content:center; margin-top:6px;">
           <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
@@ -170,11 +191,12 @@
     <section class="container section-pad">
       <div class="copy-col">
         <h2 class="sect-h2">報名到抽籤到起跑，狀態一目了然</h2>
-        <p class="body-copy">
-          行事曆檢視每場賽事的報名、抽籤、備戰、完賽狀態；14 天內的賽事會自動置頂成「備戰卡片」，
-          提醒裝備打包進度與配速策略。手上一份 Excel 報名紀錄？直接匯入，不用一場一場手動輸入。
-          還有獎牌牆與緊湊表格兩種檢視模式，方便跨年比對。
-        </p>
+        <p class="body-copy">行事曆檢視每場賽事的報名、抽籤、備戰、完賽狀態</p>
+        <ol class="benefit-list">
+          <li>14 天內的賽事會自動置頂成「備戰卡片」，提醒裝備打包進度與配速策略。</li>
+          <li>手上一份 Excel 報名紀錄？直接匯入，不用一場一場手動輸入。</li>
+          <li>獎牌牆與緊湊表格兩種檢視模式，方便跨年比對。</li>
+        </ol>
       </div>
     </section>
 
@@ -183,11 +205,12 @@
       <div class="container section-pad">
         <div class="copy-col">
           <h2 class="sect-h2">路線還沒跑過，先讓數據幫你心裡有底</h2>
-          <p class="body-copy">
-            匯入 GPX、TCX 或 FIT 航跡，海拔變化圖自動畫出來，游標拖曳就能看到任一點的坡度與里程；
-            賽事開始前 7 天，即時天氣預報會自動查詢起跑時刻的氣溫、降雨機率與陣風。
-            再搭配配速試算工具，生成一張可以戴在手上的分段配速手環。
-          </p>
+          <p class="body-copy">路線、天氣預報、配速手環</p>
+          <ol class="benefit-list">
+            <li>匯入 GPX、TCX 或 FIT 軌跡，海拔變化圖自動畫出來，移動滑鼠就能看到任一點的坡度與里程。</li>
+            <li>賽事開始前 7 天，即時天氣預報會自動查詢起跑時刻的氣溫、降雨機率與陣風。</li>
+            <li>搭配配速試算工具，生成一張可以戴在手上的分段配速手環。</li>
+          </ol>
         </div>
         <div class="frame" style="margin-top:40px;">
           <img id="img-elevation" src="images/elevation-light.png" data-light="images/elevation-light.png" data-dark="images/elevation.png"
@@ -200,11 +223,11 @@
     <section class="container section-pad">
       <div class="copy-col">
         <h2 class="sect-h2">完賽之後，數據會自己說話</h2>
-        <p class="body-copy">
-          分段配速自動抓出相對快慢，心率依「儲備心率法」換算成跑步、騎車、游泳三種個人化區間。
-          就連那場賽事當天的實際天氣，也會自動回填——氣溫、降雨、風速風向，
-          連同一地點近五年歷年同日平均氣溫濕度都一併查好，一整段賽後紀錄不用自己動手查資料。
-        </p>
+        <p class="body-copy">完賽後，匯入 GPX、TCX 或 FIT 軌跡</p>
+        <ol class="benefit-list">
+          <li>分段配速自動抓出相對快慢，心率依「儲備心率法」換算成跑步、騎車、游泳三種個人化區間。</li>
+          <li>歷史賽事當天的實際天氣，會自動回填——氣溫、降雨、風速風向，連同一地點近五年歷年同日平均氣溫濕度都一併查好，一整段賽後紀錄不用自己動手查資料。</li>
+        </ol>
       </div>
       <div class="frame" style="margin-top:40px; max-width:760px;">
         <img id="img-weather" src="images/weather-light.png" data-light="images/weather-light.png" data-dark="images/weather.png"
@@ -215,14 +238,14 @@
     <!-- BENEFIT 4 -->
     <section class="band">
       <div class="container section-pad">
-        <div style="display:flex; gap:60px; align-items:center; flex-wrap:wrap;">
+        <div class="benefit-flex">
           <div style="flex:1; min-width:300px;">
             <h2 class="sect-h2">累積的不只是里程，還有成就感</h2>
-            <p class="body-copy">
-              95 個成就徽章橫跨探索、地形、速度、裝備四大類別，達成當下有開箱動畫慶祝。
-              每個徽章都能下載成一張直式成就圖，自動附上那場賽事的關鍵數據與路線軌跡，
-              適合直接發到社群限時動態。鞋款也能個別追蹤累積里程，退役前提醒你換一雙。
-            </p>
+            <ol class="benefit-list">
+              <li>95 個成就徽章橫跨探索、地形、速度、裝備四大類別，達成當下有開箱慶祝動畫。</li>
+              <li>每個徽章都能下載成一張直式成就圖，自動附上那場賽事的關鍵數據與路線軌跡，直接發到社群限時動態。</li>
+              <li>鞋款也能個別追蹤累積里程，退役前提醒你換一雙。</li>
+            </ol>
           </div>
           <div class="frame" style="flex:0 0 auto; width:260px; margin-inline:auto;">
             <img src="images/badge.png" alt="徽章成就分享圖，顯示「攀山羚羊」徽章、賽事數據與金色路線軌跡" width="1080" height="1920" loading="lazy">
@@ -235,11 +258,12 @@
     <section class="container section-pad">
       <div style="max-width:740px; margin:0 auto; text-align:center;">
         <h2 class="sect-h2">不綁帳號，但需要同步的時候也在</h2>
-        <p class="body-copy">
-          資料預設存在瀏覽器裡，隨時可以匯出成 JSON 或 CSV 備份。想跨裝置同步的話，
-          選用 Google 帳號登入即可；賽事也能一鍵加入 Google 日曆，或匯出 .ics 行事曆提醒。
-          整個網站可以安裝成手機 App 桌面圖示，離線也能開啟。
-        </p>
+        <ol class="benefit-list">
+          <li>資料預設存在瀏覽器裡，隨時可以匯出成 JSON 或 CSV 備份。</li>
+          <li>想跨裝置同步的話，選用 Google 帳號登入即可。</li>
+          <li>賽事也能一鍵加入 Google 日曆，或匯出 .ics 行事曆提醒。</li>
+          <li>整個網站可以安裝成手機 App 桌面圖示，離線也能開啟。</li>
+        </ol>
       </div>
 
       <div style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; margin-top:44px;">
@@ -264,7 +288,7 @@
 
     <!-- CLOSING CTA -->
     <section class="band">
-      <div class="container" style="padding-block:84px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
+      <div class="container" style="padding-block:clamp(56px, 10vw, 84px); display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
         <h2 style="font-size:30px; line-height:1.4; max-width:480px;">下一場賽事，從現在開始記錄</h2>
         <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
         <span class="mono" style="font-size:13px; color:var(--stone);">github.com/AI-SUB3/Race-Day</span>
