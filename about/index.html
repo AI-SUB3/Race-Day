@@ -5,6 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>賽事紀錄 — 從報名到終點的完整紀錄</title>
 <meta name="description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。行事曆管理報名進度、自動查詢天氣與地形、累積成就徽章。免費、開源、不需要帳號。">
+
+<!-- Open Graph / Facebook / LINE / Threads -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-sub3.github.io/Race-Day/about/">
+<meta property="og:title" content="賽事紀錄 — 從報名到終點的完整紀錄">
+<meta property="og:description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。行事曆管理報名進度、自動查詢天氣與地形、累積成就徽章。免費、開源、不需要帳號。">
+<meta property="og:image" content="https://ai-sub3.github.io/Race-Day/about/images/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="zh_TW">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="賽事紀錄 — 從報名到終點的完整紀錄">
+<meta name="twitter:description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。免費、開源、不需要帳號。">
+<meta name="twitter:image" content="https://ai-sub3.github.io/Race-Day/about/images/og-cover.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -30,34 +47,52 @@
   img{max-width:100%; height:auto; display:block;}
   .mono{font-family:'IBM Plex Mono', monospace;}
   .container{max-width:1120px; margin:0 auto; padding-inline:28px;}
+
+  /* ---- 排版共用類別（減少重複的 inline style） ---- */
+  .section-pad{padding-block:92px;}
+  .flex-row{display:flex; align-items:center; gap:14px;}
+  .body-copy{font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px;}
+  .copy-col{max-width:640px;}
+  .pill{
+    display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule);
+    border-radius:8px; padding:13px 20px; font-size:14px;
+  }
+  .hero-h1{font-size:48px; line-height:1.4;}
+  .sect-h2{font-size:32px; line-height:1.45;}
+  @media (max-width:760px){
+    .hero-h1{font-size:36px;}
+    .sect-h2{font-size:27px;}
+    .proof-row{gap:26px;}
+  }
+
   .btn-primary{
     display:inline-block; background:var(--gold); color:#241C0B; font-weight:700; font-size:17px;
-    padding:16px 32px; border-radius:6px; text-decoration:none; transition:background-color 0.2s ease;
+    padding:16px 32px; border-radius:6px; text-decoration:none;
+    transition:background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   }
-  .btn-primary:hover{opacity:0.88;}
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 10px 22px rgba(var(--gold-rgb),0.4);}
+  .btn-primary:active{transform:translateY(0); box-shadow:0 4px 10px rgba(var(--gold-rgb),0.32);}
   .btn-ghost{
     display:inline-flex; align-items:center; gap:8px; color:var(--ink); font-weight:600; font-size:15px; padding:10px 16px;
     border-radius:6px; border:1px solid var(--rule); text-decoration:none; background:none; cursor:pointer;
-    font-family:'Noto Sans TC', sans-serif;
+    font-family:'Noto Sans TC', sans-serif; transition:border-color 0.15s ease;
   }
   .btn-ghost:hover{border-color:var(--ink); color:var(--ink);}
   .icon-toggle{
     display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;
     border-radius:6px; border:1px solid var(--rule); background:none; cursor:pointer; color:var(--ink);
+    transition:border-color 0.15s ease;
   }
   .icon-toggle:hover{border-color:var(--ink);}
   .icon-toggle svg{display:none;}
   .icon-toggle .icon-moon{display:block;}
   [data-theme="dark"] .icon-toggle .icon-sun{display:block;}
   [data-theme="dark"] .icon-toggle .icon-moon{display:none;}
+
   .frame{border-radius:12px; overflow:hidden; border:1px solid var(--rule); box-shadow:0 22px 56px var(--shadow);}
+  .frame img{transition:opacity 0.22s ease;}
   .band{border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); background:var(--surface2);}
   :focus-visible{outline:2px solid var(--gold); outline-offset:3px;}
-  @media (max-width:760px){
-    .hero-h1{font-size:36px !important;}
-    .sect-h2{font-size:27px !important;}
-    .proof-row{gap:26px !important;}
-  }
 </style>
 </head>
 <body>
@@ -65,13 +100,13 @@
 <div style="width:100%; min-height:100vh;">
 
   <!-- NAV -->
-  <div style="border-bottom:1px solid var(--rule);">
+  <nav style="border-bottom:1px solid var(--rule);">
     <div class="container" style="display:flex; align-items:center; justify-content:space-between; padding-block:20px;">
       <div style="display:flex; align-items:baseline; gap:10px;">
         <span style="font-family:'LXGW WenKai TC',serif; font-weight:700; font-size:22px;">賽事紀錄</span>
         <span class="mono" style="font-size:12px; color:var(--stone);">Race Day</span>
       </div>
-      <div style="display:flex; align-items:center; gap:10px;">
+      <div class="flex-row" style="gap:10px;">
         <button type="button" class="icon-toggle" id="theme-toggle" aria-label="切換淺色／深色主題">
           <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg>
           <svg class="icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"></path></svg>
@@ -79,167 +114,169 @@
         <a class="btn-ghost" href="https://ai-sub3.github.io/Race-Day/">前往網站</a>
       </div>
     </div>
-  </div>
+  </nav>
 
-  <!-- HERO -->
-  <div class="container" style="padding-top:84px; padding-bottom:68px;">
-    <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:22px; max-width:720px; margin:0 auto;">
-      <h1 class="hero-h1" style="font-size:48px; line-height:1.4;">
-        從報名到終點線，<br>把每一場賽事都好好記下來
-      </h1>
-      <p style="font-size:18px; line-height:1.8; color:var(--ink-soft); max-width:600px;">
-        一個給路跑、越野跑、鐵人三項愛好者的賽事紀錄網站。行事曆管理報名進度、
-        自動查詢天氣與地形、累積成就徽章——不用登入、資料留在你的裝置上，隨時可以帶著走。
-      </p>
-      <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; justify-content:center; margin-top:6px;">
-        <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
-        <span class="mono" style="font-size:13px; color:var(--stone);">不需註冊・可離線使用</span>
-      </div>
-    </div>
-
-    <div class="frame" style="margin-top:52px;">
-      <img id="img-calendar" src="images/calendar-light.png" data-light="images/calendar-light.png" data-dark="images/calendar.png"
-        alt="賽事紀錄網站的行事曆主畫面，顯示備戰中的賽事卡片與歷年完賽統計" width="1600" height="925">
-    </div>
-  </div>
-
-  <!-- PROOF BAR -->
-  <div class="band">
-    <div class="container proof-row" style="display:flex; flex-wrap:wrap; gap:40px; justify-content:center; padding-block:34px;">
-
-      <div style="display:flex; align-items:center; gap:14px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5"></path></svg>
-        <div><div class="mono" style="font-size:21px; font-weight:600;">95</div><div style="font-size:13px; color:var(--ink-soft);">成就徽章</div></div>
+  <main>
+    <!-- HERO -->
+    <section class="container" style="padding-top:84px; padding-bottom:68px;">
+      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:22px; max-width:720px; margin:0 auto;">
+        <h1 class="hero-h1">
+          從報名到終點線，<br>把每一場賽事都好好記下來
+        </h1>
+        <p style="font-size:18px; line-height:1.8; color:var(--ink-soft); max-width:600px;">
+          一個給路跑、越野跑、鐵人三項愛好者的賽事紀錄網站。行事曆管理報名進度、
+          自動查詢天氣與地形、累積成就徽章——不用登入、資料留在你的裝置上，隨時可以帶著走。
+        </p>
+        <div class="flex-row" style="gap:16px; flex-wrap:wrap; justify-content:center; margin-top:6px;">
+          <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
+          <span class="mono" style="font-size:13px; color:var(--stone);">不需註冊・可離線使用</span>
+        </div>
       </div>
 
-      <div style="display:flex; align-items:center; gap:14px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--contour)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h10"></path></svg>
-        <div><div class="mono" style="font-size:21px; font-weight:600;">3</div><div style="font-size:13px; color:var(--ink-soft);">語言：繁中・日文・英文</div></div>
+      <div class="frame" style="margin-top:52px;">
+        <img id="img-calendar" src="images/calendar-light.png" data-light="images/calendar-light.png" data-dark="images/calendar.png"
+          alt="賽事紀錄網站的行事曆主畫面，顯示備戰中的賽事卡片與歷年完賽統計" width="1600" height="925">
       </div>
+    </section>
 
-      <div style="display:flex; align-items:center; gap:14px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--trail)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17V7a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"></path><path d="M14 5v5h5"></path></svg>
-        <div><div class="mono" style="font-size:21px; font-weight:600;">Excel／GPX／FIT</div><div style="font-size:13px; color:var(--ink-soft);">一次匯入賽事與路線</div></div>
+    <!-- PROOF BAR -->
+    <section class="band">
+      <div class="container proof-row" style="display:flex; flex-wrap:wrap; gap:40px; justify-content:center; padding-block:34px;">
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">95</div><div style="font-size:13px; color:var(--ink-soft);">成就徽章</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--contour)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h10"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">3</div><div style="font-size:13px; color:var(--ink-soft);">語言：繁中・日文・英文</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--trail)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17V7a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"></path><path d="M14 5v5h5"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">Excel／GPX／FIT</div><div style="font-size:13px; color:var(--ink-soft);">一次匯入賽事與路線</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--flag)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 19h14"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">100%</div><div style="font-size:13px; color:var(--ink-soft);">免費・開源・無廣告</div></div>
+        </div>
+
       </div>
+    </section>
 
-      <div style="display:flex; align-items:center; gap:14px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--flag)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 19h14"></path></svg>
-        <div><div class="mono" style="font-size:21px; font-weight:600;">100%</div><div style="font-size:13px; color:var(--ink-soft);">免費・開源・無廣告</div></div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- BENEFIT 1 -->
-  <div class="container" style="padding-block:92px;">
-    <div style="max-width:640px;">
-      <h2 class="sect-h2" style="font-size:32px; line-height:1.45;">報名到抽籤到起跑，狀態一目了然</h2>
-      <p style="font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px;">
-        行事曆檢視每場賽事的報名、抽籤、備戰、完賽狀態；14 天內的賽事會自動置頂成「備戰卡片」，
-        提醒裝備打包進度與配速策略。手上一份 Excel 報名紀錄？直接匯入，不用一場一場手動輸入。
-        還有獎牌牆與緊湊表格兩種檢視模式，方便跨年比對。
-      </p>
-    </div>
-  </div>
-
-  <!-- BENEFIT 2 -->
-  <div class="band">
-    <div class="container" style="padding-block:92px;">
-      <div style="max-width:640px;">
-        <h2 class="sect-h2" style="font-size:32px; line-height:1.45;">路線還沒跑過，先讓數據幫你心裡有底</h2>
-        <p style="font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px;">
-          匯入 GPX、TCX 或 FIT 航跡，海拔變化圖自動畫出來，游標拖曳就能看到任一點的坡度與里程；
-          賽事開始前 7 天，即時天氣預報會自動查詢起跑時刻的氣溫、降雨機率與陣風。
-          再搭配配速試算工具，生成一張可以戴在手上的分段配速手環。
+    <!-- BENEFIT 1 -->
+    <section class="container section-pad">
+      <div class="copy-col">
+        <h2 class="sect-h2">報名到抽籤到起跑，狀態一目了然</h2>
+        <p class="body-copy">
+          行事曆檢視每場賽事的報名、抽籤、備戰、完賽狀態；14 天內的賽事會自動置頂成「備戰卡片」，
+          提醒裝備打包進度與配速策略。手上一份 Excel 報名紀錄？直接匯入，不用一場一場手動輸入。
+          還有獎牌牆與緊湊表格兩種檢視模式，方便跨年比對。
         </p>
       </div>
-      <div class="frame" style="margin-top:40px;">
-        <img id="img-elevation" src="images/elevation-light.png" data-light="images/elevation-light.png" data-dark="images/elevation.png"
-          alt="海拔變化圖，游標拖曳顯示 9 公里處海拔 1055 公尺、瞬時坡度 5.6%" width="2000" height="383">
-      </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- BENEFIT 3 -->
-  <div class="container" style="padding-block:92px;">
-    <div style="max-width:640px;">
-      <h2 class="sect-h2" style="font-size:32px; line-height:1.45;">完賽之後，數據會自己說話</h2>
-      <p style="font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px;">
-        分段配速自動抓出相對快慢，心率依「儲備心率法」換算成跑步、騎車、游泳三種個人化區間。
-        就連那場賽事當天的實際天氣，也會自動回填——氣溫、降雨、風速風向，
-        連同一地點近五年歷年同日平均氣溫濕度都一併查好，一整段賽後紀錄不用自己動手查資料。
-      </p>
-    </div>
-    <div class="frame" style="margin-top:40px; max-width:760px;">
-      <img id="img-weather" src="images/weather-light.png" data-light="images/weather-light.png" data-dark="images/weather.png"
-        alt="賽事氣象分頁，顯示自動查詢到的賽事當天實際天氣，以及自動帶入的風向、風速、降雨機率與氣候狀況欄位" width="2000" height="840">
-    </div>
-  </div>
-
-  <!-- BENEFIT 4 -->
-  <div class="band">
-    <div class="container" style="padding-block:92px;">
-      <div style="display:flex; gap:60px; align-items:center; flex-wrap:wrap;">
-        <div style="flex:1; min-width:300px;">
-          <h2 class="sect-h2" style="font-size:32px; line-height:1.45;">累積的不只是里程，還有成就感</h2>
-          <p style="font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px;">
-            95 個成就徽章橫跨探索、地形、速度、裝備四大類別，達成當下有開箱動畫慶祝。
-            每個徽章都能下載成一張直式成就圖，自動附上那場賽事的關鍵數據與路線軌跡，
-            適合直接發到社群限時動態。鞋款也能個別追蹤累積里程，退役前提醒你換一雙。
+    <!-- BENEFIT 2 -->
+    <section class="band">
+      <div class="container section-pad">
+        <div class="copy-col">
+          <h2 class="sect-h2">路線還沒跑過，先讓數據幫你心裡有底</h2>
+          <p class="body-copy">
+            匯入 GPX、TCX 或 FIT 航跡，海拔變化圖自動畫出來，游標拖曳就能看到任一點的坡度與里程；
+            賽事開始前 7 天，即時天氣預報會自動查詢起跑時刻的氣溫、降雨機率與陣風。
+            再搭配配速試算工具，生成一張可以戴在手上的分段配速手環。
           </p>
         </div>
-        <div class="frame" style="flex:0 0 auto; width:260px; margin-inline:auto;">
-          <img src="images/badge.png" alt="徽章成就分享圖，顯示「攀山羚羊」徽章、賽事數據與金色路線軌跡" width="1080" height="1920">
+        <div class="frame" style="margin-top:40px;">
+          <img id="img-elevation" src="images/elevation-light.png" data-light="images/elevation-light.png" data-dark="images/elevation.png"
+            alt="海拔變化圖，游標拖曳顯示 9 公里處海拔 1055 公尺、瞬時坡度 5.6%" width="2000" height="383" loading="lazy">
         </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- BENEFIT 5 -->
-  <div class="container" style="padding-block:92px;">
-    <div style="max-width:740px; margin:0 auto; text-align:center;">
-      <h2 class="sect-h2" style="font-size:32px; line-height:1.45;">不綁帳號，但需要同步的時候也在</h2>
-      <p style="font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px;">
-        資料預設存在瀏覽器裡，隨時可以匯出成 JSON 或 CSV 備份。想跨裝置同步的話，
-        選用 Google 帳號登入即可；賽事也能一鍵加入 Google 日曆，或匯出 .ics 行事曆提醒。
-        整個網站可以安裝成手機 App 桌面圖示，離線也能開啟。
-      </p>
-    </div>
+    <!-- BENEFIT 3 -->
+    <section class="container section-pad">
+      <div class="copy-col">
+        <h2 class="sect-h2">完賽之後，數據會自己說話</h2>
+        <p class="body-copy">
+          分段配速自動抓出相對快慢，心率依「儲備心率法」換算成跑步、騎車、游泳三種個人化區間。
+          就連那場賽事當天的實際天氣，也會自動回填——氣溫、降雨、風速風向，
+          連同一地點近五年歷年同日平均氣溫濕度都一併查好，一整段賽後紀錄不用自己動手查資料。
+        </p>
+      </div>
+      <div class="frame" style="margin-top:40px; max-width:760px;">
+        <img id="img-weather" src="images/weather-light.png" data-light="images/weather-light.png" data-dark="images/weather.png"
+          alt="賽事氣象分頁，顯示自動查詢到的賽事當天實際天氣，以及自動帶入的風向、風速、降雨機率與氣候狀況欄位" width="2000" height="840" loading="lazy">
+      </div>
+    </section>
 
-    <div style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; margin-top:44px;">
-      <div style="display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:13px 20px;">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 12-4-4m4 4 4-4"></path><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
-        <span style="font-size:14px;">JSON／CSV 備份匯出</span>
+    <!-- BENEFIT 4 -->
+    <section class="band">
+      <div class="container section-pad">
+        <div style="display:flex; gap:60px; align-items:center; flex-wrap:wrap;">
+          <div style="flex:1; min-width:300px;">
+            <h2 class="sect-h2">累積的不只是里程，還有成就感</h2>
+            <p class="body-copy">
+              95 個成就徽章橫跨探索、地形、速度、裝備四大類別，達成當下有開箱動畫慶祝。
+              每個徽章都能下載成一張直式成就圖，自動附上那場賽事的關鍵數據與路線軌跡，
+              適合直接發到社群限時動態。鞋款也能個別追蹤累積里程，退役前提醒你換一雙。
+            </p>
+          </div>
+          <div class="frame" style="flex:0 0 auto; width:260px; margin-inline:auto;">
+            <img src="images/badge.png" alt="徽章成就分享圖，顯示「攀山羚羊」徽章、賽事數據與金色路線軌跡" width="1080" height="1920" loading="lazy">
+          </div>
+        </div>
       </div>
-      <div style="display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:13px 20px;">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18M8 2v4M16 2v4"></path></svg>
-        <span style="font-size:14px;">Google 日曆／.ics 提醒</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:13px 20px;">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6-1.5A4.5 4.5 0 0 0 6.5 19h11Z"></path></svg>
-        <span style="font-size:14px;">選用 Google 帳號雲端同步</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:13px 20px;">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
-        <span style="font-size:14px;">可安裝為手機 App（PWA）</span>
-      </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- CLOSING CTA -->
-  <div class="band">
-    <div class="container" style="padding-block:84px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
-      <h2 style="font-size:30px; line-height:1.4; max-width:480px;">下一場賽事，從現在開始記錄</h2>
-      <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
-      <span class="mono" style="font-size:13px; color:var(--stone);">github.com/AI-SUB3/Race-Day</span>
-    </div>
-  </div>
+    <!-- BENEFIT 5 -->
+    <section class="container section-pad">
+      <div style="max-width:740px; margin:0 auto; text-align:center;">
+        <h2 class="sect-h2">不綁帳號，但需要同步的時候也在</h2>
+        <p class="body-copy">
+          資料預設存在瀏覽器裡，隨時可以匯出成 JSON 或 CSV 備份。想跨裝置同步的話，
+          選用 Google 帳號登入即可；賽事也能一鍵加入 Google 日曆，或匯出 .ics 行事曆提醒。
+          整個網站可以安裝成手機 App 桌面圖示，離線也能開啟。
+        </p>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; margin-top:44px;">
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 12-4-4m4 4 4-4"></path><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
+          <span>JSON／CSV 備份匯出</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18M8 2v4M16 2v4"></path></svg>
+          <span>Google 日曆／.ics 提醒</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6-1.5A4.5 4.5 0 0 0 6.5 19h11Z"></path></svg>
+          <span>選用 Google 帳號雲端同步</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
+          <span>可安裝為手機 App（PWA）</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOSING CTA -->
+    <section class="band">
+      <div class="container" style="padding-block:84px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
+        <h2 style="font-size:30px; line-height:1.4; max-width:480px;">下一場賽事，從現在開始記錄</h2>
+        <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
+        <span class="mono" style="font-size:13px; color:var(--stone);">github.com/AI-SUB3/Race-Day</span>
+      </div>
+    </section>
+  </main>
 
   <!-- FOOTER -->
-  <div class="container" style="padding-block:26px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+  <footer class="container" style="padding-block:26px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
     <span class="mono" style="font-size:12px; color:var(--stone);">© 2026 劉恩龍 LIU EN LUNG</span>
     <span style="font-size:13px; color:var(--stone);">賽事紀錄・從報名到終點的完整紀錄</span>
-  </div>
+  </footer>
 
 </div>
 
@@ -247,7 +284,8 @@
 (function(){
   var STORAGE_KEY = 'race-day-showcase-theme';
   var toggleImgs = ['img-calendar','img-elevation','img-weather'];
-  function applyTheme(theme){
+
+  function applyTheme(theme, animate){
     if(theme === 'dark'){
       document.documentElement.setAttribute('data-theme','dark');
     }else{
@@ -257,21 +295,33 @@
       var el = document.getElementById(id);
       if(!el) return;
       var next = theme === 'dark' ? el.getAttribute('data-dark') : el.getAttribute('data-light');
-      if(next && el.getAttribute('src') !== next) el.setAttribute('src', next);
+      if(!next || el.getAttribute('src') === next) return;
+      if(animate){
+        // 淡出、換圖、淡入，讓切換主題時圖片不是瞬間跳換
+        el.style.opacity = '0';
+        setTimeout(function(){
+          el.setAttribute('src', next);
+          requestAnimationFrame(function(){ el.style.opacity = '1'; });
+        }, 180);
+      }else{
+        el.setAttribute('src', next);
+      }
     });
   }
+
   var saved = null;
   try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
   // 預設一律先顯示淺色版本，不管裝置本身的系統色彩偏好設定是什麼；
   // 只有使用者自己在這個頁面上點過切換按鈕、留下記錄，回來的時候才會
-  // 照他上次選的來顯示。
-  applyTheme(saved === 'dark' ? 'dark' : 'light');
+  // 照他上次選的來顯示。第一次載入不需要淡入淡出動畫，直接顯示正確
+  // 版本即可，animate 傳 false。
+  applyTheme(saved === 'dark' ? 'dark' : 'light', false);
 
   var btn = document.getElementById('theme-toggle');
   btn.addEventListener('click', function(){
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     var next = isDark ? 'light' : 'dark';
-    applyTheme(next);
+    applyTheme(next, true);
     try{ localStorage.setItem(STORAGE_KEY, next); }catch(e){}
   });
 })();
