@@ -1113,7 +1113,7 @@
           <div class="action-menu-divider"></div>
           <button id="btn-export" type="button" class="action-menu-item" data-i18n="ui.exportJson">匯出 JSON</button>
           <button id="btn-export-csv" type="button" class="action-menu-item" data-i18n="ui.exportCsv" title="扁平化多表 CSV，適合 SQL／Python／Excel VBA 自動化">匯出 CSV（扁平化）</button>
-          <button id="btn-export-ics" type="button" class="action-menu-item" data-i18n="ui.exportIcs">匯出行事曆提醒</button>
+          <button id="btn-export-ics" type="button" class="action-menu-item" data-i18n="ui.exportIcs">匯出行事曆提醒（.ics檔）</button>
           <div class="action-menu-divider"></div>
           <button id="btn-recovery" type="button" class="action-menu-item" data-action="open-recovery"></button>
           <button id="btn-clear" type="button" class="action-menu-item danger" data-i18n="ui.clearAll" data-keep-menu-open>清除全部資料</button>
@@ -1568,7 +1568,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.48.0';
+const APP_VERSION='v2.48.1';
 
 /* ============================================================
    多語系（i18n）
@@ -1640,7 +1640,7 @@ const JA={
   'ui.weatherErrorNoData':'この座標と日付では予報データが見つかりませんでした',
   'ui.focusNoWeather':'まだ気象予報が入力されていません',
   'ui.focusViewRace':'大会の詳細を見る',
-  'ui.importExcel':'Excelを読み込む','ui.exportJson':'JSONを書き出す','ui.exportIcs':'カレンダーリマインダーを書き出す',
+  'ui.importExcel':'Excelを読み込む','ui.exportJson':'JSONを書き出す','ui.exportIcs':'カレンダーリマインダーを書き出す（.icsファイル）',
   'ui.exportCsv':'CSVを書き出す（フラット化）',
   'ui.clearAll':'すべてのデータを削除','ui.clearAllConfirm':'本当に削除しますか？もう一度押してください',
   'ui.cloudNotConfigured':'クラウド同期は未設定です','ui.signIn':'Googleでログインして同期','ui.signOut':'ログアウト',
@@ -1661,7 +1661,7 @@ const JA={
   'ui.dismiss':'了解しました',
   'ui.storageWarning':'ローカルデータが約 {n} MB になりました。ブラウザの保存容量には上限があるため、定期的に「JSONを書き出す」でバックアップするか、一部の大会のカバー写真を削除することをおすすめします。',
   'ui.storageError':'ローカル保存に失敗しました！ブラウザの保存容量が上限に達している可能性があり、直前の変更が実際には保存されていません。今すぐ「JSONを書き出す」でバックアップし、データを整理するかカバー写真を削除してから再度お試しください。',
-  'ui.pasteQuickFill':'データを貼り付けて入力','ui.exportRaceIcs':'カレンダーに追加',
+  'ui.pasteQuickFill':'データを貼り付けて入力','ui.exportRaceIcs':'カレンダーリマインダーを書き出す（.icsファイル）',
   'ui.openGoogleCalendar':'Googleカレンダーで開く','ui.exportRaceIcsDefaultName':'レース',
   'ui.createRace':'大会を作成','ui.cancel':'キャンセル','ui.close':'閉じる','ui.apply':'適用',
   'ui.selectAll':'すべて選択','ui.selectNone':'選択解除','ui.addItem':'+ 追加','ui.delete':'削除',
@@ -1976,7 +1976,7 @@ const EN={
   'ui.weatherErrorNoData':'No forecast data found for this location and date',
   'ui.focusNoWeather':'No forecast entered yet',
   'ui.focusViewRace':'View Full Race',
-  'ui.importExcel':'Import Excel','ui.exportJson':'Export JSON','ui.exportIcs':'Export Calendar Reminders',
+  'ui.importExcel':'Import Excel','ui.exportJson':'Export JSON','ui.exportIcs':'Export Calendar Reminders (.ics file)',
   'ui.exportCsv':'Export CSV (Flattened)',
   'ui.clearAll':'Clear All Data','ui.clearAllConfirm':'Are you sure? Click again to confirm',
   'ui.cloudNotConfigured':'Cloud sync not configured','ui.signIn':'Sign in with Google to sync','ui.signOut':'Sign out',
@@ -1997,7 +1997,7 @@ const EN={
   'ui.dismiss':'Got it',
   'ui.storageWarning':'Local data is now about {n} MB. Browser storage has a limit, so export a JSON backup regularly, or consider removing cover photos from some races.',
   'ui.storageError':'Local save failed! Your browser storage may be full, and your latest changes were not actually saved. Please export a JSON backup right away, then free up space by deleting some data or removing cover photos before trying again.',
-  'ui.pasteQuickFill':'Paste to quick-fill','ui.exportRaceIcs':'Add calendar reminder',
+  'ui.pasteQuickFill':'Paste to quick-fill','ui.exportRaceIcs':'Export Calendar Reminders (.ics file)',
   'ui.openGoogleCalendar':'Open in Google Calendar','ui.exportRaceIcsDefaultName':'Race',
   'ui.createRace':'Create Race','ui.cancel':'Cancel','ui.close':'Close','ui.apply':'Apply',
   'ui.selectAll':'Select All','ui.selectNone':'Select None','ui.addItem':'+ Add','ui.delete':'Delete',
@@ -5731,7 +5731,7 @@ function detailHeaderHtml(race){
               <svg class="action-menu-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
             </button>
             <div id="dh-more-menu" class="action-menu-panel" hidden>
-              ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="export-race-ics">${t('ui.exportRaceIcs','加入行事曆提醒')}</button>`:''}
+              ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="export-race-ics">${t('ui.exportRaceIcs','匯出行事曆提醒（.ics檔）')}</button>`:''}
               ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
               ${['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
               <div class="action-menu-divider"></div>
