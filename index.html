@@ -432,6 +432,10 @@
   .yearly-chart-title{color:var(--stone);margin-bottom:2px;}
   .year-in-review-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
   .year-in-review-label{color:var(--stone);}
+  .year-in-review-select{
+    font-size:14px;padding:4px 8px;border:1px solid var(--rule);border-radius:12px;
+    background:var(--surface);color:var(--ink);font-family:inherit;
+  }
   .yearly-chart-svg{height:100px;display:block;}
   .yearly-chart-count{font-size:11px;fill:var(--ink-soft);}
   .yearly-chart-year{font-size:11px;fill:var(--stone);}
@@ -439,9 +443,13 @@
   .elevation-trend-svg{height:110px;display:block;}
   .elevation-trend-label{font-size:10px;fill:var(--stone);}
   .climate-chart-wrap{max-width:100%;}
-  .climate-chart-svg{width:100%;height:200px;display:block;}
+  .climate-chart-svg{width:100%;height:220px;display:block;}
   .climate-chart-axis-label{font-size:10px;fill:var(--stone);}
+  .climate-chart-axis-title{font-size:10px;fill:var(--ink-soft);font-weight:600;}
+  .climate-chart-sweetspot-label{font-size:9px;fill:var(--trail);font-weight:600;}
+  .climate-chart-legend-label{font-size:10px;fill:var(--ink-soft);}
   .climate-chart-slope{color:var(--flag);margin-top:8px;}
+  .climate-chart-weak-note{margin-top:4px;}
   .climate-chart-sweetspot{color:var(--trail);margin-top:2px;}
   .epp-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--rule);}
   .epp-coefficient-block p{color:var(--ink-soft);margin-bottom:4px;}
@@ -451,6 +459,12 @@
   .epp-predicted-row{display:flex;align-items:baseline;gap:10px;padding:10px 12px;border:1px solid var(--rule);border-radius:5px;background:var(--paper);margin-bottom:8px;}
   .epp-predicted-value{font-size:20px;font-weight:700;color:var(--gold);}
   .epp-adopt-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .epp-segment-toggle-row{margin-top:10px;}
+  .epp-segment-table-wrap{max-height:320px;overflow-y:auto;margin-top:10px;border:1px solid var(--rule);border-radius:6px;}
+  .epp-segment-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .epp-segment-table th{position:sticky;top:0;background:var(--surface);text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);color:var(--ink-soft);font-weight:600;}
+  .epp-segment-table td{padding:6px 10px;border-bottom:1px solid var(--rule);}
+  .epp-segment-table tr:last-child td{border-bottom:none;}
   .heatmap-wrap{max-width:100%;overflow-x:auto;}
   .heatmap-row{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
   .heatmap-year-label{width:36px;flex-shrink:0;font-size:11px;color:var(--stone);}
@@ -546,6 +560,13 @@
   .geo-photo-popup{text-align:center;}
   .geo-photo-popup-img{width:100%;max-width:180px;border-radius:4px;margin-bottom:6px;}
   .geo-photo-popup-stats div{margin-bottom:2px;}
+
+  /* ---------- 開放水域 GPS 降噪 ---------- */
+  .gps-denoise-row{margin-top:10px;}
+  .gps-denoise-row .empty-hint{margin-top:6px;}
+  .gps-denoise-preview{margin-top:10px;padding:12px 14px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);}
+  .gps-denoise-compare{display:flex;gap:18px;flex-wrap:wrap;margin:6px 0;}
+  .gps-denoise-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center;}
 
   /* ---------- Focus panel (備戰釘選) ---------- */
   .focus-panel{
@@ -1214,6 +1235,39 @@
     margin-bottom:18px;word-break:break-word;max-width:100%;
   }
   .fatigue-panel-hint{font-size:15px;color:#555;}
+  /* ---- 強光／色盲適配：工具列、心率區間對照卡 ---- */
+  .fatigue-tools-row{display:flex;gap:10px;padding:0 16px 14px;flex:0 0 auto;}
+  .fatigue-tool-btn{
+    flex:1;background:transparent;border:1.5px solid #3A3A3A;color:#999;padding:12px 8px;
+    border-radius:8px;font-size:14px;font-family:inherit;
+  }
+  .fatigue-tool-btn.is-active{border-color:#D9B15C;color:#D9B15C;}
+  .fatigue-zone-card{flex:1;display:flex;flex-direction:column;justify-content:center;padding:20px 24px;min-height:0;overflow-y:auto;}
+  .fatigue-zone-card .fatigue-panel-label{text-align:center;margin-bottom:18px;}
+  .fatigue-zone-rows{display:flex;flex-direction:column;gap:14px;}
+  .fatigue-zone-row{display:flex;align-items:center;gap:14px;padding:8px 0;border-bottom:1px solid #1A1A1A;}
+  .fatigue-zone-row .hr-zone-bars{width:26px;height:18px;flex-shrink:0;}
+  .fatigue-zone-label{font-size:22px;font-weight:800;width:44px;flex-shrink:0;}
+  .fatigue-zone-range{font-size:22px;color:#ccc;}
+  .fatigue-zone-note,.fatigue-zone-empty{font-size:14px;color:#666;margin-top:18px;text-align:center;line-height:1.6;}
+  /* 電子紙高對比模式：反轉成近乎純黑字配暖白底，強光下靠反射閱讀，
+     不靠螢幕自體發光跟環境光搶對比——所有原本偏灰、偏暗的次要文字
+     顏色都要跟著提高對比，不然「暗底淺灰字」直接對調成「淺底淺灰字」
+     反而更看不清楚。 */
+  .fatigue-high-contrast{background:#F2EFE6;color:#111;}
+  .fatigue-high-contrast .fatigue-undo-btn,
+  .fatigue-high-contrast .fatigue-exit-btn{border-color:#111;color:#111;}
+  .fatigue-high-contrast .fatigue-tool-btn{border-color:#111;color:#333;}
+  .fatigue-high-contrast .fatigue-tool-btn.is-active{background:#111;color:#F2EFE6;border-color:#111;}
+  .fatigue-high-contrast .fatigue-panel-top{border-bottom-color:#B9B4A4;}
+  .fatigue-high-contrast .fatigue-panel-label{color:#5A5647;}
+  .fatigue-high-contrast .fatigue-panel-value{color:#111;}
+  .fatigue-high-contrast .fatigue-panel-hint{color:#5A5647;}
+  .fatigue-high-contrast .fatigue-zone-row{border-bottom-color:#B9B4A4;}
+  .fatigue-high-contrast .fatigue-zone-label{color:#111 !important;}
+  .fatigue-high-contrast .fatigue-zone-range{color:#333;}
+  .fatigue-high-contrast .fatigue-zone-note,
+  .fatigue-high-contrast .fatigue-zone-empty{color:#5A5647;}
   .modal-panel{
     background:var(--surface);border-radius:4px;padding:28px 30px;max-width:440px;width:100%;
     max-height:86vh;overflow-y:auto;
@@ -1757,7 +1811,7 @@ function emptyRace(name,sportType,status,raceDate){
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
     route:{distanceKm:null,elevationGainM:null,elevationLossM:null,minAltitudeM:null,maxAltitudeM:null,startAltitudeM:null,
-      surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,itraPoints:null,terrainNotes:'',elevationProfile:[],trackPoints:[],timedTrackPoints:[]},
+      surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,itraPoints:null,terrainNotes:'',elevationProfile:[],trackPoints:[],timedTrackPoints:[],gpsDenoised:false},
     checkpoints:[],
     climateForecast:{avgTempC:null,avgHumidityPct:null,windDirection:'',windSpeedKmh:null,rainProbabilityPct:null},
     raceDayWeather:{feelsLikeTempC:null,condition:'',humidityPct:null,marineConditions:{waveHeightM:null,swellPeriodSeconds:null,waterTempC:null},notes:''},
@@ -1789,7 +1843,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.69.0';
+const APP_VERSION='v2.74.1';
 
 /* ============================================================
    多語系（i18n）
@@ -1914,7 +1968,10 @@ const JA={
   'ui.careerTotalElevation':'生涯累積標高','ui.unitRaces':'回','ui.unitKm':'km','ui.unitMeters':'m',
   'ui.yearlyChartTitle':'年別完走数',
   'ui.elevationTrendTitle':'四半期別累積標高（トレンド）',
-  'ui.climateChartTitle':'気候とパフォーマンスの散布図','ui.climateChartSlope':'気温が1°C上がるごとに、ペースは平均で約 {n} ポイント低下します',
+  'ui.climateChartTitle':'気候とパフォーマンスの散布図','ui.climateChartSlope':'気温が1°C上がるごとに、ペースは平均で約 {n} ポイント低下します（R²={r2}、{count}件のレースから算出）',
+  'ui.climateChartXAxis':'体感温度','ui.climateChartYAxis':'ペース低下（自己PB比）',
+  'ui.climateChartSweetSpotLabel':'スイートスポット','ui.climateChartLegendPb':'PB','ui.climateChartLegendOther':'その他のレース',
+  'ui.climateChartWeakR2':'R²が低いため、気温だけでは配速の差の大部分を説明できていません。この線はあくまで参考値で、まだ安定した傾向とは言えません——データが増えるほど信頼性が上がります。',
   'ui.climateChartSweetSpot':'最適な気温帯：{range}（高効率レース {n} 件から算出）',
   'ui.eppTitle':'環境ペナルティ予測（EPP）','ui.eppNotReadyHint':'2つの係数が揃い、このレースに距離が入力されると、ここにペナルティ・ウォーターフォール図とAI予測タイムが表示されます。',
   'ui.eppThermalReady':'暑熱ペナルティ：気温が1°C上がるごとにペース低下 約{pct}%（R²={r2}、{n}件のレースから算出）',
@@ -1923,6 +1980,9 @@ const JA={
   'ui.eppGravityPending':'登坂ペナルティ：データがまだ足りません（有効な区間が現在{n}個、最低{needed}個・2件以上のレースが必要）',
   'ui.eppBarBaseline':'基準','ui.eppBarGravity':'登坂','ui.eppBarThermal':'暑熱','ui.eppBarOther':'その他要因','ui.eppBarActual':'実際完走','ui.eppBarPredicted':'AI予測',
   'ui.eppPredictedLabel':'AI予測完走タイム','ui.eppAdoptGoal':'{tier}目標として採用',
+  'ui.eppShowSegments':'区間別予測を表示（{km}kmごと）','ui.eppHideSegments':'区間別予測を隠す',
+  'ui.eppSegmentsNeedProfile':'このレースにはまだ標高プロファイルのデータがありません（GPX/TCX/FITをインポートするか、標高変化グラフを手動入力すると使えます）。現在は総獲得標高を全体に均等に割り振った簡易推定を使用しています。',
+  'ui.eppSegRange':'区間','ui.eppSegElevation':'正味の標高変化','ui.eppSegPace':'予測ペース','ui.eppSegArrival':'到着予測時刻',
   'ui.eppDisclaimer':'これは過去のレースから統計的に算出した推定値であり、必ず実現する保証ではありません。自動的に目標にはなりません——採用する場合は下のボタンを押してください。',
   'ui.unnamedItem':'(名称未設定の項目)','ui.equipmentViewList':'リスト表示に切り替え','ui.equipmentViewKanban':'配置ビュー（かんばん）に切り替え',
   'ui.locUnassigned':'未分類','ui.locBody':'携行','ui.locStartBag':'スタート預け荷物','ui.locFinishBag':'フィニッシュ預け荷物',
@@ -1933,7 +1993,7 @@ const JA={
   'ui.tableColDate':'日付','ui.tableColName':'大会名','ui.tableColStatus':'状態',
   'ui.tableColDistance':'距離(km)','ui.tableColElevation':'獲得標高(m)','ui.tableColTime':'完走タイム',
   'ui.splitsChartTitle':'ペース区間チャート','ui.splitsChartDistance':'距離',
-  'ui.splitsActualPace':'実際',
+  'ui.splitsActualPace':'実際のペース',
   'ui.heatmapTitle':'参加ヒートマップ（月別走行距離）',
   'ui.heatmapCellCount':'{a} レース、{b} km',
   'ui.elevationProfileTitle':'標高変化グラフ','ui.routeMapTitle':'コースマップ',
@@ -1942,6 +2002,11 @@ const JA={
   'ui.geoPhotoOffsetLabel':'カメラ時刻とGPS時刻のずれ補正','ui.unitSeconds':'秒',
   'ui.geoPhotoMatchSummary':'{matched} / {total} 枚が軌跡に対応付けられました',
   'ui.geoPhotoMatched':'対応完了・標高 {n}m','ui.geoPhotoUnmatched':'軌跡の時間範囲外のため対応できませんでした',
+  'ui.gpsDenoiseApplied':'このレースのGPS軌跡にはすでにオープンウォーターのノイズ除去が適用されています。',
+  'ui.gpsDenoiseStart':'オープンウォーターGPSノイズ除去を適用','ui.gpsDenoiseHint':'オープンウォーターで泳ぐとき、腕が水中に入るたびにGPS信号が途切れ、1点あたり10m以上のずれが出ることも珍しくありません。単純に合算すると距離が実際より長く出がちです。カルマンフィルタで軌跡を平滑化します。適用前に距離の変化を確認できます。',
+  'ui.gpsDenoisePreviewTitle':'ノイズ除去プレビュー','ui.gpsDenoiseBefore':'適用前','ui.gpsDenoiseAfter':'適用後',
+  'ui.gpsDenoiseNote':'ノイズ除去はGPSのばらつきを大きく減らしますが、実際の経路を完全には再現できません。この距離もあくまで推定値です。地図の軌跡は必ず更新されますが、レースの距離欄も同じ値に更新するかどうかは選べます。',
+  'ui.gpsDenoiseApplyMapOnly':'適用（地図の軌跡のみ更新）','ui.gpsDenoiseApplyWithDistance':'適用して距離を {km} に更新',
   'ui.elevTooltipElevation':'標高','ui.elevTooltipGradient':'瞬間勾配','ui.elevationCpHint':'点線＝CP 地点',
   'ui.mapStandard':'標準地図','ui.mapTerrain':'地形図',
   'ui.dragToReorder':'ドラッグして並べ替え','ui.moveUp':'上に移動','ui.moveDown':'下に移動',
@@ -2009,11 +2074,14 @@ const JA={
   'ui.trophyFilterAll':'すべて','ui.trophyFilterUnlocked':'解除済み','ui.trophyFilterInProgress':'進行中','ui.trophyFilterNotStarted':'未着手','ui.trophyFilterEmpty':'この条件に一致するバッジはありません',
   'ui.yearInReviewLabel':'年間振り返り','ui.yearInReviewRaceCount':'完走レース {n} 件','ui.yearInReviewDistance':'総距離','ui.yearInReviewElevation':'総獲得標高',
   'ui.yearInReviewPbCount':'自己ベスト更新回数','ui.yearInReviewNewBadges':'新規解除バッジ','ui.yearInReviewTopShoe':'最も履いたシューズ','ui.yearInReviewShoeDetail':'{count} 回・{km} km',
-  'ui.yearInReviewWeatherExtreme':'気象記録','ui.yearInReviewColdest':'最も寒かったレース','ui.yearInReviewHottest':'最も暑かったレース','ui.yearInReviewCta':'年間振り返りカード','ui.yearInReviewSuffix':'-年間振り返り.png',
+  'ui.yearInReviewWeatherExtreme':'気象記録','ui.yearInReviewColdest':'最も寒かったレース','ui.yearInReviewHottest':'最も暑かったレース','ui.yearInReviewCta':'年間振り返りカード','ui.yearInReviewSuffix':'-年間振り返り.png','ui.yearInReviewDownload':'ダウンロード',
   'ui.yearInReviewRouteTraces':'今年走ったルート','ui.yearInReviewMoreRoutes':'他 {n} 件',
   'ui.storyModeButton':'{year} 年間振り返り','ui.storyTitleSub':'ハイライトレース {n} 件','ui.storyWeatherLabel':'当日の天気','ui.storyPrev':'前へ','ui.storyNext':'次へ',
   'ui.openFatigueMode':'疲労モードを開く（レース中用）','ui.fatigueExit':'疲労モードを終了','ui.fatigueUndo':'ひとつ戻す',
   'ui.fatigueNextCp':'次のCP','ui.fatigueNextFuel':'次の補給','ui.fatigueSwipeRightHint':'右にスワイプ＝到着を記録','ui.fatigueSwipeLeftHint':'左にスワイプ＝補給済みを記録',
+  'ui.fatigueZoneCardToggle':'心拍ゾーン早見表','ui.fatigueContrastToggle':'電子ペーパー高コントラスト',
+  'ui.fatigueZoneCardTitle':'心拍ゾーン早見表','ui.fatigueZoneCardEmpty':'安静時心拍数／最大心拍数が未設定のため、ゾーンを計算できません。',
+  'ui.fatigueZoneCardNote':'これはレース前に設定した参考ゾーンで、リアルタイムの心拍数ではありません——腕時計に表示されている心拍数と照らし合わせてください。',
   'ui.fatigueCpFallback':'CP','ui.fatigueItemFallback':'補給食品','ui.fatigueAllCpsArrived':'すべてのCPに到着済み','ui.fatigueAllNutritionDone':'補給計画はすべて完了',
   'ui.fatigueSpeakNextCp':'次は、{name}、あと {km} キロ','ui.fatigueSpeakAllCpsDone':'すべての補給ポイントに到着しました',
   'ui.gearWeightTitle':'装備重量','ui.gearWeightBase':'ベース重量','ui.gearWeightConsumable':'消耗品重量','ui.gearWeightPartial':'重量を入力済みの {n}/{total} 件のみ集計',
@@ -2321,7 +2389,10 @@ const EN={
   'ui.careerTotalElevation':'Lifetime elevation gain','ui.unitRaces':'races','ui.unitKm':'km','ui.unitMeters':'m',
   'ui.yearlyChartTitle':'Races Completed by Year',
   'ui.elevationTrendTitle':'Cumulative Elevation by Quarter',
-  'ui.climateChartTitle':'Climate vs. Performance','ui.climateChartSlope':'For every 1°C rise in temperature, pace slows by about {n} percentage points on average',
+  'ui.climateChartTitle':'Climate vs. Performance','ui.climateChartSlope':'For every 1°C rise in temperature, pace slows by about {n} percentage points on average (R²={r2}, based on {count} races)',
+  'ui.climateChartXAxis':'Feels-Like Temperature','ui.climateChartYAxis':'Pace Degradation (vs. own PB)',
+  'ui.climateChartSweetSpotLabel':'Sweet Spot','ui.climateChartLegendPb':'PB','ui.climateChartLegendOther':'Other Races',
+  'ui.climateChartWeakR2':'R\u00b2 is low, meaning temperature alone doesn\u2019t explain most of the variation in pace. This line is only a rough reference, not yet a reliable pattern \u2014 it\u2019ll get more trustworthy with more data points.',
   'ui.climateChartSweetSpot':'Sweet spot temperature range: {range} (based on {n} high-efficiency race(s))',
   'ui.eppTitle':'Environmental Pace Penalty (EPP)','ui.eppNotReadyHint':'Once both coefficients are ready and this race has a distance filled in, a penalty waterfall chart and AI predicted time will appear here.',
   'ui.eppThermalReady':'Thermal penalty: pace degrades about {pct}% per 1°C rise (R²={r2}, based on {n} races)',
@@ -2330,6 +2401,9 @@ const EN={
   'ui.eppGravityPending':'Gravity penalty: not enough data yet ({n} valid segments so far, need at least {needed} from 2+ races)',
   'ui.eppBarBaseline':'Baseline','ui.eppBarGravity':'Gravity','ui.eppBarThermal':'Thermal','ui.eppBarOther':'Other factors','ui.eppBarActual':'Actual finish','ui.eppBarPredicted':'AI predicted',
   'ui.eppPredictedLabel':'AI Predicted Finish Time','ui.eppAdoptGoal':'Adopt as Tier {tier}',
+  'ui.eppShowSegments':'Show Per-Segment Prediction (every {km}km)','ui.eppHideSegments':'Hide Per-Segment Prediction',
+  'ui.eppSegmentsNeedProfile':'This race doesn\u2019t have elevation profile data yet (import a GPX/TCX/FIT file, or fill in the elevation chart manually, to unlock this). Currently using a simplified estimate that spreads total elevation gain evenly across the whole distance.',
+  'ui.eppSegRange':'Segment','ui.eppSegElevation':'Net Elevation','ui.eppSegPace':'Predicted Pace','ui.eppSegArrival':'Est. Arrival Time',
   'ui.eppDisclaimer':'This is a statistical estimate from your past races, not a guarantee. It never becomes a goal automatically — use the buttons below if you want to adopt it.',
   'ui.unnamedItem':'(Unnamed item)','ui.equipmentViewList':'Switch to list view','ui.equipmentViewKanban':'Switch to deployment view (Kanban)',
   'ui.locUnassigned':'Unassigned','ui.locBody':'Carried on body','ui.locStartBag':'Start bag','ui.locFinishBag':'Finish bag',
@@ -2340,7 +2414,7 @@ const EN={
   'ui.tableColDate':'Date','ui.tableColName':'Race Name','ui.tableColStatus':'Status',
   'ui.tableColDistance':'Distance(km)','ui.tableColElevation':'Elevation(m)','ui.tableColTime':'Finish Time',
   'ui.splitsChartTitle':'Pace by Split','ui.splitsChartDistance':'Distance',
-  'ui.splitsActualPace':'actual',
+  'ui.splitsActualPace':'actual pace',
   'ui.heatmapTitle':'Race Heatmap (Monthly Distance)',
   'ui.heatmapCellCount':'{a} race(s), {b} km',
   'ui.elevationProfileTitle':'Elevation Profile','ui.routeMapTitle':'Route Map',
@@ -2349,6 +2423,11 @@ const EN={
   'ui.geoPhotoOffsetLabel':'Camera/GPS Clock Offset Correction','ui.unitSeconds':'sec',
   'ui.geoPhotoMatchSummary':'{matched} / {total} photos matched to the track',
   'ui.geoPhotoMatched':'Matched \u00b7 elevation {n}m','ui.geoPhotoUnmatched':'Outside the track\u2019s time range, not matched',
+  'ui.gpsDenoiseApplied':'Open-water GPS denoising has already been applied to this race\u2019s track.',
+  'ui.gpsDenoiseStart':'Apply Open-Water GPS Denoising','ui.gpsDenoiseHint':'In open water, GPS signal drops every time your wrist submerges on a stroke, and individual points are often off by 10m or more. Summing those raw points tends to inflate total distance. This runs a Kalman filter to smooth the track, and shows you the distance change before applying anything.',
+  'ui.gpsDenoisePreviewTitle':'Denoising Preview','ui.gpsDenoiseBefore':'Before','ui.gpsDenoiseAfter':'After',
+  'ui.gpsDenoiseNote':'Denoising substantially reduces GPS noise but can\u2019t fully reconstruct the true path \u2014 this distance is still an estimate. The map trace will always update; whether the race\u2019s distance field also updates to match is up to you.',
+  'ui.gpsDenoiseApplyMapOnly':'Apply (map trace only)','ui.gpsDenoiseApplyWithDistance':'Apply and update distance to {km}',
   'ui.elevTooltipElevation':'Elevation','ui.elevTooltipGradient':'Instant Grade','ui.elevationCpHint':'Dashed = CP',
   'ui.mapStandard':'Standard Map','ui.mapTerrain':'Terrain Map',
   'ui.dragToReorder':'Drag to reorder','ui.moveUp':'Move up','ui.moveDown':'Move down',
@@ -2410,11 +2489,14 @@ const EN={
   'ui.trophyFilterAll':'All','ui.trophyFilterUnlocked':'Unlocked','ui.trophyFilterInProgress':'In Progress','ui.trophyFilterNotStarted':'Not Started','ui.trophyFilterEmpty':'No badges match this filter',
   'ui.yearInReviewLabel':'Year in Review','ui.yearInReviewRaceCount':'{n} races finished','ui.yearInReviewDistance':'Total Distance','ui.yearInReviewElevation':'Total Elevation',
   'ui.yearInReviewPbCount':'PBs Broken','ui.yearInReviewNewBadges':'New Badges','ui.yearInReviewTopShoe':'Most-Worn Shoe','ui.yearInReviewShoeDetail':'{count} races・{km} km',
-  'ui.yearInReviewWeatherExtreme':'Weather Extremes','ui.yearInReviewColdest':'Coldest Race','ui.yearInReviewHottest':'Hottest Race','ui.yearInReviewCta':'Year in Review Card','ui.yearInReviewSuffix':'-year-in-review.png',
+  'ui.yearInReviewWeatherExtreme':'Weather Extremes','ui.yearInReviewColdest':'Coldest Race','ui.yearInReviewHottest':'Hottest Race','ui.yearInReviewCta':'Year in Review Card','ui.yearInReviewSuffix':'-year-in-review.png','ui.yearInReviewDownload':'Download',
   'ui.yearInReviewRouteTraces':'Routes run this year','ui.yearInReviewMoreRoutes':'+{n} more',
   'ui.storyModeButton':'{year} Year in Review','ui.storyTitleSub':'{n} highlight races','ui.storyWeatherLabel':'Weather that day','ui.storyPrev':'Previous','ui.storyNext':'Next',
   'ui.openFatigueMode':'Open Fatigue Mode (for race day)','ui.fatigueExit':'Exit Fatigue Mode','ui.fatigueUndo':'Undo last',
   'ui.fatigueNextCp':'Next CP','ui.fatigueNextFuel':'Next Fuel','ui.fatigueSwipeRightHint':'Swipe right = mark arrived','ui.fatigueSwipeLeftHint':'Swipe left = mark fueled',
+  'ui.fatigueZoneCardToggle':'HR Zone Reference','ui.fatigueContrastToggle':'E-Paper High Contrast',
+  'ui.fatigueZoneCardTitle':'HR Zone Reference','ui.fatigueZoneCardEmpty':'Resting/max heart rate isn\u2019t set yet, so zones can\u2019t be calculated.',
+  'ui.fatigueZoneCardNote':'This is the reference zone table set before the race, not a live heart rate reading \u2014 check it against the number on your watch.',
   'ui.fatigueCpFallback':'CP','ui.fatigueItemFallback':'Fuel item','ui.fatigueAllCpsArrived':'All checkpoints reached','ui.fatigueAllNutritionDone':'Fueling plan complete',
   'ui.fatigueSpeakNextCp':'Next up, {name}, {km} kilometers ahead','ui.fatigueSpeakAllCpsDone':'All checkpoints reached',
   'ui.gearWeightTitle':'Gear Weight','ui.gearWeightBase':'Base Weight','ui.gearWeightConsumable':'Consumables','ui.gearWeightPartial':'Only counting {n}/{total} items with weight entered',
@@ -2678,6 +2760,36 @@ async function idbSet(key,value){
   }
   localStorage.setItem(key,value);
 }
+/* ============================================================
+   saveJson／loadJson：把 7 組 persistXxx()／loadXxx()（賽事、範本、
+   個人資訊、鞋款、補給品資料庫、同步覆寫紀錄、徽章解鎖紀錄）裡各自
+   重複的「依 hasArtifactStorage 走 window.storage 或 idbSet／idbGet
+   分支、JSON 序列化／解析」抽出來共用。刻意不在這兩個函式裡包
+   try/catch——原本每組 persistXxx／loadXxx 各自只有一層 try/catch，
+   loadXxx 那層包的是「讀取＋解析＋讀完後的轉換（例如 .map(migrateRace)）」
+   一整段，不是只有讀取本身；如果在這裡就把錯誤吞掉，轉換那段一旦
+   出錯就不會被原本外層的 catch 接住，等於悄悄改變了行為。錯誤處理
+   還是留給每個 persistXxx／loadXxx 自己既有的 try/catch，這兩個函式
+   只負責「怎麼存、怎麼讀」，不負責「失敗怎麼辦」——純粹是包裝，
+   不改存讀邏輯本身。
+   ============================================================ */
+async function saveJson(key,value){
+  const json=JSON.stringify(value);
+  if(hasArtifactStorage){
+    await window.storage.set(key,json,false);
+  }else{
+    await idbSet(key,json);
+  }
+}
+async function loadJson(key,fallback){
+  if(hasArtifactStorage){
+    const res=await window.storage.get(key,false);
+    return (res&&res.value)?JSON.parse(res.value):fallback;
+  }else{
+    const raw=await idbGet(key);
+    return raw?JSON.parse(raw):fallback;
+  }
+}
 const IDB_MIGRATION_FLAG='idb-migration-v1-done';
 async function migrateLocalStorageToIdb(){
   if(!hasIdbKeyval) return;
@@ -2863,6 +2975,7 @@ function migrateRace(r){
   if(r.route&&r.route.timedTrackPoints==null) r.route.timedTrackPoints=[];
   if(r.geoPhotos==null) r.geoPhotos=[];
   if(r.photoTimeOffsetSeconds==null) r.photoTimeOffsetSeconds=0;
+  if(r.route&&r.route.gpsDenoised==null) r.route.gpsDenoised=false;
   backfillSplitElevationFromProfile(r);
   return r;
 }
@@ -3088,13 +3201,7 @@ function duplicateRace(race){
 
 async function loadRaces(){
   try{
-    if(hasArtifactStorage){
-      const res=await window.storage.get(STORAGE_KEY,false);
-      state.races=(res&&res.value)?JSON.parse(res.value):[];
-    }else{
-      const raw=await idbGet(STORAGE_KEY);
-      state.races=raw?JSON.parse(raw):[];
-    }
+    state.races=await loadJson(STORAGE_KEY,[]);
     state.races=state.races.map(migrateRace);
   }catch(err){
     state.races=[];
@@ -3102,11 +3209,7 @@ async function loadRaces(){
 }
 async function persist(){
   try{
-    if(hasArtifactStorage){
-      await window.storage.set(STORAGE_KEY,JSON.stringify(state.races),false);
-    }else{
-      await idbSet(STORAGE_KEY,JSON.stringify(state.races));
-    }
+    await saveJson(STORAGE_KEY,state.races);
     hideStorageBanner();
   }catch(err){
     console.error('本機儲存失敗',err);
@@ -3157,6 +3260,45 @@ function scheduleCloudSync(){
   if(!state.user||!cloudEnabled()) return;
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer=setTimeout(()=>{cloudSyncAllRaces();},800);
+}
+// 鞋款、補給品資料庫這兩份全域清單原本完全沒有雲端同步——只存在本機
+// IndexedDB／localStorage，從來沒有被推上 Firestore 過，這是換一台
+// 電腦登入同一個帳號、資料就整個消失的真正原因，不是同步「失敗」，
+// 是這兩份清單根本從來沒有被同步過。修法比照賽事已經有的
+// scheduleCloudSync／cloudSyncAllRaces 這一組「本機異動 800ms 後才
+// 真的送出，避免每個字都各打一次網路請求」的節流寫法，兩份清單共用
+// 同一個 Firestore 文件、同一個計時器一起送出，不需要各自獨立。
+let globalListsSyncTimer=null;
+function scheduleGlobalListsSync(){
+  if(!state.user||!cloudEnabled()) return;
+  clearTimeout(globalListsSyncTimer);
+  globalListsSyncTimer=setTimeout(()=>{cloudSyncGlobalLists();},800);
+}
+async function cloudSyncGlobalLists(){
+  if(!state.user||!cloudEnabled()) return;
+  try{
+    await window.__cloud.syncGlobalLists(state.user.uid,shoes,nutritionDictionary);
+  }catch(err){
+    console.error('鞋款／補給品資料庫雲端同步失敗',err);
+  }
+}
+// 兩份清單都沒有像賽事那樣逐筆記錄 updatedAt 時間戳記，沒辦法比較
+// 「雲端跟本機哪個比較新」，所以合併策略比賽事那套簡單：依 id 取
+// 聯集，雲端獨有的項目補進本機，本機獨有的項目維持不動；同一個 id
+// 兩邊都有但內容不同，保留本機版本（使用者當下正在看、正在用的
+// 這一份），不彈跳「偵測到分歧」的通知——這種情況預期只會在「修好
+// 這個 bug 之前，兩台裝置各自累積了不同鞋款」這種一次性情境發生，
+// 不是常態下需要處理的分歧。
+function mergeGlobalListsIntoState(cloud){
+  if(!cloud) return;
+  if(Array.isArray(cloud.shoes)){
+    const localIds=new Set(shoes.map(s=>s.id));
+    cloud.shoes.forEach(s=>{ if(!localIds.has(s.id)) shoes.push(migrateShoe(s)); });
+  }
+  if(Array.isArray(cloud.nutritionDictionary)){
+    const localIds=new Set(nutritionDictionary.map(n=>n.id));
+    cloud.nutritionDictionary.forEach(n=>{ if(!localIds.has(n.id)) nutritionDictionary.push(migrateNutritionDictItem(n)); });
+  }
 }
 async function cloudSyncAllRaces(){
   if(!state.user||!cloudEnabled()) return;
@@ -3272,6 +3414,18 @@ async function handleAuthChange(user){
     }catch(err){
       console.error('雲端資料讀取失敗',err);
     }
+    // 鞋款／補給品資料庫獨立一個 try/catch，這邊同步失敗不該連帶讓
+    // 賽事資料（上面那段，明顯更重要）也跟著顯示錯誤或中斷。
+    try{
+      const cloudGlobalLists=await window.__cloud.fetchGlobalLists(user.uid);
+      mergeGlobalListsIntoState(cloudGlobalLists);
+      await persistShoes();
+      await persistNutritionDictionary();
+      await cloudSyncGlobalLists();
+      renderAll();
+    }catch(err){
+      console.error('鞋款／補給品資料庫雲端讀取失敗',err);
+    }
   }
 }
 document.addEventListener('click',e=>{
@@ -3316,24 +3470,14 @@ window.addEventListener('cloud-ready',()=>{
 let templates=[];
 async function loadTemplates(){
   try{
-    if(hasArtifactStorage){
-      const res=await window.storage.get(TEMPLATES_KEY,false);
-      templates=(res&&res.value)?JSON.parse(res.value):[];
-    }else{
-      const raw=await idbGet(TEMPLATES_KEY);
-      templates=raw?JSON.parse(raw):[];
-    }
+    templates=await loadJson(TEMPLATES_KEY,[]);
   }catch(err){
     templates=[];
   }
 }
 async function persistTemplates(){
   try{
-    if(hasArtifactStorage){
-      await window.storage.set(TEMPLATES_KEY,JSON.stringify(templates),false);
-    }else{
-      await idbSet(TEMPLATES_KEY,JSON.stringify(templates));
-    }
+    await saveJson(TEMPLATES_KEY,templates);
   }catch(err){
     console.error('範本儲存失敗',err);
   }
@@ -3438,24 +3582,14 @@ function migrateUserProfile(p){
 }
 async function loadUserProfile(){
   try{
-    if(hasArtifactStorage){
-      const res=await window.storage.get(PROFILE_KEY,false);
-      userProfile=migrateUserProfile(res&&res.value?JSON.parse(res.value):null);
-    }else{
-      const raw=await idbGet(PROFILE_KEY);
-      userProfile=migrateUserProfile(raw?JSON.parse(raw):null);
-    }
+    userProfile=migrateUserProfile(await loadJson(PROFILE_KEY,null));
   }catch(err){
     userProfile=emptyUserProfile();
   }
 }
 async function persistUserProfile(){
   try{
-    if(hasArtifactStorage){
-      await window.storage.set(PROFILE_KEY,JSON.stringify(userProfile),false);
-    }else{
-      await idbSet(PROFILE_KEY,JSON.stringify(userProfile));
-    }
+    await saveJson(PROFILE_KEY,userProfile);
   }catch(err){
     console.error('個人資訊儲存失敗',err);
   }
@@ -3478,6 +3612,27 @@ function karvonenZoneForHr(zones,hr){
   return zones[zones.length-1];
 }
 const HR_ZONE_COLORS=['var(--stone)','var(--contour)','var(--trail)','var(--gold)','var(--flag)'];
+// 心率區間目前只靠顏色分辨（Z1~Z5 各配一個顏色），色盲使用者（尤其紅綠
+// 色弱，偏偏綠→金→紅這種漸層正好是最容易搞混的組合）光看顏色很難
+// 分辨區間。這裡加一個不依賴顏色的「柱狀強度」圖示：5 根由矮到高的
+// 直條，區間 N 就把前 N 根塗實、其餘畫空心——類似訊號強度格數的概念，
+// 不用讀數字、掃一眼柱子填了幾根就知道區間高低，柱子本身的「形狀」
+// （填了幾根、高度遞增）才是真正傳遞資訊的東西，顏色只是額外輔助，
+// 拿掉顏色（例如印成灰階、或色盲使用者眼中顏色都差不多）這個圖示
+// 一樣看得懂。
+function hrZoneBarsSvg(zoneNum,color){
+  if(zoneNum==null) return '';
+  const heights=[4,6,8,10,12];
+  const bars=heights.map((h,i)=>{
+    const x=i*4;
+    const y=12-h;
+    const filled=i<zoneNum;
+    return filled
+      ?`<rect x="${x}" y="${y}" width="3" height="${h}" fill="${color}" rx="0.5"/>`
+      :`<rect x="${x}" y="${y}" width="3" height="${h}" fill="none" stroke="${color}" stroke-width="1" rx="0.5"/>`;
+  }).join('');
+  return `<svg class="hr-zone-bars" viewBox="0 0 20 14" width="20" height="14" aria-hidden="true">${bars}</svg>`;
+}
 function sportToProfileCategory(sportType){
   if(sportType==='cycling') return 'cycling';
   if(sportType==='swimming') return 'swimming';
@@ -3513,13 +3668,7 @@ function migrateShoe(s){
 }
 async function loadShoes(){
   try{
-    if(hasArtifactStorage){
-      const res=await window.storage.get(SHOES_KEY,false);
-      shoes=(res&&res.value)?JSON.parse(res.value):[];
-    }else{
-      const raw=await idbGet(SHOES_KEY);
-      shoes=raw?JSON.parse(raw):[];
-    }
+    shoes=await loadJson(SHOES_KEY,[]);
     shoes=shoes.map(migrateShoe);
   }catch(err){
     shoes=[];
@@ -3527,14 +3676,11 @@ async function loadShoes(){
 }
 async function persistShoes(){
   try{
-    if(hasArtifactStorage){
-      await window.storage.set(SHOES_KEY,JSON.stringify(shoes),false);
-    }else{
-      await idbSet(SHOES_KEY,JSON.stringify(shoes));
-    }
+    await saveJson(SHOES_KEY,shoes);
   }catch(err){
     console.error('鞋款儲存失敗',err);
   }
+  scheduleGlobalListsSync();
 }
 /* ============================================================
    補給品資料庫（nutritionDictionary）：跟 shoes 一樣是「全域、跨賽事
@@ -3553,13 +3699,7 @@ function migrateNutritionDictItem(it){
 }
 async function loadNutritionDictionary(){
   try{
-    if(hasArtifactStorage){
-      const res=await window.storage.get(NUTRITION_DICT_KEY,false);
-      nutritionDictionary=(res&&res.value)?JSON.parse(res.value):[];
-    }else{
-      const raw=await idbGet(NUTRITION_DICT_KEY);
-      nutritionDictionary=raw?JSON.parse(raw):[];
-    }
+    nutritionDictionary=await loadJson(NUTRITION_DICT_KEY,[]);
     nutritionDictionary=nutritionDictionary.map(migrateNutritionDictItem);
   }catch(err){
     nutritionDictionary=[];
@@ -3567,14 +3707,11 @@ async function loadNutritionDictionary(){
 }
 async function persistNutritionDictionary(){
   try{
-    if(hasArtifactStorage){
-      await window.storage.set(NUTRITION_DICT_KEY,JSON.stringify(nutritionDictionary),false);
-    }else{
-      await idbSet(NUTRITION_DICT_KEY,JSON.stringify(nutritionDictionary));
-    }
+    await saveJson(NUTRITION_DICT_KEY,nutritionDictionary);
   }catch(err){
     console.error('補給品資料庫儲存失敗',err);
   }
+  scheduleGlobalListsSync();
 }
 // 這場賽事的補給時程規劃裡，每一筆只要連結了資料庫項目（dictionaryItemId）
 // 又填了數量（qty），就用「數量 × 該項目的碳水／鈉含量」加總；沒有連結
@@ -3687,24 +3824,15 @@ const SYNC_OVERWRITES_KEY='sync-overwrites-v1';
 let syncOverwrites=[];
 async function loadSyncOverwrites(){
   try{
-    if(hasArtifactStorage){
-      const res=await window.storage.get(SYNC_OVERWRITES_KEY,false);
-      syncOverwrites=(res&&res.value)?JSON.parse(res.value):[];
-    }else{
-      const raw=await idbGet(SYNC_OVERWRITES_KEY);
-      syncOverwrites=raw?JSON.parse(raw):[];
-    }
+    syncOverwrites=await loadJson(SYNC_OVERWRITES_KEY,[]);
   }catch(err){ syncOverwrites=[]; }
 }
 async function persistSyncOverwrites(){
   try{
-    const trimmed=JSON.stringify(syncOverwrites.slice(0,20));
-    if(hasArtifactStorage){
-      await window.storage.set(SYNC_OVERWRITES_KEY,trimmed,false);
-    }else{
-      await idbSet(SYNC_OVERWRITES_KEY,trimmed);
-    }
-  }catch(err){}
+    await saveJson(SYNC_OVERWRITES_KEY,syncOverwrites.slice(0,20));
+  }catch(err){
+    console.error('同步覆寫紀錄儲存失敗',err);
+  }
 }
 /* ============================================================
    徽章系統：儲存層
@@ -3718,24 +3846,15 @@ const BADGES_KEY='badges-v1';
 let badgeUnlocks={};
 async function loadBadgeUnlocks(){
   try{
-    if(hasArtifactStorage){
-      const res=await window.storage.get(BADGES_KEY,false);
-      badgeUnlocks=(res&&res.value)?JSON.parse(res.value):{};
-    }else{
-      const raw=await idbGet(BADGES_KEY);
-      badgeUnlocks=raw?JSON.parse(raw):{};
-    }
+    badgeUnlocks=await loadJson(BADGES_KEY,{});
   }catch(err){ badgeUnlocks={}; }
 }
 async function persistBadgeUnlocks(){
   try{
-    const json=JSON.stringify(badgeUnlocks);
-    if(hasArtifactStorage){
-      await window.storage.set(BADGES_KEY,json,false);
-    }else{
-      await idbSet(BADGES_KEY,json);
-    }
-  }catch(err){}
+    await saveJson(BADGES_KEY,badgeUnlocks);
+  }catch(err){
+    console.error('徽章解鎖紀錄儲存失敗',err);
+  }
 }
 
 /* ============================================================
@@ -4929,7 +5048,7 @@ function hrZoneHtml(hr,race){
   if(hr==null) return '—';
   const info=hrZoneInfoForRace(hr,race);
   if(!info) return `${hr} bpm`;
-  return `<span style="color:${info.color}">${hr} bpm</span> <span class="hr-zone-tag" style="background:${info.color}">Z${info.zone}</span>`;
+  return `<span style="color:${info.color}">${hr} bpm</span> ${hrZoneBarsSvg(info.zone,info.color)} <span class="hr-zone-tag" style="background:${info.color}">Z${info.zone}</span>`;
 }
 function renderResultsDashboard(race){
   if(race.status!=='completed'||race.results.chipTimeSeconds==null) return '';
@@ -5065,13 +5184,12 @@ function renderSplitsChart(race){
   const range=(maxPace-minPace)||1;
   let cumKm=0;
   const rows=splits.map((s,i)=>{
-    const rangeStart=cumKm,rangeEnd=cumKm+s.distanceKm;
+    const rangeEnd=cumKm+s.distanceKm;
     cumKm=rangeEnd;
     const fillPct=Math.max(4,Math.round(((maxPace-displayPaces[i])/range)*100));
-    const startLabel=formatDistanceCompact(rangeStart),endLabel=formatDistanceCompact(rangeEnd);
-    const distLabel=startLabel&&endLabel?`${startLabel.replace('K','')}-${endLabel}`:(endLabel||'—');
+    const distLabel=formatDistanceCompact(rangeEnd)||'—';
     const paceHtml=gaps[i]!=null
-      ?`<span class="splits-gap-stack"><span class="mono splits-gap-primary">${formatPace(gaps[i])}/km</span><span class="splits-gap-secondary mono small">${formatPace(s.avgPaceSecPerKm)}/km ${t('ui.splitsActualPace','實際')}</span></span>`
+      ?`<span class="splits-gap-stack"><span class="mono splits-gap-primary">${formatPace(gaps[i])}/km (GAP)</span><span class="splits-gap-secondary mono small">${formatPace(s.avgPaceSecPerKm)}/km (${t('ui.splitsActualPace','實際配速')})</span></span>`
       :`<span class="mono">${formatPace(s.avgPaceSecPerKm)}/km</span>`;
     return `<tr>
       <td class="mono num">${distLabel}</td>
@@ -6630,6 +6748,14 @@ let fatigueModeActive=false;
 let fatigueWakeLockSentinel=null;
 let fatigueLastAction=null; // {type:'cp'|'nutrition', race, target} 給「復原上一步」用
 let fatigueTouchStartX=null,fatigueTouchStartY=null,fatigueTouchStartTime=null;
+// 強光／色盲適配：電子紙高對比模式是跨賽事的持久偏好（跟深色模式一樣
+// 存 localStorage），因為「今天陽光很強」跟哪一場賽事無關，是使用者
+// 當下環境的選擇；心率區間對照卡則是每次開疲勞模式時的暫時檢視狀態，
+// 不需要記住，關閉疲勞模式就重置。
+const FATIGUE_CONTRAST_KEY='fatigue-high-contrast-v1';
+let fatigueHighContrast=false;
+try{ fatigueHighContrast=localStorage.getItem(FATIGUE_CONTRAST_KEY)==='1'; }catch(e){}
+let fatigueShowZoneCard=false;
 
 function fatigueCurrentCheckpoint(race){
   const cps=(race.checkpoints||[]).filter(cp=>cp.distanceKm!=null).slice().sort((a,b)=>a.distanceKm-b.distanceKm);
@@ -6670,6 +6796,43 @@ document.addEventListener('visibilitychange',()=>{
     fatigueRequestWakeLock();
   }
 });
+// 心率區間對照卡：開放給疲勞模式在賽事進行中快速核對「手錶上這個
+// bpm 數字落在哪一區」用——這個 App 本身沒有跟心率錶做藍牙連線、
+// 讀不到即時心率，所以這裡呈現的是賽前就設定好的區間表，不是即時
+// 心率讀數，卡片上也用文字寫清楚這一點，避免被誤會成正在讀取心率。
+// 優先用使用者依運動類型設定好的個人化儲備心率區間，沒設定時退回
+// 「這場賽事填的最大心率」簡單百分比估算，兩種來源算出來的
+// 區間表都套用同一套形狀圖示＋顏色雙重編碼。
+function fatigueZoneCardHtml(race){
+  const category=sportToProfileCategory(race.sportType);
+  const profileHr=userProfile&&userProfile.hr&&userProfile.hr[category];
+  let zones=null;
+  if(profileHr&&profileHr.restingHr!=null&&profileHr.maxHr!=null){
+    zones=karvonenZones(profileHr.restingHr,profileHr.maxHr);
+  }
+  if(!zones&&race.performanceData.maxHr){
+    const maxHr=race.performanceData.maxHr;
+    const bounds=[0,0.6,0.7,0.8,0.9,1.0];
+    zones=[];
+    for(let i=0;i<5;i++) zones.push({zone:i+1,low:Math.round(maxHr*bounds[i]),high:Math.round(maxHr*bounds[i+1])});
+  }
+  if(!zones){
+    return `<div class="fatigue-zone-card">
+      <div class="fatigue-panel-label">${t('ui.fatigueZoneCardTitle','心率區間對照')}</div>
+      <p class="fatigue-zone-empty">${t('ui.fatigueZoneCardEmpty','還沒有設定安靜心率／最大心率，無法算出區間表。')}</p>
+    </div>`;
+  }
+  const rows=zones.map(z=>`<div class="fatigue-zone-row">
+    ${hrZoneBarsSvg(z.zone,HR_ZONE_COLORS[z.zone-1])}
+    <span class="fatigue-zone-label" style="color:${HR_ZONE_COLORS[z.zone-1]}">Z${z.zone}</span>
+    <span class="fatigue-zone-range mono">${z.low}–${z.high}</span>
+  </div>`).join('');
+  return `<div class="fatigue-zone-card">
+    <div class="fatigue-panel-label">${t('ui.fatigueZoneCardTitle','心率區間對照')}</div>
+    <div class="fatigue-zone-rows">${rows}</div>
+    <p class="fatigue-zone-note">${t('ui.fatigueZoneCardNote','這是賽前設定好的參考區間，不是即時心率讀數——請對照手錶上顯示的心率數字。')}</p>
+  </div>`;
+}
 function fatigueModeHtml(race){
   const cp=fatigueCurrentCheckpoint(race);
   const nutrition=fatigueNextNutritionItem(race);
@@ -6679,11 +6842,11 @@ function fatigueModeHtml(race){
   const nutritionText=nutrition
     ?(nutrition.item||t('ui.fatigueItemFallback','補給項目'))+(nutrition.distanceKm!=null?` @ ${nutrition.distanceKm}km`:'')
     :t('ui.fatigueAllNutritionDone','補給計畫已全部完成');
-  return `
-    <div class="fatigue-exit-bar">
-      ${fatigueLastAction?`<button type="button" class="fatigue-undo-btn" data-action="fatigue-undo">${t('ui.fatigueUndo','復原上一步')}</button>`:'<span></span>'}
-      <button type="button" class="fatigue-exit-btn" data-action="exit-fatigue-mode">${t('ui.fatigueExit','結束疲勞模式')}</button>
-    </div>
+  const toolsRow=`<div class="fatigue-tools-row">
+    <button type="button" class="fatigue-tool-btn${fatigueShowZoneCard?' is-active':''}" data-action="toggle-fatigue-zone-card">${t('ui.fatigueZoneCardToggle','心率區間對照')}</button>
+    <button type="button" class="fatigue-tool-btn${fatigueHighContrast?' is-active':''}" data-action="toggle-fatigue-contrast">${t('ui.fatigueContrastToggle','電子紙高對比')}</button>
+  </div>`;
+  const body=fatigueShowZoneCard?fatigueZoneCardHtml(race):`
     <div class="fatigue-panel fatigue-panel-top">
       <div class="fatigue-panel-label">${t('ui.fatigueNextCp','下一個 CP')}</div>
       <div class="fatigue-panel-value">${escapeHtml(cpText)}</div>
@@ -6694,6 +6857,13 @@ function fatigueModeHtml(race){
       <div class="fatigue-panel-value">${escapeHtml(nutritionText)}</div>
       <div class="fatigue-panel-hint">${t('ui.fatigueSwipeLeftHint','向左滑動＝標記已補給')}</div>
     </div>`;
+  return `
+    <div class="fatigue-exit-bar">
+      ${fatigueLastAction?`<button type="button" class="fatigue-undo-btn" data-action="fatigue-undo">${t('ui.fatigueUndo','復原上一步')}</button>`:'<span></span>'}
+      <button type="button" class="fatigue-exit-btn" data-action="exit-fatigue-mode">${t('ui.fatigueExit','結束疲勞模式')}</button>
+    </div>
+    ${toolsRow}
+    ${body}`;
 }
 function renderFatigueOverlay(){
   if(!fatigueModeActive||!currentRace) return;
@@ -6704,6 +6874,8 @@ async function openFatigueMode(){
   if(!currentRace) return;
   fatigueModeActive=true;
   fatigueLastAction=null;
+  fatigueShowZoneCard=false;
+  fatigueModeEl_getter().classList.toggle('fatigue-high-contrast',fatigueHighContrast);
   fatigueModeEl_getter().innerHTML=fatigueModeHtml(currentRace);
   fatigueModeEl_getter().hidden=false;
   document.body.style.overflow='hidden';
@@ -7115,6 +7287,110 @@ function computeEppBaselinePace(){
 // 預測）身上，拆解成瀑布圖需要的幾段：基準時間／爬升折損／高溫折損／
 // 其他（已完賽時是「實際時間 - 前三段加總」，未完賽時這段不存在，因為
 // 還沒有實際時間可以拿來對比）。
+// 用線性插值，從海拔剖面（route.elevationProfile，通常是降採樣到 50 點
+// 的 {distanceKm,elevationM} 陣列）算出「某個公里數當下」的海拔——
+// 逐公里切片預測要知道每一段的起訖點海拔，但剖面本身不會剛好在整數
+// 公里處取樣，需要在兩個最近的已知點之間內插。
+function elevationAtDistance(elevationProfile,km){
+  if(!elevationProfile||elevationProfile.length<2) return null;
+  if(km<=elevationProfile[0].distanceKm) return elevationProfile[0].elevationM;
+  const last=elevationProfile[elevationProfile.length-1];
+  if(km>=last.distanceKm) return last.elevationM;
+  for(let i=1;i<elevationProfile.length;i++){
+    if(elevationProfile[i].distanceKm>=km){
+      const p0=elevationProfile[i-1],p1=elevationProfile[i];
+      const span=p1.distanceKm-p0.distanceKm;
+      const frac=span>0?(km-p0.distanceKm)/span:0;
+      return p0.elevationM+(p1.elevationM-p0.elevationM)*frac;
+    }
+  }
+  return last.elevationM;
+}
+/* ============================================================
+   EPP 逐公里切片預測引擎：把整場賽事切成固定長度的區段（預設 1 公里，
+   長距離賽事自動放寬到 3 公里，避免表格長到失去意義），每一段各自套
+   用坡度折損／高溫折損，而不是像 computeRaceWaterfall() 原本那樣把
+   全場總爬升攤平成一個平均坡度——這樣做出來的預測，才會真的反映出
+   「第 4 段有一段連續陡坡，這段特別慢；第 9 段是長下坡，這段比基準
+   還快」這種賽道實際的起伏樣貌，而不是整場均勻地慢一點點。
+
+   坡度用「這一段起訖點的淨海拔變化」而不是「只算爬升的正值總和」，
+   是為了跟爬升折損係數本身的算法保持一致——那個係數是拿 splits 資料
+   裡 splitGradePct()（也是用淨爬升，下坡是負值）去迴歸出來的，如果
+   這裡改用「只算上坡」的算法，套用同一個係數就會邏輯不一致。這也是
+   為什麼下坡段的折損算出來可以是負值（=比基準快）：係數本身就是從
+   這位使用者自己「上坡變慢多少、下坡變快多少」的真實資料迴歸出來
+   的，不是只把上坡的效應複製一份、下坡直接歸零。
+
+   氣溫則是「動態」的：如果這場賽事有抓到即時逐時預報（liveForecast，
+   只有賽事日期在 7 天內才會有），會依照模擬跑到這一段時的「預估時
+   鐘時間」去查對應時段的預報溫度，而不是整場都套同一個溫度——長距
+   離賽事清晨出發、中午還在賽道上，體感溫度本來就會隨時間爬升，這裡
+   把這個效應也模擬進去。查不到逐時預報、或模擬時間跨到隔天（逐時
+   預報只涵蓋單一天）時，退回整場統一套用同一個溫度，跟原本 computeRaceWaterfall()
+   的做法一樣。
+   ============================================================ */
+function pickSegmentLengthKm(distanceKm){
+  return distanceKm>15?3:1;
+}
+function computeSegmentPredictions(race,segmentKmOverride){
+  const baseline=computeEppBaselinePace();
+  const thermal=computeThermalCoefficient();
+  const gravity=computeGravityCoefficient();
+  if(!baseline||!thermal.ready||!gravity.ready) return null;
+  const distanceKm=race.route.distanceKm;
+  if(!distanceKm) return null;
+  const elevationProfile=race.route.elevationProfile;
+  const hasProfile=elevationProfile&&elevationProfile.length>=2;
+  if(!hasProfile) return null; // 沒有海拔剖面就沒辦法逐段算坡度，讓呼叫端退回用 elevationGainM 的簡化版，不要在這裡假裝算過、實際上每段坡度都是 0
+  const segmentKm=segmentKmOverride||pickSegmentLengthKm(distanceKm);
+  const live=race.liveForecast;
+  const fallbackTempC=race.raceDayWeather.feelsLikeTempC!=null?race.raceDayWeather.feelsLikeTempC:race.climateForecast.avgTempC;
+  const segments=[];
+  let cumulativeSec=0;
+  let startKm=0;
+  while(startKm<distanceKm-1e-6){
+    const endKm=Math.min(startKm+segmentKm,distanceKm);
+    const segLenKm=endKm-startKm;
+    let elevationChangeM=0;
+    if(hasProfile){
+      const e0=elevationAtDistance(elevationProfile,startKm);
+      const e1=elevationAtDistance(elevationProfile,endKm);
+      if(e0!=null&&e1!=null) elevationChangeM=e1-e0;
+    }
+    const avgGradePct=segLenKm>0?(elevationChangeM/(segLenKm*1000))*100:0;
+    const gravityExtraPct=gravity.pctPerGradePoint*avgGradePct; // 刻意不夾在 >=0，下坡段允許算出負值（比基準快）
+    const baselineSegSec=baseline.paceSecPerKm*segLenKm;
+    const gravitySegSec=baselineSegSec*(gravityExtraPct/100);
+    let tempC=fallbackTempC;
+    if(live&&live.times&&live.times.length&&race.schedule.startTime){
+      const arrival=formatClockTimeOffset(race.schedule.startTime,cumulativeSec);
+      if(arrival&&arrival.dayOffset===0){
+        const idx=findClosestHourIndex(live.times,arrival.label);
+        if(live.temp&&live.temp[idx]!=null) tempC=live.temp[idx];
+      }
+    }
+    const thermalExtraPct=(tempC!=null&&tempC>15)?thermal.pctPerDegree*(tempC-15):0;
+    const thermalSegSec=baselineSegSec*(thermalExtraPct/100);
+    const predictedSegSec=Math.max(0,baselineSegSec+gravitySegSec+thermalSegSec);
+    cumulativeSec+=predictedSegSec;
+    segments.push({
+      startKm:+startKm.toFixed(2),endKm:+endKm.toFixed(2),segLenKm,
+      elevationChangeM:Math.round(elevationChangeM),avgGradePct,
+      tempC,gravitySegSec,thermalSegSec,predictedSegSec,
+      cumulativeSec,paceSecPerKm:predictedSegSec/segLenKm,
+    });
+    startKm=endKm;
+  }
+  if(!segments.length) return null;
+  return {
+    segments,segmentKm,
+    totalGravitySec:segments.reduce((s,x)=>s+x.gravitySegSec,0),
+    totalThermalSec:segments.reduce((s,x)=>s+x.thermalSegSec,0),
+    totalPredictedSec:cumulativeSec,
+    baseline,thermal,gravity,
+  };
+}
 function computeRaceWaterfall(race){
   const baseline=computeEppBaselinePace();
   const thermal=computeThermalCoefficient();
@@ -7124,21 +7400,33 @@ function computeRaceWaterfall(race){
   const elevationGainM=race.route.elevationGainM;
   if(!distanceKm) return null;
   const baselineSec=baseline.paceSecPerKm*distanceKm;
-  // 爬升折損：用「每 1% 坡度配速比自己平均慢幾%」反推整場賽事因為
-  // 爬升多花的時間——先算出「如果把全部爬升平均攤在整趟距離上，平均
-  // 坡度是幾%」，再用這個平均坡度乘上距離換算成秒數。這是簡化：實際
-  // 爬升集中在某幾段陡坡、不是均勻分佈，但在還沒有逐公里切片預測
-  // （下一輪要做的事）之前，這是用全場總量算總折損的合理近似。
-  const avgGradePct=elevationGainM!=null?(elevationGainM/(distanceKm*1000))*100:0;
-  const gravityExtraPct=Math.max(0,gravity.pctPerGradePoint*avgGradePct);
-  const gravitySec=baselineSec*(gravityExtraPct/100);
-  const tempC=race.raceDayWeather.feelsLikeTempC!=null?race.raceDayWeather.feelsLikeTempC:race.climateForecast.avgTempC;
-  const thermalExtraPct=tempC!=null&&tempC>15?thermal.pctPerDegree*(tempC-15):0;
-  const thermalSec=baselineSec*(thermalExtraPct/100);
-  const predictedSec=baselineSec+gravitySec+thermalSec;
+  // 優先用逐公里切片引擎算出來的加總——比下面「把全場爬升攤平成一個
+  // 平均坡度」的簡化版準確得多，因為爬升折損跟高溫折損都會依照賽道
+  // 實際的起伏跟模擬時鐘時間分段套用，不是整場均勻地打一個折。只有
+  // 賽事沒有海拔剖面資料（例如手動填距離、沒匯入 GPX）時才會退回
+  // 簡化版，保證這個功能在資料不足時依然能給出一個粗估值，而不是
+  // 整段消失。
+  const segmentResult=computeSegmentPredictions(race);
+  let gravitySec,thermalSec,predictedSec,tempC,avgGradePct;
+  if(segmentResult){
+    gravitySec=segmentResult.totalGravitySec;
+    thermalSec=segmentResult.totalThermalSec;
+    predictedSec=segmentResult.totalPredictedSec;
+    avgGradePct=elevationGainM!=null?(elevationGainM/(distanceKm*1000))*100:0;
+    tempC=race.raceDayWeather.feelsLikeTempC!=null?race.raceDayWeather.feelsLikeTempC:race.climateForecast.avgTempC;
+  }else{
+    const fallbackAvgGradePct=elevationGainM!=null?(elevationGainM/(distanceKm*1000))*100:0;
+    const gravityExtraPct=Math.max(0,gravity.pctPerGradePoint*fallbackAvgGradePct);
+    gravitySec=baselineSec*(gravityExtraPct/100);
+    tempC=race.raceDayWeather.feelsLikeTempC!=null?race.raceDayWeather.feelsLikeTempC:race.climateForecast.avgTempC;
+    const thermalExtraPct=tempC!=null&&tempC>15?thermal.pctPerDegree*(tempC-15):0;
+    thermalSec=baselineSec*(thermalExtraPct/100);
+    predictedSec=baselineSec+gravitySec+thermalSec;
+    avgGradePct=fallbackAvgGradePct;
+  }
   const actualSec=race.results.chipTimeSeconds;
   const otherSec=actualSec!=null?actualSec-predictedSec:null;
-  return {baseline,thermal,gravity,baselineSec,gravitySec,thermalSec,predictedSec,actualSec,otherSec,tempC,avgGradePct};
+  return {baseline,thermal,gravity,baselineSec,gravitySec,thermalSec,predictedSec,actualSec,otherSec,tempC,avgGradePct,segmentResult};
 }
 // 帶正負號的時間差顯示，用在瀑布圖的「+15分」「-8分」這種階梯標籤，
 // 跟 secToHMS 分開是因為那個函式假設輸入一定是非負秒數。
@@ -7214,6 +7502,33 @@ function eppCoefficientBlockHtml(){
     <p class="small">${gravityLine}</p>
   </div>`;
 }
+// 逐公里預測表格預設收合，避免每次打開賽事詳情頁都跳出一大串清單；
+// 是否展開只是畫面上的暫時狀態，不需要記住，重新整理就會收合回去。
+let eppShowSegments=false;
+function eppSegmentTableHtml(segmentResult,race){
+  if(!segmentResult) return '';
+  const rows=segmentResult.segments.map(s=>{
+    const arrival=race.schedule.startTime?formatClockTimeOffset(race.schedule.startTime,s.cumulativeSec):null;
+    const eleSign=s.elevationChangeM>0?'+':'';
+    return `<tr>
+      <td class="mono">${s.startKm}–${s.endKm}km</td>
+      <td class="mono">${eleSign}${s.elevationChangeM}m</td>
+      <td class="mono">${formatPace(s.paceSecPerKm)||'—'}/km</td>
+      <td class="mono">${arrival?arrival.label+(arrival.dayOffset>0?' +'+arrival.dayOffset+'d':''):'—'}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="epp-segment-table-wrap">
+    <table class="epp-segment-table">
+      <thead><tr>
+        <th>${t('ui.eppSegRange','區間')}</th>
+        <th>${t('ui.eppSegElevation','淨爬升')}</th>
+        <th>${t('ui.eppSegPace','預測配速')}</th>
+        <th>${t('ui.eppSegArrival','預估抵達時刻')}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
 function eppSectionHtml(race){
   const wf=computeRaceWaterfall(race);
   const coeffBlock=eppCoefficientBlockHtml();
@@ -7227,6 +7542,12 @@ function eppSectionHtml(race){
   const adoptButtons=['A','B','C'].map(tier=>
     `<button type="button" class="btn-text-small" data-action="epp-adopt-goal" data-tier="${tier}" data-seconds="${Math.round(wf.predictedSec)}">${t('ui.eppAdoptGoal','採用為 {tier} 目標').replace('{tier}',tier)}</button>`
   ).join('');
+  const segmentToggle=wf.segmentResult
+    ?`<div class="epp-segment-toggle-row">
+        <button type="button" class="btn-text-small" data-action="toggle-epp-segments">${eppShowSegments?t('ui.eppHideSegments','隱藏逐公里預測'):t('ui.eppShowSegments','顯示逐公里預測（每 {km} 公里）').replace('{km}',wf.segmentResult.segmentKm)}</button>
+      </div>
+      ${eppShowSegments?eppSegmentTableHtml(wf.segmentResult,race):''}`
+    :`<p class="empty-hint small">${t('ui.eppSegmentsNeedProfile','這場賽事還沒有海拔剖面資料（匯入 GPX/TCX/FIT 或手動填海拔變化圖才會有），目前用的是全場爬升攤平成平均坡度的簡化估計。')}</p>`;
   return `<div class="epp-section">
     <div class="subsection-head"><span class="small">${t('ui.eppTitle','環境折損預測（EPP）')}</span></div>
     ${coeffBlock}
@@ -7237,6 +7558,7 @@ function eppSectionHtml(race){
     </div>
     <p class="empty-hint small">${t('ui.eppDisclaimer','這是根據你過去賽事統計出來的估計值，不是保證會發生的事，也不會自動變成你的賽前目標——要採用的話請自己按下面的按鈕。')}</p>
     <div class="epp-adopt-row">${adoptButtons}</div>
+    ${segmentToggle}
   </div>`;
 }
 
@@ -7864,12 +8186,24 @@ function computeMonthlyHeatmapData(){
   });
   return byMonth;
 }
+// 氣候與表現散佈圖：門檻從原本 3 場提高到 4 場，跟 EPP 模型的高溫折損
+// 係數用一樣的最低樣本數（同樣是「溫度 vs 表現」的迴歸，沒有理由套用
+// 不同的可信度標準）。R²／樣本數這次改成一定會顯示在圖表文字裡，不是
+// 拿到才選擇性顯示——3、4 筆資料畫出來的趨勢線，視覺上看起來會跟資料
+// 齊全時一樣「確定」，但統計上完全不是一回事，把 R² 藏起來等於讓使用者
+// 沒辦法自己判斷這條線值不值得信。R² 偏低（<0.4，代表這條線解釋不到
+// 4 成的變異）時，趨勢線改用更淡、更稀疏的虛線呈現，用視覺本身傳達
+// 「這條線沒有很篤定」，不是只在文字裡加一句警語、圖案本身還是畫得
+// 信心滿滿。
+const CLIMATE_CHART_MIN_POINTS=4;
+const CLIMATE_CHART_WEAK_R2=0.4;
 function climatePerformanceChartSvg(){
   const points=computeClimatePerformancePoints();
-  if(points.length<3) return '';
+  if(points.length<CLIMATE_CHART_MIN_POINTS) return '';
 
   const sweetSpot=computeSweetSpotBand(points);
   const reg=linearRegression(points.map(p=>({x:p.tempC,y:p.degradationPct})));
+  const regIsWeak=reg&&reg.r2!=null&&reg.r2<CLIMATE_CHART_WEAK_R2;
 
   const temps=points.map(p=>p.tempC);
   let minTemp=Math.min(...temps),maxTemp=Math.max(...temps);
@@ -7881,25 +8215,30 @@ function climatePerformanceChartSvg(){
 
   const degs=points.map(p=>p.degradationPct);
   let minDeg=Math.min(...degs,0);
-  // 讓趨勢線的兩端也落在可視範圍內，不會被畫到圖表邊界外面看不到
   if(reg){
     minDeg=Math.min(minDeg,reg.intercept+reg.slope*minTemp,reg.intercept+reg.slope*maxTemp);
   }
-  if(minDeg>=0) minDeg=-1; // 保底：萬一收錄進來的賽事全部都是各自類別的 PB，degradation 全部是 0
+  if(minDeg>=0) minDeg=-1;
   const degRange=(0-minDeg)||1;
 
-  const w=560,h=240,padL=48,padR=20,padTop=20,padBottom=36;
+  const w=560,h=272,padL=54,padR=20,padTop=34,padBottom=48;
   const plotW=w-padL-padR,plotH=h-padTop-padBottom;
   const sx=temp=>padL+((temp-minTemp)/tempRange)*plotW;
   const sy=deg=>padTop+((0-deg)/degRange)*plotH;
 
   const sweetSpotRect=sweetSpot
-    ?`<rect x="${sx(sweetSpot.min).toFixed(1)}" y="${padTop}" width="${(sx(sweetSpot.max)-sx(sweetSpot.min)).toFixed(1)}" height="${plotH}" fill="var(--trail)" opacity="0.14"/>`
+    ?`<rect x="${sx(sweetSpot.min).toFixed(1)}" y="${padTop}" width="${(sx(sweetSpot.max)-sx(sweetSpot.min)).toFixed(1)}" height="${plotH}" fill="var(--trail)" opacity="0.14"/>
+      <text x="${((sx(sweetSpot.min)+sx(sweetSpot.max))/2).toFixed(1)}" y="${padTop+14}" text-anchor="middle" class="climate-chart-sweetspot-label">${t('ui.climateChartSweetSpotLabel','甜蜜點')}</text>`
     :'';
   const zeroY=sy(0).toFixed(1);
   const zeroLine=`<line x1="${padL}" y1="${zeroY}" x2="${w-padR}" y2="${zeroY}" stroke="var(--rule)" stroke-width="1"/>`;
+  // 中間再補一條淡淡的 Y 軸刻度線，原本只有 0% 跟最低值兩個端點，中間
+  // 完全沒有參考線，這次補一條在視覺上抓比例會更容易。
+  const midDeg=minDeg/2;
+  const midY=sy(midDeg).toFixed(1);
+  const midGridLine=`<line x1="${padL}" y1="${midY}" x2="${w-padR}" y2="${midY}" stroke="var(--rule)" stroke-width="0.5" stroke-dasharray="2 3" opacity="0.6"/>`;
   const trendLine=reg
-    ?`<line x1="${padL}" y1="${sy(reg.intercept+reg.slope*minTemp).toFixed(1)}" x2="${w-padR}" y2="${sy(reg.intercept+reg.slope*maxTemp).toFixed(1)}" stroke="var(--flag)" stroke-width="1.5" stroke-dasharray="5 4"/>`
+    ?`<line x1="${padL}" y1="${sy(reg.intercept+reg.slope*minTemp).toFixed(1)}" x2="${w-padR}" y2="${sy(reg.intercept+reg.slope*maxTemp).toFixed(1)}" stroke="var(--flag)" stroke-width="${regIsWeak?1:1.5}" stroke-dasharray="${regIsWeak?'3 5':'5 4'}" opacity="${regIsWeak?0.5:1}"/>`
     :'';
   const dots=points.map(p=>{
     const cx=sx(p.tempC).toFixed(1),cy=sy(p.degradationPct).toFixed(1);
@@ -7908,22 +8247,38 @@ function climatePerformanceChartSvg(){
     return `<circle cx="${cx}" cy="${cy}" r="${p.isPb?5:4}" fill="${p.isPb?'var(--gold)':'var(--contour)'}" opacity="0.82"><title>${escapeHtml(tipText)}</title></circle>`;
   }).join('');
   const axisLabels=`
-    <text x="${padL}" y="${h-10}" text-anchor="start" class="climate-chart-axis-label mono">${minTemp.toFixed(0)}°C</text>
-    <text x="${w-padR}" y="${h-10}" text-anchor="end" class="climate-chart-axis-label mono">${maxTemp.toFixed(0)}°C</text>
+    <text x="${padL}" y="${h-padBottom+20}" text-anchor="start" class="climate-chart-axis-label mono">${minTemp.toFixed(0)}°C</text>
+    <text x="${w-padR}" y="${h-padBottom+20}" text-anchor="end" class="climate-chart-axis-label mono">${maxTemp.toFixed(0)}°C</text>
+    <text x="${((padL+w-padR)/2).toFixed(1)}" y="${h-padBottom+20}" text-anchor="middle" class="climate-chart-axis-label mono">${t('ui.climateChartXAxis','體感溫度')}</text>
     <text x="${padL-6}" y="${padTop+4}" text-anchor="end" class="climate-chart-axis-label mono">0%</text>
-    <text x="${padL-6}" y="${(padTop+plotH).toFixed(1)}" text-anchor="end" class="climate-chart-axis-label mono">${minDeg.toFixed(0)}%</text>`;
+    <text x="${padL-6}" y="${(padTop+plotH).toFixed(1)}" text-anchor="end" class="climate-chart-axis-label mono">${minDeg.toFixed(0)}%</text>
+    <text x="${padL}" y="16" text-anchor="start" class="climate-chart-axis-title">${t('ui.climateChartYAxis','配速衰退（相對自己 PB）')}</text>`;
+  const legend=`
+    <g class="climate-chart-legend">
+      <circle cx="${w-140}" cy="16" r="4" fill="var(--gold)"/>
+      <text x="${w-131}" y="19" class="climate-chart-legend-label">${t('ui.climateChartLegendPb','PB')}</text>
+      <circle cx="${w-95}" cy="16" r="4" fill="var(--contour)"/>
+      <text x="${w-86}" y="19" class="climate-chart-legend-label">${t('ui.climateChartLegendOther','其他賽事')}</text>
+    </g>`;
 
   const slopeNote=reg
-    ?`<div class="climate-chart-slope small">${tf('ui.climateChartSlope','氣溫每升高 1°C，配速平均衰退約 {n} 個百分點',Math.abs(reg.slope).toFixed(2))}</div>`:'';
+    ?`<div class="climate-chart-slope small">${t('ui.climateChartSlope','氣溫每升高 1°C，配速平均衰退約 {n} 個百分點（R²={r2}，依 {count} 場賽事推算）')
+        .replace('{n}',Math.abs(reg.slope).toFixed(2)).replace('{r2}',reg.r2!=null?reg.r2.toFixed(2):'—').replace('{count}',reg.n)}</div>`
+    :'';
+  const weakR2Note=regIsWeak
+    ?`<p class="climate-chart-weak-note empty-hint small">${t('ui.climateChartWeakR2','R² 偏低，代表氣溫沒辦法解釋大部分的配速差異，這條線僅供參考，不是穩定的規律——資料點再多一些，這個估計會更可信。')}</p>`
+    :'';
   const sweetSpotNote=sweetSpot
-    ?`<div class="climate-chart-sweetspot small">${t('ui.climateChartSweetSpot','最佳作戰溫度帶：{range}（依 {n} 場高效率賽事推算）').replace('{range}',sweetSpot.min.toFixed(0)+'~'+sweetSpot.max.toFixed(0)+'°C').replace('{n}',sweetSpot.count)}</div>`:'';
+    ?`<div class="climate-chart-sweetspot small">${t('ui.climateChartSweetSpot','最佳作戰溫度帶：{range}（依 {n} 場高效率賽事推算）').replace('{range}',sweetSpot.min.toFixed(0)+'~'+sweetSpot.max.toFixed(0)+'°C').replace('{n}',sweetSpot.count)}</div>`
+    :'';
 
   return `<div class="climate-chart-wrap">
     <div class="yearly-chart-title small">${t('ui.climateChartTitle','氣候與表現散佈圖')}</div>
     <svg viewBox="0 0 ${w} ${h}" class="climate-chart-svg" preserveAspectRatio="xMidYMid meet">
-      ${sweetSpotRect}${zeroLine}${trendLine}${dots}${axisLabels}
+      ${sweetSpotRect}${midGridLine}${zeroLine}${trendLine}${dots}${axisLabels}${legend}
     </svg>
     ${slopeNote}
+    ${weakR2Note}
     ${sweetSpotNote}
   </div>`;
 }
@@ -8107,12 +8462,14 @@ function renderTrophyCabinet(){
     <div id="trophy-cabinet-body">${trophyCabinetBodyHtml()}</div>
   </details>`;
 }
-function yearInReviewButtonsHtml(){
+function yearInReviewPickerHtml(){
   const years=availableYearInReviewYears();
   if(!years.length) return '';
+  const options=years.map(y=>`<option value="${y}">${y}</option>`).join('');
   return `<div class="year-in-review-row">
     <span class="year-in-review-label small">${t('ui.yearInReviewCta','年度回顧長圖卡')}</span>
-    ${years.slice(0,5).map(y=>`<button type="button" class="chip" data-action="download-year-review" data-year="${y}">${y}</button>`).join('')}
+    <select id="year-in-review-select" class="year-in-review-select">${options}</select>
+    <button type="button" class="chip" data-action="download-year-review">${t('ui.yearInReviewDownload','下載')}</button>
   </div>`;
 }
 function renderCareerSummary(){
@@ -8138,7 +8495,7 @@ function renderCareerSummary(){
         </div>`).join('')}</div>
       ${yearlyChartSvg()}
     </div>
-    ${yearInReviewButtonsHtml()}
+    ${yearInReviewPickerHtml()}
     ${elevationTrendChartSvg()}
     ${climatePerformanceChartSvg()}
     ${heatmapHtml()}
@@ -8349,6 +8706,7 @@ function renderDetail(){
       ${elevationProfileHtml(race)}
       ${routeMapHtml(race)}
       ${geoPhotoSectionHtml(race)}
+      ${gpsDenoiseSectionHtml(race)}
       ${renderRepeatable(race,'checkpoints')}
     </details>
     <details class="section" id="section-weather">
@@ -9931,6 +10289,183 @@ function interpolateTrackAtTime(timedPoints,targetMs){
   const paceSecPerKm=(gapSec>0&&gapDistKm>0)?Math.round(gapSec/gapDistKm):null;
   return {lat,lon,elevationM,hr,paceSecPerKm};
 }
+/* ============================================================
+   開放水域 GPS 降噪（Kalman 濾波）：手錶在開放水域游泳時，手腕每一次
+   划手就會沒入水中一次，GPS 訊號跟著斷一次、浮出水面才重新定位大約
+   1 秒——查證過的實測資料顯示單點誤差常見到 10 公尺、甚至到 50 公尺，
+   沒有做修正的話，累計距離可能膨脹 15~20% 以上。這裡用等速度模型的
+   卡爾曼濾波，把每個點的位置當成「量測」、拿一個簡單的等速度運動模型
+   當「預測」，兩者依照各自的不確定性加權平均，比單純的移動平均更能
+   同時保留真實的轉彎，又壓掉量測雜訊。
+
+   參數 q_accel（模型允許的加速度變異）跟 r_std（量測雜訊標準差，公尺）
+   都不是憑感覺選的：r_std=15 取自上述「常見 10 公尺、甚至到 50 公尺」
+   的實測描述，抓一個居中的保守值；q_accel=0.005 則是用合成測試資料
+   （已知真實路徑＋人工加入 15 公尺標準差雜訊，涵蓋直線跟繞浮標的彎道
+   兩種形狀、各自跑 5 組不同亂數種子）挑出在這兩種情境下都穩定有效的
+   數值——直線情境下位置均方根誤差穩定降低 39~53%，彎道情境下累計距離
+   的誤差穩定從六到七成降到約二成，不是只在單一組測試資料上湊出來的
+   數字。這也是為什麼上限沒有喊「濾掉所有雜訊」：卡爾曼濾波能大幅壓低
+   雜訊，但沒辦法把資料完全變回真實路徑，這點在說明文字裡會如實寫。
+   ============================================================ */
+const KALMAN_R_STD_M=15;   // 量測雜訊標準差（公尺），來源見上方註解
+const KALMAN_Q_ACCEL=0.005; // 加速度過程雜訊，來源見上方註解
+// 等經緯直角座標轉換：用第一個點當參考原點，把整段軌跡投影到平面
+// 座標系（公尺）——賽事範圍通常只有幾十公里內，這種簡化的等距圓柱
+// 投影誤差可以忽略，換來的是後面濾波公式可以用平面座標直接運算。
+function latLonToLocalXY(lat,lon,refLat,refLon){
+  const refLatRad=refLat*Math.PI/180;
+  const x=(lon-refLon)*Math.cos(refLatRad)*111320;
+  const y=(lat-refLat)*110540;
+  return {x,y};
+}
+function localXYToLatLon(x,y,refLat,refLon){
+  const refLatRad=refLat*Math.PI/180;
+  const lon=refLon+x/(Math.cos(refLatRad)*111320);
+  const lat=refLat+y/110540;
+  return {lat,lon};
+}
+function mat4Mul4(A,B){ // 4x4 * 4x4
+  const out=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=A[i][k]*B[k][j];out[i][j]=s;}
+  return out;
+}
+function mat4Transpose(A){
+  const out=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++)out[j][i]=A[i][j];
+  return out;
+}
+function mat4Add(A,B){
+  const out=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++)out[i][j]=A[i][j]+B[i][j];
+  return out;
+}
+function mat4VecMul(A,v){ // 4x4 * 4x1
+  const out=[0,0,0,0];
+  for(let i=0;i<4;i++){let s=0;for(let k=0;k<4;k++)s+=A[i][k]*v[k];out[i]=s;}
+  return out;
+}
+// 單一步卡爾曼濾波（狀態＝[x,y,vx,vy]），對應 Python 版逐行相同結構，
+// 方便跟參考實作逐步比對，不是為了效能刻意展開成純量運算。
+function kalmanStep(x,P,z,dt,qAccel,rStd){
+  const F=[[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]];
+  const q=qAccel;
+  const Q=[
+    [q*dt**4/4,0,q*dt**3/2,0],
+    [0,q*dt**4/4,0,q*dt**3/2],
+    [q*dt**3/2,0,q*dt*dt,0],
+    [0,q*dt**3/2,0,q*dt*dt],
+  ];
+  const xPred=mat4VecMul(F,x);
+  const Ft=mat4Transpose(F);
+  const PPred=mat4Add(mat4Mul4(mat4Mul4(F,P),Ft),Q);
+  // H=[[1,0,0,0],[0,1,0,0]]，H@PPred@H.T 直接就是 PPred 左上 2x2 區塊，
+  // 手動取值省去乘一個大多是 0 的矩陣。
+  const r=rStd*rStd;
+  const S=[[PPred[0][0]+r,PPred[0][1]],[PPred[1][0],PPred[1][1]+r]];
+  const detS=S[0][0]*S[1][1]-S[0][1]*S[1][0];
+  const SInv=[[S[1][1]/detS,-S[0][1]/detS],[-S[1][0]/detS,S[0][0]/detS]];
+  // K = PPred @ H.T @ SInv；PPred@H.T 取 PPred 前兩欄（4x2）
+  const PHt=[[PPred[0][0],PPred[0][1]],[PPred[1][0],PPred[1][1]],[PPred[2][0],PPred[2][1]],[PPred[3][0],PPred[3][1]]];
+  const K=PHt.map(row=>[row[0]*SInv[0][0]+row[1]*SInv[1][0],row[0]*SInv[0][1]+row[1]*SInv[1][1]]);
+  const yInnov=[z[0]-xPred[0],z[1]-xPred[1]];
+  const xNew=xPred.map((v,i)=>v+K[i][0]*yInnov[0]+K[i][1]*yInnov[1]);
+  // P = (I - K@H) @ PPred；K@H 是 4x4，但 H 只有前兩欄非零
+  const KH=[[K[0][0],K[0][1],0,0],[K[1][0],K[1][1],0,0],[K[2][0],K[2][1],0,0],[K[3][0],K[3][1],0,0]];
+  const IminusKH=[[1-KH[0][0],-KH[0][1],0,0],[-KH[1][0],1-KH[1][1],0,0],[-KH[2][0],-KH[2][1],1,0],[-KH[3][0],-KH[3][1],0,1]];
+  const PNew=mat4Mul4(IminusKH,PPred);
+  return {x:xNew,P:PNew};
+}
+// 對外主函式：吃一段 timedTrackPoints（需要 time 欄位算 dt），回傳新的
+// 陣列，經緯度換成濾波後的結果，time／ele／hr 等其他欄位原樣保留。
+// 少於 2 個點、或缺時間戳記時直接回傳 null，交給呼叫端判斷不能套用。
+function kalmanSmoothTrack(timedPoints,opts){
+  if(!timedPoints||timedPoints.length<2) return null;
+  const valid=timedPoints.filter(p=>p.lat!=null&&p.lon!=null&&p.time);
+  if(valid.length<2) return null;
+  const qAccel=(opts&&opts.qAccel)||KALMAN_Q_ACCEL;
+  const rStd=(opts&&opts.rStd)||KALMAN_R_STD_M;
+  const refLat=valid[0].lat,refLon=valid[0].lon;
+  const local=valid.map(p=>({...latLonToLocalXY(p.lat,p.lon,refLat,refLon),t:new Date(p.time).getTime()/1000}));
+  let x=[local[0].x,local[0].y,0,0];
+  let P=[[rStd*rStd,0,0,0],[0,rStd*rStd,0,0],[0,0,100,0],[0,0,0,100]];
+  const outLocal=[{x:x[0],y:x[1]}];
+  for(let i=1;i<local.length;i++){
+    let dt=local[i].t-local[i-1].t;
+    if(dt<=0) dt=0.001; // 時間戳記重複或亂序時的保護，避免除以 0 / 負值
+    const step=kalmanStep(x,P,[local[i].x,local[i].y],dt,qAccel,rStd);
+    x=step.x;P=step.P;
+    outLocal.push({x:x[0],y:x[1]});
+  }
+  return valid.map((p,i)=>{
+    const {lat,lon}=localXYToLatLon(outLocal[i].x,outLocal[i].y,refLat,refLon);
+    return {...p,lat,lon};
+  });
+}
+// 算一段 timedTrackPoints 的總距離（haversine 逐段加總），降噪前後
+// 都用同一個函式算，才能公平比較「這次降噪讓距離少算了多少」。
+function timedTrackTotalDistanceKm(timedPoints){
+  if(!timedPoints||timedPoints.length<2) return 0;
+  let total=0;
+  for(let i=1;i<timedPoints.length;i++){
+    total+=haversineKm(timedPoints[i-1].lat,timedPoints[i-1].lon,timedPoints[i].lat,timedPoints[i].lon);
+  }
+  return total;
+}
+// 目前正在預覽中的降噪結果（尚未套用），null 代表沒有在預覽。刻意先讓
+// 使用者看到「降噪前 vs 降噪後」的距離差異，才決定要不要套用、要不要
+// 連同賽事距離欄位一起更新——降噪能大幅壓低雜訊，但沒辦法完全還原真實
+// 路徑，把套用前後的數字都攤開來，使用者才能自己判斷這次降噪的效果
+// 對這場賽事來說是不是有意義的修正。
+let gpsDenoisePreview=null;
+function startGpsDenoisePreview(race){
+  const smoothed=kalmanSmoothTrack(race.route.timedTrackPoints);
+  if(!smoothed) return;
+  gpsDenoisePreview={
+    raceId:race.id,
+    smoothedTimedPoints:smoothed,
+    oldDistanceKm:timedTrackTotalDistanceKm(race.route.timedTrackPoints),
+    newDistanceKm:timedTrackTotalDistanceKm(smoothed),
+  };
+}
+function cancelGpsDenoisePreview(){ gpsDenoisePreview=null; }
+function applyGpsDenoise(race,alsoUpdateDistance){
+  if(!gpsDenoisePreview||gpsDenoisePreview.raceId!==race.id) return;
+  race.route.timedTrackPoints=gpsDenoisePreview.smoothedTimedPoints;
+  race.route.trackPoints=downsampleLatLon(gpsDenoisePreview.smoothedTimedPoints,400);
+  race.route.gpsDenoised=true;
+  if(alsoUpdateDistance) race.route.distanceKm=+gpsDenoisePreview.newDistanceKm.toFixed(2);
+  gpsDenoisePreview=null;
+  race.updatedAt=new Date().toISOString();
+  persist();
+}
+function gpsDenoiseSectionHtml(race){
+  if(!raceIsOpenWaterEligible(race)||!race.route.timedTrackPoints||race.route.timedTrackPoints.length<2) return '';
+  if(race.route.gpsDenoised){
+    return `<p class="empty-hint small">${t('ui.gpsDenoiseApplied','已對這場賽事的 GPS 軌跡套用開放水域降噪。')}</p>`;
+  }
+  const preview=(gpsDenoisePreview&&gpsDenoisePreview.raceId===race.id)?gpsDenoisePreview:null;
+  if(!preview){
+    return `<div class="gps-denoise-row">
+      <button type="button" class="btn-ghost" data-action="start-gps-denoise" data-id="${race.id}">${t('ui.gpsDenoiseStart','套用開放水域 GPS 降噪')}</button>
+      <p class="empty-hint small">${t('ui.gpsDenoiseHint','手錶在開放水域游泳時，手腕每次划手沒入水中就會斷一次 GPS 訊號，單點誤差常見到 10 公尺以上，直接加總容易讓距離虛高。這裡用卡爾曼濾波把軌跡平滑化，套用前會先讓你看降噪前後的距離差異。')}</p>
+    </div>`;
+  }
+  const deltaPct=preview.oldDistanceKm>0?((preview.newDistanceKm-preview.oldDistanceKm)/preview.oldDistanceKm*100):0;
+  return `<div class="gps-denoise-preview">
+    <p class="small">${t('ui.gpsDenoisePreviewTitle','降噪預覽')}</p>
+    <div class="gps-denoise-compare">
+      <span class="mono">${t('ui.gpsDenoiseBefore','降噪前')}：${preview.oldDistanceKm.toFixed(2)} km</span>
+      <span class="mono">${t('ui.gpsDenoiseAfter','降噪後')}：${preview.newDistanceKm.toFixed(2)} km（${deltaPct>=0?'+':''}${deltaPct.toFixed(1)}%）</span>
+    </div>
+    <p class="empty-hint small">${t('ui.gpsDenoiseNote','降噪能大幅壓低 GPS 雜訊，但沒辦法完全還原真實路徑，這個距離仍然是估計值。地圖軌跡一定會更新；賽事的距離欄位要不要一起改成這個數字，由你決定。')}</p>
+    <div class="gps-denoise-actions">
+      <button type="button" class="btn-ghost" data-action="apply-gps-denoise" data-id="${race.id}" data-update-distance="0">${t('ui.gpsDenoiseApplyMapOnly','套用（只更新地圖軌跡）')}</button>
+      <button type="button" class="btn-ghost" data-action="apply-gps-denoise" data-id="${race.id}" data-update-distance="1">${t('ui.gpsDenoiseApplyWithDistance','套用並更新距離為 {km}').replace('{km}',preview.newDistanceKm.toFixed(2))} km</button>
+      <button type="button" class="btn-text-small" data-action="cancel-gps-denoise">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+}
 function summarizeTrackPoints(pts){
   const valid=pts.filter(p=>p.lat!=null&&p.lon!=null);
   if(valid.length<2) throw new Error(t('ui.errNotEnoughPoints','檔案中沒有足夠的座標點'));
@@ -10994,6 +11529,7 @@ function profileHrTabHtml(p){
         ${zones?`<div class="profile-hr-zones">
           ${zones.map(z=>`<div class="profile-hr-zone-row">
             <span class="profile-hr-zone-tag mono" style="background:${HR_ZONE_COLORS[z.zone-1]}">Z${z.zone}</span>
+            ${hrZoneBarsSvg(z.zone,HR_ZONE_COLORS[z.zone-1])}
             <span class="mono">${z.low} – ${z.high} bpm</span>
           </div>`).join('')}
         </div>`:`<p class="empty-hint small">${t('ui.profileHrNeedBoth','填入安靜心率與最大心率後自動計算')}</p>`}
@@ -11202,6 +11738,20 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="download-dossier"]')&&currentRace){ downloadDossierImage(currentRace); logFeatureUse('export_dossier'); }
   if(e.target.closest('[data-action="download-crew-guide"]')&&currentRace){ downloadCrewGuideImage(currentRace); logFeatureUse('export_crew_guide'); }
   if(e.target.closest('[data-action="open-fatigue-mode"]')&&currentRace){ openFatigueMode(); logFeatureUse('open_fatigue_mode'); }
+  if(e.target.closest('[data-action="toggle-fatigue-zone-card"]')){
+    fatigueShowZoneCard=!fatigueShowZoneCard;
+    renderFatigueOverlay();
+  }
+  if(e.target.closest('[data-action="toggle-epp-segments"]')){
+    eppShowSegments=!eppShowSegments;
+    renderDetail();
+  }
+  if(e.target.closest('[data-action="toggle-fatigue-contrast"]')){
+    fatigueHighContrast=!fatigueHighContrast;
+    try{ localStorage.setItem(FATIGUE_CONTRAST_KEY,fatigueHighContrast?'1':'0'); }catch(err){}
+    fatigueModeEl_getter().classList.toggle('fatigue-high-contrast',fatigueHighContrast);
+    renderFatigueOverlay();
+  }
   if(e.target.closest('[data-action="epp-adopt-goal"]')&&currentRace){
     const btn=e.target.closest('[data-action="epp-adopt-goal"]');
     const tier=btn.dataset.tier,seconds=Number(btn.dataset.seconds);
@@ -11225,12 +11775,30 @@ document.addEventListener('click',e=>{
     persist();
     renderDetail();
   }
+  if(e.target.closest('[data-action="start-gps-denoise"]')&&currentRace){
+    startGpsDenoisePreview(currentRace);
+    renderDetail();
+    logFeatureUse('gps_denoise_preview');
+  }
+  if(e.target.closest('[data-action="apply-gps-denoise"]')&&currentRace){
+    const btn=e.target.closest('[data-action="apply-gps-denoise"]');
+    applyGpsDenoise(currentRace,btn.dataset.updateDistance==='1');
+    renderDetail();
+    logFeatureUse('gps_denoise_apply');
+  }
+  if(e.target.closest('[data-action="cancel-gps-denoise"]')){
+    cancelGpsDenoisePreview();
+    renderDetail();
+  }
   const copyPromptBtn=e.target.closest('[data-action="copy-report-prompt"]');
   if(copyPromptBtn){ copyRaceReportPrompt(copyPromptBtn.dataset.id); logFeatureUse('export_report_prompt'); }
   const badgeShareBtn=e.target.closest('[data-action="download-badge-share"]');
   if(badgeShareBtn){ downloadBadgeShareImage(badgeShareBtn.dataset.id); logFeatureUse('export_badge_share'); }
   const yearReviewBtn=e.target.closest('[data-action="download-year-review"]');
-  if(yearReviewBtn){ downloadYearInReviewImage(yearReviewBtn.dataset.year); logFeatureUse('export_year_review'); }
+  if(yearReviewBtn){
+    const yearSelect=document.getElementById('year-in-review-select');
+    if(yearSelect){ downloadYearInReviewImage(yearSelect.value); logFeatureUse('export_year_review'); }
+  }
   if(e.target.closest('[data-action="open-shoe-modal"]')){ openShoeModal(); logFeatureUse('tool_shoe_manager'); }
   if(e.target.closest('[data-action="open-profile-modal"]')){ openProfileModal(); logFeatureUse('tool_profile_panel'); }
   if(e.target.closest('[data-action="open-pacing-modal"]')){ openPacingModal(); logFeatureUse('tool_pacing_calculator'); }
@@ -11384,7 +11952,7 @@ init();
     getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
   import {
-    getFirestore, collection, doc, setDoc, deleteDoc, getDocs, writeBatch, increment
+    getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, writeBatch, increment
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
   import {
     getMessaging, getToken, onMessage
@@ -11440,6 +12008,17 @@ init();
       snap.docs.forEach(d=>{ if(!keepIds.has(d.id)) batch.delete(d.ref); });
       races.forEach(r=>batch.set(doc(racesCol(uid), r.id), r));
       await batch.commit();
+    },
+    // 鞋款、補給品資料庫這兩份清單是全域、跨賽事共用的資料，不像賽事
+    // 那樣一場一份文件，資料量也小很多，直接整包存成 users/{uid}/meta/globalLists
+    // 底下的單一文件，不用比照賽事那套「逐筆文件＋依 updatedAt 判斷
+    // 誰比較新」的複雜合併機制。
+    async fetchGlobalLists(uid){
+      const snap=await getDoc(doc(db,'users',uid,'meta','globalLists'));
+      return snap.exists()?snap.data():null;
+    },
+    async syncGlobalLists(uid, shoes, nutritionDictionary){
+      await setDoc(doc(db,'users',uid,'meta','globalLists'), {shoes, nutritionDictionary, updatedAt:new Date().toISOString()});
     },
     // 功能點擊次數統計：counts 是一次要送出的 {功能代號: 這次要加的次數}，
     // 用 increment() 讓 Firestore 在伺服器端做原子加總，不管多少個訪客
