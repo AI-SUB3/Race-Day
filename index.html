@@ -1273,6 +1273,36 @@
   .global-dropzone-title{color:var(--ink);font-size:22px;margin:0 0 8px;}
   .global-dropzone-hint{color:var(--ink-soft);margin:0;}
 
+  /* ---- 全域指令控制台（Cmd/Ctrl+K）：背景故意跟「動態回顧輪播」一樣
+     用寫死的深色，不跟著淺色/深色主題變動——這是聚焦式的懸浮操作
+     介面，不是一般表單頁面，維持固定的深色調更有「浮在最上層」的
+     視覺重量；控制台本體（.cmdk-frame）才用一般的 --surface，會照
+     淺色/深色主題正常切換。 ---- */
+  .cmdk-overlay{
+    position:fixed;inset:0;z-index:600;background:rgba(10,14,12,0.55);
+    display:flex;align-items:flex-start;justify-content:center;padding:12vh 20px 20px;
+  }
+  .cmdk-overlay[hidden]{display:none;}
+  .cmdk-frame{
+    width:100%;max-width:600px;background:var(--surface);border-radius:14px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;
+    display:flex;flex-direction:column;max-height:70vh;
+  }
+  .cmdk-input{
+    width:100%;border:none;border-bottom:1px solid var(--rule);padding:18px 20px;
+    font-size:17px;font-family:inherit;background:transparent;color:var(--ink);outline:none;
+  }
+  .cmdk-results{overflow-y:auto;padding:6px;}
+  .cmdk-row{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;
+  }
+  .cmdk-row-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+  .cmdk-row-label{flex:1;color:var(--ink);}
+  .cmdk-row-meta{color:var(--stone);font-size:12px;}
+  .cmdk-row.active{background:var(--stamp-bg-gold);}
+  .cmdk-empty{padding:20px;text-align:center;color:var(--stone);font-size:14px;}
+  .cmdk-group-label{padding:8px 12px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--stone);}
+
   /* ---- 動態回顧輪播（Story Mode）：故意用寫死的深色，不跟著淺色/深色
      主題變動，理由跟徽章成就圖卡一樣——這是沉浸式的相片瀏覽畫面，不是
      一般表單頁面。 ---- */
@@ -1514,6 +1544,12 @@
   </div>
 </div>
 <div id="profile-modal" class="modal-overlay" hidden></div>
+<div id="command-palette" class="cmdk-overlay" hidden>
+  <div class="cmdk-frame">
+    <input type="text" id="cmdk-input" class="cmdk-input" autocomplete="off" spellcheck="false" data-i18n-placeholder="ui.cmdkPlaceholder" placeholder="搜尋賽事，或輸入 > 執行動作、# 快速篩選…">
+    <div id="cmdk-results" class="cmdk-results"></div>
+  </div>
+</div>
 <div id="story-mode-overlay" class="story-overlay" hidden></div>
 <div id="fatigue-mode-overlay" class="fatigue-overlay" hidden></div>
 <div id="report-prompt-fallback-modal" class="modal-overlay" hidden></div>
@@ -2018,7 +2054,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.83.0';
+const APP_VERSION='v2.84.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2138,6 +2174,12 @@ const JA={
   'ui.reviewTemplateHint':'何から書けばいいか迷ったら？','ui.reviewTemplateKpt':'KPT振り返りテンプレートを適用',
   'ui.tmplRoadRunning':'ロードランニング標準装備','ui.tmplTrailRunning':'トレイルランニング標準装備（必携装備の参考、実際は大会要項に従うこと）',
   'ui.tmplTriathlon':'トライアスロン標準装備','ui.tmplCycling':'サイクリング標準装備','ui.tmplSwimming':'水泳標準装備',
+  'ui.cmdkPlaceholder':'レースを検索、または「>」でアクション実行、「#」で絞り込み…',
+  'ui.cmdkToggleTheme':'ダークモード切り替え','ui.cmdkNewRace':'レースを追加','ui.cmdkManageShoes':'シューズ管理',
+  'ui.cmdkNutritionDict':'補給食データベース','ui.cmdkOpenProfile':'個人情報を開く','ui.cmdkExportJson':'JSONをエクスポート',
+  'ui.cmdkExportCsv':'CSVをエクスポート（フラット化）','ui.cmdkSampleData':'サンプルデータ','ui.cmdkSyncDiag':'同期診断',
+  'ui.cmdkFilterPb':'自己ベスト (PB)','ui.cmdkFilterDnf':'途中棄権 (DNF)','ui.cmdkFilterDns':'未出走 (DNS)','ui.cmdkFilterUpcoming':'今後のレース',
+  'ui.cmdkNoResults':'一致する結果がありません',
   'ui.loading':'読み込み中…',
   'ui.noMatchingRacesMonth':'今月は条件に一致する大会がありません',
   'ui.selectRaceHint':'上のカレンダーから大会を選ぶか、新しい大会を作成してください。',
@@ -2580,6 +2622,12 @@ const EN={
   'ui.reviewTemplateHint':'Not sure where to start?','ui.reviewTemplateKpt':'Apply KPT retrospective template',
   'ui.tmplRoadRunning':'Road Running Essentials','ui.tmplTrailRunning':'Trail Running Essentials (mandatory-gear reference \u2014 always follow the race\u2019s official rules)',
   'ui.tmplTriathlon':'Triathlon Essentials','ui.tmplCycling':'Cycling Essentials','ui.tmplSwimming':'Swimming Essentials',
+  'ui.cmdkPlaceholder':'Search races, or type > to run an action, # to filter\u2026',
+  'ui.cmdkToggleTheme':'Toggle dark mode','ui.cmdkNewRace':'Add race','ui.cmdkManageShoes':'Manage shoes',
+  'ui.cmdkNutritionDict':'Nutrition dictionary','ui.cmdkOpenProfile':'Open profile','ui.cmdkExportJson':'Export JSON',
+  'ui.cmdkExportCsv':'Export CSV (flattened)','ui.cmdkSampleData':'Sample data','ui.cmdkSyncDiag':'Sync diagnostics',
+  'ui.cmdkFilterPb':'Personal Best (PB)','ui.cmdkFilterDnf':'DNF','ui.cmdkFilterDns':'DNS','ui.cmdkFilterUpcoming':'Upcoming',
+  'ui.cmdkNoResults':'No matching results',
   'ui.loading':'Loading…',
   'ui.noMatchingRacesMonth':'No matching races this month',
   'ui.selectRaceHint':'Select a race from the calendar above, or create a new one.',
@@ -13027,6 +13075,144 @@ document.addEventListener('keydown',e=>{
       if(closeBtn) closeBtn.click();
       return;
     }
+  }
+});
+/* ============================================================
+   全域指令控制台（Cmd/Ctrl+K）：不用滑鼠，鍵盤敲幾個字就能跳到任何
+   一場賽事、或執行幾個最常用的全域動作。三種輸入語法：
+   - 「>」開頭：系統動作（切換深色模式、匯出資料……）
+   - 「#」開頭：快速篩選（個人最佳、未完賽……），列出符合的賽事
+   - 沒有前綴：賽事全文檢索，比對邏輯跟主畫面搜尋框完全一樣（同一
+     套 name／alias／city 字串比對），保持行為一致，不是另外發明
+     一套模糊搜尋演算法。
+   這個 App 累積的功能非常多，這裡刻意只收錄最常用的幾個全域動作，
+   不是把每一個既有功能都塞進來——指令控制台的價值在「快」，選項
+   太多反而找不到，之後有需要可以再擴充這份清單。
+   ============================================================ */
+const CMDK_ACTIONS=[
+  {id:'toggle-theme',icon:'🌓',labelKey:'ui.cmdkToggleTheme',labelFallback:'切換深色模式',keywords:'dark light theme 深色 淺色 主題',run:()=>document.getElementById('btn-theme-toggle').click()},
+  {id:'new-race',icon:'➕',labelKey:'ui.cmdkNewRace',labelFallback:'新增賽事',keywords:'add create new race 建立',run:()=>startCreate()},
+  {id:'manage-shoes',icon:'👟',labelKey:'ui.cmdkManageShoes',labelFallback:'管理鞋款',keywords:'shoe shoes 戰靴 鞋櫃',run:()=>openShoeModal()},
+  {id:'nutrition-dict',icon:'🍬',labelKey:'ui.cmdkNutritionDict',labelFallback:'補給品資料庫',keywords:'nutrition gel 補給 能量膠',run:()=>openNutritionDictModal()},
+  {id:'open-profile',icon:'🙋',labelKey:'ui.cmdkOpenProfile',labelFallback:'建立個人資訊',keywords:'profile heart rate 心率 個人資訊',run:()=>openProfileModal()},
+  {id:'export-json',icon:'💾',labelKey:'ui.cmdkExportJson',labelFallback:'匯出 JSON',keywords:'export backup json 備份',run:()=>document.getElementById('btn-export').click()},
+  {id:'export-csv',icon:'📊',labelKey:'ui.cmdkExportCsv',labelFallback:'匯出 CSV（扁平化）',keywords:'export csv excel',run:()=>document.getElementById('btn-export-csv').click()},
+  {id:'sample-data',icon:'🧪',labelKey:'ui.cmdkSampleData',labelFallback:'範例資料',keywords:'sample demo example 示範',run:()=>document.getElementById('btn-sample-data').click()},
+  {id:'sync-diag',icon:'🔍',labelKey:'ui.cmdkSyncDiag',labelFallback:'同步診斷',keywords:'sync diagnostics 同步 診斷',available:()=>cloudEnabled()&&!!state.user,run:()=>openSyncDiagModal()},
+];
+const CMDK_QUICK_FILTERS=[
+  {key:'pb',labelKey:'ui.cmdkFilterPb',labelFallback:'個人最佳 (PB)',match:r=>r.results&&r.results.isPb},
+  {key:'dnf',labelKey:'ui.cmdkFilterDnf',labelFallback:'未完賽 (DNF)',match:r=>r.status==='dnf'},
+  {key:'dns',labelKey:'ui.cmdkFilterDns',labelFallback:'未起跑 (DNS)',match:r=>r.status==='dns'},
+  {key:'upcoming',labelKey:'ui.cmdkFilterUpcoming',labelFallback:'即將到來',match:r=>isUpcomingRace(r,todayISO())},
+];
+function cmdkComputeResults(query){
+  const trimmed=query.trim();
+  if(trimmed.startsWith('>')){
+    const q=trimmed.slice(1).trim().toLowerCase();
+    return CMDK_ACTIONS.filter(a=>!a.available||a.available())
+      .filter(a=>!q||`${t(a.labelKey,a.labelFallback)} ${a.keywords}`.toLowerCase().includes(q))
+      .map(a=>({type:'action',icon:a.icon,label:t(a.labelKey,a.labelFallback),action:a}));
+  }
+  if(trimmed.startsWith('#')){
+    const rest=trimmed.slice(1).trim();
+    const q=rest.toLowerCase();
+    const filter=CMDK_QUICK_FILTERS.find(f=>q.indexOf(f.key)===0);
+    if(!filter){
+      return CMDK_QUICK_FILTERS.filter(f=>!q||f.key.includes(q)).map(f=>({type:'filter-hint',icon:'#',label:t(f.labelKey,f.labelFallback),filter:f}));
+    }
+    const matches=state.races.filter(r=>!r.deletedAt&&filter.match(r));
+    return matches.map(r=>({type:'race',icon:'🏁',label:r.name||t('ui.unnamedRace','(未命名賽事)'),meta:r.schedule.raceDate||'',race:r}));
+  }
+  const q=trimmed.toLowerCase();
+  if(!q) return [];
+  const matches=state.races.filter(r=>{
+    if(r.deletedAt) return false;
+    const hay=`${r.name} ${r.alias} ${(r.location&&r.location.city)||''}`.toLowerCase();
+    return hay.includes(q);
+  }).slice(0,20);
+  return matches.map(r=>({type:'race',icon:'🏁',label:r.name||t('ui.unnamedRace','(未命名賽事)'),meta:r.schedule.raceDate||'',race:r}));
+}
+function cmdkRenderResults(results){
+  const container=document.getElementById('cmdk-results');
+  if(!results.length){
+    container.innerHTML=`<div class="cmdk-empty">${t('ui.cmdkNoResults','沒有符合的結果')}</div>`;
+    cmdkSelectedIndex=-1;
+    return;
+  }
+  cmdkSelectedIndex=0;
+  container.innerHTML=results.map((r,i)=>`<div class="cmdk-row${i===0?' active':''}" data-index="${i}">
+    <span class="cmdk-row-icon">${r.icon}</span>
+    <span class="cmdk-row-label">${escapeHtml(r.label)}</span>
+    ${r.meta?`<span class="cmdk-row-meta mono">${escapeHtml(r.meta)}</span>`:''}
+  </div>`).join('');
+}
+let cmdkResults=[];
+let cmdkSelectedIndex=-1;
+function cmdkOpen(){
+  document.getElementById('command-palette').hidden=false;
+  const input=document.getElementById('cmdk-input');
+  input.value='';
+  cmdkResults=[];
+  document.getElementById('cmdk-results').innerHTML='';
+  input.focus();
+}
+function cmdkClose(){
+  document.getElementById('command-palette').hidden=true;
+}
+function cmdkUpdateActiveRow(){
+  document.querySelectorAll('#cmdk-results .cmdk-row').forEach((row,i)=>{
+    row.classList.toggle('active',i===cmdkSelectedIndex);
+  });
+  const activeRow=document.querySelector('#cmdk-results .cmdk-row.active');
+  if(activeRow) activeRow.scrollIntoView({block:'nearest'});
+}
+function cmdkExecute(index){
+  const item=cmdkResults[index];
+  if(!item) return;
+  if(item.type==='race'){
+    cmdkClose();
+    selectRace(item.race.id);
+  }else if(item.type==='action'){
+    cmdkClose();
+    item.action.run();
+  }else if(item.type==='filter-hint'){
+    const input=document.getElementById('cmdk-input');
+    input.value='#'+item.filter.key+' ';
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+}
+document.getElementById('cmdk-input').addEventListener('input',e=>{
+  cmdkResults=cmdkComputeResults(e.target.value);
+  cmdkRenderResults(cmdkResults);
+});
+document.getElementById('cmdk-input').addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    if(cmdkResults.length){ cmdkSelectedIndex=(cmdkSelectedIndex+1)%cmdkResults.length; cmdkUpdateActiveRow(); }
+  }else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    if(cmdkResults.length){ cmdkSelectedIndex=(cmdkSelectedIndex-1+cmdkResults.length)%cmdkResults.length; cmdkUpdateActiveRow(); }
+  }else if(e.key==='Enter'){
+    e.preventDefault();
+    cmdkExecute(cmdkSelectedIndex);
+  }
+});
+document.getElementById('cmdk-results').addEventListener('click',e=>{
+  const row=e.target.closest('.cmdk-row');
+  if(!row) return;
+  cmdkExecute(Number(row.dataset.index));
+});
+document.addEventListener('keydown',e=>{
+  const palette=document.getElementById('command-palette');
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){
+    e.preventDefault();
+    if(palette.hidden) cmdkOpen(); else cmdkClose();
+    return;
+  }
+  if(e.key==='Escape'&&!palette.hidden){
+    e.preventDefault();
+    cmdkClose();
   }
 });
 init();
