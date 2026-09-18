@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<script>
+  // 在畫面繪製前就決定好主題，避免深色模式的使用者每次進站都先閃一下淺色版本再切換過去
+  (function(){
+    try{
+      if(localStorage.getItem('race-day-showcase-theme') === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      }
+    }catch(e){}
+  })();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>賽事紀錄 — 正式上線</title>
+<meta name="description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站，正式上線。行事曆管理報名進度、自動查詢天氣與地形、累積成就徽章。免費、開源、不需要帳號。">
+<link rel="canonical" href="https://ai-sub3.github.io/Race-Day/about/">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%221.6%22%20height%3D%2219%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%223%22%20width%3D%2212.0%22%20height%3D%229.6%22%20fill%3D%22%23F5F1E6%22%2F%3E%3Crect%20x%3D%225.00%22%20y%3D%223.00%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%229.80%22%20y%3D%223.00%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%2214.60%22%20y%3D%223.00%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%227.40%22%20y%3D%225.40%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%2212.20%22%20y%3D%225.40%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%225.00%22%20y%3D%227.80%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%229.80%22%20y%3D%227.80%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%2214.60%22%20y%3D%227.80%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%227.40%22%20y%3D%2210.20%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3Crect%20x%3D%2212.20%22%20y%3D%2210.20%22%20width%3D%222.4%22%20height%3D%222.4%22%20fill%3D%22%2316231C%22%2F%3E%3C%2Fsvg%3E">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADHUlEQVR42u3dz0vTYRzAced0is6KwEJNrA6lYQwMFOwgeehWUN0Sim6FePUgeQv0mgr+AyIdgjx06FJURERGRAaFNGeFoYfMcmv+iOoPSPZ4KDb19Tp/+GzoW5/Bw5dF6tobi2AjxX4EiANxIA7EgTgQB+JAHIgDcYA4EAfiQByIA3EgDsSBOBAHiANxIA7EgTgQB+JAHIgDcYA4EAfiQByIA3EgDsSBOBAHO1dJfl9+fSG9cbOVsWg8ljh05MWzl8ElvT3d165cDo51Xe1++nwyOPbq4f3du6pyz3ycm+s4cy64qiWRmJpP+s+BYwVxgDgQB+JAHIgDcSAOxME2UlLIb660tLS5MfzllbFYbOrtu+BYfV3NZrYlU6nSWCz3zPJyejOrqvftLdrKdysFHUf1/urxm8PBscGh4bNdl4JjY6Mjg/3Xg2OJjs7vy+lAZ7W1j+9OBFfde/LowevJrRuHYwVxIA7EgTgQB+JAHIgDcSAO+Eukrr0xjy+f+6GmjhOtnS1twSWZTDY5OxscO36sKRIJv6Xp5MzKymrumXg8frihPrhq/uuX0dvjWzeOgr54W1pc6rsxEBzr7eke6O8LjuXliTfHCj5zIA4QB+JAHIgDcSAOxIE42F4K++KtpfVUS2twyY9sNpn6EBxrbjoa2cTN2/RMajV08VZVFT9YfyC4amFp0cXb/1JRWXHxwvng2ODQ8K07E8GxsdMjJ9vCqf3bJ94cK/jMgThAHIgDcSAOxIE4EAfiYHsp6Iu3qsrKhpq64JK1tfX1tZ/BsbKKWElxNDiWzWR//Q7MRIsj5RXlwVXf0ulP85+3bhwFffG2nMm8eT/tL9ixgjgQB+JAHIgDxIE4EAfiQByIA3EgDsSBOEAciANxIA7EgTgQB+JAHIgDcYA4EAfiQByIA3EgDsSBOBAHiANxIA7EgTgQB+JAHIgDcYA4yC3PX8YT3bPx9x1Foqrd8XEUl5X4HThWEAfiQByIA8SBOBAH4kAciANxIA7EgThAHIgDcSAOxIE4EAfiQByIA8SBOBAH4kAciANxIA7EgTjY2f4AwF+bAqF9b54AAAAASUVORK5CYII=">
+
+<!-- Open Graph / Facebook / LINE / Threads -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-sub3.github.io/Race-Day/about/">
+<meta property="og:title" content="賽事紀錄 — 正式上線">
+<meta property="og:description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站，正式上線。行事曆管理報名進度、自動查詢天氣與地形、累積成就徽章。免費、開源、不需要帳號。">
+<meta property="og:image" content="https://ai-sub3.github.io/Race-Day/about/images/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="zh_TW">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="賽事紀錄 — 正式上線">
+<meta name="twitter:description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。免費、開源、不需要帳號。">
+<meta name="twitter:image" content="https://ai-sub3.github.io/Race-Day/about/images/og-cover.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "賽事紀錄 Race Day",
+  "url": "https://ai-sub3.github.io/Race-Day/",
+  "description": "給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。行事曆管理報名進度、自動查詢天氣與地形、累積成就徽章。免費、開源、不需要帳號。",
+  "applicationCategory": "SportsApplication",
+  "operatingSystem": "Web",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "劉恩龍"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "資料安全嗎？我的賽事紀錄存在哪裡？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "資料預設只存在你自己的瀏覽器裡，不會上傳到任何地方。如果選擇用 Google 帳號登入，才會同步到你自己的帳號，方便跨裝置使用；也可以隨時匯出成 JSON 或 CSV 自行備份。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "需要付費嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不用，整個網站免費、開源，沒有廣告，也不需要建立帳號才能使用。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支援哪些裝置和瀏覽器？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "只要是現代瀏覽器（Chrome、Safari、Edge、Firefox）就能使用，手機、平板、電腦都可以；也能安裝成手機 App 桌面圖示，離線時也能開啟。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "可以匯入我原本的賽事紀錄嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以，支援 Excel 報名紀錄一次匯入，也能匯入 GPX、TCX、FIT 軌跡檔補上路線與海拔資料。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支援哪些語言？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "目前支援繁體中文、日文、英文三種介面語言，隨時可以切換。"
+      }
+    }
+  ]
+}
+</script>
+<style>
+  :root{
+    /* 淺色（預設） */
+    --paper:#E6E9E6; --surface2:#DEE2DC; --surface:#FAFAF8; --ink:#16231C; --ink-soft:#4B564E;
+    --rule:#D8DAD3; --trail:#2E6B49; --contour:#3A5A8C; --flag:#B8451F; --stone:#8B8D82; --gold:#B08D2E;
+    --gold-rgb:176,141,46; --shadow:rgba(30,35,30,0.12);
+  }
+  [data-theme="dark"]{
+    --paper:#0D1013; --surface2:#161B21; --surface:#1E232A; --ink:#EDEEE9; --ink-soft:#9BA3A0;
+    --rule:#2A3038; --trail:#4C9A72; --contour:#7B9FD1; --flag:#E07850; --stone:#6B7178; --gold:#D9B15C;
+    --gold-rgb:217,177,92; --shadow:rgba(0,0,0,0.42);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Noto Sans TC', sans-serif; -webkit-font-smoothing:antialiased; transition:background-color 0.2s ease, color 0.2s ease;}
+  h1,h2{font-family:'LXGW WenKai TC', 'Noto Sans TC', serif; font-weight:700; margin:0;}
+  p{margin:0;}
+  a{color:var(--gold);}
+  a:hover{color:var(--ink);}
+  img{max-width:100%; height:auto; display:block;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .container{max-width:1120px; margin:0 auto; padding-inline:28px;}
+
+  /* ---- 排版共用類別（減少重複的 inline style） ---- */
+  .section-pad{padding-block:92px;}
+  .flex-row{display:flex; align-items:center; gap:14px;}
+  .body-copy{font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px; text-align:justify;}
+  .copy-col{max-width:640px;}
+  .benefit-list{
+    margin:14px 0 0; padding-left:1.3em; font-size:16px; line-height:1.9; color:var(--ink-soft);
+  }
+  .benefit-list li{margin-top:10px; text-align:justify;}
+  .benefit-list li::marker{font-family:'IBM Plex Mono', monospace; font-weight:600; color:var(--gold);}
+  .pill{
+    display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule);
+    border-radius:8px; padding:13px 20px; font-size:14px;
+  }
+  .benefit-flex{display:flex; gap:60px; align-items:center; flex-wrap:wrap;}
+  .proof-link{color:inherit; text-decoration:none; transition:opacity 0.15s ease;}
+  .proof-link:hover{opacity:0.72;}
+
+  /* 流體字級：字重會隨螢幕寬度平滑縮放，取代單一斷點的跳動 */
+  .hero-h1{font-size:clamp(30px, 5vw + 14px, 48px); line-height:1.42; text-wrap:balance;}
+  .sect-h2{font-size:clamp(23px, 2.6vw + 14px, 32px); line-height:1.45; text-wrap:balance;}
+
+  @media (max-width:760px){
+    .section-pad{padding-block:64px;}
+    .proof-row{gap:26px;}
+    .benefit-flex{gap:36px;}
+  }
+  @media (max-width:480px){
+    .container{padding-inline:18px;}
+    .section-pad{padding-block:52px;}
+    .proof-row{gap:20px; justify-content:flex-start;}
+    .pill{padding:11px 16px; font-size:13px;}
+    .body-copy{font-size:15px;}
+    .benefit-list{font-size:15px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition-duration:0.001ms !important; animation-duration:0.001ms !important;}
+  }
+
+  .btn-primary{
+    display:inline-block; background:var(--gold); color:#241C0B; font-weight:700; font-size:17px;
+    padding:16px 32px; border-radius:6px; text-decoration:none;
+    transition:background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 10px 22px rgba(var(--gold-rgb),0.4);}
+  .btn-primary:active{transform:translateY(0); box-shadow:0 4px 10px rgba(var(--gold-rgb),0.32);}
+  .btn-ghost{
+    display:inline-flex; align-items:center; gap:8px; color:var(--ink); font-weight:600; font-size:15px; padding:10px 16px;
+    border-radius:6px; border:1px solid var(--rule); text-decoration:none; background:none; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; transition:border-color 0.15s ease;
+  }
+  .btn-ghost:hover{border-color:var(--ink); color:var(--ink);}
+  .icon-toggle{
+    display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;
+    border-radius:6px; border:1px solid var(--rule); background:none; cursor:pointer; color:var(--ink);
+    transition:border-color 0.15s ease;
+  }
+  .icon-toggle:hover{border-color:var(--ink);}
+  .icon-toggle svg{display:none;}
+  .icon-toggle .icon-moon{display:block;}
+  [data-theme="dark"] .icon-toggle .icon-sun{display:block;}
+  [data-theme="dark"] .icon-toggle .icon-moon{display:none;}
+
+  .frame{border-radius:12px; overflow:hidden; border:1px solid var(--rule); box-shadow:0 22px 56px var(--shadow);}
+  .frame img{transition:opacity 0.22s ease;}
+  .band{border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); background:var(--surface2);}
+  :focus-visible{outline:2px solid var(--gold); outline-offset:3px;}
+
+  .live-badge{
+    display:inline-block; background:var(--trail); color:#F5F1E6; font-family:'IBM Plex Mono', monospace;
+    font-size:11px; font-weight:700; letter-spacing:.07em; padding:3px 9px; border-radius:4px;
+    vertical-align:middle;
+  }
+  .live-frame-wrap{position:relative;}
+  .live-ribbon{
+    position:absolute; top:22px; right:-42px; width:180px; z-index:2;
+    background:var(--trail); color:#F5F1E6; font-family:'IBM Plex Mono', monospace;
+    font-weight:700; font-size:13px; letter-spacing:.1em; text-align:center;
+    padding:7px 0; transform:rotate(45deg); box-shadow:0 3px 10px rgba(0,0,0,.3);
+  }
+  @media (max-width:480px){
+    .live-ribbon{top:16px; right:-46px; width:160px; font-size:11px; padding:6px 0;}
+  }
+
+  .faq-item{border-bottom:1px solid var(--rule);}
+  .faq-item:first-child{border-top:1px solid var(--rule);}
+  .faq-item summary{
+    cursor:pointer; list-style:none; padding-block:18px; font-weight:600; font-size:16px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .faq-item summary::-webkit-details-marker{display:none;}
+  .faq-item summary::after{
+    content:'+'; flex-shrink:0; font-family:'IBM Plex Mono', monospace; font-size:20px; font-weight:400;
+    color:var(--gold); transition:transform 0.15s ease;
+  }
+  .faq-item[open] summary::after{transform:rotate(45deg);}
+  .faq-item p{font-size:15px; line-height:1.8; color:var(--ink-soft); text-align:justify; padding-bottom:18px; margin:0;}
+  @media (max-width:480px){
+    .faq-item summary{font-size:15px;}
+    .faq-item p{font-size:14px;}
+  }
+</style>
+</head>
+<body>
+
+<div style="width:100%; min-height:100vh;">
+
+  <!-- NAV -->
+  <nav style="border-bottom:1px solid var(--rule);">
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; padding-block:20px;">
+      <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+        <span style="font-family:'LXGW WenKai TC',serif; font-weight:700; font-size:22px;">賽事紀錄</span>
+        <span class="mono" style="font-size:12px; color:var(--stone);">Race Day</span>
+        <span class="live-badge">正式上線</span>
+      </div>
+      <div class="flex-row" style="gap:10px;">
+        <button type="button" class="icon-toggle" id="theme-toggle" aria-label="切換淺色／深色主題" aria-pressed="false">
+          <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg>
+          <svg class="icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"></path></svg>
+        </button>
+        <a class="btn-ghost" href="https://ai-sub3.github.io/Race-Day/">前往網站</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- HERO -->
+    <section class="container" style="padding-top:clamp(48px, 10vw, 84px); padding-bottom:clamp(40px, 8vw, 68px);">
+      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:22px; max-width:720px; margin:0 auto;">
+        <h1 class="hero-h1">
+          鳴槍起跑，賽事紀錄正式上線
+        </h1>
+        <p style="font-size:clamp(15px, 1.4vw + 13px, 18px); line-height:1.8; color:var(--ink-soft); max-width:600px; text-align:justify;">
+          一個給路跑、越野跑、鐵人三項愛好者的賽事紀錄網站，
+          經過一段時間的 Beta 測試打磨，正式和大家見面。
+          行事曆管理報名進度、自動查詢天氣與地形、累積成就徽章
+          ——資料留在你的裝置上，隨時可以帶著走。
+        </p>
+        <div class="flex-row" style="gap:16px; flex-wrap:wrap; justify-content:center; margin-top:6px;">
+          <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
+          <span class="mono" style="font-size:13px; color:var(--stone);">不需註冊・可離線使用</span>
+        </div>
+      </div>
+
+      <div class="live-frame-wrap" style="margin-top:52px;">
+        <div class="live-ribbon">正式上線</div>
+        <div class="frame">
+          <img id="img-calendar" src="images/calendar-light.png" data-light="images/calendar-light.png" data-dark="images/calendar.png"
+            alt="賽事紀錄網站的行事曆主畫面，顯示備戰中的賽事卡片與歷年完賽統計" width="1600" height="925">
+        </div>
+      </div>
+    </section>
+
+    <!-- PROOF BAR -->
+    <section class="band">
+      <div class="container proof-row" style="display:flex; flex-wrap:wrap; gap:40px; justify-content:center; padding-block:34px;">
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">95</div><div style="font-size:13px; color:var(--ink-soft);">成就徽章</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--contour)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h10"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">3</div><div style="font-size:13px; color:var(--ink-soft);">語言：繁中・日文・英文</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--trail)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17V7a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"></path><path d="M14 5v5h5"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">Excel／GPX／FIT</div><div style="font-size:13px; color:var(--ink-soft);">一次匯入賽事與路線</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--flag)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 19h14"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">100%</div><div style="font-size:13px; color:var(--ink-soft);">免費・開源・無廣告</div></div>
+        </div>
+
+        <a class="flex-row proof-link" href="https://github.com/AI-SUB3/Race-Day/blob/main/CHANGELOG.md">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">v2.60.1</div><div style="font-size:13px; color:var(--ink-soft);">持續更新・更新日誌</div></div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- BENEFIT 1 -->
+    <section class="container section-pad">
+      <div class="copy-col">
+        <h2 class="sect-h2">報名到抽籤到起跑，狀態一目了然</h2>
+        <p class="body-copy">行事曆檢視每場賽事的報名、抽籤、備戰、完賽狀態</p>
+        <ol class="benefit-list">
+          <li>14 天內的賽事會自動置頂成「備戰卡片」，提醒裝備打包進度與配速策略。</li>
+          <li>手上一份 Excel 報名紀錄？直接匯入，不用一場一場手動輸入。</li>
+          <li>獎牌牆與緊湊表格兩種檢視模式，方便跨年比對。</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- BENEFIT 2 -->
+    <section class="band">
+      <div class="container section-pad">
+        <div class="copy-col">
+          <h2 class="sect-h2">路線還沒跑過，先讓數據幫你心裡有底</h2>
+          <p class="body-copy">路線、天氣預報、配速手環</p>
+          <ol class="benefit-list">
+            <li>匯入 GPX、TCX 或 FIT 軌跡，海拔變化圖自動畫出來，移動滑鼠就能看到任一點的坡度與里程。</li>
+            <li>賽事開始前 7 天，即時天氣預報會自動查詢起跑時刻的氣溫、降雨機率與陣風。</li>
+            <li>搭配配速試算工具，生成一張可以戴在手上的分段配速手環。</li>
+          </ol>
+        </div>
+        <div class="frame" style="margin-top:40px;">
+          <img id="img-elevation" src="images/elevation-light.png" data-light="images/elevation-light.png" data-dark="images/elevation.png"
+            alt="海拔變化圖，移動滑鼠顯示 9 公里處海拔 1055 公尺、瞬時坡度 5.6%" width="2000" height="383" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <!-- BENEFIT 3 -->
+    <section class="container section-pad">
+      <div class="copy-col">
+        <h2 class="sect-h2">完賽之後，數據會自己說話</h2>
+        <p class="body-copy">完賽後，匯入 GPX、TCX 或 FIT 軌跡</p>
+        <ol class="benefit-list">
+          <li>分段配速自動抓出相對快慢，心率依「儲備心率法」換算成跑步、騎車、游泳三種個人化區間。</li>
+          <li>歷史賽事當天的實際天氣會自動回填——氣溫、降雨、風速風向。</li>
+          <li>同一地點近五年歷年同日平均氣溫濕度也一併查好，一整段賽後紀錄不用自己動手查資料。</li>
+        </ol>
+      </div>
+      <div class="frame" style="margin-top:40px; max-width:760px;">
+        <img id="img-weather" src="images/weather-light.png" data-light="images/weather-light.png" data-dark="images/weather.png"
+          alt="賽事氣象分頁，顯示自動查詢到的賽事當天實際天氣，以及自動帶入的風向、風速、降雨機率與氣候狀況欄位" width="2000" height="840" loading="lazy">
+      </div>
+    </section>
+
+    <!-- BENEFIT 4 -->
+    <section class="band">
+      <div class="container section-pad">
+        <div class="benefit-flex">
+          <div style="flex:1; min-width:300px;">
+            <h2 class="sect-h2">累積的不只是里程，還有成就感</h2>
+            <ol class="benefit-list">
+              <li>95 個成就徽章橫跨探索、地形、速度、裝備四大類別，達成當下有開箱慶祝動畫。</li>
+              <li>每個徽章都能下載成一張直式成就圖，自動附上那場賽事的關鍵數據與路線軌跡，直接發到社群限時動態。</li>
+              <li>鞋款也能個別追蹤累積里程，退役前提醒你換一雙。</li>
+            </ol>
+          </div>
+          <div class="frame" style="flex:0 0 auto; width:260px; margin-inline:auto;">
+            <img src="images/badge.png" alt="徽章成就分享圖，顯示「攀山羚羊」徽章、賽事數據與金色路線軌跡" width="1080" height="1920" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BENEFIT 5 -->
+    <section class="container section-pad">
+      <div style="max-width:740px; margin:0 auto; text-align:center;">
+        <h2 class="sect-h2">不綁帳號，但需要同步的時候也在</h2>
+        <ol class="benefit-list">
+          <li>資料預設存在瀏覽器裡，隨時可以匯出成 JSON 或 CSV 備份。</li>
+          <li>想跨裝置同步的話，選用 Google 帳號登入即可。</li>
+          <li>賽事也能一鍵加入 Google 日曆，或匯出 .ics 行事曆提醒。</li>
+          <li>整個網站可以安裝成手機 App 桌面圖示，離線也能開啟。</li>
+        </ol>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; margin-top:44px;">
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 12-4-4m4 4 4-4"></path><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
+          <span>JSON／CSV 備份匯出</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18M8 2v4M16 2v4"></path></svg>
+          <span>Google 日曆／.ics 提醒</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6-1.5A4.5 4.5 0 0 0 6.5 19h11Z"></path></svg>
+          <span>選用 Google 帳號雲端同步</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
+          <span>可安裝為手機 App（PWA）</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="container section-pad">
+      <h2 class="sect-h2" style="text-align:center;">常見問題</h2>
+      <div style="max-width:720px; margin:34px auto 0;">
+        <details class="faq-item">
+          <summary>資料安全嗎？我的賽事紀錄存在哪裡？</summary>
+          <p>資料預設只存在你自己的瀏覽器裡，不會上傳到任何地方。如果選擇用 Google 帳號登入，才會同步到你自己的帳號，方便跨裝置使用；也可以隨時匯出成 JSON 或 CSV 自行備份。</p>
+        </details>
+        <details class="faq-item">
+          <summary>需要付費嗎？</summary>
+          <p>不用，整個網站免費、開源，沒有廣告，也不需要建立帳號才能使用。</p>
+        </details>
+        <details class="faq-item">
+          <summary>支援哪些裝置和瀏覽器？</summary>
+          <p>只要是現代瀏覽器（Chrome、Safari、Edge、Firefox）就能使用，手機、平板、電腦都可以；也能安裝成手機 App 桌面圖示，離線時也能開啟。</p>
+        </details>
+        <details class="faq-item">
+          <summary>可以匯入我原本的賽事紀錄嗎？</summary>
+          <p>可以，支援 Excel 報名紀錄一次匯入，也能匯入 GPX、TCX、FIT 軌跡檔補上路線與海拔資料。</p>
+        </details>
+        <details class="faq-item">
+          <summary>支援哪些語言？</summary>
+          <p>目前支援繁體中文、日文、英文三種介面語言，隨時可以切換。</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- CLOSING CTA -->
+    <section class="band">
+      <div class="container" style="padding-block:clamp(56px, 10vw, 84px); display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
+        <h2 style="font-size:30px; line-height:1.4; max-width:480px;">正式上線，換你來記錄下一場賽事</h2>
+        <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
+        <span class="mono" style="font-size:13px; color:var(--stone);">github.com/AI-SUB3/Race-Day</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="container" style="padding-block:26px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <span class="mono" style="font-size:12px; color:var(--stone);">© 2026 劉恩龍 LIU EN LUNG</span>
+    <span style="font-size:13px; color:var(--stone);">賽事紀錄・從報名到終點的完整紀錄</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'race-day-showcase-theme';
+  var toggleImgs = ['img-calendar','img-elevation','img-weather'];
+  var btn = document.getElementById('theme-toggle');
+
+  function applyTheme(theme, animate){
+    if(theme === 'dark'){
+      document.documentElement.setAttribute('data-theme','dark');
+    }else{
+      document.documentElement.removeAttribute('data-theme');
+    }
+    if(btn){ btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false'); }
+    toggleImgs.forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      var next = theme === 'dark' ? el.getAttribute('data-dark') : el.getAttribute('data-light');
+      if(!next || el.getAttribute('src') === next) return;
+      if(animate){
+        // 淡出、換圖、淡入，讓切換主題時圖片不是瞬間跳換
+        el.style.opacity = '0';
+        setTimeout(function(){
+          el.setAttribute('src', next);
+          requestAnimationFrame(function(){ el.style.opacity = '1'; });
+        }, 180);
+      }else{
+        el.setAttribute('src', next);
+      }
+    });
+  }
+
+  var saved = null;
+  try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
+  // 預設一律先顯示淺色版本，不管裝置本身的系統色彩偏好設定是什麼；
+  // 只有使用者自己在這個頁面上點過切換按鈕、留下記錄，回來的時候才會
+  // 照他上次選的來顯示。第一次載入不需要淡入淡出動畫，直接顯示正確
+  // 版本即可，animate 傳 false。
+  applyTheme(saved === 'dark' ? 'dark' : 'light', false);
+
+  if(btn){
+    btn.addEventListener('click', function(){
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      var next = isDark ? 'light' : 'dark';
+      applyTheme(next, true);
+      try{ localStorage.setItem(STORAGE_KEY, next); }catch(e){}
+    });
+  }
+})();
+</script>
+</body>
+</html>

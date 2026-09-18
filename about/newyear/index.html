@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<script>
+  // 在畫面繪製前就決定好主題，避免深色模式的使用者每次進站都先閃一下淺色版本再切換過去
+  (function(){
+    try{
+      if(localStorage.getItem('race-day-showcase-theme') === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      }
+    }catch(e){}
+  })();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>賽事紀錄 — 跨年特別版・新賽季倒數開始</title>
+<meta name="description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。跨年特別版，101 煙火倒數的那一刻，把新一年的報名進度、路線、天氣、成就徽章通通安排好。免費、開源、不需要帳號。">
+<link rel="canonical" href="https://ai-sub3.github.io/Race-Day/about/newyear/">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cline%20x1%3D%2212%22%20y1%3D%2212%22%20x2%3D%2221.00%22%20y2%3D%2212.00%22%20stroke%3D%22%23D9B15C%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2212%22%20x2%3D%2218.36%22%20y2%3D%2218.36%22%20stroke%3D%22%23D9B15C%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2212%22%20x2%3D%2212.00%22%20y2%3D%2221.00%22%20stroke%3D%22%23D9B15C%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2212%22%20x2%3D%225.64%22%20y2%3D%2218.36%22%20stroke%3D%22%23D9B15C%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2212%22%20x2%3D%223.00%22%20y2%3D%2212.00%22%20stroke%3D%22%23D9B15C%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2212%22%20x2%3D%225.64%22%20y2%3D%225.64%22%20stroke%3D%22%23D9B15C%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2212%22%20x2%3D%2212.00%22%20y2%3D%223.00%22%20stroke%3D%22%23D9B15C%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cline%20x1%3D%2212%22%20y1%3D%2212%22%20x2%3D%2218.36%22%20y2%3D%225.64%22%20stroke%3D%22%23D9B15C%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2221.00%22%20cy%3D%2212.00%22%20r%3D%221.3%22%20fill%3D%22%23D9B15C%22%2F%3E%3Ccircle%20cx%3D%2218.36%22%20cy%3D%2218.36%22%20r%3D%221.3%22%20fill%3D%22%23D9B15C%22%2F%3E%3Ccircle%20cx%3D%2212.00%22%20cy%3D%2221.00%22%20r%3D%221.3%22%20fill%3D%22%23D9B15C%22%2F%3E%3Ccircle%20cx%3D%225.64%22%20cy%3D%2218.36%22%20r%3D%221.3%22%20fill%3D%22%23D9B15C%22%2F%3E%3Ccircle%20cx%3D%223.00%22%20cy%3D%2212.00%22%20r%3D%221.3%22%20fill%3D%22%23D9B15C%22%2F%3E%3Ccircle%20cx%3D%225.64%22%20cy%3D%225.64%22%20r%3D%221.3%22%20fill%3D%22%23D9B15C%22%2F%3E%3Ccircle%20cx%3D%2212.00%22%20cy%3D%223.00%22%20r%3D%221.3%22%20fill%3D%22%23D9B15C%22%2F%3E%3Ccircle%20cx%3D%2218.36%22%20cy%3D%225.64%22%20r%3D%221.3%22%20fill%3D%22%23D9B15C%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%221.6%22%20fill%3D%22%23D9B15C%22%2F%3E%3C%2Fsvg%3E">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAAFlklEQVR42u2dO24UQRCG261NkRBcxYlTAktcAt/AEgGnILDEDUDiDJYcOHWyZ0EcwYGlYdl51fZ099Tj+zOv2zM9U5+rql+1V+/ef0wITSnzChBwIOBAwIGAAwEHAg4EHAg4EHAg4EAIOBBwIOBAwIGAAwEHAg4EHAg4EHAgBBxoBziOtzfH25t27ZFVOAYzC+19aXtkFY4zA6/a+9L2iJwDeYTj+ull4cft7ZFtz3Fq4IvCCmQo1KHp1Y+3N5f6j710/Pn5X5fuHiGjCRzXTy+S1FJP+nmKxeknINIkIZUHl93dxpgMya+Ao224wWnHhUPiPDS7DZxHW88xxwduAzguQAdFhGPsPHAbIeAoWE0d2kvcRofV2tXBavDRbC4mQ5hAlIUPVms16Kqg1GR/gzVNUOaGJEyCsSpLQKkKR+eBBuOavXQoNthbcBGmlgUml18f6YKjg9nAwn/OMbdpg2GIZ8+xfVwzt9sjztYK5U966HanNw6Wd3vE2Vph4klzH7dx6iFmF+TCbK2w8qS5Axm1WiJvCenkuGP8SZytFYaetAkckm3ljFwieg4sDRwiMpYnsv777e+/GMMzHMXbO4R8OEg7JI+gZzSb/b1cOq8Rjj5nZY3yIey250mwwcBCS5+1v757lLwdc3wIo4m2ieAr5V86vPBaa73KyVtUtFOHRwiacyy8PhP+wy4ZNhJSu3yYJsPMaMUiH9bJsDSUtcWHAzKSrXkOK3z4ICOZmwRrwcfkNYuv5oaMZPHcimb/4YmMZPRQk04+nJGR7J5408aHPzKS6eOQevhwSUayflZWAx9eyUgODlKrzU8dHKfwcMp+Rz58l29wUoJhFz7cF/bwU5+jMx8RSr64Kt7SjY8g9Um9VfbpwIfj4YlzOFrzEYeM5LUmWCM+QpGRHBeMq85HNDKS72qCFfkISEZyX2qyCh8xyUgR6pBu5CMsGSlIkdpiPiKTkfQfaqqoijNXQeobBypvXcuicSpf9/AcqgoqbvQf+/a/85tsC4fO1am6+9T37XPTLuVdbGBxG45CMlq/yYO5f186bD4h5Rt7HVDLl/Eg4EDAgQzAwXekKR984TnQJkWcBCvL8HVO3DXtVbjp82RzhnSXNxloVbbKrECoXCpDRucrAIdPMqLxkSFjLlJYr48LHK3IgI8QcGzcBxqZjwwZ8BERjop7x2PykSEDPmLB0ei8STQ+MmTARxQ4OpxRi8NH9oRFt9OLQfjI7h1GarNaFoGPDBnw4RaO5VDSeoXdNx/ZMRl9+uCYjwwZ8OENDm1lVVzykSEDPvzAobkUkzM+MmTo5+P+4fn+4bluS29wWCnfVpePwdirVpe39AaHrcJ+tfg4M/OC1eUtvcFhseSjg/wjQ4ZmPn58/SS811lL+R8ahsN6mdjqfMzFi9PPq5CRdqwJVgaELTKGrs49kfDs65uxhWlELTLUeY7lPRkWyZB3ePXZB6uPKRk+qUiGLjiEbtboUWZht1XlqtnlK/ba+Unn0chtKILDZTQpji94DlTBebRzG0pHK5H168+3lFJKIh8pX3ApowfPoZCMFauPzbxg+C0LLorKPu21T3ju1u3uOHm7gYw+UQnPgbwkpAv/qc7KtE0+zpcP31W5jaSzmmD/0pSdw8rCk0qSx8nsYTXtKEhID1b+sVxq/KQtRqTF1yTnMKa51deKuwOBAwGHd7fR1HkAh/mA0o4P4ODr6EwNZfWQoWTcdOYPJkcfLbYJ4jksRZN2fwIcFweU3SPO2MxCrxDo3ApiKIvSsp9YcBsRz62gwcyr9pa3ZLTiZ7RCWEHAoUxxNpEQVurEF7AADkRYQcCBgAMBBwIOBBwIOBBwIOBAwIEQcCDgQMCBgAMBBwIOBBwIOBBwIOBACDgQcCDgQMCBgAMBBwIOBBzIqV4B5EseWUV81PIAAAAASUVORK5CYII=">
+
+<!-- Open Graph / Facebook / LINE / Threads -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-sub3.github.io/Race-Day/about/newyear/">
+<meta property="og:title" content="賽事紀錄 — 跨年特別版・新賽季倒數開始">
+<meta property="og:description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。跨年特別版，101 煙火倒數的那一刻，把新一年的報名進度、路線、天氣、成就徽章通通安排好。免費、開源、不需要帳號。">
+<meta property="og:image" content="https://ai-sub3.github.io/Race-Day/about/images/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="zh_TW">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="賽事紀錄 — 跨年特別版・新賽季倒數開始">
+<meta name="twitter:description" content="給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。免費、開源、不需要帳號。">
+<meta name="twitter:image" content="https://ai-sub3.github.io/Race-Day/about/images/og-cover.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "賽事紀錄 Race Day",
+  "url": "https://ai-sub3.github.io/Race-Day/",
+  "description": "給路跑、越野跑、鐵人三項愛好者的個人賽事管理網站。行事曆管理報名進度、自動查詢天氣與地形、累積成就徽章。免費、開源、不需要帳號。",
+  "applicationCategory": "SportsApplication",
+  "operatingSystem": "Web",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "劉恩龍"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "資料安全嗎？我的賽事紀錄存在哪裡？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "資料預設只存在你自己的瀏覽器裡，不會上傳到任何地方。如果選擇用 Google 帳號登入，才會同步到你自己的帳號，方便跨裝置使用；也可以隨時匯出成 JSON 或 CSV 自行備份。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "需要付費嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不用，整個網站免費、開源，沒有廣告，也不需要建立帳號才能使用。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支援哪些裝置和瀏覽器？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "只要是現代瀏覽器（Chrome、Safari、Edge、Firefox）就能使用，手機、平板、電腦都可以；也能安裝成手機 App 桌面圖示，離線時也能開啟。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "可以匯入我原本的賽事紀錄嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以，支援 Excel 報名紀錄一次匯入，也能匯入 GPX、TCX、FIT 軌跡檔補上路線與海拔資料。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支援哪些語言？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "目前支援繁體中文、日文、英文三種介面語言，隨時可以切換。"
+      }
+    }
+  ]
+}
+</script>
+<style>
+  :root{
+    /* 淺色（預設） */
+    --paper:#E6E9E6; --surface2:#DEE2DC; --surface:#FAFAF8; --ink:#16231C; --ink-soft:#4B564E;
+    --rule:#D8DAD3; --trail:#2E6B49; --contour:#3A5A8C; --flag:#B8451F; --stone:#8B8D82; --gold:#B08D2E;
+    --gold-rgb:176,141,46; --shadow:rgba(30,35,30,0.12);
+  }
+  [data-theme="dark"]{
+    --paper:#0D1013; --surface2:#161B21; --surface:#1E232A; --ink:#EDEEE9; --ink-soft:#9BA3A0;
+    --rule:#2A3038; --trail:#4C9A72; --contour:#7B9FD1; --flag:#E07850; --stone:#6B7178; --gold:#D9B15C;
+    --gold-rgb:217,177,92; --shadow:rgba(0,0,0,0.42);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Noto Sans TC', sans-serif; -webkit-font-smoothing:antialiased; transition:background-color 0.2s ease, color 0.2s ease;}
+  h1,h2{font-family:'LXGW WenKai TC', 'Noto Sans TC', serif; font-weight:700; margin:0;}
+  p{margin:0;}
+  a{color:var(--gold);}
+  a:hover{color:var(--ink);}
+  img{max-width:100%; height:auto; display:block;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .container{max-width:1120px; margin:0 auto; padding-inline:28px;}
+
+  /* ---- 排版共用類別（減少重複的 inline style） ---- */
+  .section-pad{padding-block:92px;}
+  .flex-row{display:flex; align-items:center; gap:14px;}
+  .body-copy{font-size:16px; line-height:1.9; color:var(--ink-soft); margin-top:18px; text-align:justify;}
+  .copy-col{max-width:640px;}
+  .benefit-list{
+    margin:14px 0 0; padding-left:1.3em; font-size:16px; line-height:1.9; color:var(--ink-soft);
+  }
+  .benefit-list li{margin-top:10px; text-align:justify;}
+  .benefit-list li::marker{font-family:'IBM Plex Mono', monospace; font-weight:600; color:var(--gold);}
+  .pill{
+    display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule);
+    border-radius:8px; padding:13px 20px; font-size:14px;
+  }
+  .benefit-flex{display:flex; gap:60px; align-items:center; flex-wrap:wrap;}
+  .proof-link{color:inherit; text-decoration:none; transition:opacity 0.15s ease;}
+  .proof-link:hover{opacity:0.72;}
+
+  /* 流體字級：字重會隨螢幕寬度平滑縮放，取代單一斷點的跳動 */
+  .hero-h1{font-size:clamp(30px, 5vw + 14px, 48px); line-height:1.42; text-wrap:balance;}
+  .sect-h2{font-size:clamp(23px, 2.6vw + 14px, 32px); line-height:1.45; text-wrap:balance;}
+
+  @media (max-width:760px){
+    .section-pad{padding-block:64px;}
+    .proof-row{gap:26px;}
+    .benefit-flex{gap:36px;}
+  }
+  @media (max-width:480px){
+    .container{padding-inline:18px;}
+    .section-pad{padding-block:52px;}
+    .proof-row{gap:20px; justify-content:flex-start;}
+    .pill{padding:11px 16px; font-size:13px;}
+    .body-copy{font-size:15px;}
+    .benefit-list{font-size:15px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition-duration:0.001ms !important; animation-duration:0.001ms !important;}
+  }
+
+  .btn-primary{
+    display:inline-block; background:var(--gold); color:#241C0B; font-weight:700; font-size:17px;
+    padding:16px 32px; border-radius:6px; text-decoration:none;
+    transition:background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 10px 22px rgba(var(--gold-rgb),0.4);}
+  .btn-primary:active{transform:translateY(0); box-shadow:0 4px 10px rgba(var(--gold-rgb),0.32);}
+  .btn-ghost{
+    display:inline-flex; align-items:center; gap:8px; color:var(--ink); font-weight:600; font-size:15px; padding:10px 16px;
+    border-radius:6px; border:1px solid var(--rule); text-decoration:none; background:none; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; transition:border-color 0.15s ease;
+  }
+  .btn-ghost:hover{border-color:var(--ink); color:var(--ink);}
+  .icon-toggle{
+    display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;
+    border-radius:6px; border:1px solid var(--rule); background:none; cursor:pointer; color:var(--ink);
+    transition:border-color 0.15s ease;
+  }
+  .icon-toggle:hover{border-color:var(--ink);}
+  .icon-toggle svg{display:none;}
+  .icon-toggle .icon-moon{display:block;}
+  [data-theme="dark"] .icon-toggle .icon-sun{display:block;}
+  [data-theme="dark"] .icon-toggle .icon-moon{display:none;}
+
+  .frame{border-radius:12px; overflow:hidden; border:1px solid var(--rule); box-shadow:0 22px 56px var(--shadow);}
+  .frame img{transition:opacity 0.22s ease;}
+  .band{border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); background:var(--surface2);}
+  :focus-visible{outline:2px solid var(--gold); outline-offset:3px;}
+
+  .nye-scene{position:relative; width:100%; line-height:0; background:#0D1013;}
+  .nye-scene svg{display:block; width:100%; height:auto;}
+  .nye-caption{
+    position:absolute; left:0; right:0; bottom:14px; text-align:center;
+    color:#F5F1E6; font-size:14px; font-weight:600; letter-spacing:.02em;
+    text-shadow:0 1px 8px rgba(0,0,0,.7); padding-inline:16px;
+  }
+  @media (max-width:600px){
+    .nye-caption{font-size:12px; bottom:8px;}
+  }
+
+  .faq-item{border-bottom:1px solid var(--rule);}
+  .faq-item:first-child{border-top:1px solid var(--rule);}
+  .faq-item summary{
+    cursor:pointer; list-style:none; padding-block:18px; font-weight:600; font-size:16px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .faq-item summary::-webkit-details-marker{display:none;}
+  .faq-item summary::after{
+    content:'+'; flex-shrink:0; font-family:'IBM Plex Mono', monospace; font-size:20px; font-weight:400;
+    color:var(--gold); transition:transform 0.15s ease;
+  }
+  .faq-item[open] summary::after{transform:rotate(45deg);}
+  .faq-item p{font-size:15px; line-height:1.8; color:var(--ink-soft); text-align:justify; padding-bottom:18px; margin:0;}
+  @media (max-width:480px){
+    .faq-item summary{font-size:15px;}
+    .faq-item p{font-size:14px;}
+  }
+</style>
+</head>
+<body>
+
+<div style="width:100%; min-height:100vh;">
+
+  <!-- NAV -->
+  <nav style="border-bottom:1px solid var(--rule);">
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; padding-block:20px;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <span style="font-family:'LXGW WenKai TC',serif; font-weight:700; font-size:22px;">賽事紀錄 🎆</span>
+        <span class="mono" style="font-size:12px; color:var(--stone);">Race Day</span>
+      </div>
+      <div class="flex-row" style="gap:10px;">
+        <button type="button" class="icon-toggle" id="theme-toggle" aria-label="切換淺色／深色主題" aria-pressed="false">
+          <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg>
+          <svg class="icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"></path></svg>
+        </button>
+        <a class="btn-ghost" href="https://ai-sub3.github.io/Race-Day/">前往網站</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="nye-scene">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B1524"/>
+      <stop offset="1" stop-color="#0D1013"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="260" fill="url(#sky)"/>
+  <circle cx="407.1" cy="78.4" r="1.52" fill="#EDEEE9" opacity="0.58"/><circle cx="457.1" cy="82.2" r="0.78" fill="#EDEEE9" opacity="0.61"/><circle cx="566.9" cy="111.0" r="0.69" fill="#EDEEE9" opacity="0.48"/><circle cx="81.6" cy="113.4" r="1.29" fill="#EDEEE9" opacity="0.33"/><circle cx="884.0" cy="135.1" r="1.25" fill="#EDEEE9" opacity="0.67"/><circle cx="141.7" cy="2.1" r="1.13" fill="#EDEEE9" opacity="0.34"/><circle cx="171.2" cy="33.9" r="0.63" fill="#EDEEE9" opacity="0.58"/><circle cx="396.5" cy="117.9" r="1.12" fill="#EDEEE9" opacity="0.68"/><circle cx="449.8" cy="92.7" r="1.06" fill="#EDEEE9" opacity="0.47"/><circle cx="897.9" cy="139.4" r="1.44" fill="#EDEEE9" opacity="0.72"/><circle cx="283.7" cy="32.2" r="0.89" fill="#EDEEE9" opacity="0.34"/><circle cx="689.7" cy="56.1" r="1.45" fill="#EDEEE9" opacity="0.53"/><circle cx="862.2" cy="118.6" r="0.60" fill="#EDEEE9" opacity="0.43"/><circle cx="819.2" cy="65.8" r="1.58" fill="#EDEEE9" opacity="0.54"/><circle cx="65.7" cy="88.1" r="1.38" fill="#EDEEE9" opacity="0.46"/><circle cx="78.4" cy="46.6" r="1.56" fill="#EDEEE9" opacity="0.75"/><circle cx="106.2" cy="34.5" r="0.70" fill="#EDEEE9" opacity="0.34"/><circle cx="717.3" cy="24.9" r="1.16" fill="#EDEEE9" opacity="0.57"/><circle cx="171.6" cy="102.5" r="0.73" fill="#EDEEE9" opacity="0.69"/><circle cx="104.9" cy="58.9" r="0.81" fill="#EDEEE9" opacity="0.46"/><circle cx="873.8" cy="112.5" r="0.90" fill="#EDEEE9" opacity="0.83"/><circle cx="189.6" cy="55.2" r="1.45" fill="#EDEEE9" opacity="0.69"/><circle cx="90.3" cy="138.5" r="0.81" fill="#EDEEE9" opacity="0.45"/><circle cx="695.4" cy="46.1" r="0.90" fill="#EDEEE9" opacity="0.34"/><circle cx="81.1" cy="81.6" r="0.84" fill="#EDEEE9" opacity="0.66"/><circle cx="334.5" cy="63.4" r="1.56" fill="#EDEEE9" opacity="0.59"/><circle cx="517.1" cy="121.3" r="0.78" fill="#EDEEE9" opacity="0.39"/><circle cx="817.6" cy="114.5" r="0.85" fill="#EDEEE9" opacity="0.41"/><circle cx="665.5" cy="131.7" r="0.80" fill="#EDEEE9" opacity="0.87"/><circle cx="794.0" cy="84.5" r="1.02" fill="#EDEEE9" opacity="0.36"/><circle cx="34.8" cy="134.8" r="0.84" fill="#EDEEE9" opacity="0.72"/><circle cx="231.3" cy="115.3" r="1.20" fill="#EDEEE9" opacity="0.48"/><circle cx="157.9" cy="100.8" r="0.67" fill="#EDEEE9" opacity="0.44"/><circle cx="503.4" cy="119.3" r="1.21" fill="#EDEEE9" opacity="0.47"/><circle cx="825.6" cy="28.6" r="0.62" fill="#EDEEE9" opacity="0.46"/>
+  <path d="M250,250 Q245,175 250,95" stroke="#D9564C" stroke-width="1.4" fill="none" opacity="0.55"/><path d="M780,250 Q775,180 780,105" stroke="#D9B15C" stroke-width="1.4" fill="none" opacity="0.55"/>
+  <circle cx="120.0" cy="55.0" r="17.0" fill="#D9B15C" opacity="0.10"/>
+  <line x1="120.0" y1="55.0" x2="157.4" y2="51.7" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="144.3" y2="75.1" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="130.4" y2="86.8" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="107.3" y2="89.7" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="98.2" y2="74.4" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="86.8" y2="52.3" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="97.7" y2="36.6" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="108.3" y2="20.7" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="129.5" y2="17.6" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <line x1="120.0" y1="55.0" x2="145.2" y2="40.2" stroke="#D9B15C" stroke-width="1.53" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="157.4" cy="51.7" r="2.04" fill="#D9B15C"/>
+  <circle cx="144.3" cy="75.1" r="2.04" fill="#D9B15C"/>
+  <circle cx="130.4" cy="86.8" r="2.04" fill="#D9B15C"/>
+  <circle cx="107.3" cy="89.7" r="2.04" fill="#D9B15C"/>
+  <circle cx="98.2" cy="74.4" r="2.04" fill="#D9B15C"/>
+  <circle cx="86.8" cy="52.3" r="2.04" fill="#D9B15C"/>
+  <circle cx="97.7" cy="36.6" r="2.04" fill="#D9B15C"/>
+  <circle cx="108.3" cy="20.7" r="2.04" fill="#D9B15C"/>
+  <circle cx="129.5" cy="17.6" r="2.04" fill="#D9B15C"/>
+  <circle cx="145.2" cy="40.2" r="2.04" fill="#D9B15C"/>
+  <circle cx="120.0" cy="55.0" r="3.06" fill="#D9B15C"/><circle cx="250.0" cy="95.0" r="12.0" fill="#D9564C" opacity="0.10"/>
+  <line x1="250.0" y1="95.0" x2="277.1" y2="98.0" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="268.2" y2="105.5" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="255.9" y2="120.0" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="242.1" y2="116.2" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="229.6" y2="109.0" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="228.5" y2="94.6" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="231.0" y2="81.7" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="242.9" y2="68.4" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="260.0" y2="72.8" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="250.0" y1="95.0" x2="267.9" y2="81.6" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="277.1" cy="98.0" r="1.44" fill="#D9564C"/>
+  <circle cx="268.2" cy="105.5" r="1.44" fill="#D9564C"/>
+  <circle cx="255.9" cy="120.0" r="1.44" fill="#D9564C"/>
+  <circle cx="242.1" cy="116.2" r="1.44" fill="#D9564C"/>
+  <circle cx="229.6" cy="109.0" r="1.44" fill="#D9564C"/>
+  <circle cx="228.5" cy="94.6" r="1.44" fill="#D9564C"/>
+  <circle cx="231.0" cy="81.7" r="1.44" fill="#D9564C"/>
+  <circle cx="242.9" cy="68.4" r="1.44" fill="#D9564C"/>
+  <circle cx="260.0" cy="72.8" r="1.44" fill="#D9564C"/>
+  <circle cx="267.9" cy="81.6" r="1.44" fill="#D9564C"/>
+  <circle cx="250.0" cy="95.0" r="2.16" fill="#D9564C"/><circle cx="555.0" cy="22.0" r="16.0" fill="#D9B15C" opacity="0.10"/>
+  <line x1="555.0" y1="22.0" x2="583.6" y2="20.8" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="577.0" y2="39.2" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="564.2" y2="51.3" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="548.4" y2="53.4" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="531.8" y2="43.1" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="527.1" y2="24.9" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="526.2" y2="1.9" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="543.5" y2="-5.0" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="567.3" y2="-12.2" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <line x1="555.0" y1="22.0" x2="580.4" y2="4.2" stroke="#D9B15C" stroke-width="1.44" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="583.6" cy="20.8" r="1.92" fill="#D9B15C"/>
+  <circle cx="577.0" cy="39.2" r="1.92" fill="#D9B15C"/>
+  <circle cx="564.2" cy="51.3" r="1.92" fill="#D9B15C"/>
+  <circle cx="548.4" cy="53.4" r="1.92" fill="#D9B15C"/>
+  <circle cx="531.8" cy="43.1" r="1.92" fill="#D9B15C"/>
+  <circle cx="527.1" cy="24.9" r="1.92" fill="#D9B15C"/>
+  <circle cx="526.2" cy="1.9" r="1.92" fill="#D9B15C"/>
+  <circle cx="543.5" cy="-5.0" r="1.92" fill="#D9B15C"/>
+  <circle cx="567.3" cy="-12.2" r="1.92" fill="#D9B15C"/>
+  <circle cx="580.4" cy="4.2" r="1.92" fill="#D9B15C"/>
+  <circle cx="555.0" cy="22.0" r="2.88" fill="#D9B15C"/><circle cx="660.0" cy="65.0" r="11.0" fill="#7B9FD1" opacity="0.10"/>
+  <line x1="660.0" y1="65.0" x2="682.2" y2="63.6" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="678.8" y2="77.8" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="665.4" y2="83.4" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="655.3" y2="88.8" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="644.3" y2="77.8" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="638.4" y2="62.4" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="643.4" y2="50.8" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="654.5" y2="46.1" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="668.3" y2="42.0" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="660.0" y1="65.0" x2="679.2" y2="51.2" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="682.2" cy="63.6" r="1.40" fill="#7B9FD1"/>
+  <circle cx="678.8" cy="77.8" r="1.40" fill="#7B9FD1"/>
+  <circle cx="665.4" cy="83.4" r="1.40" fill="#7B9FD1"/>
+  <circle cx="655.3" cy="88.8" r="1.40" fill="#7B9FD1"/>
+  <circle cx="644.3" cy="77.8" r="1.40" fill="#7B9FD1"/>
+  <circle cx="638.4" cy="62.4" r="1.40" fill="#7B9FD1"/>
+  <circle cx="643.4" cy="50.8" r="1.40" fill="#7B9FD1"/>
+  <circle cx="654.5" cy="46.1" r="1.40" fill="#7B9FD1"/>
+  <circle cx="668.3" cy="42.0" r="1.40" fill="#7B9FD1"/>
+  <circle cx="679.2" cy="51.2" r="1.40" fill="#7B9FD1"/>
+  <circle cx="660.0" cy="65.0" r="2.00" fill="#7B9FD1"/><circle cx="780.0" cy="105.0" r="10.0" fill="#D9B15C" opacity="0.10"/>
+  <line x1="780.0" y1="105.0" x2="797.6" y2="103.9" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="794.8" y2="115.2" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="787.9" y2="122.7" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="771.2" y2="125.0" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="764.5" y2="114.8" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="761.3" y2="104.8" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="765.0" y2="95.8" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="771.6" y2="84.1" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="788.4" y2="84.8" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="780.0" y1="105.0" x2="795.4" y2="95.4" stroke="#D9B15C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="797.6" cy="103.9" r="1.40" fill="#D9B15C"/>
+  <circle cx="794.8" cy="115.2" r="1.40" fill="#D9B15C"/>
+  <circle cx="787.9" cy="122.7" r="1.40" fill="#D9B15C"/>
+  <circle cx="771.2" cy="125.0" r="1.40" fill="#D9B15C"/>
+  <circle cx="764.5" cy="114.8" r="1.40" fill="#D9B15C"/>
+  <circle cx="761.3" cy="104.8" r="1.40" fill="#D9B15C"/>
+  <circle cx="765.0" cy="95.8" r="1.40" fill="#D9B15C"/>
+  <circle cx="771.6" cy="84.1" r="1.40" fill="#D9B15C"/>
+  <circle cx="788.4" cy="84.8" r="1.40" fill="#D9B15C"/>
+  <circle cx="795.4" cy="95.4" r="1.40" fill="#D9B15C"/>
+  <circle cx="780.0" cy="105.0" r="2.00" fill="#D9B15C"/><circle cx="410.0" cy="45.0" r="9.0" fill="#D9564C" opacity="0.10"/>
+  <line x1="410.0" y1="45.0" x2="429.3" y2="45.6" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="425.6" y2="58.1" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="415.1" y2="64.6" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="406.4" y2="62.5" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="393.7" y2="54.4" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="394.2" y2="43.5" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="396.5" y2="35.3" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="404.5" y2="27.4" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="413.2" y2="28.8" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="410.0" y1="45.0" x2="425.7" y2="32.2" stroke="#D9564C" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="429.3" cy="45.6" r="1.40" fill="#D9564C"/>
+  <circle cx="425.6" cy="58.1" r="1.40" fill="#D9564C"/>
+  <circle cx="415.1" cy="64.6" r="1.40" fill="#D9564C"/>
+  <circle cx="406.4" cy="62.5" r="1.40" fill="#D9564C"/>
+  <circle cx="393.7" cy="54.4" r="1.40" fill="#D9564C"/>
+  <circle cx="394.2" cy="43.5" r="1.40" fill="#D9564C"/>
+  <circle cx="396.5" cy="35.3" r="1.40" fill="#D9564C"/>
+  <circle cx="404.5" cy="27.4" r="1.40" fill="#D9564C"/>
+  <circle cx="413.2" cy="28.8" r="1.40" fill="#D9564C"/>
+  <circle cx="425.7" cy="32.2" r="1.40" fill="#D9564C"/>
+  <circle cx="410.0" cy="45.0" r="2.00" fill="#D9564C"/><circle cx="55.0" cy="135.0" r="8.0" fill="#7B9FD1" opacity="0.10"/>
+  <line x1="55.0" y1="135.0" x2="72.5" y2="136.2" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="67.0" y2="143.7" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="62.1" y2="150.2" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="49.8" y2="151.4" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="41.3" y2="145.6" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="37.6" y2="136.0" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="42.9" y2="125.2" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="49.9" y2="118.9" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="58.9" y2="119.2" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <line x1="55.0" y1="135.0" x2="67.6" y2="127.2" stroke="#7B9FD1" stroke-width="1.20" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="72.5" cy="136.2" r="1.40" fill="#7B9FD1"/>
+  <circle cx="67.0" cy="143.7" r="1.40" fill="#7B9FD1"/>
+  <circle cx="62.1" cy="150.2" r="1.40" fill="#7B9FD1"/>
+  <circle cx="49.8" cy="151.4" r="1.40" fill="#7B9FD1"/>
+  <circle cx="41.3" cy="145.6" r="1.40" fill="#7B9FD1"/>
+  <circle cx="37.6" cy="136.0" r="1.40" fill="#7B9FD1"/>
+  <circle cx="42.9" cy="125.2" r="1.40" fill="#7B9FD1"/>
+  <circle cx="49.9" cy="118.9" r="1.40" fill="#7B9FD1"/>
+  <circle cx="58.9" cy="119.2" r="1.40" fill="#7B9FD1"/>
+  <circle cx="67.6" cy="127.2" r="1.40" fill="#7B9FD1"/>
+  <circle cx="55.0" cy="135.0" r="2.00" fill="#7B9FD1"/>
+  <rect x="557.8" y="19.0" width="4.4" height="28.6" fill="#1B2A3D"/><circle cx="560.0" cy="19.0" r="3.3" fill="#D9B15C"/><rect x="533.6" y="223.6" width="52.8" height="26.4" fill="#1B2A3D"/>
+  <path d="M536.9,47.6 L529.5,54.2 L539.3,69.6 L580.7,69.6 L590.5,54.2 L583.1,47.6 Z" fill="#1B2A3D"/>
+  <path d="M539.3,69.6 L532.7,76.2 L541.7,91.6 L578.3,91.6 L587.3,76.2 L580.7,69.6 Z" fill="#1B2A3D"/>
+  <path d="M541.7,91.6 L535.9,98.2 L544.1,113.6 L575.9,113.6 L584.1,98.2 L578.3,91.6 Z" fill="#1B2A3D"/>
+  <path d="M544.1,113.6 L539.0,120.2 L546.5,135.6 L573.5,135.6 L581.0,120.2 L575.9,113.6 Z" fill="#1B2A3D"/>
+  <path d="M546.5,135.6 L542.2,142.2 L548.9,157.6 L571.1,157.6 L577.8,142.2 L573.5,135.6 Z" fill="#1B2A3D"/>
+  <path d="M548.9,157.6 L545.4,164.2 L551.3,179.6 L568.7,179.6 L574.6,164.2 L571.1,157.6 Z" fill="#1B2A3D"/>
+  <path d="M551.3,179.6 L548.6,186.2 L553.7,201.6 L566.3,201.6 L571.4,186.2 L568.7,179.6 Z" fill="#1B2A3D"/>
+  <path d="M553.7,201.6 L551.7,208.2 L556.1,223.6 L563.9,223.6 L568.3,208.2 L566.3,201.6 Z" fill="#1B2A3D"/>
+  <circle cx="557.9" cy="63.0" r="1.2" fill="#D9B15C" opacity="0.49"/>
+  <circle cx="554.5" cy="71.5" r="1.2" fill="#D9B15C" opacity="0.74"/>
+  <circle cx="557.4" cy="80.3" r="1.2" fill="#D9B15C" opacity="0.71"/>
+  <circle cx="569.6" cy="90.4" r="1.2" fill="#D9B15C" opacity="0.62"/>
+  <circle cx="562.5" cy="99.9" r="1.2" fill="#D9B15C" opacity="0.50"/>
+  <circle cx="557.2" cy="111.6" r="1.2" fill="#D9B15C" opacity="0.57"/>
+  <circle cx="552.4" cy="122.3" r="1.2" fill="#D9B15C" opacity="0.70"/>
+  <circle cx="556.5" cy="133.7" r="1.2" fill="#D9B15C" opacity="0.83"/>
+  <circle cx="566.0" cy="143.8" r="1.2" fill="#D9B15C" opacity="0.61"/>
+  <circle cx="554.9" cy="153.2" r="1.2" fill="#D9B15C" opacity="0.40"/>
+  <circle cx="570.8" cy="161.8" r="1.2" fill="#D9B15C" opacity="0.64"/>
+  <circle cx="568.8" cy="171.6" r="1.2" fill="#D9B15C" opacity="0.67"/>
+  <circle cx="556.9" cy="183.6" r="1.2" fill="#D9B15C" opacity="0.50"/>
+  <circle cx="552.5" cy="195.3" r="1.2" fill="#D9B15C" opacity="0.76"/>
+  <circle cx="570.6" cy="205.6" r="1.2" fill="#D9B15C" opacity="0.82"/>
+  <circle cx="549.8" cy="216.2" r="1.2" fill="#D9B15C" opacity="0.41"/>
+</svg>
+    <div class="nye-caption">🎆 跨年特別版・101 煙火倒數，新賽季就在這一刻開始</div>
+  </div>
+
+  <main>
+    <!-- HERO -->
+    <section class="container" style="padding-top:clamp(48px, 10vw, 84px); padding-bottom:clamp(40px, 8vw, 68px);">
+      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:22px; max-width:720px; margin:0 auto;">
+        <h1 class="hero-h1">
+          煙火升空的那一刻，新賽季正式開跑
+        </h1>
+        <p style="font-size:clamp(15px, 1.4vw + 13px, 18px); line-height:1.8; color:var(--ink-soft); max-width:600px; text-align:justify;">
+          一個給路跑、越野跑、鐵人三項愛好者的賽事紀錄網站。
+          跨年倒數之後，把新一年的報名進度、路線、天氣、成就徽章通通安排好
+          ——資料留在你的裝置上，隨時可以帶著走。
+        </p>
+        <div class="flex-row" style="gap:16px; flex-wrap:wrap; justify-content:center; margin-top:6px;">
+          <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
+          <span class="mono" style="font-size:13px; color:var(--stone);">不需註冊・可離線使用</span>
+        </div>
+      </div>
+
+      <div class="frame" style="margin-top:52px;">
+        <img id="img-calendar" src="images/calendar-light.png" data-light="images/calendar-light.png" data-dark="images/calendar.png"
+          alt="賽事紀錄網站的行事曆主畫面，顯示備戰中的賽事卡片與歷年完賽統計" width="1600" height="925">
+      </div>
+    </section>
+
+    <!-- PROOF BAR -->
+    <section class="band">
+      <div class="container proof-row" style="display:flex; flex-wrap:wrap; gap:40px; justify-content:center; padding-block:34px;">
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">95</div><div style="font-size:13px; color:var(--ink-soft);">成就徽章</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--contour)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h10"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">3</div><div style="font-size:13px; color:var(--ink-soft);">語言：繁中・日文・英文</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--trail)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17V7a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"></path><path d="M14 5v5h5"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">Excel／GPX／FIT</div><div style="font-size:13px; color:var(--ink-soft);">一次匯入賽事與路線</div></div>
+        </div>
+
+        <div class="flex-row">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--flag)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 19h14"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">100%</div><div style="font-size:13px; color:var(--ink-soft);">免費・開源・無廣告</div></div>
+        </div>
+
+        <a class="flex-row proof-link" href="https://github.com/AI-SUB3/Race-Day/blob/main/CHANGELOG.md">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
+          <div><div class="mono" style="font-size:21px; font-weight:600;">v2.60.1</div><div style="font-size:13px; color:var(--ink-soft);">持續更新・更新日誌</div></div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- BENEFIT 1 -->
+    <section class="container section-pad">
+      <div class="copy-col">
+        <h2 class="sect-h2">報名到抽籤到起跑，狀態一目了然</h2>
+        <p class="body-copy">行事曆檢視每場賽事的報名、抽籤、備戰、完賽狀態</p>
+        <ol class="benefit-list">
+          <li>14 天內的賽事會自動置頂成「備戰卡片」，提醒裝備打包進度與配速策略。</li>
+          <li>手上一份 Excel 報名紀錄？直接匯入，不用一場一場手動輸入。</li>
+          <li>獎牌牆與緊湊表格兩種檢視模式，方便跨年比對。</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- BENEFIT 2 -->
+    <section class="band">
+      <div class="container section-pad">
+        <div class="copy-col">
+          <h2 class="sect-h2">路線還沒跑過，先讓數據幫你心裡有底</h2>
+          <p class="body-copy">路線、天氣預報、配速手環</p>
+          <ol class="benefit-list">
+            <li>匯入 GPX、TCX 或 FIT 軌跡，海拔變化圖自動畫出來，移動滑鼠就能看到任一點的坡度與里程。</li>
+            <li>賽事開始前 7 天，即時天氣預報會自動查詢起跑時刻的氣溫、降雨機率與陣風。</li>
+            <li>搭配配速試算工具，生成一張可以戴在手上的分段配速手環。</li>
+          </ol>
+        </div>
+        <div class="frame" style="margin-top:40px;">
+          <img id="img-elevation" src="images/elevation-light.png" data-light="images/elevation-light.png" data-dark="images/elevation.png"
+            alt="海拔變化圖，移動滑鼠顯示 9 公里處海拔 1055 公尺、瞬時坡度 5.6%" width="2000" height="383" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <!-- BENEFIT 3 -->
+    <section class="container section-pad">
+      <div class="copy-col">
+        <h2 class="sect-h2">完賽之後，數據會自己說話</h2>
+        <p class="body-copy">完賽後，匯入 GPX、TCX 或 FIT 軌跡</p>
+        <ol class="benefit-list">
+          <li>分段配速自動抓出相對快慢，心率依「儲備心率法」換算成跑步、騎車、游泳三種個人化區間。</li>
+          <li>歷史賽事當天的實際天氣會自動回填——氣溫、降雨、風速風向。</li>
+          <li>同一地點近五年歷年同日平均氣溫濕度也一併查好，一整段賽後紀錄不用自己動手查資料。</li>
+        </ol>
+      </div>
+      <div class="frame" style="margin-top:40px; max-width:760px;">
+        <img id="img-weather" src="images/weather-light.png" data-light="images/weather-light.png" data-dark="images/weather.png"
+          alt="賽事氣象分頁，顯示自動查詢到的賽事當天實際天氣，以及自動帶入的風向、風速、降雨機率與氣候狀況欄位" width="2000" height="840" loading="lazy">
+      </div>
+    </section>
+
+    <!-- BENEFIT 4 -->
+    <section class="band">
+      <div class="container section-pad">
+        <div class="benefit-flex">
+          <div style="flex:1; min-width:300px;">
+            <h2 class="sect-h2">累積的不只是里程，還有成就感</h2>
+            <ol class="benefit-list">
+              <li>95 個成就徽章橫跨探索、地形、速度、裝備四大類別，達成當下有開箱慶祝動畫。</li>
+              <li>每個徽章都能下載成一張直式成就圖，自動附上那場賽事的關鍵數據與路線軌跡，直接發到社群限時動態。</li>
+              <li>鞋款也能個別追蹤累積里程，退役前提醒你換一雙。</li>
+            </ol>
+          </div>
+          <div class="frame" style="flex:0 0 auto; width:260px; margin-inline:auto;">
+            <img src="images/badge.png" alt="徽章成就分享圖，顯示「攀山羚羊」徽章、賽事數據與金色路線軌跡" width="1080" height="1920" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BENEFIT 5 -->
+    <section class="container section-pad">
+      <div style="max-width:740px; margin:0 auto; text-align:center;">
+        <h2 class="sect-h2">不綁帳號，但需要同步的時候也在</h2>
+        <ol class="benefit-list">
+          <li>資料預設存在瀏覽器裡，隨時可以匯出成 JSON 或 CSV 備份。</li>
+          <li>想跨裝置同步的話，選用 Google 帳號登入即可。</li>
+          <li>賽事也能一鍵加入 Google 日曆，或匯出 .ics 行事曆提醒。</li>
+          <li>整個網站可以安裝成手機 App 桌面圖示，離線也能開啟。</li>
+        </ol>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; margin-top:44px;">
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 12-4-4m4 4 4-4"></path><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
+          <span>JSON／CSV 備份匯出</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18M8 2v4M16 2v4"></path></svg>
+          <span>Google 日曆／.ics 提醒</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6-1.5A4.5 4.5 0 0 0 6.5 19h11Z"></path></svg>
+          <span>選用 Google 帳號雲端同步</span>
+        </div>
+        <div class="pill">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
+          <span>可安裝為手機 App（PWA）</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="container section-pad">
+      <h2 class="sect-h2" style="text-align:center;">常見問題</h2>
+      <div style="max-width:720px; margin:34px auto 0;">
+        <details class="faq-item">
+          <summary>資料安全嗎？我的賽事紀錄存在哪裡？</summary>
+          <p>資料預設只存在你自己的瀏覽器裡，不會上傳到任何地方。如果選擇用 Google 帳號登入，才會同步到你自己的帳號，方便跨裝置使用；也可以隨時匯出成 JSON 或 CSV 自行備份。</p>
+        </details>
+        <details class="faq-item">
+          <summary>需要付費嗎？</summary>
+          <p>不用，整個網站免費、開源，沒有廣告，也不需要建立帳號才能使用。</p>
+        </details>
+        <details class="faq-item">
+          <summary>支援哪些裝置和瀏覽器？</summary>
+          <p>只要是現代瀏覽器（Chrome、Safari、Edge、Firefox）就能使用，手機、平板、電腦都可以；也能安裝成手機 App 桌面圖示，離線時也能開啟。</p>
+        </details>
+        <details class="faq-item">
+          <summary>可以匯入我原本的賽事紀錄嗎？</summary>
+          <p>可以，支援 Excel 報名紀錄一次匯入，也能匯入 GPX、TCX、FIT 軌跡檔補上路線與海拔資料。</p>
+        </details>
+        <details class="faq-item">
+          <summary>支援哪些語言？</summary>
+          <p>目前支援繁體中文、日文、英文三種介面語言，隨時可以切換。</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- CLOSING CTA -->
+    <section class="band">
+      <div class="container" style="padding-block:clamp(56px, 10vw, 84px); display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
+        <h2 style="font-size:30px; line-height:1.4; max-width:480px;">新的一年，從第一場報名開始記錄</h2>
+        <a class="btn-primary" href="https://ai-sub3.github.io/Race-Day/">立即開始使用</a>
+        <span class="mono" style="font-size:13px; color:var(--stone);">github.com/AI-SUB3/Race-Day</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="container" style="padding-block:26px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <span class="mono" style="font-size:12px; color:var(--stone);">© 2026 劉恩龍 LIU EN LUNG</span>
+    <span style="font-size:13px; color:var(--stone);">賽事紀錄・從報名到終點的完整紀錄</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'race-day-showcase-theme';
+  var toggleImgs = ['img-calendar','img-elevation','img-weather'];
+  var btn = document.getElementById('theme-toggle');
+
+  function applyTheme(theme, animate){
+    if(theme === 'dark'){
+      document.documentElement.setAttribute('data-theme','dark');
+    }else{
+      document.documentElement.removeAttribute('data-theme');
+    }
+    if(btn){ btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false'); }
+    toggleImgs.forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      var next = theme === 'dark' ? el.getAttribute('data-dark') : el.getAttribute('data-light');
+      if(!next || el.getAttribute('src') === next) return;
+      if(animate){
+        // 淡出、換圖、淡入，讓切換主題時圖片不是瞬間跳換
+        el.style.opacity = '0';
+        setTimeout(function(){
+          el.setAttribute('src', next);
+          requestAnimationFrame(function(){ el.style.opacity = '1'; });
+        }, 180);
+      }else{
+        el.setAttribute('src', next);
+      }
+    });
+  }
+
+  var saved = null;
+  try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
+  // 預設一律先顯示淺色版本，不管裝置本身的系統色彩偏好設定是什麼；
+  // 只有使用者自己在這個頁面上點過切換按鈕、留下記錄，回來的時候才會
+  // 照他上次選的來顯示。第一次載入不需要淡入淡出動畫，直接顯示正確
+  // 版本即可，animate 傳 false。
+  applyTheme(saved === 'dark' ? 'dark' : 'light', false);
+
+  if(btn){
+    btn.addEventListener('click', function(){
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      var next = isDark ? 'light' : 'dark';
+      applyTheme(next, true);
+      try{ localStorage.setItem(STORAGE_KEY, next); }catch(e){}
+    });
+  }
+})();
+</script>
+</body>
+</html>
