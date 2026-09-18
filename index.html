@@ -1402,6 +1402,7 @@
 <div id="paste-modal" class="modal-overlay" hidden></div>
 <div id="shoe-modal" class="modal-overlay" hidden></div>
 <div id="nutrition-dict-modal" class="modal-overlay" hidden></div>
+<div id="sync-diag-modal" class="modal-overlay" hidden></div>
 <div id="profile-modal" class="modal-overlay" hidden></div>
 <div id="story-mode-overlay" class="story-overlay" hidden></div>
 <div id="fatigue-mode-overlay" class="fatigue-overlay" hidden></div>
@@ -1873,7 +1874,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.74.5';
+const APP_VERSION='v2.75.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1957,6 +1958,12 @@ const JA={
   'ui.cloudNotConfigured':'クラウド同期は未設定です','ui.signIn':'Googleでログインして同期','ui.signOut':'ログアウト',
   'ui.enableNotif':'プッシュ通知を有効にする','ui.notifEnabled':'通知は有効です',
   'ui.signedIn':'ログイン済み','ui.syncFailing':'クラウド同期に失敗しました。自動的に再試行します（ローカルデータには影響ありません）',
+  'ui.syncDiagButton':'同期診断','ui.syncDiagTitle':'同期診断','ui.syncDiagVersion':'アプリバージョン：',
+  'ui.syncDiagLoggedInAs':'ログイン中のアカウント：','ui.syncDiagNotLoggedIn':'現在クラウド同期にログインしていません',
+  'ui.syncDiagLocalShoes':'ローカルのシューズ：','ui.syncDiagLocalNutrition':'ローカルの補給食データ：',
+  'ui.syncDiagRun':'今すぐクラウドのデータを確認','ui.syncDiagQuerying':'確認中…','ui.syncDiagQueryFailed':'確認に失敗しました：',
+  'ui.syncDiagCloudShoes':'クラウドのシューズ：','ui.syncDiagCloudNutrition':'クラウドの補給食データ：',
+  'ui.syncDiagCloudUpdatedAt':'クラウドの最終更新日時：','ui.syncDiagCloudEmpty':'クラウドにはこのデータがまだ存在しません（一度も正常に送信されていません）',
   'ui.importJson':'JSONを読み込む',
   'ui.errJsonNotArray':'ファイルの内容が有効なレース一覧ではありません（配列である必要があります）',
   'ui.errJsonInvalidRace':'ファイル内に形式が正しくないレースデータがあります',
@@ -2380,6 +2387,12 @@ const EN={
   'ui.cloudNotConfigured':'Cloud sync not configured','ui.signIn':'Sign in with Google to sync','ui.signOut':'Sign out',
   'ui.enableNotif':'Enable push notifications','ui.notifEnabled':'Notifications enabled',
   'ui.signedIn':'Signed in','ui.syncFailing':'Cloud sync failed — retrying automatically (local data is unaffected)',
+  'ui.syncDiagButton':'Sync Diagnostics','ui.syncDiagTitle':'Sync Diagnostics','ui.syncDiagVersion':'App Version: ',
+  'ui.syncDiagLoggedInAs':'Signed in as: ','ui.syncDiagNotLoggedIn':'Not currently signed in for cloud sync',
+  'ui.syncDiagLocalShoes':'Local Shoes: ','ui.syncDiagLocalNutrition':'Local Nutrition Items: ',
+  'ui.syncDiagRun':'Check Cloud Data Now','ui.syncDiagQuerying':'Checking\u2026','ui.syncDiagQueryFailed':'Check failed: ',
+  'ui.syncDiagCloudShoes':'Cloud Shoes: ','ui.syncDiagCloudNutrition':'Cloud Nutrition Items: ',
+  'ui.syncDiagCloudUpdatedAt':'Cloud Last Updated: ','ui.syncDiagCloudEmpty':'The cloud has no data yet (never successfully pushed)',
   'ui.importJson':'Import JSON',
   'ui.errJsonNotArray':'This file is not a valid race list (expected an array)',
   'ui.errJsonInvalidRace':'This file contains incorrectly formatted race data',
@@ -3399,7 +3412,7 @@ function renderAuthArea(){
     const notifEnabled=localStorage.getItem('notif-enabled-v1')==='1';
     const notifBtn=notifConfigured?`<button id="btn-enable-notif" class="btn-text">${notifEnabled?t('ui.notifEnabled','推播已啟用'):t('ui.enableNotif','啟用推播通知')}</button>`:'';
     const syncErrorSpan=cloudSyncHasError?`<span class="auth-error small">${t('ui.syncFailing','雲端同步失敗，將自動重試（本機資料不受影響）')}</span>`:'';
-    el.innerHTML=`<span class="auth-user small">${photo}<span class="mono">${escapeHtml(name)}</span></span>${notifBtn}<button id="btn-signout" class="btn-text">${t('ui.signOut','登出')}</button>${syncErrorSpan}${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
+    el.innerHTML=`<span class="auth-user small">${photo}<span class="mono">${escapeHtml(name)}</span></span>${notifBtn}<button id="btn-sync-diag" class="btn-text">${t('ui.syncDiagButton','同步診斷')}</button><button id="btn-signout" class="btn-text">${t('ui.signOut','登出')}</button>${syncErrorSpan}${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
   }else{
     el.innerHTML=`<button id="btn-signin" class="btn-ghost">${t('ui.signIn','使用 Google 登入同步')}</button>${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
   }
@@ -3438,6 +3451,71 @@ let signInAttemptInFlight=false;
 // 通常會立刻點進鞋款管理，比登入→抓雲端資料這個非同步過程還快，
 // 使用者當下看到的畫面就是同步完成前的那一瞬間。登入合併完成後，
 // 順便檢查這兩個彈窗當下開著沒有，開著就直接重新畫一次。
+/* ============================================================
+   同步診斷面板：排查「雲端明明有資料、畫面卻是空的」這類問題時，
+   原本只能請使用者在電腦版開瀏覽器主控台手動貼指令查——手機版
+   沒有方便的主控台可用，變成每次都要先確認是不是能借到電腦才能
+   繼續查下去。這個面板把同樣的資訊（本機有幾筆、雲端有幾筆、雲端
+   最後更新時間、查詢過程有沒有出錯）直接做成手機也能點的畫面，
+   不用開發者工具。
+   ============================================================ */
+let syncDiagCloudResult=null,syncDiagCloudError=null,syncDiagLoading=false,syncDiagQueried=false;
+function syncDiagModalHtml(){
+  const loggedIn=!!state.user;
+  const loginInfo=loggedIn
+    ?`${t('ui.syncDiagLoggedInAs','登入帳號：')}<span class="mono">${escapeHtml(state.user.email||state.user.displayName||'—')}</span><br><span class="small mono">uid: ${escapeHtml(state.user.uid)}</span>`
+    :`<span class="small">${t('ui.syncDiagNotLoggedIn','目前沒有登入雲端同步')}</span>`;
+  let cloudSection;
+  if(!loggedIn){
+    cloudSection='';
+  }else if(syncDiagLoading){
+    cloudSection=`<p class="small">${t('ui.syncDiagQuerying','查詢中…')}</p>`;
+  }else if(syncDiagCloudError){
+    cloudSection=`<p class="auth-error small">${t('ui.syncDiagQueryFailed','查詢失敗：')}${escapeHtml(syncDiagCloudError)}</p>`;
+  }else if(syncDiagQueried){
+    const r=syncDiagCloudResult;
+    cloudSection=r
+      ?`<p class="mono small">${t('ui.syncDiagCloudShoes','雲端鞋款：')}${(r.shoes||[]).length}　${t('ui.syncDiagCloudNutrition','雲端補給品：')}${(r.nutritionDictionary||[]).length}</p>
+         <p class="small">${t('ui.syncDiagCloudUpdatedAt','雲端最後更新時間：')}<span class="mono">${escapeHtml(r.updatedAt||'—')}</span></p>`
+      :`<p class="small">${t('ui.syncDiagCloudEmpty','雲端目前完全沒有這份資料（從來沒有成功推送過）')}</p>`;
+  }else{
+    cloudSection='';
+  }
+  return `<div class="modal-panel">
+    <h2>${t('ui.syncDiagTitle','同步診斷')}</h2>
+    <p class="small">${t('ui.syncDiagVersion','App 版本：')}<span class="mono">${APP_VERSION}</span></p>
+    <p class="small">${loginInfo}</p>
+    <p class="mono small">${t('ui.syncDiagLocalShoes','本機鞋款：')}${shoes.length}　${t('ui.syncDiagLocalNutrition','本機補給品：')}${nutritionDictionary.length}</p>
+    ${loggedIn?`<button type="button" class="btn-ghost" data-action="run-sync-diag" ${syncDiagLoading?'disabled':''}>${t('ui.syncDiagRun','立即查詢雲端資料')}</button>`:''}
+    ${cloudSection}
+    <div class="modal-actions"><button class="btn-ghost" data-action="close-sync-diag">${t('ui.close','關閉')}</button></div>
+  </div>`;
+}
+const syncDiagModalEl_getter=()=>document.getElementById('sync-diag-modal');
+function openSyncDiagModal(){
+  syncDiagCloudResult=null;syncDiagCloudError=null;syncDiagLoading=false;syncDiagQueried=false;
+  syncDiagModalEl_getter().innerHTML=syncDiagModalHtml();
+  syncDiagModalEl_getter().hidden=false;
+}
+async function runSyncDiag(){
+  if(!state.user||!cloudEnabled()) return;
+  syncDiagLoading=true;syncDiagCloudError=null;
+  syncDiagModalEl_getter().innerHTML=syncDiagModalHtml();
+  try{
+    syncDiagCloudResult=await window.__cloud.fetchGlobalLists(state.user.uid);
+    syncDiagQueried=true;
+  }catch(err){
+    syncDiagCloudError=(err&&err.message)?err.message:String(err);
+  }
+  syncDiagLoading=false;
+  syncDiagModalEl_getter().innerHTML=syncDiagModalHtml();
+}
+syncDiagModalEl_getter().addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-sync-diag"]')){
+    syncDiagModalEl_getter().hidden=true;syncDiagModalEl_getter().innerHTML='';
+  }
+  if(e.target.closest('[data-action="run-sync-diag"]')) runSyncDiag();
+});
 function refreshOpenGlobalListModals(){
   if(!shoeModalEl_getter().hidden) shoeModalEl_getter().innerHTML=shoeModalHtml();
   if(!nutritionDictModalEl_getter().hidden) nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
@@ -3503,6 +3581,10 @@ document.addEventListener('click',e=>{
   }
   if(e.target.closest('#btn-signout')){
     if(cloudEnabled()) window.__cloud.signOutUser().catch(err=>console.error('登出失敗',err));
+    return;
+  }
+  if(e.target.closest('#btn-sync-diag')){
+    openSyncDiagModal();
     return;
   }
 });
