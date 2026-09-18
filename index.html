@@ -524,6 +524,29 @@
   .route-map-head{color:var(--stone);margin-bottom:6px;}
   .route-map{width:100%;height:280px;border-radius:4px;border:1px solid var(--rule);background:var(--paper);z-index:0;}
 
+  /* ---------- 照片時空對位（空間記憶迴廊） ---------- */
+  .geo-photo-section{margin-top:16px;}
+  .geo-photo-drop-zone{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0;}
+  .geo-photo-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;}
+  .geo-photo-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid var(--rule);border-radius:5px;}
+  .geo-photo-row-unmatched{opacity:0.6;}
+  .geo-photo-info{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .geo-photo-thumb{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--rule);}
+  .geo-photo-thumb-empty{display:flex;align-items:center;justify-content:center;background:var(--paper);font-size:18px;}
+  /* 地圖上的縮圖圖釘：圓形頭像框，跟現有路線的深紅色主題呼應一個
+     細金色外框，在標準地圖跟地形地圖兩種底圖上都看得清楚 */
+  .geo-photo-marker-wrap{background:transparent;border:none;}
+  .geo-photo-marker{
+    width:40px;height:40px;border-radius:50%;overflow:hidden;
+    border:2.5px solid var(--gold);box-shadow:0 1px 4px rgba(0,0,0,0.4);
+    background:var(--surface);display:flex;align-items:center;justify-content:center;
+  }
+  .geo-photo-marker img{width:100%;height:100%;object-fit:cover;}
+  .geo-photo-marker-empty{font-size:18px;}
+  .geo-photo-popup{text-align:center;}
+  .geo-photo-popup-img{width:100%;max-width:180px;border-radius:4px;margin-bottom:6px;}
+  .geo-photo-popup-stats div{margin-bottom:2px;}
+
   /* ---------- Focus panel (備戰釘選) ---------- */
   .focus-panel{
     border:1.5px solid var(--gold);border-radius:8px;padding:18px 20px;margin-bottom:22px;
@@ -1734,7 +1757,7 @@ function emptyRace(name,sportType,status,raceDate){
     lottery:{applicants:null,winners:null,winRatePct:null,wasSelected:false},
     location:{venueName:'',city:'',country:''},
     route:{distanceKm:null,elevationGainM:null,elevationLossM:null,minAltitudeM:null,maxAltitudeM:null,startAltitudeM:null,
-      surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,itraPoints:null,terrainNotes:'',elevationProfile:[],trackPoints:[]},
+      surface:{pavedPct:null,trailPct:null,stairsPct:null},checkpointCount:null,cutoffTimeSeconds:null,itraPoints:null,terrainNotes:'',elevationProfile:[],trackPoints:[],timedTrackPoints:[]},
     checkpoints:[],
     climateForecast:{avgTempC:null,avgHumidityPct:null,windDirection:'',windSpeedKmh:null,rainProbabilityPct:null},
     raceDayWeather:{feelsLikeTempC:null,condition:'',humidityPct:null,marineConditions:{waveHeightM:null,swellPeriodSeconds:null,waterTempC:null},notes:''},
@@ -1753,6 +1776,7 @@ function emptyRace(name,sportType,status,raceDate){
     liveForecast:null,
     historicalWeather:null,
     historicalAverageWeather:null,
+    geoPhotos:[],photoTimeOffsetSeconds:0,
     createdAt:now,updatedAt:now,
   };
 }
@@ -1765,7 +1789,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.67.0';
+const APP_VERSION='v2.68.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1913,6 +1937,11 @@ const JA={
   'ui.heatmapTitle':'参加ヒートマップ（月別走行距離）',
   'ui.heatmapCellCount':'{a} レース、{b} km',
   'ui.elevationProfileTitle':'標高変化グラフ','ui.routeMapTitle':'コースマップ',
+  'ui.geoPhotoTitle':'空間の記憶回廊（写真タイムシンク）','ui.geoPhotoHint':'写真をドラッグ＆ドロップまたは選択すると、撮影時刻を自動取得し、このレースのGPS軌跡とタイムシンクして下の地図に表示します。読み取るのは写真のメタデータと内蔵サムネイルのみで、元の写真全体をページに読み込むことはありません。',
+  'ui.geoPhotoAdd':'＋ 写真を追加','ui.geoPhotoProcessing':'解析中… 残り{n}枚',
+  'ui.geoPhotoOffsetLabel':'カメラ時刻とGPS時刻のずれ補正','ui.unitSeconds':'秒',
+  'ui.geoPhotoMatchSummary':'{matched} / {total} 枚が軌跡に対応付けられました',
+  'ui.geoPhotoMatched':'対応完了・標高 {n}m','ui.geoPhotoUnmatched':'軌跡の時間範囲外のため対応できませんでした',
   'ui.elevTooltipElevation':'標高','ui.elevTooltipGradient':'瞬間勾配','ui.elevationCpHint':'点線＝CP 地点',
   'ui.mapStandard':'標準地図','ui.mapTerrain':'地形図',
   'ui.dragToReorder':'ドラッグして並べ替え','ui.moveUp':'上に移動','ui.moveDown':'下に移動',
@@ -2314,6 +2343,11 @@ const EN={
   'ui.heatmapTitle':'Race Heatmap (Monthly Distance)',
   'ui.heatmapCellCount':'{a} race(s), {b} km',
   'ui.elevationProfileTitle':'Elevation Profile','ui.routeMapTitle':'Route Map',
+  'ui.geoPhotoTitle':'Spatial Memory Corridor (Photo Time-Sync)','ui.geoPhotoHint':'Drag in or select photos, and their capture time will be automatically read and time-synced with this race\u2019s GPS track, shown on the map below. Only the photo\u2019s metadata and embedded thumbnail are read \u2014 the full original photo is never loaded into the page.',
+  'ui.geoPhotoAdd':'+ Add Photos','ui.geoPhotoProcessing':'Processing\u2026 {n} left',
+  'ui.geoPhotoOffsetLabel':'Camera/GPS Clock Offset Correction','ui.unitSeconds':'sec',
+  'ui.geoPhotoMatchSummary':'{matched} / {total} photos matched to the track',
+  'ui.geoPhotoMatched':'Matched \u00b7 elevation {n}m','ui.geoPhotoUnmatched':'Outside the track\u2019s time range, not matched',
   'ui.elevTooltipElevation':'Elevation','ui.elevTooltipGradient':'Instant Grade','ui.elevationCpHint':'Dashed = CP',
   'ui.mapStandard':'Standard Map','ui.mapTerrain':'Terrain Map',
   'ui.dragToReorder':'Drag to reorder','ui.moveUp':'Move up','ui.moveDown':'Move down',
@@ -2824,6 +2858,9 @@ function migrateRace(r){
   if(r.raceDayWeather&&!r.raceDayWeather.marineConditions){
     r.raceDayWeather.marineConditions={waveHeightM:null,swellPeriodSeconds:null,waterTempC:null};
   }
+  if(r.route&&r.route.timedTrackPoints==null) r.route.timedTrackPoints=[];
+  if(r.geoPhotos==null) r.geoPhotos=[];
+  if(r.photoTimeOffsetSeconds==null) r.photoTimeOffsetSeconds=0;
   backfillSplitElevationFromProfile(r);
   return r;
 }
@@ -5289,6 +5326,21 @@ function ensureLeafletLoaded(){
   });
   return leafletLoadPromise;
 }
+// 照片 EXIF 解析套件（exifr）也是延遲載入，只有使用者真的要拖照片進來
+// 對位時才會去抓，理由跟 Leaflet 一樣：避免拖慢一般情況下的頁面載入。
+let exifrLoadPromise=null;
+function ensureExifrLoaded(){
+  if(window.exifr) return Promise.resolve();
+  if(exifrLoadPromise) return exifrLoadPromise;
+  exifrLoadPromise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js';
+    script.onload=()=>resolve();
+    script.onerror=()=>reject(new Error('exifr failed to load'));
+    document.head.appendChild(script);
+  });
+  return exifrLoadPromise;
+}
 let currentRouteMap=null;
 let elevScrubMapMarker=null;
 function destroyRouteMap(){
@@ -5320,7 +5372,31 @@ function initRouteMap(race){
   const polyline=L.polyline(pts,{color:'#C4001D',weight:3.5,opacity:1,lineCap:'round',lineJoin:'round'}).addTo(currentRouteMap);
   L.circleMarker(pts[0],{radius:6,color:'#fff',weight:2,fillColor:'#00C853',fillOpacity:1}).addTo(currentRouteMap);
   L.circleMarker(pts[pts.length-1],{radius:6,color:'#fff',weight:2,fillColor:'#FFD600',fillOpacity:1}).addTo(currentRouteMap);
+  (race.geoPhotos||[]).filter(p=>p.matched&&p.lat!=null&&p.lon!=null).forEach(p=>{
+    const icon=L.divIcon({
+      className:'geo-photo-marker-wrap',
+      html:p.thumbnailDataUrl
+        ?`<div class="geo-photo-marker"><img src="${p.thumbnailDataUrl}" alt=""></div>`
+        :`<div class="geo-photo-marker geo-photo-marker-empty">📷</div>`,
+      iconSize:[44,44],iconAnchor:[22,22],
+    });
+    L.marker([p.lat,p.lon],{icon}).addTo(currentRouteMap).bindPopup(geoPhotoPopupHtml(p),{maxWidth:220});
+  });
   currentRouteMap.fitBounds(polyline.getBounds(),{padding:[16,16]});
+}
+// 圖釘 popup 內容：拍攝時間／插值出來的海拔／心率／配速，跟使用者原始
+// 需求描述的資訊沉浸卡片對應。心率／配速沒有值（該時刻附近沒有對應
+// 資料）時，那一行不會顯示「null bpm」這種沒意義的字串，直接省略。
+function geoPhotoPopupHtml(p){
+  const paceLabel=p.paceSecPerKm!=null?formatPace(p.paceSecPerKm):null;
+  const lines=[`📷 ${formatPhotoTime(p.rawCapturedAt)}`];
+  if(p.elevationM!=null) lines.push(`⛰️ ${p.elevationM}m`);
+  const hrPace=[p.hr!=null?`❤️ ${p.hr} bpm`:null,paceLabel?`🏃 ${paceLabel}/km`:null].filter(Boolean).join(' · ');
+  if(hrPace) lines.push(hrPace);
+  return `<div class="geo-photo-popup">
+    ${p.thumbnailDataUrl?`<img src="${p.thumbnailDataUrl}" alt="" class="geo-photo-popup-img">`:''}
+    <div class="geo-photo-popup-stats mono small">${lines.map(l=>`<div>${escapeHtml(l)}</div>`).join('')}</div>
+  </div>`;
 }
 function routeMapHtml(race){
   if(!race.route.trackPoints||race.route.trackPoints.length<2) return '';
@@ -5336,6 +5412,124 @@ function renderRouteMapIfNeeded(race){
   }).catch(err=>console.error('地圖載入失敗',err));
 }
 
+/* ============================================================
+   照片時空對位（Time-Sync Mapping）：拖照片進來，讀 EXIF 拍攝時間跟
+   內嵌縮圖（只讀檔案前面幾十 KB，不會把整張 20~40MB 的原始照片載進
+   記憶體），套用時差校正後，去 route.timedTrackPoints 裡用二元搜尋＋
+   線性插值查出那個瞬間的座標／海拔／心率／局部配速，變成地圖上的
+   縮圖圖釘。只有這場賽事有存到「保留時間戳記的軌跡」（v2.68.0 之後
+   （重新）匯入 GPX/TCX/FIT 才會有）才能用；舊賽事既有的 route.trackPoints
+   只存經緯度、沒有時間戳記，沒辦法拿來做時間對位，需要使用者重新
+   匯入一次原始檔案。
+   ============================================================ */
+function raceHasTimedTrack(race){
+  return !!(race.route.timedTrackPoints&&race.route.timedTrackPoints.length>=2);
+}
+// 把一張照片的「原始拍攝時間＋目前這場賽事的時差校正秒數」代入插值
+// 引擎，回填 race.geoPhotos 裡對應那筆紀錄的座標／海拔／心率／配速。
+// 抽成獨立函式是因為時差校正滑桿每次拖動，所有已經對位過的照片都要
+// 用新的偏移量重新插值一次，不用重新讀檔案、重新解 EXIF。
+function reinterpolatePhoto(race,photo){
+  const rawMs=new Date(photo.rawCapturedAt).getTime();
+  const targetMs=rawMs+race.photoTimeOffsetSeconds*1000;
+  const r=interpolateTrackAtTime(race.route.timedTrackPoints,targetMs);
+  if(r){
+    photo.matched=true;
+    photo.lat=r.lat;photo.lon=r.lon;photo.elevationM=r.elevationM;photo.hr=r.hr;photo.paceSecPerKm=r.paceSecPerKm;
+  }else{
+    photo.matched=false;
+    photo.lat=null;photo.lon=null;photo.elevationM=null;photo.hr=null;photo.paceSecPerKm=null;
+  }
+}
+function reinterpolateAllPhotos(race){
+  (race.geoPhotos||[]).forEach(p=>reinterpolatePhoto(race,p));
+}
+let photoProcessingCount=0;
+// 對每個檔案：先用 exifr 只挑 DateTimeOriginal 這個 tag 做最小限度解析
+// （exifr 本身預設就是分段讀取，瀏覽器端一次讀 64KB），找不到拍攝時間
+// 的檔案（例如截圖、經過某些軟體重新存檔後被清空 EXIF 的照片）直接
+// 略過、不中斷整批處理；縮圖用 exifr.thumbnail() 單獨抽取內嵌縮圖，
+// 抽不到縮圖時 thumbnailDataUrl 留 null，畫面上會退回顯示通用圖示，
+// 但拍攝時間／座標對位不受影響，兩者是各自獨立、互不依賴的資訊。
+async function processPhotoFiles(race,files){
+  await ensureExifrLoaded();
+  photoProcessingCount=files.length;
+  if(currentRace&&currentRace.id===race.id) renderDetail();
+  for(const file of files){
+    try{
+      // 這裡刻意不加 {pick:['DateTimeOriginal']} 這種欄位篩選選項——
+      // 實測發現目前這個 exifr 版本（lite build）的 pick 選項本身有
+      // bug，帶了就整個拋出例外，等於每張照片都解析失敗。不加篩選、
+      // 直接完整解析（順便多拿到 Make/Model 這些用不到但無害的欄位）
+      // 反而是能真正動作的寫法，速度上的差異在這個量級的檔案可以忽略。
+      const tags=await window.exifr.parse(file);
+      const capturedAt=tags&&tags.DateTimeOriginal;
+      if(!capturedAt){ photoProcessingCount--; continue; }
+      let thumbnailDataUrl=null;
+      try{
+        const thumbBytes=await window.exifr.thumbnail(file);
+        if(thumbBytes){
+          const blob=new Blob([thumbBytes],{type:'image/jpeg'});
+          thumbnailDataUrl=await new Promise((resolve,reject)=>{
+            const reader=new FileReader();
+            reader.onload=()=>resolve(reader.result);
+            reader.onerror=()=>reject(reader.error);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }catch(e){ /* 沒有內嵌縮圖，留 null，不影響拍攝時間對位 */ }
+      const photo={
+        id:uid(),fileName:file.name,thumbnailDataUrl,
+        rawCapturedAt:capturedAt.toISOString(),
+        matched:false,lat:null,lon:null,elevationM:null,hr:null,paceSecPerKm:null,
+      };
+      reinterpolatePhoto(race,photo);
+      race.geoPhotos.push(photo);
+    }catch(e){
+      console.error('照片 EXIF 解析失敗',file.name,e);
+    }
+    photoProcessingCount--;
+    if(currentRace&&currentRace.id===race.id) renderDetail();
+  }
+  race.updatedAt=new Date().toISOString();
+  persist();
+  if(currentRace&&currentRace.id===race.id) renderDetail();
+}
+function formatPhotoTime(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+}
+function geoPhotoSectionHtml(race){
+  if(!raceHasTimedTrack(race)) return '';
+  const photos=race.geoPhotos||[];
+  const matchedCount=photos.filter(p=>p.matched).length;
+  const rows=photos.map(p=>`
+    <div class="geo-photo-row${p.matched?'':' geo-photo-row-unmatched'}">
+      ${p.thumbnailDataUrl?`<img class="geo-photo-thumb" src="${p.thumbnailDataUrl}" alt="">`:`<div class="geo-photo-thumb geo-photo-thumb-empty">📷</div>`}
+      <div class="geo-photo-info">
+        <span class="small mono">${formatPhotoTime(p.rawCapturedAt)}</span>
+        <span class="small">${p.matched?tf('ui.geoPhotoMatched','已對位・海拔 {n}m',p.elevationM!=null?p.elevationM:'—'):t('ui.geoPhotoUnmatched','超出軌跡時間範圍，未對位')}</span>
+      </div>
+      <button type="button" class="btn-text-small danger" data-action="delete-geo-photo" data-id="${p.id}">${t('ui.delete','刪除')}</button>
+    </div>`).join('');
+  return `<div class="subsection geo-photo-section">
+    <div class="subsection-head"><h3>${t('ui.geoPhotoTitle','空間記憶迴廊（照片時空對位）')}</h3></div>
+    <p class="modal-hint small">${t('ui.geoPhotoHint','拖曳或選擇照片，會自動讀取拍攝時間，跟這場賽事的 GPS 軌跡做時空對位，顯示在下方地圖上。只讀取照片檔案的中繼資料跟內嵌縮圖，不會把整張原始照片載入網頁。')}</p>
+    <div class="geo-photo-drop-zone" id="geo-photo-drop-zone">
+      <input type="file" id="geo-photo-input" accept="image/jpeg,image/jpg" multiple style="display:none">
+      <button type="button" class="btn-ghost" data-action="trigger-geo-photo-input">${t('ui.geoPhotoAdd','＋ 加入照片')}</button>
+      ${photoProcessingCount>0?`<span class="small">${tf('ui.geoPhotoProcessing','解析中… 還剩 {n} 張',photoProcessingCount)}</span>`:''}
+    </div>
+    ${photos.length?`
+    <label class="field" for="geo-photo-offset">
+      <span>${t('ui.geoPhotoOffsetLabel','相機時間與 GPS 時間偏差校正')}：<span class="mono">${race.photoTimeOffsetSeconds>0?'+':''}${race.photoTimeOffsetSeconds}${t('ui.unitSeconds','秒')}</span></span>
+      <input type="range" id="geo-photo-offset" min="-120" max="120" step="1" value="${race.photoTimeOffsetSeconds}">
+    </label>
+    <p class="small">${t('ui.geoPhotoMatchSummary','{matched} / {total} 張已成功對位到軌跡上').replace('{matched}',matchedCount).replace('{total}',photos.length)}</p>
+    <div class="geo-photo-list">${rows}</div>`:''}
+  </div>`;
+}
 function renderShoeSelector(race){
   const boundId=race.performanceData.shoeId;
   const visibleShoes=shoes.filter(s=>!s.isRetired||s.id===boundId);
@@ -8152,6 +8346,7 @@ function renderDetail(){
       <div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f,'route')).join('')}</div>
       ${elevationProfileHtml(race)}
       ${routeMapHtml(race)}
+      ${geoPhotoSectionHtml(race)}
       ${renderRepeatable(race,'checkpoints')}
     </details>
     <details class="section" id="section-weather">
@@ -8930,6 +9125,24 @@ function showSaveStatus(kind){
 }
 detailEl.addEventListener('change',async e=>{
   const t=e.target;
+  if(t.id==='geo-photo-input'){
+    if(currentRace&&t.files&&t.files.length){
+      const files=Array.from(t.files);
+      t.value=''; // 清空選取，允許使用者之後再次選到同一批檔案（例如刪除後重新加入）
+      processPhotoFiles(currentRace,files);
+    }
+    return;
+  }
+  if(t.id==='geo-photo-offset'){
+    if(currentRace){
+      currentRace.photoTimeOffsetSeconds=Number(t.value);
+      reinterpolateAllPhotos(currentRace);
+      currentRace.updatedAt=new Date().toISOString();
+      persist();
+      renderDetail();
+    }
+    return;
+  }
   if(t.dataset.action==='kanban-move-select'){
     const idx=parseInt(t.dataset.index,10);
     const item=currentRace&&currentRace.equipmentChecklist&&currentRace.equipmentChecklist[idx];
@@ -9648,6 +9861,74 @@ function downsampleLatLon(pts,maxPoints){
   }
   return out;
 }
+// 給「照片時空對位」功能專用的、保留時間戳記的軌跡陣列，跟上面
+// downsampleLatLon() 產生的 route.trackPoints（純經緯度、給地圖畫線／
+// 年度回顧路線拼貼用）刻意分開存、互不影響——既有的畫線邏輯只認
+// {lat,lon}，就算之後不小心讀到這個新欄位也不會受影響；反過來，這個
+// 新欄位需要比畫線用的 400 點更高的時間解析度才能讓照片對位準確，
+// 所以取樣點數也拉高到 2000（一場 6 小時賽事大約每 10 秒一個點，
+// 比畫線用的「每 54 秒一個點」精細很多，但仍然遠小於原始 GPX 逐秒
+// 記錄的資料量）。只有真的有時間戳記的點才會被留下。
+function downsampleTimedTrackPoints(pts,maxPoints){
+  const valid=pts.filter(p=>p.lat!=null&&p.lon!=null&&p.time);
+  if(valid.length<2) return [];
+  const toEntry=p=>({lat:p.lat,lon:p.lon,ele:p.ele!=null?p.ele:null,hr:p.hr!=null?p.hr:null,time:p.time.toISOString()});
+  if(valid.length<=maxPoints) return valid.map(toEntry);
+  const step=(valid.length-1)/(maxPoints-1);
+  const out=[];
+  for(let i=0;i<maxPoints;i++){
+    const idx=Math.round(i*step);
+    out.push(toEntry(valid[idx]));
+  }
+  return out;
+}
+/* ============================================================
+   照片時空對位（Time-Sync Mapping）：拿一張照片的拍攝時間，在
+   route.timedTrackPoints（見上方 downsampleTimedTrackPoints）裡用
+   二元搜尋法找出時間軸上緊鄰的前後兩個軌跡點，再用線性插值算出那個
+   瞬間的經緯度、海拔、心率跟局部配速。
+   ============================================================ */
+// 二元搜尋「第一個時間 >= targetMs 的點」的索引（lower bound）。
+function binarySearchTrackIndex(timedPoints,targetMs){
+  let lo=0,hi=timedPoints.length;
+  while(lo<hi){
+    const mid=(lo+hi)>>1;
+    if(new Date(timedPoints[mid].time).getTime()<targetMs) lo=mid+1;
+    else hi=mid;
+  }
+  return lo;
+}
+// 照片時間如果早於軌跡起點或晚於軌跡終點，代表這張照片根本不是這場
+// 賽事拍的（或還沒開始／已經結束），刻意回傳 null 而不是外推硬猜一個
+// 座標——外推出來的位置沒有實際意義，顯示出來反而會誤導。
+function interpolateTrackAtTime(timedPoints,targetMs){
+  if(!timedPoints||timedPoints.length<2) return null;
+  const firstMs=new Date(timedPoints[0].time).getTime();
+  const lastMs=new Date(timedPoints[timedPoints.length-1].time).getTime();
+  if(targetMs<firstMs||targetMs>lastMs) return null;
+  let idx=binarySearchTrackIndex(timedPoints,targetMs);
+  if(idx===0) idx=1; // 剛好等於第一個點的時間，用第 0～1 段插值，frac 會算出 0
+  const p0=timedPoints[idx-1],p1=timedPoints[idx];
+  const t0=new Date(p0.time).getTime(),t1=new Date(p1.time).getTime();
+  const span=t1-t0;
+  const frac=span>0?(targetMs-t0)/span:0;
+  const lat=p0.lat+(p1.lat-p0.lat)*frac;
+  const lon=p0.lon+(p1.lon-p0.lon)*frac;
+  let elevationM=null;
+  if(p0.ele!=null&&p1.ele!=null) elevationM=Math.round(p0.ele+(p1.ele-p0.ele)*frac);
+  else if(p0.ele!=null) elevationM=Math.round(p0.ele);
+  else if(p1.ele!=null) elevationM=Math.round(p1.ele);
+  let hr=null;
+  if(p0.hr!=null&&p1.hr!=null) hr=Math.round(p0.hr+(p1.hr-p0.hr)*frac);
+  else if(p0.hr!=null) hr=Math.round(p0.hr);
+  else if(p1.hr!=null) hr=Math.round(p1.hr);
+  // 局部配速：用「插值用到的這兩個軌跡點之間」的距離／時間算，不是
+  // 整場賽事的平均配速——這樣才反映得出「拍照當下那一小段」的節奏。
+  const gapDistKm=haversineKm(p0.lat,p0.lon,p1.lat,p1.lon);
+  const gapSec=span/1000;
+  const paceSecPerKm=(gapSec>0&&gapDistKm>0)?Math.round(gapSec/gapDistKm):null;
+  return {lat,lon,elevationM,hr,paceSecPerKm};
+}
 function summarizeTrackPoints(pts){
   const valid=pts.filter(p=>p.lat!=null&&p.lon!=null);
   if(valid.length<2) throw new Error(t('ui.errNotEnoughPoints','檔案中沒有足夠的座標點'));
@@ -9668,6 +9949,7 @@ function summarizeTrackPoints(pts){
     splits:computeSplitsFromPoints(valid),
     elevationProfile:downsampleElevationProfile(valid,50),
     trackPoints:downsampleLatLon(valid,400),
+    timedTrackPoints:downsampleTimedTrackPoints(valid,2000),
   };
 }
 /* ============================================================
@@ -9865,6 +10147,7 @@ function parseTcxDoc(xml){
     splits:laps.length>1?splits:computeSplitsFromPoints(pts),
     elevationProfile:downsampleElevationProfile(pts,50),
     trackPoints:downsampleLatLon(pts,400),
+    timedTrackPoints:downsampleTimedTrackPoints(pts,2000),
   };
 }
 function parseGpxOrTcx(text){
@@ -9914,6 +10197,7 @@ function applyActivitySummaryToRace(race,s){
   if(s.splits&&s.splits.length) race.splits=s.splits;
   if(s.elevationProfile&&s.elevationProfile.length) race.route.elevationProfile=s.elevationProfile;
   if(s.trackPoints&&s.trackPoints.length) race.route.trackPoints=s.trackPoints;
+  if(s.timedTrackPoints&&s.timedTrackPoints.length) race.route.timedTrackPoints=s.timedTrackPoints;
 }
 async function parseActivityFile(file){
   const ext=(file.name.split('.').pop()||'').toLowerCase();
@@ -10926,6 +11210,17 @@ document.addEventListener('click',e=>{
       renderDetail();
       logFeatureUse('epp_adopt_goal');
     }
+  }
+  if(e.target.closest('[data-action="trigger-geo-photo-input"]')){
+    const input=document.getElementById('geo-photo-input');
+    if(input) input.click();
+  }
+  if(e.target.closest('[data-action="delete-geo-photo"]')&&currentRace){
+    const id=e.target.closest('[data-action="delete-geo-photo"]').dataset.id;
+    currentRace.geoPhotos=(currentRace.geoPhotos||[]).filter(p=>p.id!==id);
+    currentRace.updatedAt=new Date().toISOString();
+    persist();
+    renderDetail();
   }
   const copyPromptBtn=e.target.closest('[data-action="copy-report-prompt"]');
   if(copyPromptBtn){ copyRaceReportPrompt(copyPromptBtn.dataset.id); logFeatureUse('export_report_prompt'); }
