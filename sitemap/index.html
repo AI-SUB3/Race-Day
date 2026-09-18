@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>網站地圖 — 賽事紀錄</title>
-<meta name="description" content="賽事紀錄網站的完整功能地圖：首頁介紹、行事曆總覽、賽事詳情頁、工具與資料管理、專案文件，一次看懂整個網站的架構。">
+<meta name="description" content="賽事紀錄網站的完整功能地圖：首頁介紹、行事曆總覽、賽事詳情頁、工具與資料管理，一次看懂整個網站的架構。">
 <meta name="robots" content="noindex">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -72,7 +72,6 @@
     font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:14px; color:var(--gold);
     box-shadow:0 2px 10px var(--shadow); z-index:1;
   }
-  .cp-marker.is-terminus{background:var(--gold); color:var(--surface);}
   .cp-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px;}
   .cp-head h2{font-size:23px;}
   .cp-head .cp-tag{
@@ -83,19 +82,20 @@
   .cp-items{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px;}
   .cp-items li{border-top:1px solid var(--rule);}
   .cp-items li:last-child{border-bottom:1px solid var(--rule);}
-  .cp-items a{
+  /* .item-row 是共用的排版（名稱靠左、備註靠右），START 那組唯一真的
+     連到別的頁面（功能介紹頁）所以用 <a>，其餘 CP1～CP4 底下的項目
+     只是同一支單頁應用程式裡的功能位置、不是各自獨立的網址，改成純
+     文字的 <div>，不套用連結的底線／手指游標／hover 變色，才不會讓人
+     以為點下去會各自跳到不同地方。 */
+  .cp-items a.item-row, .cp-items div.item-row{
     display:flex; justify-content:space-between; align-items:baseline; gap:16px;
-    padding:13px 4px; text-decoration:none; transition:padding-left 0.15s ease;
+    padding:13px 4px;
   }
-  .cp-items a:hover{padding-left:10px; color:var(--gold);}
+  .cp-items a.item-row{text-decoration:none; transition:padding-left 0.15s ease;}
+  .cp-items a.item-row:hover{padding-left:10px; color:var(--gold);}
+  .cp-items a.item-row:hover .item-hint{color:var(--gold);}
   .cp-items .item-name{font-size:15px; font-weight:500;}
   .cp-items .item-hint{font-size:13px; color:var(--stone); text-align:right; flex-shrink:0;}
-  .cp-items a:hover .item-hint{color:var(--gold);}
-
-  /* 專案文件那一組不是站內小節，是外部文件，用不同的箭頭符號跟顏色 區隔 */
-  .cp-items.is-external a{color:var(--contour);}
-  .cp-items.is-external a:hover{color:var(--flag);}
-  .cp-items.is-external .item-hint::after{content:' ↗';}
 
   footer{border-top:1px solid var(--rule); margin-top:12px;}
   footer .container{padding-block:26px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;}
@@ -105,7 +105,7 @@
     .cp{padding-left:56px;}
     .cp-marker{width:40px; height:40px; font-size:12px;}
     .course-line{left:19px;}
-    .cp-items a{flex-direction:column; gap:3px;}
+    .cp-items .item-row{flex-direction:column; gap:3px;}
     .cp-items .item-hint{text-align:left;}
   }
 </style>
@@ -133,7 +133,7 @@
     <h1>網站地圖</h1>
     <p>賽事紀錄網站目前有哪些內容、各自放在哪裡，整理成一條路線給你參考——像賽前看賽道圖一樣，找不到東西的時候回來看一眼就好。</p>
     <div class="spa-note">
-      <strong>關於連結：</strong>「賽事紀錄」主程式是單頁應用程式，行事曆、賽事詳情、鞋款管理等功能都在同一個網址裡切換，沒有各自獨立的頁面網址。下面 CP1～CP4 底下的項目點下去都會開啟同一個主程式，文字說明的是「進去之後要找哪個分頁或按鈕」，不是各自不同的頁面。
+      <strong>關於這份地圖：</strong>「賽事紀錄」主程式是單頁應用程式，行事曆、賽事詳情、鞋款管理等功能都在同一個網址裡切換，沒有各自獨立的頁面網址，所以下面 CP1～CP4 底下的項目是純文字說明「進去主程式後要找哪個分頁或按鈕」，不是可以個別點擊的連結。
     </div>
   </section>
 
@@ -145,7 +145,7 @@
       <div class="cp-head"><h2>首頁介紹</h2><span class="cp-tag">獨立頁面</span></div>
       <p class="cp-desc">產品介紹頁，給還沒用過這個網站的人看：功能特色、使用情境、免費開源說明。</p>
       <ul class="cp-items">
-        <li><a href="../about/"><span class="item-name">賽事紀錄 — 從報名到終點的完整紀錄</span><span class="item-hint">功能介紹頁</span></a></li>
+        <li><a class="item-row" href="../about/"><span class="item-name">賽事紀錄 — 從報名到終點的完整紀錄</span><span class="item-hint">功能介紹頁</span></a></li>
       </ul>
     </div>
 
@@ -154,12 +154,12 @@
       <div class="cp-head"><h2>行事曆與總覽</h2><span class="cp-tag">主程式首頁</span></div>
       <p class="cp-desc">打開主程式後看到的第一個畫面，管理所有賽事、回顧生涯數據跟成就。</p>
       <ul class="cp-items">
-        <li><a href="../"><span class="item-name">月曆檢視／緊湊表格檢視</span><span class="item-hint">頁面右上角切換</span></a></li>
-        <li><a href="../"><span class="item-name">賽事搜尋與篩選（即將到來／歷史紀錄）</span><span class="item-hint">搜尋框旁的篩選按鈕</span></a></li>
-        <li><a href="../"><span class="item-name">備戰釘選卡片</span><span class="item-hint">14 天內賽事自動置頂</span></a></li>
-        <li><a href="../"><span class="item-name">生涯數據、氣候與表現散佈圖、爬升趨勢圖、參賽熱力圖</span><span class="item-hint">累積 5 場完賽後自動出現</span></a></li>
-        <li><a href="../"><span class="item-name">榮譽櫃與成就徽章</span><span class="item-hint">生涯數據下方可展開</span></a></li>
-        <li><a href="../"><span class="item-name">年度回顧故事模式、年度回顧長圖卡</span><span class="item-hint">歷年完賽場次圖旁的按鈕</span></a></li>
+        <li><div class="item-row"><span class="item-name">月曆檢視／緊湊表格檢視</span><span class="item-hint">頁面右上角切換</span></div></li>
+        <li><div class="item-row"><span class="item-name">賽事搜尋與篩選（即將到來／歷史紀錄）</span><span class="item-hint">搜尋框旁的篩選按鈕</span></div></li>
+        <li><div class="item-row"><span class="item-name">備戰釘選卡片</span><span class="item-hint">14 天內賽事自動置頂</span></div></li>
+        <li><div class="item-row"><span class="item-name">生涯數據、氣候與表現散佈圖、爬升趨勢圖、參賽熱力圖</span><span class="item-hint">累積 5 場完賽後自動出現</span></div></li>
+        <li><div class="item-row"><span class="item-name">榮譽櫃與成就徽章</span><span class="item-hint">生涯數據下方可展開</span></div></li>
+        <li><div class="item-row"><span class="item-name">年度回顧故事模式、年度回顧長圖卡</span><span class="item-hint">歷年完賽場次圖旁的按鈕</span></div></li>
       </ul>
     </div>
 
@@ -168,12 +168,12 @@
       <div class="cp-head"><h2>賽事詳情頁</h2><span class="cp-tag">點選任一場賽事後</span></div>
       <p class="cp-desc">單一場賽事的完整紀錄，分成六個可摺疊分頁，從報名一路記到賽後檢討。</p>
       <ul class="cp-items">
-        <li><a href="../"><span class="item-name">基本資訊與時間</span><span class="item-hint">狀態、抽籤、報名時程</span></a></li>
-        <li><a href="../"><span class="item-name">地理與路線</span><span class="item-hint">海拔圖、路線地圖、空間記憶迴廊（照片對位）</span></a></li>
-        <li><a href="../"><span class="item-name">氣象</span><span class="item-hint">歷史天氣回填、即時預報、海象紀錄</span></a></li>
-        <li><a href="../"><span class="item-name">預算與行程規劃</span><span class="item-hint">住宿、交通、同行者</span></a></li>
-        <li><a href="../"><span class="item-name">裝備、補給與戰略</span><span class="item-hint">裝備看板、補給品資料庫、配速試算、環境折損預測</span></a></li>
-        <li><a href="../"><span class="item-name">賽後紀錄與個人數據</span><span class="item-hint">成績儀表板、分段配速分析、鞋款戰力</span></a></li>
+        <li><div class="item-row"><span class="item-name">基本資訊與時間</span><span class="item-hint">狀態、抽籤、報名時程</span></div></li>
+        <li><div class="item-row"><span class="item-name">地理與路線</span><span class="item-hint">海拔圖、路線地圖、空間記憶迴廊（照片對位）</span></div></li>
+        <li><div class="item-row"><span class="item-name">氣象</span><span class="item-hint">歷史天氣回填、即時預報、海象紀錄</span></div></li>
+        <li><div class="item-row"><span class="item-name">預算與行程規劃</span><span class="item-hint">住宿、交通、同行者</span></div></li>
+        <li><div class="item-row"><span class="item-name">裝備、補給與戰略</span><span class="item-hint">裝備看板、補給品資料庫、配速試算、環境折損預測</span></div></li>
+        <li><div class="item-row"><span class="item-name">賽後紀錄與個人數據</span><span class="item-hint">成績儀表板、分段配速分析、鞋款戰力</span></div></li>
       </ul>
     </div>
 
@@ -182,10 +182,10 @@
       <div class="cp-head"><h2>賽事工具</h2><span class="cp-tag">詳情頁「更多操作」選單</span></div>
       <p class="cp-desc">跟單一賽事綁在一起的實用小工具，都收在詳情頁標題旁的「更多操作」裡。</p>
       <ul class="cp-items">
-        <li><a href="../"><span class="item-name">下載賽前作戰卡／應援指南圖</span><span class="item-hint">報名中賽事適用</span></a></li>
-        <li><a href="../"><span class="item-name">複製賽後檢討 AI 提示詞</span><span class="item-hint">已完賽賽事適用</span></a></li>
-        <li><a href="../"><span class="item-name">疲勞模式（賽中用）</span><span class="item-hint">全螢幕大字配速提示</span></a></li>
-        <li><a href="../"><span class="item-name">貼上資料快速填入／複製賽事</span><span class="item-hint">從簡章或舊賽事帶入資料</span></a></li>
+        <li><div class="item-row"><span class="item-name">下載賽前作戰卡／應援指南圖</span><span class="item-hint">報名中賽事適用</span></div></li>
+        <li><div class="item-row"><span class="item-name">複製賽後檢討 AI 提示詞</span><span class="item-hint">已完賽賽事適用</span></div></li>
+        <li><div class="item-row"><span class="item-name">疲勞模式（賽中用）</span><span class="item-hint">全螢幕大字配速提示</span></div></li>
+        <li><div class="item-row"><span class="item-name">貼上資料快速填入／複製賽事</span><span class="item-hint">從簡章或舊賽事帶入資料</span></div></li>
       </ul>
     </div>
 
@@ -194,22 +194,10 @@
       <div class="cp-head"><h2>資料與工具管理</h2><span class="cp-tag">頁面右上角「資料管理」選單</span></div>
       <p class="cp-desc">整個帳號層級的資料進出跟共用設定，不綁在單一賽事上。</p>
       <ul class="cp-items">
-        <li><a href="../"><span class="item-name">匯入 Excel／JSON</span><span class="item-hint">批次建立賽事</span></a></li>
-        <li><a href="../"><span class="item-name">匯出 JSON／CSV／Python 分析套件／行事曆提醒</span><span class="item-hint">備份與資料分析</span></a></li>
-        <li><a href="../"><span class="item-name">鞋款管理</span><span class="item-hint">賽事詳情頁「賽後紀錄」分頁裡</span></a></li>
-        <li><a href="../"><span class="item-name">雲端同步與個人資訊</span><span class="item-hint">選用，需登入 Google 帳號</span></a></li>
-      </ul>
-    </div>
-
-    <div class="cp">
-      <div class="cp-marker is-terminus">GOAL</div>
-      <div class="cp-head"><h2>專案文件</h2><span class="cp-tag">GitHub 上的說明文件</span></div>
-      <p class="cp-desc">想知道某個功能背後怎麼運作、想自己架設雲端同步，或想看完整的版本異動紀錄，這裡都有。</p>
-      <ul class="cp-items is-external">
-        <li><a href="https://github.com/AI-SUB3/Race-Day#readme" target="_blank" rel="noopener noreferrer"><span class="item-name">README — 專案總覽</span><span class="item-hint">github.com</span></a></li>
-        <li><a href="https://github.com/AI-SUB3/Race-Day/blob/main/USAGE.md" target="_blank" rel="noopener noreferrer"><span class="item-name">USAGE.md — 完整使用說明</span><span class="item-hint">github.com</span></a></li>
-        <li><a href="https://github.com/AI-SUB3/Race-Day/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer"><span class="item-name">CHANGELOG.md — 版本紀錄</span><span class="item-hint">github.com</span></a></li>
-        <li><a href="https://github.com/AI-SUB3/Race-Day/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><span class="item-name">LICENSE — 授權條款</span><span class="item-hint">github.com</span></a></li>
+        <li><div class="item-row"><span class="item-name">匯入 Excel／JSON</span><span class="item-hint">批次建立賽事</span></div></li>
+        <li><div class="item-row"><span class="item-name">匯出 JSON／CSV／Python 分析套件／行事曆提醒</span><span class="item-hint">備份與資料分析</span></div></li>
+        <li><div class="item-row"><span class="item-name">鞋款管理</span><span class="item-hint">賽事詳情頁「賽後紀錄」分頁裡</span></div></li>
+        <li><div class="item-row"><span class="item-name">雲端同步與個人資訊</span><span class="item-hint">選用，需登入 Google 帳號</span></div></li>
       </ul>
     </div>
   </section>
