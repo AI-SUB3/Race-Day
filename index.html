@@ -255,6 +255,8 @@
   .empty-hint-block svg{width:30px;height:30px;opacity:0.55;}
   .empty-hint-block .empty-hint{padding:0;text-align:center;}
   .repeat-rows .empty-hint-block{padding:16px 8px;}
+  .empty-hint-action{display:flex;justify-content:center;margin:-8px 0 16px;}
+  .review-template-row{display:flex;align-items:center;gap:10px;margin:-8px 0 16px;color:var(--stone);}
 
   /* ---------- Calendar ---------- */
   #calendar{margin-bottom:8px;}
@@ -316,6 +318,17 @@
   .cal-list-item:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.1);}
   .cal-list-item:active{transform:scale(0.98);}
   .cal-list-thumb{width:34px;height:34px;border-radius:5px;object-fit:cover;flex-shrink:0;}
+  /* ---------- 手機版滑動清單（Swipe-to-Action） ---------- */
+  .swipe-row{position:relative;border-radius:4px;overflow:hidden;}
+  .swipe-action-bg{
+    position:absolute;inset:0;display:flex;align-items:center;
+    font-size:14px;font-weight:700;color:#fff;background:var(--rule);
+  }
+  .swipe-action-bg .swipe-action-icon{font-size:18px;}
+  .swipe-bg-right{background:var(--trail);justify-content:flex-start;padding-left:20px;gap:8px;}
+  .swipe-bg-left{background:var(--flag);justify-content:flex-end;padding-right:20px;gap:8px;flex-direction:row-reverse;}
+  .swipe-bg-confirm{background:var(--flag);justify-content:flex-end;padding-right:20px;gap:8px;flex-direction:row-reverse;cursor:pointer;}
+  .swipe-card{margin:0;touch-action:pan-y;position:relative;z-index:1;}
   .cal-list-sport-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
   .cal-list-item.selected{background:var(--ink);border-color:var(--ink);}
   .cal-list-item.selected .cal-list-name{color:var(--surface);}
@@ -489,6 +502,17 @@
   .results-badge{display:flex;flex-direction:column;gap:3px;padding:9px 11px;background:var(--paper);border-radius:3px;}
   .results-badge-label{font-size:11px;color:var(--stone);}
   .results-badge-value{font-size:16px;font-weight:600;}
+  /* 步頻震動體驗按鈕——平常是安靜的手掌圖示，體驗進行中的 5 秒內
+     用淡入淡出的透明度變化暗示「正在跳動」，不用真的做逐拍閃爍動畫
+     （那樣反而會讓人分心去對動畫跟震動兩件事，這裡只是一個輔助的
+     視覺提示，不是這個功能的重點）。 */
+  .cadence-feel-btn{
+    background:none;border:none;padding:2px 4px;margin-left:6px;font-size:15px;
+    cursor:pointer;border-radius:4px;vertical-align:middle;
+  }
+  .cadence-feel-btn:hover{background:var(--rule);}
+  .cadence-feel-btn.feeling{animation:cadence-feel-pulse 0.6s ease-in-out infinite;cursor:default;}
+  @keyframes cadence-feel-pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
   .results-dashboard-actions{display:flex;flex-wrap:wrap;gap:10px;}
 
   /* ---------- Split analysis ---------- */
@@ -507,6 +531,12 @@
   .splits-chart-table{width:100%;border-collapse:collapse;font-size:13px;}
   .splits-chart-table th{text-align:left;padding:5px 8px;color:var(--stone);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--rule);}
   .splits-chart-table td{padding:0 8px;border-bottom:1px solid var(--rule);}
+  /* 三維度游標聯動：滑鼠停在海拔剖面圖或地圖上時，對應的分段配速列
+     用這個樣式標出來。淡金色跟海拔圖上的游標圓點、生命週期軌道
+     「目前」節點用的是同一個 --gold，維持「這是互動當下的焦點」
+     這個視覺語彙在整個 App 裡是一致的。 */
+  .splits-chart-table tr.sync-row-active{background:var(--stamp-bg-gold);}
+  .splits-chart-table tr.sync-row-active td{font-weight:700;}
   .splits-chart-pace-cell{padding:0!important;}
 
   .splits-chart-bar{display:flex;align-items:center;padding:6px 8px;height:100%;}
@@ -1722,6 +1752,29 @@ function showToast(message,kind){
   document.body.appendChild(el);
   setTimeout(()=>{ el.remove(); },6000);
 }
+// startCadenceFeel(btn, cadenceSpm)：用網頁震動 API 模擬這個步頻
+// （spm＝每分鐘步數）的節奏，連續跑 5 秒。intervalMs 是「兩步之間
+// 隔多久」——60000（一分鐘的毫秒數）除以 spm，就是每一步對應的
+// 毫秒數。呼叫端已經先確認過 navigator.vibrate 存在，這裡不用再
+// 判斷一次；btn 上加 'feeling' 這個 class 純粹是給 CSS 動畫用、
+// 順便當作「這顆按鈕現在忙碌中」的旗標，避免體驗還沒跑完又被連點。
+function startCadenceFeel(btn,cadenceSpm){
+  if(!cadenceSpm||cadenceSpm<=0) return;
+  btn.classList.add('feeling');
+  const intervalMs=60000/cadenceSpm;
+  const totalMs=5000;
+  let elapsedMs=0;
+  navigator.vibrate(5);
+  const timer=setInterval(()=>{
+    elapsedMs+=intervalMs;
+    if(elapsedMs>=totalMs){
+      clearInterval(timer);
+      btn.classList.remove('feeling');
+      return;
+    }
+    navigator.vibrate(5);
+  },intervalMs);
+}
 function getPath(obj,path){return path.split('.').reduce((o,k)=>(o==null?undefined:o[k]),obj);}
 function setPath(obj,path,value){
   const keys=path.split('.');let o=obj;
@@ -1965,7 +2018,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.79.0';
+const APP_VERSION='v2.83.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2021,6 +2074,7 @@ const JA={
   'ui.mediaGalleryTitle':'メディアギャラリー',
   'ui.taperBadge':'テーパリング中',
   'ui.lcMarkDns':'未出走 (DNS) にする','ui.lcMarkDnf':'途中棄権 (DNF) にする',
+  'ui.swipeComplete':'完走','ui.swipeDelete':'削除','ui.swipeDeleteConfirm':'もう一度タップして削除を確定',
   'ui.focusPanelLabel':'直前準備',
   'ui.focusCountdown':'あと {n} 日',
   'ui.focusHeroDaysLabel':'日後にスタート',
@@ -2080,6 +2134,10 @@ const JA={
   'ui.createRace':'大会を作成','ui.cancel':'キャンセル','ui.close':'閉じる','ui.apply':'適用',
   'ui.selectAll':'すべて選択','ui.selectNone':'選択解除','ui.addItem':'+ 追加','ui.delete':'削除',
   'ui.notYetAdded':'まだ追加されていません','ui.noMatchingRaces':'条件に一致する大会がありません',
+  'ui.applyStarterTemplate':'「{n}」テンプレートを適用',
+  'ui.reviewTemplateHint':'何から書けばいいか迷ったら？','ui.reviewTemplateKpt':'KPT振り返りテンプレートを適用',
+  'ui.tmplRoadRunning':'ロードランニング標準装備','ui.tmplTrailRunning':'トレイルランニング標準装備（必携装備の参考、実際は大会要項に従うこと）',
+  'ui.tmplTriathlon':'トライアスロン標準装備','ui.tmplCycling':'サイクリング標準装備','ui.tmplSwimming':'水泳標準装備',
   'ui.loading':'読み込み中…',
   'ui.noMatchingRacesMonth':'今月は条件に一致する大会がありません',
   'ui.selectRaceHint':'上のカレンダーから大会を選ぶか、新しい大会を作成してください。',
@@ -2244,7 +2302,10 @@ const JA={
   // ---- 成績儀表板 ----
   'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
   'ui.resultAvgHr':'平均心拍数','ui.resultElevGain':'累積標高',
+  'ui.resultAvgCadence':'平均ケイデンス','ui.feelCadenceHint':'この歩数のリズムを振動で体感する（5秒間）',
+  'ui.vibrateNotSupported':'このブラウザはWeb振動に対応していません（iOS Safariは現在この機能を全く対応していません）',
   'ui.pbBadge':'自己ベスト PB','ui.generateShareImage':'シェア画像を作成',
+  'ui.seriesPbDetected':'🎉「{n}」シリーズで自己ベストを更新しました！','ui.markAsPb':'自己ベスト (PB) にする',
   'ui.downloadDossier':'作戦カードをダウンロード','ui.dossierLabel':'レース前作戦カード',
   'ui.dossierCutoffs':'CP／関門時間','ui.dossierMoreCps':'他 {n} 箇所の関門は非表示',
   'ui.dossierEmergencyContact':'緊急連絡先','ui.dossierNutrition':'補給プラン',
@@ -2455,6 +2516,7 @@ const EN={
   'ui.mediaGalleryTitle':'Media Gallery',
   'ui.taperBadge':'Tapering',
   'ui.lcMarkDns':'Mark as DNS','ui.lcMarkDnf':'Mark as DNF',
+  'ui.swipeComplete':'Complete','ui.swipeDelete':'Delete','ui.swipeDeleteConfirm':'Tap again to confirm delete',
   'ui.focusPanelLabel':'Race Prep',
   'ui.focusCountdown':'{n} days to go',
   'ui.focusHeroDaysLabel':'days to race day',
@@ -2514,6 +2576,10 @@ const EN={
   'ui.createRace':'Create Race','ui.cancel':'Cancel','ui.close':'Close','ui.apply':'Apply',
   'ui.selectAll':'Select All','ui.selectNone':'Select None','ui.addItem':'+ Add','ui.delete':'Delete',
   'ui.notYetAdded':'Nothing added yet','ui.noMatchingRaces':'No races match the current filters',
+  'ui.applyStarterTemplate':'Apply \u201c{n}\u201d template',
+  'ui.reviewTemplateHint':'Not sure where to start?','ui.reviewTemplateKpt':'Apply KPT retrospective template',
+  'ui.tmplRoadRunning':'Road Running Essentials','ui.tmplTrailRunning':'Trail Running Essentials (mandatory-gear reference \u2014 always follow the race\u2019s official rules)',
+  'ui.tmplTriathlon':'Triathlon Essentials','ui.tmplCycling':'Cycling Essentials','ui.tmplSwimming':'Swimming Essentials',
   'ui.loading':'Loading…',
   'ui.noMatchingRacesMonth':'No matching races this month',
   'ui.selectRaceHint':'Select a race from the calendar above, or create a new one.',
@@ -2670,7 +2736,10 @@ const EN={
   'ui.badgeUnlockCaption':'Earned: {a} ({b})','ui.badgeUnlockCaptionDate':'Earned: {n}',
   'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
+  'ui.resultAvgCadence':'Avg Cadence','ui.feelCadenceHint':'Feel this cadence\u2019s rhythm via vibration (5 seconds)',
+  'ui.vibrateNotSupported':'This browser doesn\u2019t support web vibration (iOS Safari currently has no support for this at all)',
   'ui.pbBadge':'Personal Best','ui.generateShareImage':'Generate share image',
+  'ui.seriesPbDetected':'🎉 This is your fastest \u201c{n}\u201d series time yet!','ui.markAsPb':'Mark as Personal Best (PB)',
   'ui.downloadDossier':'Download pre-race card','ui.dossierLabel':'Pre-Race Dossier',
   'ui.dossierCutoffs':'Checkpoints / Cutoffs','ui.dossierMoreCps':'{n} more cutoffs not shown',
   'ui.dossierEmergencyContact':'Emergency Contact','ui.dossierNutrition':'Nutrition Plan',
@@ -3772,6 +3841,20 @@ const STARTER_TEMPLATES=[
     {itemName:'毛巾/更衣用具',category:'other',isMandatory:false},
   ]},
 ];
+// STARTER_TEMPLATES 裡的範本名稱（跟範本內每一項裝備的名稱）是寫死
+// 的中文字串，不是透過翻譯系統來的——這是自動套用裝備範本這個機制
+// 一直以來的既有限制，自動套用發生的時候是安靜生效、不會把範本
+// 名稱顯示給使用者看，所以這個限制過去不會被注意到。這次因為空
+// 狀態的按鈕要把範本名稱直接秀在畫面上，才第一次讓這個限制變得
+// 看得見——先只補上範本「名稱」本身的翻譯（按鈕上會顯示的那句話），
+// 範本裡面每一項裝備的名稱（例如「頭燈＋備用電池」）維持原樣，
+// 那是更大範圍的既有限制，不是這次的範圍。索引對應 STARTER_TEMPLATES。
+const STARTER_TEMPLATE_NAME_KEYS=['ui.tmplRoadRunning','ui.tmplTrailRunning','ui.tmplTriathlon','ui.tmplCycling','ui.tmplSwimming'];
+function starterTemplateName(idx){
+  const key=STARTER_TEMPLATE_NAME_KEYS[idx];
+  const tmpl=STARTER_TEMPLATES[idx];
+  return key&&tmpl?t(key,tmpl.name):(tmpl?tmpl.name:'');
+}
 
 // 依運動種類自動套用對應的裝備範本（僅在裝備清單還是空的時候才會套用，
 // 不會覆蓋使用者已經自己填好的內容）。索引對應 STARTER_TEMPLATES 陣列。
@@ -3866,6 +3949,52 @@ function applySmartDefaults(race,changedPath){
     race.status='registered'; filled.push('status');
   }
   return filled;
+}
+// quickSetRaceStatus(race, newStatus)：把一場賽事的狀態改成 newStatus，
+// 包含鞋款里程門檻提醒、無感智慧預設、裝備範本自動套用這一整套邏輯
+// ——賽事詳情頁的狀態下拉選單（跟連動的生命週期軌道）、手機版滑動
+// 清單向右滑完賽（見下方 swipe-to-action 區塊），呼叫的是同一份函式，
+// 不是各自維護一份容易兜不起來的重複邏輯。只負責改資料、存檔、跳出
+// 對應的提示 toast，不負責事後要重新畫哪些畫面（列表、詳情頁）——
+// 兩個呼叫端的畫面情境差很多（有沒有開著詳情頁、要不要整頁重繪），
+// 留給各自呼叫端自己處理。回傳這次連帶觸發的無感智慧預設欄位（陣列，
+// 通常是空的，因為「狀態本身改變」目前沒有任何一條智慧預設規則會
+// 對它起反應，保留這個回傳值只是讓這個函式的行為跟其他呼叫
+// applySmartDefaults() 的地方維持一致的介面，不代表現在就有用到）。
+async function quickSetRaceStatus(race,newStatus){
+  const prevStatus=race.status;
+  const shoeForAlert=(newStatus==='completed'&&prevStatus!=='completed'&&race.performanceData.shoeId)
+    ?shoes.find(s=>s.id===race.performanceData.shoeId):null;
+  const oldShoePct=shoeForAlert?shoeHealthPct(shoeForAlert,computeShoeStats(shoeForAlert.id).totalDistance):null;
+  race.status=newStatus;
+  race.updatedAt=new Date().toISOString();
+  const smartFilled=applySmartDefaults(race,'status');
+  const templateApplied=smartFilled.includes('sportType')&&autoApplyEquipmentTemplate(race);
+  await persist();
+  if(templateApplied){
+    const el=document.createElement('div');
+    el.className='foreground-toast';
+    el.innerHTML=`<strong>${window.t('ui.templateAutoApplied','已自動套用裝備範本')}</strong>`;
+    document.body.appendChild(el);
+    setTimeout(()=>{ el.remove(); },4000);
+  }
+  if(shoeForAlert&&oldShoePct!=null){
+    const newPct=shoeHealthPct(shoeForAlert,computeShoeStats(shoeForAlert.id).totalDistance);
+    let alertMsg=null;
+    if(oldShoePct<100&&newPct>=100){
+      alertMsg=window.tf('ui.shoeAlert100',`注意：您的 ${shoeForAlert.name} 累積里程已達設定壽命的 100%，建議儘快更換戰靴！`,shoeForAlert.name);
+    }else if(oldShoePct<80&&newPct>=80){
+      alertMsg=window.tf('ui.shoeAlert80',`注意：您的 ${shoeForAlert.name} 累積里程已達設定壽命的 80%，建議開始物色下一雙戰靴！`,shoeForAlert.name);
+    }
+    if(alertMsg){
+      const shoeToastEl=document.createElement('div');
+      shoeToastEl.className='foreground-toast';
+      shoeToastEl.innerHTML=`<strong>${alertMsg}</strong>`;
+      document.body.appendChild(shoeToastEl);
+      setTimeout(()=>{ shoeToastEl.remove(); },6000);
+    }
+  }
+  return smartFilled;
 }
 /* ============================================================
    個人資訊：心率區間（儲備心率法）與身體數據
@@ -5208,6 +5337,45 @@ function gearWeightDashboardHtml(race){
     ${bodyLoadHtml}
   </div>`;
 }
+// equipmentEmptyStateHtml(race)：裝備清單是空的時候，除了原本的
+// 「尚未新增」提示，如果這場賽事的運動種類剛好有對應的標配範本
+// （STARTER_TEMPLATES／SPORT_TEMPLATE_INDEX），多加一個一鍵套用的
+// 按鈕。正常情況下這個範本在建立賽事的當下就已經自動套用過了（見
+// autoApplyEquipmentTemplate()），所以會走到「清單真的是空的」這裡，
+// 通常是運動種類選了「其他」（沒有對應範本，這個按鈕不會出現）、
+// 或使用者自己把清單全部清空了——後者這個按鈕能讓使用者快速拿回
+// 標配範本，不用跑一趟上面的「套用範本」下拉選單（那個選單放的是
+// 使用者自己存的範本，不會列出這幾個內建的標配範本）。
+// reviewTemplateButtonsHtml(race)：「檢討筆記」這個開放式大欄位常常
+// 是賽後最難下筆的地方——有結構的引導比一片空白更容易讓人開始寫。
+// 只在這個欄位目前還是空的時候顯示；已經寫過內容的話就不再顯示，
+// 避免使用者誤以為按下去會覆蓋掉已經寫好的東西（雖然實際上是整個
+// 換成範本文字，不是插入，顯示時機本身就先避開這個疑慮，不用另外
+// 寫一個確認彈窗）。
+const REVIEW_KPT_TEMPLATE=`## Keep（這次做得好、下次要延續的）
+- 
+
+## Problem（哪裡出狀況、卡關的地方）
+- 
+
+## Try（下次想嘗試的調整）
+- `;
+function reviewTemplateButtonsHtml(race){
+  if((race.review.lessonsLearned||'').trim()) return '';
+  return `<div class="review-template-row">
+    <span class="small">${t('ui.reviewTemplateHint','不知道從何寫起？')}</span>
+    <button type="button" class="btn-text-small" data-action="apply-review-template" data-race-id="${race.id}">${t('ui.reviewTemplateKpt','套用 KPT 復盤法範本')}</button>
+  </div>`;
+}
+function equipmentEmptyStateHtml(race){
+  const idx=SPORT_TEMPLATE_INDEX[race.sportType];
+  const tmpl=(idx!=null)?STARTER_TEMPLATES[idx]:null;
+  const base=emptyStateBlock('equipmentChecklist',t('ui.notYetAdded','尚未新增'));
+  if(!tmpl) return base;
+  return `${base}<div class="empty-hint-action">
+    <button type="button" class="btn-ghost" data-action="apply-starter-template" data-race-id="${race.id}">${tf('ui.applyStarterTemplate','套用「{n}」範本',escapeHtml(starterTemplateName(idx)))}</button>
+  </div>`;
+}
 function renderEquipmentSection(race){
   const items=race.equipmentChecklist||[];
   const options=templates.map(tp=>`<option value="${tp.id}">${escapeHtml(tp.name)}（${tp.items.length}）</option>`).join('');
@@ -5235,14 +5403,14 @@ function renderEquipmentSection(race){
         <button type="button" class="btn-ghost" data-action="cancel-save-template">${t('ui.cancel','取消')}</button>
       </div>`:''}`}
     ${isKanban
-      ?(items.length?equipmentKanbanHtml(race):emptyStateBlock('equipmentChecklist',t('ui.notYetAdded','尚未新增')))
+      ?(items.length?equipmentKanbanHtml(race):equipmentEmptyStateHtml(race))
       :`<div class="repeat-rows">
       ${items.length?items.map((it,i)=>`
         <div class="repeat-row${items.length>1?' reorderable':''}">
           ${reorderControlsHtml('equipmentChecklist',i,items.length)}
           <button type="button" class="row-remove" data-action="remove-item" data-list="equipmentChecklist" data-index="${i}" title="${t('ui.delete','刪除')}">×</button>
           ${EQUIP_FIELDS.map(f=>renderField(race,Object.assign({},f,{path:`equipmentChecklist.${i}.${f.path}`,labelPath:f.path}),'equipmentChecklist')).join('')}
-        </div>`).join(''):emptyStateBlock('equipmentChecklist',t('ui.notYetAdded','尚未新增'))}
+        </div>`).join(''):equipmentEmptyStateHtml(race)}
     </div>`}
   </div>`;
 }
@@ -5311,6 +5479,22 @@ const QUICK_NAV_SECTIONS=[
 ];
 function quickNavHtml(){
   return `<nav class="quick-nav">${QUICK_NAV_SECTIONS.map(([id,key,fallback])=>`<a href="#${id}" data-target="${id}">${t(key,fallback)}</a>`).join('')}</nav>`;
+}
+// detectSeriesPb(race)：這場賽事的晶片時間，是不是比「同系列」其他
+// 賽事裡最快的還要快。刻意只在同系列內比較，用的是跟上面「系列賽事
+// 比較（跨年）」那張表完全一樣的比較基準（同系列＝多半是同一條賽道、
+// 年復一年的賽事），不是另外發明一套「距離相近就算同類」這種容易
+// 誤判的模糊規則——越野賽同樣是 10K，山徑陡峭程度天差地遠，拿來
+// 互相比「PB」沒有意義。沒有系列、系列裡沒有其他已經填時間的賽事，
+// 一律回傳 false，因為根本沒有比較基準，沒辦法宣稱「破了 PB」。
+function detectSeriesPb(race){
+  const chipT=race.results&&race.results.chipTimeSeconds;
+  if(chipT==null||!race.series||!race.series.trim()) return false;
+  const key=race.series.trim();
+  const others=state.races.filter(r=>r.id!==race.id&&r.series&&r.series.trim()===key&&r.results&&r.results.chipTimeSeconds!=null);
+  if(!others.length) return false;
+  const bestOther=Math.min(...others.map(r=>r.results.chipTimeSeconds));
+  return chipT<bestOther;
 }
 function renderSeriesComparison(race){
   if(!race.series||!race.series.trim()) return '';
@@ -5381,6 +5565,12 @@ function renderResultsDashboard(race){
   if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),race.results.overallRank+(race.results.overallParticipants?`／${race.results.overallParticipants}`:''),false]);
   if(race.results.ageGroupRank!=null) badges.push([t('field.post.results.ageGroupRank','分組名次'),race.results.ageGroupRank+(race.results.ageGroupParticipants?`／${race.results.ageGroupParticipants}`:''),false]);
   if(race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),hrZoneHtml(race.performanceData.avgHr,race),true]);
+  if(race.performanceData.avgCadence!=null){
+    const cad=race.performanceData.avgCadence;
+    badges.push([t('ui.resultAvgCadence','平均步頻'),
+      `<span class="mono">${cad} spm</span><button type="button" class="cadence-feel-btn" data-action="feel-cadence" data-cadence="${cad}" title="${t('ui.feelCadenceHint','用震動體驗這個步頻的節奏（5 秒）')}">👋</button>`,
+      true]);
+  }
   if(race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺',false]);
   return `<div class="results-dashboard${isPb?' is-pb':''}">
     <div class="results-dashboard-main">
@@ -5512,7 +5702,7 @@ function renderSplitsChart(race){
     const paceHtml=gaps[i]!=null
       ?`<span class="splits-gap-stack"><span class="mono splits-gap-primary">${formatPace(gaps[i])}/km (GAP)</span><span class="splits-gap-secondary mono small">${formatPace(s.avgPaceSecPerKm)}/km (${t('ui.splitsActualPace','實際配速')})</span></span>`
       :`<span class="mono">${formatPace(s.avgPaceSecPerKm)}/km</span>`;
-    return `<tr>
+    return `<tr data-km-end="${rangeEnd.toFixed(3)}" data-km-span="${s.distanceKm.toFixed(3)}">
       <td class="mono num">${distLabel}</td>
       <td class="splits-chart-pace-cell">
         <span class="splits-chart-bar" style="background:linear-gradient(to right, var(--trail) ${fillPct}%, transparent ${fillPct}%)">
@@ -5524,7 +5714,7 @@ function renderSplitsChart(race){
   }).join('');
   return `<div class="splits-chart-wrap">
     <div class="yearly-chart-title small">${t('ui.splitsChartTitle','分段配速一覽')}</div>
-    <table class="splits-chart-table">
+    <table class="splits-chart-table" id="splits-chart-table-${race.id}">
       <thead><tr>
         <th>${t('ui.splitsChartDistance','距離')}</th>
         <th>${t('ui.resultPace','配速')}</th>
@@ -5689,6 +5879,36 @@ function setupElevationScrubbing(race){
   const cursorLine=cursor.querySelector('line');
   const cursorDot=cursor.querySelector('circle');
 
+  // 三維度游標聯動的第三腳：分段配速表。開始設定的時候把每一列的
+  // 「累積距離終點」跟 DOM 節點快取成一個排序好的陣列，滑鼠移動時
+  // 用二分搜尋找對應的那一列，不用每次移動都重新查一次 DOM、掃過
+  // 所有列——海拔圖的 pointermove 可能一秒觸發好幾十次，表格列數
+  // 多的時候（超馬、破百公里）這個差異看得出來。
+  const splitsTable=document.getElementById('splits-chart-table-'+race.id);
+  const splitsRows=splitsTable?[...splitsTable.querySelectorAll('tbody tr[data-km-end]')].map(tr=>({el:tr,kmEnd:parseFloat(tr.dataset.kmEnd)})):[];
+  let activeSplitsRow=null;
+  // lastGradeWasSteep：游標剛剛所在的點，坡度有沒有超過「陡坡」門檻
+  // ——每次 setupElevationScrubbing() 重新呼叫（也就是每次切換／重新
+  // 整理賽事詳情頁）都會重設回 false，不會帶著上一場賽事的狀態。
+  let lastGradeWasSteep=false;
+  const STEEP_GRADE_THRESHOLD_PCT=8; // 山徑／健行常見的「陡坡」門檻，上下坡都算
+  function findSplitsRowIndex(distKm){
+    if(!splitsRows.length) return -1;
+    let lo=0,hi=splitsRows.length-1;
+    while(lo<hi){
+      const mid=(lo+hi)>>1;
+      if(splitsRows[mid].kmEnd<distKm) lo=mid+1; else hi=mid;
+    }
+    return lo;
+  }
+  function setActiveSplitsRow(idx){
+    const row=idx>=0&&idx<splitsRows.length?splitsRows[idx].el:null;
+    if(row===activeSplitsRow) return;
+    if(activeSplitsRow) activeSplitsRow.classList.remove('sync-row-active');
+    if(row) row.classList.add('sync-row-active');
+    activeSplitsRow=row;
+  }
+
   function elevationAt(distKm){
     let i=1;
     while(i<pts.length-1&&pts[i].distanceKm<distKm) i++;
@@ -5700,13 +5920,28 @@ function setupElevationScrubbing(race){
     const gradPct=distM>0?((p1.elevationM-p0.elevationM)/distM)*100:0;
     return {elev,gradPct};
   }
-  function handleMove(clientX){
-    const rect=svg.getBoundingClientRect();
-    if(!rect.width) return;
-    const relX=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
-    const distKm=minX+relX*(maxX-minX);
+  // applyHoverAtKm(distKm)：三個介面（海拔剖面圖游標、路線地圖上的
+  // 幽靈圖釘、分段配速表列）共用的核心更新邏輯，不管這次是滑鼠在
+  // SVG 上移動觸發、還是滑進了表格的某一列觸發，最終都走這一個
+  // 函式，行為保證一致。relX 拿來定位 tooltip 的左右位置——如果是
+  // 從表格觸發，沒有實際滑鼠 X 座標可用，用 distKm 換算出等效的
+  // relX，讓 tooltip 一樣能正確定位在 SVG 上對應的地方。
+  function applyHoverAtKm(distKm,relXOverride){
+    const relX=relXOverride!=null?relXOverride:((maxX-minX)>0?(distKm-minX)/(maxX-minX):0);
     const {elev,gradPct}=elevationAt(distKm);
     const cx=sx(distKm);
+
+    // 陡坡「阻力感」：游標經過的坡度跨過陡坡門檻（不管是進入還是離開）
+    // 的那個瞬間震動一下，模擬滑過一道隱形阻力牆的物理錯覺。用
+    // if(navigator.vibrate) 判斷是必要防呆，不是可有可無的寫法——
+    // iOS Safari 完全不支援這個 API，沒判斷就直接呼叫會直接拋例外、
+    // 中斷整個游標更新；有這層判斷之後，iOS 上游標聯動一樣正常運作，
+    // 只是沒有震動感，這是平台本身的限制。
+    const isSteep=Math.abs(gradPct)>=STEEP_GRADE_THRESHOLD_PCT;
+    if(isSteep!==lastGradeWasSteep){
+      lastGradeWasSteep=isSteep;
+      if(navigator.vibrate) navigator.vibrate(15);
+    }
 
     cursor.style.opacity='1';
     cursorLine.setAttribute('x1',cx.toFixed(1));cursorLine.setAttribute('x2',cx.toFixed(1));
@@ -5716,12 +5951,12 @@ function setupElevationScrubbing(race){
     tooltip.innerHTML=`<div class="elev-tooltip-dist mono">${distKm.toFixed(1)} km</div>
       <div class="elev-tooltip-row"><span>${t('ui.elevTooltipElevation','海拔')}</span><span class="mono">${Math.round(elev)} m</span></div>
       <div class="elev-tooltip-row"><span>${t('ui.elevTooltipGradient','瞬時坡度')}</span><span class="mono">${gradPct>0?'+':''}${gradPct.toFixed(1)}%</span></div>`;
-    const leftPct=relX*100;
+    const leftPct=Math.max(0,Math.min(1,relX))*100;
     tooltip.style.left=leftPct+'%';
     tooltip.style.transform=leftPct>70?'translateX(-100%)':(leftPct<5?'translateX(0)':'translateX(-50%)');
 
     if(trackDistances&&currentRouteMap&&window.L){
-      const trackTargetKm=profileTotalKm>0?relX*trackTotalKm:0;
+      const trackTargetKm=profileTotalKm>0?((distKm-minX)/profileTotalKm)*trackTotalKm:0;
       const idx=findNearestTrackPointIndex(trackDistances,trackTargetKm);
       const pt=trackPoints[idx];
       if(pt){
@@ -5733,17 +5968,60 @@ function setupElevationScrubbing(race){
         }
       }
     }
+    setActiveSplitsRow(findSplitsRowIndex(distKm));
   }
-  function handleLeave(){
+  function clearHover(){
     cursor.style.opacity='0';
     tooltip.hidden=true;
     if(elevScrubMapMarker&&currentRouteMap&&currentRouteMap.hasLayer(elevScrubMapMarker)){
       currentRouteMap.removeLayer(elevScrubMapMarker);
     }
+    setActiveSplitsRow(-1);
+    lastGradeWasSteep=false; // 離開之後重設，下次重新進入陡坡一樣會震動，不會因為「上次剛好也是陡坡」而被跳過
+  }
+
+  // rAF 節流：pointermove 在部分裝置上觸發頻率可能超過螢幕更新率，
+  // 這裡把實際的 DOM 更新工作收進 requestAnimationFrame，同一畫面
+  // 更新週期內收到好幾次移動事件也只會真的畫一次，不會讓瀏覽器忙著
+  // 處理跟不上、看不到的中間畫面。
+  let rafPending=false,pendingKm=undefined,pendingRelX=undefined;
+  function scheduleHover(distKm,relX){
+    pendingKm=distKm;pendingRelX=relX;
+    if(rafPending) return;
+    rafPending=true;
+    requestAnimationFrame(()=>{
+      rafPending=false;
+      if(pendingKm!=null) applyHoverAtKm(pendingKm,pendingRelX);
+    });
+  }
+  function handleMove(clientX){
+    const rect=svg.getBoundingClientRect();
+    if(!rect.width) return;
+    const relX=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
+    const distKm=minX+relX*(maxX-minX);
+    scheduleHover(distKm,relX);
+  }
+  function handleLeave(){
+    pendingKm=undefined;
+    clearHover();
   }
   captureRect.addEventListener('pointermove',e=>handleMove(e.clientX));
   captureRect.addEventListener('pointerleave',handleLeave);
   captureRect.addEventListener('touchmove',e=>{ if(e.touches[0]){ handleMove(e.touches[0].clientX); e.preventDefault(); } },{passive:false});
+
+  // 分段配速表：滑進某一列，直接用那一列的累積距離終點當代表點——
+  // 跟海拔圖、地圖同步移動過去；離開表格清除整組聯動顯示，行為跟
+  // 滑鼠離開海拔圖是一樣的。表格列數通常不多（幾十列），不需要像
+  // 海拔圖那樣額外做 rAF 節流，滑進一列就直接反應。
+  splitsRows.forEach(({el,kmEnd},idx)=>{
+    const kmStart=kmEnd-parseFloat(el.dataset.kmSpan||'0');
+    const midKm=kmStart+(kmEnd-kmStart)/2;
+    el.addEventListener('mouseenter',()=>{
+      pendingKm=undefined; // 蓋掉海拔圖那邊還沒處理完的排程，避免兩邊互搶
+      applyHoverAtKm(midKm);
+    });
+    el.addEventListener('mouseleave',()=>{ clearHover(); });
+  });
 }
 
 /* ============================================================
@@ -8915,16 +9193,19 @@ function renderCalendar(){
       listRows.push(`<div class="cal-list-day">
         <div class="cal-list-date mono${isToday?' today':''}">${cellD}<span class="cal-list-weekday">${weekdayLabels()[new Date(cellY,cellM,cellD).getDay()]}</span></div>
         <div class="cal-list-races">
-          ${dayRaces.map(r=>`<button type="button" class="cal-list-item status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
-            ${r.coverImage?`<img class="cal-list-thumb" src="${r.coverImage}" alt="" style="${focalPointStyle(r)}">`:`<span class="cal-list-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}
-            <span class="cal-list-text">
-              <span class="cal-list-name-row">
-                <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
-                <span class="cal-list-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span>
+          ${dayRaces.map(r=>`<div class="swipe-row" data-id="${r.id}">
+            <div class="swipe-action-bg"></div>
+            <button type="button" class="cal-list-item swipe-card status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
+              ${r.coverImage?`<img class="cal-list-thumb" src="${r.coverImage}" alt="" style="${focalPointStyle(r)}">`:`<span class="cal-list-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}
+              <span class="cal-list-text">
+                <span class="cal-list-name-row">
+                  <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
+                  <span class="cal-list-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span>
+                </span>
+                ${raceTerrainMetaHtml(r)}
               </span>
-              ${raceTerrainMetaHtml(r)}
-            </span>
-          </button>`).join('')}
+            </button>
+          </div>`).join('')}
         </div>
       </div>`);
     }
@@ -9102,7 +9383,7 @@ function renderDetail(){
         <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX / FIT）')}</button>
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
       </div>
-      <div class="section-body">${SECTION_POST.map(f=>renderField(race,f,'post')).join('')}</div>
+      <div class="section-body">${SECTION_POST.map(f=>renderField(race,f,'post')+(f.path==='review.lessonsLearned'?reviewTemplateButtonsHtml(race):'')).join('')}</div>
       ${(race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}
       ${renderRepeatable(race,'mediaLinks')}
       ${mediaGalleryHtml(race)}
@@ -9291,8 +9572,123 @@ filterChipsEl.addEventListener('click',e=>{
   renderCalendar();
 });
 
+// swipeState：目前正在進行中的滑動手勢（一次只會有一個，因為手指
+// 同時間只能滑一張卡片）。recentlySwipedId 是「這張卡片剛滑過」的
+// 短暫記號——手機瀏覽器在 touchend 之後通常還會補送一個合成的 click
+// 事件，如果不擋掉，滑動完賽／刪除之餘還會順便把賽事詳情頁打開，
+// 這不是使用者要的。
+let swipeState=null;
+let recentlySwipedId=null;
+const SWIPE_THRESHOLD_PX=84;
+function swipeActionBgHtml(dir){
+  return dir==='right'
+    ?`<span class="swipe-action-icon">✓</span><span>${t('ui.swipeComplete','完賽')}</span>`
+    :`<span>${t('ui.swipeDelete','刪除')}</span><span class="swipe-action-icon">🗑</span>`;
+}
+function resetSwipeCard(card,bg){
+  card.style.transition='transform 0.2s ease';
+  card.style.transform='translateX(0)';
+  bg.className='swipe-action-bg';
+  bg.innerHTML='';
+  delete bg.dataset.confirmDeleteId;
+  clearTimeout(bg._resetTimer);
+}
+calendarEl.addEventListener('touchstart',e=>{
+  const row=e.target.closest('.swipe-row');
+  if(!row||e.touches.length!==1) return;
+  const card=row.querySelector('.swipe-card'),bg=row.querySelector('.swipe-action-bg');
+  // 這張卡片如果還卡在「已滑到底、等待再次點擊確認刪除」的狀態，
+  // 這次新的觸摸手勢視同放棄那次確認，先收回去，不要疊加兩套狀態。
+  if(bg.dataset.confirmDeleteId) resetSwipeCard(card,bg);
+  const touch=e.touches[0];
+  swipeState={id:row.dataset.id,row,card,bg,startX:touch.clientX,startY:touch.clientY,currentX:0,dragging:false,direction:null,vibrated:false};
+},{passive:true});
+calendarEl.addEventListener('touchmove',e=>{
+  if(!swipeState) return;
+  const touch=e.touches[0];
+  const deltaX=touch.clientX-swipeState.startX,deltaY=touch.clientY-swipeState.startY;
+  if(!swipeState.dragging){
+    if(Math.abs(deltaX)<10&&Math.abs(deltaY)<10) return;
+    // 垂直移動比水平移動大，判斷成使用者在捲動頁面，整個放棄這次
+    // 手勢——這一步是避免「往下捲動清單」被誤判成「向左右滑」的
+    // 關鍵，只判斷一次（剛開始移動的當下），之後就不再重新判斷。
+    if(Math.abs(deltaY)>Math.abs(deltaX)){ swipeState=null; return; }
+    swipeState.dragging=true;
+    swipeState.card.style.transition='none';
+  }
+  e.preventDefault(); // 確定是水平滑動之後，鎖住垂直捲動，卡片才能跟手指一起移動
+  // 阻尼公式：超過門檻之後，每多拉 1px 畫面只移動 0.28px，模擬拉到
+  // 底的物理極限感，不會讓卡片無止盡跟著手指一路飛出螢幕外。
+  const overshoot=Math.abs(deltaX)-SWIPE_THRESHOLD_PX;
+  const damped=overshoot>0?Math.sign(deltaX)*(SWIPE_THRESHOLD_PX+overshoot*0.28):deltaX;
+  swipeState.currentX=damped;
+  swipeState.card.style.transform=`translateX(${damped}px)`;
+  const dir=deltaX>0?'right':'left';
+  if(dir!==swipeState.direction){
+    swipeState.direction=dir;
+    swipeState.bg.className='swipe-action-bg swipe-bg-'+dir;
+    swipeState.bg.innerHTML=swipeActionBgHtml(dir);
+  }
+  const pastThreshold=Math.abs(deltaX)>=SWIPE_THRESHOLD_PX;
+  if(pastThreshold&&!swipeState.vibrated){
+    swipeState.vibrated=true;
+    // iOS Safari 完全不支援 Vibration API（navigator.vibrate 在那個
+    // 環境下根本不存在），這裡加 if 判斷是必要的防呆，不是可有可無
+    // 的寫法——沒有這層判斷，iOS 上呼叫會直接拋例外、中斷整個滑動
+    // 手勢，其他平台（多數 Android 瀏覽器）才有這個效果。
+    if(navigator.vibrate) navigator.vibrate(10);
+  }else if(!pastThreshold){
+    swipeState.vibrated=false;
+  }
+},{passive:false});
+calendarEl.addEventListener('touchend',()=>{
+  if(!swipeState) return;
+  const s=swipeState;swipeState=null;
+  if(!s.dragging) return;
+  recentlySwipedId=s.id;
+  setTimeout(()=>{ if(recentlySwipedId===s.id) recentlySwipedId=null; },350);
+  const pastThreshold=Math.abs(s.currentX)>=SWIPE_THRESHOLD_PX;
+  if(pastThreshold&&s.direction==='right'){
+    const race=state.races.find(r=>r.id===s.id);
+    if(!race){ resetSwipeCard(s.card,s.bg); return; }
+    s.card.style.transition='transform 0.2s ease,opacity 0.2s ease';
+    s.card.style.transform='translateX(110%)';
+    s.card.style.opacity='0';
+    if(navigator.vibrate) navigator.vibrate([15,30,15]);
+    quickSetRaceStatus(race,'completed').then(()=>{ renderCalendar(); });
+    logFeatureUse('swipe_complete');
+  }else if(pastThreshold&&s.direction==='left'){
+    // 卡片定格在左側、露出刪除確認區塊，要再點一次才真的刪除——
+    // 跟詳情頁既有的「連按兩次」刪除精神一致，滑動這個新入口一樣
+    // 不會單一個手勢就讓資料消失。5 秒沒有點擊確認會自動收回。
+    s.card.style.transition='transform 0.2s ease';
+    s.card.style.transform=`translateX(-${SWIPE_THRESHOLD_PX}px)`;
+    s.bg.className='swipe-action-bg swipe-bg-confirm';
+    s.bg.innerHTML=`<span>${t('ui.swipeDeleteConfirm','再次點擊以確認刪除')}</span><span class="swipe-action-icon">🗑</span>`;
+    s.bg.dataset.confirmDeleteId=s.id;
+    clearTimeout(s.bg._resetTimer);
+    s.bg._resetTimer=setTimeout(()=>{ if(s.bg.dataset.confirmDeleteId===s.id) resetSwipeCard(s.card,s.bg); },5000);
+    logFeatureUse('swipe_delete_arm');
+  }else{
+    resetSwipeCard(s.card,s.bg);
+  }
+});
 calendarEl.addEventListener('click',e=>{
+  const confirmBg=e.target.closest('.swipe-bg-confirm');
+  if(confirmBg){
+    const id=confirmBg.dataset.confirmDeleteId;
+    const race=state.races.find(r=>r.id===id);
+    if(race){
+      race.deletedAt=new Date().toISOString();
+      race.updatedAt=new Date().toISOString();
+      if(state.selectedId===id){ state.selectedId=null; currentRace=null; }
+      persist();renderAll();
+      logFeatureUse('swipe_delete_confirm');
+    }
+    return;
+  }
   const chip=e.target.closest('.cal-chip,.cal-list-item');if(!chip) return;
+  if(recentlySwipedId===chip.dataset.id){ recentlySwipedId=null; return; }
   selectRace(chip.dataset.id);
 });
 
@@ -9891,66 +10287,75 @@ detailEl.addEventListener('change',async e=>{
   else if(t.dataset.kind==='duration') value=hmsToSec(t.value);
   else if(t.type==='number') value=(t.value===''?null:Number(t.value));
   else value=t.value;
-  const prevStatus=path==='status'?currentRace.status:null;
-  // 完賽門檻提醒：在真正把狀態改成「已完賽」之前，先記錄這場賽事綁定的鞋款
-  // 「目前」（還沒把這場算進去）的累積里程百分比，等存檔完再跟新的百分比比較，
-  // 才能判斷是不是「剛好跨過」80%／100% 這兩個門檻，而不是每次開啟畫面都提醒。
-  const shoeForAlert=(path==='status'&&value==='completed'&&prevStatus!=='completed'&&currentRace.performanceData.shoeId)
-    ?shoes.find(s=>s.id===currentRace.performanceData.shoeId):null;
-  const oldShoePct=shoeForAlert?shoeHealthPct(shoeForAlert,computeShoeStats(shoeForAlert.id).totalDistance):null;
-  setPath(currentRace,path,value);
-  currentRace.updatedAt=new Date().toISOString();
-  if(path==='schedule.raceDate'&&value){
-    const d=new Date(value+'T00:00:00');
-    if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
-  }
-  // 無感智慧預設：見 applySmartDefaults() 說明。回傳這次自動改了哪些
-  // 欄位——「換運動種類自動帶裝備範本」這個既有機制原本只認使用者
-  // 直接改 sportType 這個 path，這次如果是被智慧預設連帶改掉的，
-  // 也要用同一套邏輯觸發，行為要一致，不能因為「觸發來源不是使用者
-  // 手動選」就跳過裝備範本這一步。
-  const smartFilled=applySmartDefaults(currentRace,path);
-  // 換運動種類時，如果裝備清單還是空的，自動帶入對應的標準範本（不會覆蓋已填的內容）
-  const templateApplied=(path==='sportType'||smartFilled.includes('sportType'))&&autoApplyEquipmentTemplate(currentRace);
-  showSaveStatus('saving');
-  await persist();
-  renderCalendar();
-  const needsFullRerender=(path==='status'||path==='series'||path==='sportType'||path.startsWith('results.')||path.startsWith('lottery.')||path.startsWith('nutritionSchedule.')||smartFilled.length>0);
-  if(smartFilled.length){
-    smartFilledHighlightPaths=new Set(smartFilled);
-    setTimeout(()=>{ smartFilledHighlightPaths=new Set(); },2500);
-  }
-  if(needsFullRerender){renderDetail();}else{updateDetailHeaderBits();}
-  showSaveStatus('saved');
-  if(templateApplied){
-    const el=document.createElement('div');
-    el.className='foreground-toast';
-    el.innerHTML=`<strong>${window.t('ui.templateAutoApplied','已自動套用裝備範本')}</strong>`;
-    document.body.appendChild(el);
-    setTimeout(()=>{ el.remove(); },4000);
-  }
-  if(shoeForAlert&&oldShoePct!=null){
-    const newPct=shoeHealthPct(shoeForAlert,computeShoeStats(shoeForAlert.id).totalDistance);
-    let alertMsg=null;
-    if(oldShoePct<100&&newPct>=100){
-      alertMsg=window.tf('ui.shoeAlert100',`注意：您的 ${shoeForAlert.name} 累積里程已達設定壽命的 100%，建議儘快更換戰靴！`,shoeForAlert.name);
-    }else if(oldShoePct<80&&newPct>=80){
-      alertMsg=window.tf('ui.shoeAlert80',`注意：您的 ${shoeForAlert.name} 累積里程已達設定壽命的 80%，建議開始物色下一雙戰靴！`,shoeForAlert.name);
+  if(path==='status'){
+    // 狀態這個欄位的核心邏輯（鞋款門檻提醒、無感智慧預設、裝備範本
+    // 自動套用、存檔）抽成 quickSetRaceStatus()，跟手機版滑動清單向右
+    // 滑完賽共用同一份；這裡只處理「詳情頁欄位編輯」這個入口自己
+    // 專屬的部分——存檔中／已存檔提示、畫面重繪、完賽時自動捲動到
+    // 賽後紀錄區塊。
+    const prevStatus=currentRace.status;
+    showSaveStatus('saving');
+    const smartFilled=await quickSetRaceStatus(currentRace,value);
+    renderCalendar();
+    if(smartFilled.length){
+      smartFilledHighlightPaths=new Set(smartFilled);
+      setTimeout(()=>{ smartFilledHighlightPaths=new Set(); },2500);
     }
-    if(alertMsg){
-      const shoeToastEl=document.createElement('div');
-      shoeToastEl.className='foreground-toast';
-      shoeToastEl.innerHTML=`<strong>${alertMsg}</strong>`;
-      document.body.appendChild(shoeToastEl);
-      setTimeout(()=>{ shoeToastEl.remove(); },6000);
+    renderDetail();
+    showSaveStatus('saved');
+    if(value==='completed'&&prevStatus!=='completed'){
+      const postSection=document.getElementById('section-post');
+      if(postSection){
+        postSection.open=true;
+        postSection.scrollIntoView({behavior:'smooth',block:'start'});
+      }
     }
-  }
-  // 從賽前狀態切成「已完賽」時，自動捲動到賽後紀錄區塊（該區塊本來就會依狀態自動展開），讓填寫動線更順暢
-  if(path==='status'&&value==='completed'&&prevStatus!=='completed'){
-    const postSection=document.getElementById('section-post');
-    if(postSection){
-      postSection.open=true;
-      postSection.scrollIntoView({behavior:'smooth',block:'start'});
+  }else{
+    setPath(currentRace,path,value);
+    currentRace.updatedAt=new Date().toISOString();
+    if(path==='schedule.raceDate'&&value){
+      const d=new Date(value+'T00:00:00');
+      if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
+    }
+    // 無感智慧預設：見 applySmartDefaults() 說明。回傳這次自動改了哪些
+    // 欄位——「換運動種類自動帶裝備範本」這個既有機制原本只認使用者
+    // 直接改 sportType 這個 path，這次如果是被智慧預設連帶改掉的，
+    // 也要用同一套邏輯觸發，行為要一致，不能因為「觸發來源不是使用者
+    // 手動選」就跳過裝備範本這一步。
+    const smartFilled=applySmartDefaults(currentRace,path);
+    // 換運動種類時，如果裝備清單還是空的，自動帶入對應的標準範本（不會覆蓋已填的內容）
+    const templateApplied=(path==='sportType'||smartFilled.includes('sportType'))&&autoApplyEquipmentTemplate(currentRace);
+    showSaveStatus('saving');
+    await persist();
+    renderCalendar();
+    const needsFullRerender=(path==='series'||path==='sportType'||path.startsWith('results.')||path.startsWith('lottery.')||path.startsWith('nutritionSchedule.')||smartFilled.length>0);
+    if(smartFilled.length){
+      smartFilledHighlightPaths=new Set(smartFilled);
+      setTimeout(()=>{ smartFilledHighlightPaths=new Set(); },2500);
+    }
+    if(needsFullRerender){renderDetail();}else{updateDetailHeaderBits();}
+    showSaveStatus('saved');
+    if(templateApplied){
+      const el=document.createElement('div');
+      el.className='foreground-toast';
+      el.innerHTML=`<strong>${window.t('ui.templateAutoApplied','已自動套用裝備範本')}</strong>`;
+      document.body.appendChild(el);
+      setTimeout(()=>{ el.remove(); },4000);
+    }
+    // PB 心跳共鳴：晶片時間存檔後，檢查是不是破了同系列的最快紀錄
+    // （見 detectSeriesPb() 說明——只在同系列內比較，不是隨便找距離
+    // 相近的賽事湊）。已經手動勾過「個人最佳」的話不用再提示一次。
+    // 只給震動＋提示，不直接幫忙勾選 isPb——那個欄位的既有設計就是
+    // 使用者自己決定，系統這裡只負責「發現了、通知你」，不越權替你
+    // 做決定，真的要標記的話提示裡有一個按鈕可以直接按。
+    if(path==='results.chipTimeSeconds'&&!currentRace.results.isPb&&detectSeriesPb(currentRace)){
+      if(navigator.vibrate) navigator.vibrate([100,50,100]);
+      const pbEl=document.createElement('div');
+      pbEl.className='foreground-toast';
+      pbEl.innerHTML=`<strong>${window.tf('ui.seriesPbDetected','🎉 這是「{n}」系列至今最快的一次！',escapeHtml(currentRace.series))}</strong>
+        <button type="button" class="btn-text-small" data-action="mark-pb-from-toast" data-id="${currentRace.id}">${window.t('ui.markAsPb','標記為個人最佳 (PB)')}</button>`;
+      document.body.appendChild(pbEl);
+      setTimeout(()=>{ pbEl.remove(); },8000);
     }
   }
   // 賽事完賽狀態下，任何欄位變動都可能剛好讓某個徽章達標（例如補填晶片時間、心率、天氣）
@@ -10046,6 +10451,42 @@ detailEl.addEventListener('click',e=>{
   if(e.target.closest('[data-action="toggle-equipment-view"]')){
     equipmentViewMode=equipmentViewMode==='kanban'?'list':'kanban';
     renderDetail();
+    return;
+  }
+  const applyStarterBtn=e.target.closest('[data-action="apply-starter-template"]');
+  if(applyStarterBtn){
+    // autoApplyEquipmentTemplate() 本身已經有「清單非空就不套用」的
+    // 保護；這個按鈕只會在清單確實是空的時候才會出現，理論上一定會
+    // 套用成功，但還是照著回傳值走，不假設一定是 true。
+    const race=state.races.find(r=>r.id===applyStarterBtn.dataset.raceId);
+    if(race&&autoApplyEquipmentTemplate(race)){
+      race.updatedAt=new Date().toISOString();
+      persist();
+      if(currentRace&&currentRace.id===race.id) renderDetail();
+      logFeatureUse('apply_starter_template_from_empty_state');
+    }
+    return;
+  }
+  const applyReviewTemplateBtn=e.target.closest('[data-action="apply-review-template"]');
+  if(applyReviewTemplateBtn){
+    const reviewRace=state.races.find(r=>r.id===applyReviewTemplateBtn.dataset.raceId);
+    if(reviewRace){
+      reviewRace.review.lessonsLearned=REVIEW_KPT_TEMPLATE;
+      reviewRace.updatedAt=new Date().toISOString();
+      persist();
+      if(currentRace&&currentRace.id===reviewRace.id){
+        renderDetail();
+        // 重新渲染之後，把游標移到第一個「- 」後面等填空的地方，
+        // 使用者不用自己再點進 textarea、找要開始打字的位置。
+        const textarea=document.getElementById('f-review-lessonsLearned');
+        if(textarea){
+          const caretPos=REVIEW_KPT_TEMPLATE.indexOf('- ')+2;
+          textarea.focus();
+          textarea.setSelectionRange(caretPos,caretPos);
+        }
+      }
+      logFeatureUse('apply_review_kpt_template');
+    }
     return;
   }
   if(e.target.closest('[data-action="open-nutrition-dict-modal"]')){
@@ -11841,6 +12282,21 @@ function refreshShoeManagementUI(){
   if(!shoeModalEl_getter().hidden) shoeModalEl_getter().innerHTML=shoeModalHtml();
   if(!profileModalEl_getter().hidden&&profileModalTab==='shoes') profileModalEl_getter().innerHTML=profileModalHtml();
 }
+// handleShoeAddRowKeydown(e)：在新增鞋款那一列的任何一個輸入框按
+// Enter，直接觸發「新增」，不用特別把滑鼠移過去點按鈕——敲完最後
+// 一個想填的欄位按下 Enter，鞋子就建好了，跟填一般表單的直覺一致。
+// 獨立彈窗（shoe-modal）跟個人資訊裡的鞋款分頁（profile-modal），
+// 兩邊的鍵盤事件監聽器都呼叫這同一份函式，理由跟 handleShoeManagementClick
+// 一樣：同一套介面可能同時出現在兩個容器裡，各自寫一份容易漏接。
+function handleShoeAddRowKeydown(e){
+  if(e.key!=='Enter') return;
+  const input=e.target.closest('#new-shoe-name,#new-shoe-target,#new-shoe-stack,#new-shoe-drop');
+  if(!input) return;
+  e.preventDefault();
+  const addBtn=input.closest('.shoe-add-row').querySelector('[data-action="add-shoe"]');
+  if(addBtn) addBtn.click();
+}
+shoeModalEl_getter().addEventListener('keydown',handleShoeAddRowKeydown);
 shoeModalEl_getter().addEventListener('click',e=>{
   if(e.target.closest('[data-action="close-shoe-modal"]')){
     shoeModalEl_getter().hidden=true;shoeModalEl_getter().innerHTML='';expandedShoeAnalysisId=null;return;
@@ -12095,6 +12551,7 @@ profileModalEl_getter().addEventListener('click',e=>{
   if(handleShoeManagementClick(e)) return;
   if(handleNutritionDictManagementClick(e)) return;
 });
+profileModalEl_getter().addEventListener('keydown',handleShoeAddRowKeydown);
 profileModalEl_getter().addEventListener('change',e=>{
   const t=e.target;const path=t.dataset.profilePath;if(!path) return;
   const value=t.type==='number'?(t.value===''?null:Number(t.value)):t.value;
@@ -12234,6 +12691,36 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-paste-modal"]')) openPasteModal();
   if(e.target.closest('[data-action="open-gpx-picker"]')) document.getElementById('gpx-file-input').click();
   if(e.target.closest('[data-action="generate-share-image"]')&&currentRace){ downloadShareImage(currentRace); logFeatureUse('export_share_image'); }
+  const markPbBtn=e.target.closest('[data-action="mark-pb-from-toast"]');
+  if(markPbBtn){
+    // 從 PB 心跳提示直接標記——找的是 data-id 對應的那場賽事，不是
+    // currentRace，因為使用者按下這個按鈕之前，理論上還沒離開過那場
+    // 賽事的詳情頁，但保險起見還是照 id 查，不假設兩者一定相同。
+    const race=state.races.find(r=>r.id===markPbBtn.dataset.id);
+    if(race){
+      race.results.isPb=true;
+      race.updatedAt=new Date().toISOString();
+      persist();
+      if(currentRace&&currentRace.id===race.id) renderDetail();
+      logFeatureUse('mark_pb_from_toast');
+    }
+    const toastEl=markPbBtn.closest('.foreground-toast');
+    if(toastEl) toastEl.remove();
+    return;
+  }
+  const feelCadenceBtn=e.target.closest('[data-action="feel-cadence"]');
+  if(feelCadenceBtn&&!feelCadenceBtn.classList.contains('feeling')){
+    if(!navigator.vibrate){
+      // iOS Safari 完全不支援網頁震動 API，按下去讓畫面安靜地跑 5
+      // 秒的「假裝在震動」動畫沒有意義，只會讓人以為壞了——直接說明
+      // 原因，比假裝功能正常運作更誠實。
+      showToast(t('ui.vibrateNotSupported','這個瀏覽器不支援網頁震動（iOS Safari 目前完全不支援這個功能）'),'error');
+      return;
+    }
+    const cadence=Number(feelCadenceBtn.dataset.cadence);
+    startCadenceFeel(feelCadenceBtn,cadence);
+    return;
+  }
   if(e.target.closest('[data-action="download-dossier"]')&&currentRace){ downloadDossierImage(currentRace); logFeatureUse('export_dossier'); }
   if(e.target.closest('[data-action="download-crew-guide"]')&&currentRace){ downloadCrewGuideImage(currentRace); logFeatureUse('export_crew_guide'); }
   if(e.target.closest('[data-action="open-fatigue-mode"]')&&currentRace){ openFatigueMode(); logFeatureUse('open_fatigue_mode'); }
