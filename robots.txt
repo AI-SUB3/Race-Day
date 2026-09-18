@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ai-sub3.github.io/Race-Day/sitemap.xml
