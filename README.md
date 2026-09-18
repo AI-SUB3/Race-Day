@@ -2,12 +2,12 @@
 
 一個從報名到終點的個人賽事紀錄網站。純前端、單一 `index.html`，部署在 GitHub Pages，不需要自架後端伺服器。
 
-**線上網址**：https://ai-sub3.github.io/Race-Day/
-**版本**：v1.0.0（[CHANGELOG.md](./CHANGELOG.md)）
-**詳細操作說明**：[USAGE.md](./USAGE.md)
-**功能介紹頁**：https://ai-sub3.github.io/Race-Day/about/
-**網站地圖（給訪客看）**：https://ai-sub3.github.io/Race-Day/sitemap/
-**sitemap.xml（給搜尋引擎看）**：https://ai-sub3.github.io/Race-Day/sitemap.xml
+- **線上網址**：https://ai-sub3.github.io/Race-Day/
+- **版本**：v1.0.0（[CHANGELOG.md](./CHANGELOG.md)）
+- **詳細操作說明**：[USAGE.md](./USAGE.md)
+- **功能介紹頁**：https://ai-sub3.github.io/Race-Day/about/
+- **網站地圖（給訪客看）**：https://ai-sub3.github.io/Race-Day/sitemap/
+- **sitemap.xml（給搜尋引擎看）**：https://ai-sub3.github.io/Race-Day/sitemap.xml
 
 ## 這是什麼
 
