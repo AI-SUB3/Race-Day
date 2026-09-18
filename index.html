@@ -2054,7 +2054,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.84.0';
+const APP_VERSION='v2.85.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2180,6 +2180,8 @@ const JA={
   'ui.cmdkExportCsv':'CSVをエクスポート（フラット化）','ui.cmdkSampleData':'サンプルデータ','ui.cmdkSyncDiag':'同期診断',
   'ui.cmdkFilterPb':'自己ベスト (PB)','ui.cmdkFilterDnf':'途中棄権 (DNF)','ui.cmdkFilterDns':'未出走 (DNS)','ui.cmdkFilterUpcoming':'今後のレース',
   'ui.cmdkNoResults':'一致する結果がありません',
+  'ui.pasteImageApplied':'クリップボードの画像をカバー写真に設定しました','ui.pasteQuickFillApplied':'貼り付けたデータを現在のレースに適用しました',
+  'ui.pasteNoRaceContext':'この操作を行うには、先にレースの詳細画面を開くか「レースを追加」をクリックしてください',
   'ui.loading':'読み込み中…',
   'ui.noMatchingRacesMonth':'今月は条件に一致する大会がありません',
   'ui.selectRaceHint':'上のカレンダーから大会を選ぶか、新しい大会を作成してください。',
@@ -2628,6 +2630,8 @@ const EN={
   'ui.cmdkExportCsv':'Export CSV (flattened)','ui.cmdkSampleData':'Sample data','ui.cmdkSyncDiag':'Sync diagnostics',
   'ui.cmdkFilterPb':'Personal Best (PB)','ui.cmdkFilterDnf':'DNF','ui.cmdkFilterDns':'DNS','ui.cmdkFilterUpcoming':'Upcoming',
   'ui.cmdkNoResults':'No matching results',
+  'ui.pasteImageApplied':'Set the clipboard image as the cover photo','ui.pasteQuickFillApplied':'Applied the pasted data to the current race',
+  'ui.pasteNoRaceContext':'To do this, first open a race\u2019s detail page or click \u201cAdd Race\u201d',
   'ui.loading':'Loading…',
   'ui.noMatchingRacesMonth':'No matching races this month',
   'ui.selectRaceHint':'Select a race from the calendar above, or create a new one.',
@@ -10140,21 +10144,31 @@ document.getElementById('btn-import-json').addEventListener('click',()=>{
 // 獨立、可重複呼叫的函式，因為除了原本「選擇檔案」這個入口，全域拖曳
 // 匯入（見下方 globalDropzone 區塊）也要呼叫同一套邏輯，不能各自維護
 // 一份重複、容易兜不起來的匯入流程。
-async function importJsonFile(file){
+// importRacesArray(parsed)：把一個「已經解析好的賽事陣列」合併進
+// state.races、存檔、跳出結果 toast——不管這個陣列是從檔案讀出來的
+// （importJsonFile()）還是使用者直接在頁面上貼上的（全域貼上匯入，
+// 見下方 paste 監聽器），最後都走這一份共用邏輯，不是各自維護一份
+// 容易兜不起來的重複程式碼。回傳 true／false 代表這次合併是否真的
+// 成功，呼叫端據此決定要不要記錄功能使用次數。
+// 跟原本內嵌在 importJsonFile() 裡的驗證邏輯有一處刻意放寬：不強制
+// 要求每一筆都要有 id——直接貼上的通常是請 AI 幫忙生出的一批全新
+// 賽事，本來就不會有 id，缺 id 的項目直接補一個新的，不會因為少了
+// 一個原本只有「還原自己備份」這個情境才會有的欄位，就把整批貼上
+// 的資料拒於門外。
+function importRacesArray(parsed){
   try{
-    const text=await file.text();
-    const parsed=JSON.parse(text);
     if(!Array.isArray(parsed)) throw new Error(t('ui.errJsonNotArray','檔案內容不是有效的賽事清單（需要是一個陣列）'));
-    const invalid=parsed.some(r=>!r||typeof r!=='object'||!r.id);
+    const invalid=parsed.some(r=>!r||typeof r!=='object');
     if(invalid) throw new Error(t('ui.errJsonInvalidRace','檔案裡有資料格式不正確的賽事'));
-    const result=mergeRacesIntoState(parsed.map(migrateRace));
+    const withIds=parsed.map(r=>r.id?r:Object.assign({},r,{id:uid()}));
+    const result=mergeRacesIntoState(withIds.map(migrateRace));
     persist();renderAll();
-    logFeatureUse('import_json_restore');
     const el=document.createElement('div');
     el.className='foreground-toast';
     el.innerHTML=`<strong>${t('ui.jsonImportDone','JSON 匯入完成')}</strong><span>${tf2('ui.jsonImportSummary',`新增 ${result.addedCount} 筆，${result.overwrittenCount} 筆版本衝突已保留舊版本在「資料復原」`,result.addedCount,result.overwrittenCount)}</span>`;
     document.body.appendChild(el);
     setTimeout(()=>{ el.remove(); },8000);
+    return true;
   }catch(err){
     console.error('JSON 匯入失敗',err);
     const el=document.createElement('div');
@@ -10162,7 +10176,24 @@ async function importJsonFile(file){
     el.innerHTML=`<strong>${t('ui.jsonImportFailed','JSON 匯入失敗')}</strong><span>${escapeHtml(err.message)}</span>`;
     document.body.appendChild(el);
     setTimeout(()=>{ el.remove(); },8000);
+    return false;
   }
+}
+async function importJsonFile(file){
+  const text=await file.text();
+  let parsed;
+  try{
+    parsed=JSON.parse(text);
+  }catch(err){
+    console.error('JSON 匯入失敗',err);
+    const el=document.createElement('div');
+    el.className='foreground-toast sync-notice';
+    el.innerHTML=`<strong>${t('ui.jsonImportFailed','JSON 匯入失敗')}</strong><span>${escapeHtml(err.message)}</span>`;
+    document.body.appendChild(el);
+    setTimeout(()=>{ el.remove(); },8000);
+    return;
+  }
+  if(importRacesArray(parsed)) logFeatureUse('import_json_restore');
 }
 document.getElementById('json-file-input').addEventListener('change',async e=>{
   const file=e.target.files[0];
@@ -13213,6 +13244,68 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!palette.hidden){
     e.preventDefault();
     cmdkClose();
+  }
+});
+/* ============================================================
+   全域貼上匯入（Ctrl/Cmd+V）：截圖貼成封面照、貼一包 JSON 陣列整批
+   匯入賽事、貼一個 JSON 物件快速填入目前開著的賽事——跟全域拖曳
+   匯入是同一個精神，只是觸發方式從「拖曳檔案」換成「貼上剪貼簿」，
+   實際負責匯入的邏輯（importCoverImageFile／importRacesArray／
+   deepMergeInto）全部沿用既有、已經測過的那一套，這裡只負責「從
+   剪貼簿事件裡拿到正確的資料、判斷該走哪一條路」，不是另外重寫
+   一套平行的匯入邏輯。
+   ============================================================ */
+document.addEventListener('paste',async e=>{
+  // 焦點防護（Focus Guard）：使用者正在某個輸入框、文字框、或任何
+  // 可編輯區域打字的時候，Ctrl+V 應該乖乖交給瀏覽器處理正常的貼上
+  // 行為，不能搶走——這是這個功能能不能安全共存的關鍵前提。沒有
+  // 這道防護，在「檢討筆記」裡貼一段普通文字會被誤判成要匯入賽事
+  // 資料。
+  const active=document.activeElement;
+  const isInputTarget=active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA'||active.isContentEditable);
+  if(isInputTarget) return;
+
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items) return;
+
+  // 優先順序：圖片 > 文字（JSON 陣列／物件）。剪貼簿裡混合圖文的
+  // 情況比較少見（例如整段複製一個網頁區塊），圖片通常是使用者
+  // 明確想貼的東西（截圖），優先處理，找到就不再檢查文字內容。
+  for(const item of items){
+    if(item.type.indexOf('image')===0){
+      e.preventDefault();
+      const file=item.getAsFile();
+      if(file){
+        await importCoverImageFile(file);
+        showToast(t('ui.pasteImageApplied','已將剪貼簿裡的圖片設為封面照'));
+      }
+      logFeatureUse('global_paste_image');
+      return;
+    }
+  }
+
+  const text=e.clipboardData.getData('text');
+  if(!text||!text.trim()) return;
+  let parsed;
+  try{
+    parsed=JSON.parse(text);
+  }catch(err){
+    return; // 不是 JSON，代表只是一般文字，不攔截，讓貼上照常發生
+  }
+  if(typeof parsed!=='object'||parsed===null) return;
+
+  e.preventDefault();
+  if(Array.isArray(parsed)){
+    if(importRacesArray(parsed)) logFeatureUse('global_paste_json_array');
+  }else if(currentRace){
+    delete parsed.id;delete parsed.createdAt;
+    deepMergeInto(currentRace,parsed);
+    currentRace.updatedAt=new Date().toISOString();
+    persist();renderCalendar();renderDetail();
+    showToast(t('ui.pasteQuickFillApplied','已把貼上的資料套用到目前這場賽事'));
+    logFeatureUse('global_paste_json_quickfill');
+  }else{
+    showToast(t('ui.pasteNoRaceContext','請先開啟一場賽事的詳情頁，或點「新增賽事」，才能貼上資料快速填入'),'error');
   }
 });
 init();
