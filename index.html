@@ -764,7 +764,7 @@
   .shoe-degrade-delta{color:var(--ink-soft);margin:10px 0 0;padding-top:10px;border-top:1px dashed var(--rule);}
 
   /* ---------- 個人資訊面板 ---------- */
-  .profile-tabs{display:flex;gap:4px;border-bottom:1px solid var(--rule);margin-bottom:18px;}
+  .profile-tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--rule);margin-bottom:18px;}
   .profile-tab-btn{
     background:none;border:none;border-bottom:2px solid transparent;padding:8px 4px;margin-right:20px;
     font:inherit;font-size:14px;font-weight:600;color:var(--stone);cursor:pointer;
@@ -1025,6 +1025,20 @@
   .section-body .field.wide{flex-basis:100%;}
 
   .field{display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--ink-soft);margin-bottom:16px;}
+  /* 無感智慧預設：欄位被自動填好時的提示動畫——淡出的背景色塊，讓
+     使用者一眼看出「這裡剛被系統動過」，不是毫無感覺地被默默改掉。
+     用 padding／margin 負值抵銷，動畫播完（2.5 秒）之後 class 會被
+     拿掉，不影響版面正常時的間距。 */
+  .field-smart-filled{
+    animation:smart-fill-flash 2.2s ease-out;
+    padding:6px 8px;margin:-6px -8px 10px;border-radius:8px;
+  }
+  @keyframes smart-fill-flash{
+    0%{background:var(--stamp-bg-trail);}
+    70%{background:var(--stamp-bg-trail);}
+    100%{background:transparent;}
+  }
+
   .field span{font-size:14px;color:var(--stone);}
   .field span i{font-style:normal;color:var(--stone);margin-left:3px;}
   .field input,.field select,.field textarea{
@@ -1169,6 +1183,27 @@
     display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
   }
   .modal-overlay[hidden]{display:none;}
+
+  /* ---- 全域拖曳匯入：拖曳外部檔案（GPX/TCX/FIT、JSON、圖片）進視窗
+     時的毛玻璃提示層。z-index 故意比一般 modal-overlay 高，確保不管
+     當下開著哪個彈窗，拖曳提示都蓋在最上層、清楚可見。backdrop-filter
+     搭配 --paper-glass（本來就是半透明的紙色調），淺色／深色主題會
+     自動套用對應的玻璃色調，不用另外寫深色模式的例外規則。 ---- */
+  .global-dropzone-overlay{
+    position:fixed;inset:0;z-index:500;
+    background:var(--paper-glass);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;padding:24px;
+    opacity:0;transition:opacity 0.15s ease;pointer-events:none;
+  }
+  .global-dropzone-overlay[hidden]{display:none;}
+  .global-dropzone-overlay.is-active{opacity:1;}
+  .global-dropzone-frame{
+    border:3px dashed var(--trail);border-radius:24px;padding:48px 32px;
+    text-align:center;max-width:360px;pointer-events:none;
+  }
+  .global-dropzone-icon{font-size:48px;margin-bottom:12px;}
+  .global-dropzone-title{color:var(--ink);font-size:22px;margin:0 0 8px;}
+  .global-dropzone-hint{color:var(--ink-soft);margin:0;}
 
   /* ---- 動態回顧輪播（Story Mode）：故意用寫死的深色，不跟著淺色/深色
      主題變動，理由跟徽章成就圖卡一樣——這是沉浸式的相片瀏覽畫面，不是
@@ -1403,6 +1438,13 @@
 <div id="shoe-modal" class="modal-overlay" hidden></div>
 <div id="nutrition-dict-modal" class="modal-overlay" hidden></div>
 <div id="sync-diag-modal" class="modal-overlay" hidden></div>
+<div id="global-dropzone" class="global-dropzone-overlay" hidden>
+  <div class="global-dropzone-frame">
+    <div class="global-dropzone-icon">📥</div>
+    <h2 class="global-dropzone-title" data-i18n="ui.dropzoneTitle">放開以匯入檔案</h2>
+    <p class="global-dropzone-hint" data-i18n="ui.dropzoneHint">支援 GPX／TCX／FIT 軌跡檔、JSON 備份、JPG／PNG 照片</p>
+  </div>
+</div>
 <div id="profile-modal" class="modal-overlay" hidden></div>
 <div id="story-mode-overlay" class="story-overlay" hidden></div>
 <div id="fatigue-mode-overlay" class="fatigue-overlay" hidden></div>
@@ -1630,6 +1672,17 @@ function downloadBlob(blob,filename){
   a.click();
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+// showToast(message, kind)：畫面右下角跳出一則短暫提示，kind='error'
+// 用跟既有錯誤提示（例如 JSON 匯入失敗）一樣的警示樣式，其餘情況用
+// 一般樣式。跳出的訊息文字已經是翻譯好的成品字串，這裡只負責組
+// DOM、掛上去、幾秒後自動移除，不做任何翻譯或格式化。
+function showToast(message,kind){
+  const el=document.createElement('div');
+  el.className=kind==='error'?'foreground-toast sync-notice':'foreground-toast';
+  el.innerHTML=`<span>${escapeHtml(message)}</span>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.remove(); },6000);
 }
 function getPath(obj,path){return path.split('.').reduce((o,k)=>(o==null?undefined:o[k]),obj);}
 function setPath(obj,path,value){
@@ -1874,7 +1927,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.75.0';
+const APP_VERSION='v2.78.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1970,6 +2023,10 @@ const JA={
   'ui.jsonImportDone':'JSONの読み込み完了',
   'ui.jsonImportSummary':'{a} 件追加、{b} 件はバージョンの競合により古い方を「データ復元」に保存しました',
   'ui.jsonImportFailed':'JSONの読み込みに失敗しました',
+  'ui.imageNeedRaceContext':'この写真を読み込むには、先にレースの詳細画面を開くか「レースを追加」をクリックしてください',
+  'ui.imageMultiNoTrackFallback':'このレースにはまだタイムスタンプ付きのGPS軌跡がないため、複数の写真をルートに対応付けできません。1枚目をカバー写真に設定し、残りの写真は無視しました',
+  'ui.dropzoneTitle':'ドロップしてインポート','ui.dropzoneHint':'GPX／TCX／FIT トラック、JSON バックアップ、JPG／PNG 写真に対応',
+  'ui.dropzoneUnsupportedFiles':'{n} 件のファイルは対応していない形式のためスキップしました',
   'ui.saving':'保存中…','ui.saved':'保存済み',
   'ui.navBasic':'基本','ui.navRoute':'コース','ui.navWeather':'気象','ui.navLogistics':'予算','ui.navPrep':'装備','ui.navPost':'結果',
   'ui.deleteRace':'大会を削除','ui.deleteConfirm':'本当に削除しますか？もう一度',
@@ -2081,7 +2138,7 @@ const JA={
   // ---- 鞋款管理 ----
   'ui.shoeManageTitle':'シューズ管理',
   'ui.createProfile':'個人情報を作成','ui.profileTitle':'個人情報',
-  'ui.profileTabHr':'心拍ゾーン','ui.profileTabBody':'身体データ',
+  'ui.profileTabHr':'心拍ゾーン','ui.profileTabBody':'身体データ','ui.profileTabShoes':'シューズ管理','ui.profileTabNutrition':'補給食管理',
   'ui.profileHrHint':'カルボーネン法（予備心拍数）を採用：心拍ゾーン＝安静時心拍数＋（最大心拍数－安静時心拍数）×強度%。種目によって最大心拍数が異なることが多いため、種目別に設定するとより正確です。完走記録のスプリットペース一覧の心拍数は、レースの種目に応じて対応するゾーンが自動的に適用されます。',
   'ui.sportCategory_running':'ランニング','ui.sportCategory_cycling':'サイクリング','ui.sportCategory_swimming':'水泳',
   'ui.restingHr':'安静時心拍数','ui.maxHr':'最大心拍数','ui.profileHrNeedBoth':'安静時心拍数と最大心拍数を入力すると自動計算されます',
@@ -2399,6 +2456,10 @@ const EN={
   'ui.jsonImportDone':'JSON import complete',
   'ui.jsonImportSummary':'{a} added; {b} had a version conflict — the older version was kept in "Data Recovery"',
   'ui.jsonImportFailed':'JSON import failed',
+  'ui.imageNeedRaceContext':'To import this photo, first open a race\u2019s detail page or click \u201cAdd Race\u201d',
+  'ui.imageMultiNoTrackFallback':'This race doesn\u2019t have a timestamped GPS track yet, so multiple photos can\u2019t be matched to the route. The first photo was set as the cover image; the rest were ignored',
+  'ui.dropzoneTitle':'Drop to Import','ui.dropzoneHint':'Supports GPX/TCX/FIT tracks, JSON backups, and JPG/PNG photos',
+  'ui.dropzoneUnsupportedFiles':'{n} file(s) were an unsupported format and were skipped',
   'ui.saving':'Saving…','ui.saved':'Saved',
   'ui.navBasic':'Basic','ui.navRoute':'Course','ui.navWeather':'Weather','ui.navLogistics':'Budget','ui.navPrep':'Gear','ui.navPost':'Results',
   'ui.deleteRace':'Delete race','ui.deleteConfirm':'Are you sure? Click again to confirm',
@@ -2503,7 +2564,7 @@ const EN={
   'ui.nutritionScheduleTitle':'Nutrition Schedule',
   'ui.shoeManageTitle':'Shoe Manager',
   'ui.createProfile':'Create Personal Info','ui.profileTitle':'Personal Info',
-  'ui.profileTabHr':'Heart Rate Zones','ui.profileTabBody':'Body Data',
+  'ui.profileTabHr':'Heart Rate Zones','ui.profileTabBody':'Body Data','ui.profileTabShoes':'Shoes','ui.profileTabNutrition':'Nutrition',
   'ui.profileHrHint':'Uses the Karvonen (heart rate reserve) method: zone = resting HR + (max HR − resting HR) × intensity%. Max HR often differs by sport, so setting these separately per sport gives more accurate zones. The heart rate shown in the pace-by-split table on completed races will automatically use the zone set matching that race\u2019s sport.',
   'ui.sportCategory_running':'Running','ui.sportCategory_cycling':'Cycling','ui.sportCategory_swimming':'Swimming',
   'ui.restingHr':'Resting HR','ui.maxHr':'Max HR','ui.profileHrNeedBoth':'Fill in both resting and max HR to calculate zones automatically',
@@ -3519,11 +3580,18 @@ syncDiagModalEl_getter().addEventListener('click',e=>{
 function refreshOpenGlobalListModals(){
   if(!shoeModalEl_getter().hidden) shoeModalEl_getter().innerHTML=shoeModalHtml();
   if(!nutritionDictModalEl_getter().hidden) nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
+  if(!profileModalEl_getter().hidden&&(profileModalTab==='shoes'||profileModalTab==='nutrition')) profileModalEl_getter().innerHTML=profileModalHtml();
 }
 async function handleAuthChange(user){
   state.user=user;
   renderAuthArea();
   if(user){
+    // 先等本機資料（賽事、鞋款、補給品資料庫）讀取完成，才能開始跟
+    // 雲端合併——見 localDataReady 宣告處的說明，這是修正一個真正的
+    // 時序 race condition，不是可有可無的保險寫法。app 剛啟動、還沒
+    // 呼叫過 init() 的極端情況下 localDataReady 會是 null，這種情況
+    // 不用等（也沒有什麼好等的）。
+    if(localDataReady) await localDataReady;
     if(signInAttemptInFlight){ signInAttemptInFlight=false; logFeatureUse('auth_google_signin'); }
     try{
       const cloudRaces=await window.__cloud.fetchAll(user.uid);
@@ -3678,6 +3746,86 @@ function autoApplyEquipmentTemplate(race){
   if(!tmpl) return false;
   race.equipmentChecklist=tmpl.items.map(it=>Object.assign({weightG:null,isConsumable:false,isPacked:false,location:'',notes:''},it));
   return true;
+}
+/* ============================================================
+   無感智慧預設：填賽事名稱、日期、抽籤結果這幾個欄位時，順手推論
+   幾個「大概率使用者接下來也要填」的欄位，減少手動點選次數。每一項
+   都有「只在還沒被使用者動過」的保護條件——這裡統一用「還是不是
+   表單給的原始預設值」判斷，不是「還是不是空的」，因為 sportType／
+   status 這兩個欄位本來就有預設值（不是空字串），一旦使用者已經
+   手動選過別的選項，就不該再被猜測結果蓋掉，就算後來又把名稱／
+   日期改了也一樣——保護的是「使用者是不是動過這個欄位」，不是
+   「這次改的觸發欄位是什麼」。
+   ============================================================ */
+// guessSeriesFromName(name)：剝掉名稱開頭／結尾常見、但每年都會變動的
+// 部分——西元年（20XX、20XX年）、民國年（1XX年，涵蓋民國 100~199
+// 年，比只認「11X年」更耐用，不會過了民國 119 年就失效）、「第X屆」
+// （X 可以是阿拉伯數字或中文數字）——剩下的當「系列名稱」的猜測值。
+// 反覆剝是因為開頭可能同時有年份跟屆數（例如「2026年第10屆」），
+// 單次只套一輪正則會漏掉疊在一起的第二層。剝完變成空字串，代表
+// 名稱整段都是會變動的部分、沒有留下固定不變的系列名稱可用，這種
+// 情況回傳 null，不要硬塞一個空字串進去。
+function guessSeriesFromName(name){
+  if(!name) return null;
+  let s=name.trim();
+  const patterns=[
+    /^(20\d{2}年?|1\d{2}年)\s*/,
+    /^第\s*[0-9一二三四五六七八九十百]+\s*屆\s*/,
+    /\s*(20\d{2}年?|1\d{2}年)$/,
+    /\s*第\s*[0-9一二三四五六七八九十百]+\s*屆$/,
+  ];
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(const p of patterns){
+      const next=s.replace(p,'').trim();
+      if(next!==s){ s=next; changed=true; }
+    }
+  }
+  return s?s:null;
+}
+// guessSportTypeFromNameAndDistance(name, distanceKm)：名稱裡的關鍵字
+// 判斷優先於距離——距離只能分辨「是不是超馬距離」，沒辦法區分路跑、
+// 越野、鐵人這幾種質地完全不同的運動，名稱裡已經寫明是哪一種的話
+// 應該用那個當準，不能被距離蓋過去（一場 10K 越野賽，距離上完全
+// 不到超馬門檻，但名稱已經講得很清楚是越野跑，不該被判斷成路跑）。
+// 關鍵字故意不用「水」「山」這種單一個字——這類地名本身就常帶這些
+// 字（例如「水上鄉半程馬拉松」是嘉義地名，不是游泳賽事），只用
+// 「泳渡」「游泳」這種完整詞組，降低誤判機率。
+function guessSportTypeFromNameAndDistance(name,distanceKm){
+  const n=(name||'').toLowerCase();
+  const has=arr=>arr.some(k=>n.includes(k));
+  if(has(['三鐵','鐵人三項','triathlon','ironman','226','113','70.3'])) return 'triathlon';
+  if(has(['二鐵','鐵人二項','duathlon'])) return 'duathlon';
+  if(has(['越野','trail','utmb','utmf','山徑','skyrunning','sky running'])) return 'trail_running';
+  if(has(['障礙','obstacle','spartan','斯巴達','ninja'])) return 'obstacle_race';
+  if(has(['泳渡','游泳','swimming','open water','公開水域'])) return 'swimming';
+  if(has(['自行車','單車','公路車','cycling','bike','kom'])) return 'cycling';
+  if(distanceKm!=null&&distanceKm>50) return 'ultra_marathon';
+  return null;
+}
+// applySmartDefaults(race, changedPath)：實際套用上面兩個猜測函式，
+// 加上狀態的「時光機」判斷。回傳這次實際自動改了哪些欄位（陣列，
+// 可能是空陣列），呼叫端用這個決定要不要顯示「已自動帶入」的提示。
+function applySmartDefaults(race,changedPath){
+  const filled=[];
+  if(changedPath==='name'&&!race.series){
+    const guessed=guessSeriesFromName(race.name);
+    if(guessed){ race.series=guessed; filled.push('series'); }
+  }
+  if((changedPath==='name'||changedPath==='route.distanceKm')&&race.sportType==='road_running'){
+    const guessed=guessSportTypeFromNameAndDistance(race.name,race.route.distanceKm);
+    if(guessed&&guessed!=='road_running'){ race.sportType=guessed; filled.push('sportType'); }
+  }
+  if(changedPath==='schedule.raceDate'&&race.schedule.raceDate&&race.status==='considering'){
+    const d=new Date(race.schedule.raceDate+'T00:00:00');
+    const today=new Date(todayISO()+'T00:00:00');
+    if(!isNaN(d)&&d<today){ race.status='completed'; filled.push('status'); }
+  }
+  if(changedPath==='lottery.wasSelected'&&race.lottery.wasSelected&&(race.status==='considering'||race.status==='lottery_pending')){
+    race.status='registered'; filled.push('status');
+  }
+  return filled;
 }
 /* ============================================================
    個人資訊：心率區間（儲備心率法）與身體數據
@@ -4808,6 +4956,12 @@ const OPTION_SET_NS=new Map([
   [TRANSPORT_MODE_OPTIONS,'transportmode'],[DIRECTION_OPTIONS,'direction'],
 ]);
 function pathToId(path){ return 'f-'+path.replace(/\./g,'-'); }
+// smartFilledHighlightPaths：無感智慧預設剛剛自動改了哪些欄位，
+// renderField() 拿這個決定要不要加上短暫的高亮動畫，讓使用者看得出
+// 「這個值是系統幫忙填的」，不是靜靜改掉、使用者完全沒發現。set 在
+// 存檔後的 change 監聽器裡填入，2.5 秒後自動清空（見那裡的說明），
+// 不會一直殘留、讓之後跟這次無關的重新渲染也誤觸發動畫。
+let smartFilledHighlightPaths=new Set();
 function renderField(race,cfg,ns){
   const val=getPath(race,cfg.path);
   const id=pathToId(cfg.path);
@@ -4833,7 +4987,7 @@ function renderField(race,cfg,ns){
     default:
       input=`<input id="${id}" type="${cfg.type||'text'}" data-path="${cfg.path}" value="${escapeHtml(val!=null?val:'')}">`;
   }
-  return `<label class="field${cfg.wide?' wide':''}" for="${id}"><span>${label}${cfg.unit?`<i>(${cfg.unit})</i>`:''}</span>${input}</label>`;
+  return `<label class="field${cfg.wide?' wide':''}${smartFilledHighlightPaths.has(cfg.path)?' field-smart-filled':''}" for="${id}"><span>${label}${cfg.unit?`<i>(${cfg.unit})</i>`:''}</span>${input}</label>`;
 }
 
 const REORDER_HANDLE_SVG=`<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>`;
@@ -8956,8 +9110,8 @@ function renderCreateForm(){
     <label class="field" for="new-name"><span>${t('ui.newRaceName','賽事名稱')}</span><input type="text" id="new-name" placeholder="${t('ui.newRaceNamePlaceholder','如：2026 臺北馬拉松')}"></label>
     <label class="field" for="new-url"><span>${t('ui.newRaceUrl','賽事官方網站')}</span><input type="url" id="new-url" placeholder="https://..."></label>
     <label class="field" for="new-sport"><span>${t('ui.newRaceSport','主要運動種類')}</span><select id="new-sport">${SPORT_OPTIONS.map(o=>`<option value="${o.value}">${t('opt.sport.'+o.value,o.label)}</option>`).join('')}</select></label>
-    <label class="field" for="new-status"><span>${t('ui.newRaceStatus','狀態')}</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value==='considering'?'selected':''}>${t('opt.status.'+o.value,o.label)}</option>`).join('')}</select></label>
-    <label class="field" for="new-date"><span>${t('ui.newRaceDate','比賽日期')}</span><input type="date" id="new-date"></label>
+    <label class="field" for="new-status"><span>${t('ui.newRaceStatus','狀態')}</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value===createDefaultStatus?'selected':''}>${t('opt.status.'+o.value,o.label)}</option>`).join('')}</select></label>
+    <label class="field" for="new-date"><span>${t('ui.newRaceDate','比賽日期')}</span><input type="date" id="new-date" value="${createDefaultDate}"></label>
     <div class="create-actions">
       <button class="btn-primary" data-action="confirm-create">${t('ui.createRace','建立賽事')}</button>
       <button class="btn-ghost" data-action="cancel-create">${t('ui.cancel','取消')}</button>
@@ -8995,9 +9149,18 @@ function selectRace(id,{scroll}={scroll:true}){
    ============================================================ */
 let createStagedActivity=null,createStagedActivityError=null;
 let createStagedCover=null,createStagedCoverError=null;
+// createDefaultStatus／createDefaultDate：平常「新增賽事」表單的狀態、
+// 日期就是固定預設值（狀態預設「考慮中」、日期空白）；只有全域拖曳
+// 匯入 GPX、又剛好沒有任何賽事可以掛（見 importActivityFile()）這種
+// 情況，才會在呼叫 startCreate() 之後覆寫這兩個值，把表單預先帶成
+// 「已完成」＋活動當天日期——使用者丟進來的是一份已經跑完的真實活動
+// 紀錄，不是在規劃一場還沒發生的比賽，狀態、日期沿用「考慮中」＋
+// 空白日期沒有意義，一定要改。
+let createDefaultStatus='considering',createDefaultDate='';
 function resetCreateStaging(){
   createStagedActivity=null;createStagedActivityError=null;
   createStagedCover=null;createStagedCoverError=null;
+  createDefaultStatus='considering';createDefaultDate='';
 }
 /* ============================================================
    第一次使用引導：完全沒有賽事資料、而且這台裝置這個瀏覽器也從沒
@@ -9447,10 +9610,11 @@ document.getElementById('btn-export').addEventListener('click',()=>{
 document.getElementById('btn-import-json').addEventListener('click',()=>{
   document.getElementById('json-file-input').click();
 });
-document.getElementById('json-file-input').addEventListener('change',async e=>{
-  const file=e.target.files[0];
-  e.target.value='';
-  if(!file) return;
+// importJsonFile(file)：從檔案物件匯入 JSON 備份，跟賽事清單合併——抽成
+// 獨立、可重複呼叫的函式，因為除了原本「選擇檔案」這個入口，全域拖曳
+// 匯入（見下方 globalDropzone 區塊）也要呼叫同一套邏輯，不能各自維護
+// 一份重複、容易兜不起來的匯入流程。
+async function importJsonFile(file){
   try{
     const text=await file.text();
     const parsed=JSON.parse(text);
@@ -9473,6 +9637,12 @@ document.getElementById('json-file-input').addEventListener('change',async e=>{
     document.body.appendChild(el);
     setTimeout(()=>{ el.remove(); },8000);
   }
+}
+document.getElementById('json-file-input').addEventListener('change',async e=>{
+  const file=e.target.files[0];
+  e.target.value='';
+  if(!file) return;
+  await importJsonFile(file);
 });
 
 /* ============================================================
@@ -9652,12 +9822,22 @@ detailEl.addEventListener('change',async e=>{
     const d=new Date(value+'T00:00:00');
     if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
   }
+  // 無感智慧預設：見 applySmartDefaults() 說明。回傳這次自動改了哪些
+  // 欄位——「換運動種類自動帶裝備範本」這個既有機制原本只認使用者
+  // 直接改 sportType 這個 path，這次如果是被智慧預設連帶改掉的，
+  // 也要用同一套邏輯觸發，行為要一致，不能因為「觸發來源不是使用者
+  // 手動選」就跳過裝備範本這一步。
+  const smartFilled=applySmartDefaults(currentRace,path);
   // 換運動種類時，如果裝備清單還是空的，自動帶入對應的標準範本（不會覆蓋已填的內容）
-  const templateApplied=(path==='sportType')&&autoApplyEquipmentTemplate(currentRace);
+  const templateApplied=(path==='sportType'||smartFilled.includes('sportType'))&&autoApplyEquipmentTemplate(currentRace);
   showSaveStatus('saving');
   await persist();
   renderCalendar();
-  const needsFullRerender=(path==='status'||path==='series'||path==='sportType'||path.startsWith('results.')||path.startsWith('lottery.')||path.startsWith('nutritionSchedule.'));
+  const needsFullRerender=(path==='status'||path==='series'||path==='sportType'||path.startsWith('results.')||path.startsWith('lottery.')||path.startsWith('nutritionSchedule.')||smartFilled.length>0);
+  if(smartFilled.length){
+    smartFilledHighlightPaths=new Set(smartFilled);
+    setTimeout(()=>{ smartFilledHighlightPaths=new Set(); },2500);
+  }
   if(needsFullRerender){renderDetail();}else{updateDetailHeaderBits();}
   showSaveStatus('saved');
   if(templateApplied){
@@ -10194,10 +10374,12 @@ function processCoverImage(file){
     reader.readAsDataURL(file);
   });
 }
-document.getElementById('cover-file-input').addEventListener('change',async e=>{
-  const file=e.target.files[0];
-  e.target.value='';
-  if(!file) return;
+// importCoverImageFile(file)：跟既有的「選擇封面照片」入口共用同一套
+// 邏輯（見下方 cover-file-input 的 change 監聽器），全域拖曳匯入也
+// 呼叫這一份。原本失敗只有 console.error、沒有任何畫面提示，這裡補
+// 上 toast——透過拖曳匯入時使用者看不到瀏覽器主控台，一定要有畫面
+// 上看得到的回饋才知道剛剛那個動作成功還是失敗。
+async function importCoverImageFile(file){
   if(state.creating){
     try{
       createStagedCover=await processCoverImage(file);
@@ -10209,7 +10391,10 @@ document.getElementById('cover-file-input').addEventListener('change',async e=>{
     updateCreateStagingUI();
     return;
   }
-  if(!currentRace) return;
+  if(!currentRace){
+    showToast(t('ui.imageNeedRaceContext','請先開啟一場賽事的詳情頁，或點「新增賽事」，再匯入這張照片'),'error');
+    return;
+  }
   try{
     const result=await processCoverImage(file);
     currentRace.coverImage=result.dataUrl;
@@ -10219,7 +10404,35 @@ document.getElementById('cover-file-input').addEventListener('change',async e=>{
     persist();renderCalendar();renderDetail();
   }catch(err){
     console.error('封面照片處理失敗',err);
+    showToast(t('ui.errImageLoad','無法讀取這張圖片'),'error');
   }
+}
+// importImageFiles(files)：全域拖曳匯入圖片專用的「智慧分流」——單張
+// 圖片走封面照（跟既有的封面照上傳入口共用 importCoverImageFile()）；
+// 多張圖片、且這場賽事已經有帶時間戳記的 GPS 軌跡（raceHasTimedTrack）
+// 時，改走「空間記憶迴廊」的照片時空對位（processPhotoFiles()，一次
+// 匯入整批賽事照片正是那個功能設計來做的事）；沒有 GPS 軌跡可以對位
+// 的話，多張圖片就算硬塞進去也只會全部變成「未對位」，沒有實際用處，
+// 這種情況退回只取第一張當封面、其餘忽略，並且用 toast 說明原因，
+// 不會靜靜地漏掉使用者的其他照片而不給任何交代。
+async function importImageFiles(files){
+  if(state.creating||!currentRace||files.length===1){
+    await importCoverImageFile(files[0]);
+    return;
+  }
+  if(raceHasTimedTrack(currentRace)){
+    await processPhotoFiles(currentRace,files);
+    logFeatureUse('import_geo_photos');
+    return;
+  }
+  showToast(t('ui.imageMultiNoTrackFallback','這場賽事還沒有帶時間戳記的 GPS 軌跡，沒辦法把多張照片對位到路線上，已把第一張設為封面照，其餘照片已忽略'),'error');
+  await importCoverImageFile(files[0]);
+}
+document.getElementById('cover-file-input').addEventListener('change',async e=>{
+  const file=e.target.files[0];
+  e.target.value='';
+  if(!file) return;
+  await importCoverImageFile(file);
 });
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-cover-picker"]')) document.getElementById('cover-file-input').click();
@@ -10584,6 +10797,13 @@ function summarizeTrackPoints(pts){
   return {
     distanceKm:+distKm.toFixed(2),
     durationSeconds:(t0&&t1)?Math.round((t1-t0)/1000):null,
+    // t0 是軌跡第一個有時間戳記的點，直接借來當這個活動實際發生的日期
+    // ——只有全域拖曳匯入時、還沒有任何賽事可以掛的情況才會用到（見
+    // importActivityFile()），幫忙把「新增賽事」表單的日期欄位預先
+    // 帶成活動當天，不用使用者自己再回想、手動選一次。用本機時區的
+    // 年月日組字串（不是 toISOString()，那個是 UTC，半夜運動的時候
+    // 容易跨日算錯）。
+    startDate:t0?`${t0.getFullYear()}-${String(t0.getMonth()+1).padStart(2,'0')}-${String(t0.getDate()).padStart(2,'0')}`:null,
     elevationGainM:elevations.length>1?computeElevationGain(elevations):null,
     avgHr:hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):null,
     maxHr:hrs.length?Math.max(...hrs):null,
@@ -10851,10 +11071,15 @@ async function parseActivityFile(file){
   const text=await file.text();
   return parseGpxOrTcx(text);
 }
-document.getElementById('gpx-file-input').addEventListener('change',async e=>{
-  const file=e.target.files[0];
-  e.target.value='';
-  if(!file) return;
+// importActivityFile(file)：從檔案物件匯入 GPX／TCX／FIT，跟既有的
+// 「選擇檔案」入口共用同一套邏輯（見下方 gpx-file-input 的 change
+// 監聽器），全域拖曳匯入也呼叫這一份。原本「既沒有在建立賽事、也沒有
+// 正在看某一場賽事」這個情況只是靜靜地 return，對著檔案輸入框選檔案
+// 幾乎不會發生（按鈕本來就只在這兩種情境下看得到），但全域拖曳沒有
+// 這層限制——使用者可能在月曆頁面就直接拖了一個 GPX 進來，這種情況
+// 靜靜地什麼都不做會讓人以為app壞了，所以這裡補上一個提示，讓使用者
+// 知道要先選一場賽事才能匯入。
+async function importActivityFile(file){
   if(state.creating){
     try{
       createStagedActivity={summary:await parseActivityFile(file),filename:file.name};
@@ -10867,7 +11092,28 @@ document.getElementById('gpx-file-input').addEventListener('change',async e=>{
     updateCreateStagingUI();
     return;
   }
-  if(!currentRace) return;
+  if(!currentRace){
+    // 全域拖曳匯入時，使用者可能根本還沒開著任何賽事（例如在月曆頁面
+    // 就直接拖了一個 GPX 進來）——與其只丟一句「請先開一場賽事」的
+    // 提示、把使用者晾在原地重新來一次，不如直接開始建立一場新賽事、
+    // 把這份活動資料預先掛上去，使用者只需要補填賽事名稱（跟視需要
+    // 調整運動種類）就能完成。先解析檔案、確定真的能解析成功才轉進
+    // 建立畫面，檔案本身有問題的話不會把使用者晾在一個半成品的建立
+    // 表單裡卻不知道發生了什麼事。
+    try{
+      const summary=await parseActivityFile(file);
+      startCreate();
+      createStagedActivity={summary,filename:file.name};
+      createDefaultStatus='completed';
+      if(summary.startDate) createDefaultDate=summary.startDate;
+      renderDetail();
+      logFeatureUse('import_gpx');
+      logFeatureUse('gpx_drop_create_race');
+    }catch(err){
+      showToast(t('ui.errCannotParseThisFile','無法解析這個檔案：')+err.message,'error');
+    }
+    return;
+  }
   const modal=gpxModalEl_getter();
   try{
     pendingGpxSummary=await parseActivityFile(file);
@@ -10878,6 +11124,12 @@ document.getElementById('gpx-file-input').addEventListener('change',async e=>{
     modal.innerHTML=gpxErrorHtml(t('ui.errCannotParseThisFile','無法解析這個檔案：')+err.message);
     modal.hidden=false;
   }
+}
+document.getElementById('gpx-file-input').addEventListener('change',async e=>{
+  const file=e.target.files[0];
+  e.target.value='';
+  if(!file) return;
+  await importActivityFile(file);
 });
 gpxModalEl_getter().addEventListener('click',e=>{
   if(e.target.closest('[data-action="close-gpx"]')){
@@ -11280,7 +11532,10 @@ function shoeAnalysisHtml(shoeId){
     <table class="shoe-analysis-table"><tbody>${raceRows}</tbody></table>
   </div>`;
 }
-function shoeModalHtml(){
+// 這個函式產生鞋款的新增列＋清單本體，不含外層標題／說明／關閉鈕
+// ——shoeModalHtml()（獨立彈窗）跟 profileModalHtml() 的鞋款分頁
+// 共用這一份，各自只加上自己需要的外層。
+function shoeManagementBodyHtml(){
   const active=shoes.filter(s=>!s.isRetired);
   const retired=shoes.filter(s=>s.isRetired);
   function shoeRowHtml(s){
@@ -11343,10 +11598,7 @@ function shoeModalHtml(){
       ${isExpanded?shoeAnalysisHtml(s.id):''}
     </div>`;
   }
-  return `<div class="modal-panel modal-panel-wide">
-    <h2>${t('ui.shoeManageTitle','鞋款管理')}</h2>
-    <p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。')}</p>
-    <div class="shoe-add-row">
+  return `<div class="shoe-add-row">
       <input type="text" id="new-shoe-name" placeholder="${t('ui.shoeNamePlaceholder','鞋款名稱，如「ASICS Metaspeed」')}">
       <input type="number" id="new-shoe-target" placeholder="${t('ui.shoeTargetPlaceholder','預期壽命(km)')}" value="${DEFAULT_SHOE_TARGET_KM}" min="1" step="1">
       <input type="number" id="new-shoe-stack" placeholder="${t('ui.shoeStackPlaceholder','鞋底厚度(mm，選填)')}" min="0" step="0.5">
@@ -11358,7 +11610,15 @@ function shoeModalHtml(){
       ${active.length?active.map(shoeRowHtml).join(''):emptyStateBlock('shoes',t('ui.shoeNoneYet','尚未新增鞋款'))}
     </div>
     ${retired.length?`<div class="shoe-section-title small">${t('ui.shoeRetiredSection','已退役')}</div>
-    <div class="shoe-list">${retired.map(shoeRowHtml).join('')}</div>`:''}
+    <div class="shoe-list">${retired.map(shoeRowHtml).join('')}</div>`:''}`;
+}
+// shoeModalHtml()／profileModalHtml() 的鞋款分頁共用同一套上面
+// shoeManagementBodyHtml() 產生的新增列＋清單。
+function shoeModalHtml(){
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.shoeManageTitle','鞋款管理')}</h2>
+    <p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。')}</p>
+    ${shoeManagementBodyHtml()}
     <div class="modal-actions"><button class="btn-ghost" data-action="close-shoe-modal">${t('ui.close','關閉')}</button></div>
   </div>`;
 }
@@ -11367,16 +11627,20 @@ function openShoeModal(){
   shoeModalEl_getter().innerHTML=shoeModalHtml();
   shoeModalEl_getter().hidden=false;
 }
-shoeModalEl_getter().addEventListener('click',e=>{
-  if(e.target.closest('[data-action="close-shoe-modal"]')){
-    shoeModalEl_getter().hidden=true;shoeModalEl_getter().innerHTML='';expandedShoeAnalysisId=null;return;
-  }
+// handleShoeManagementClick(e)：鞋款清單所有的新增／編輯／刪除／退役
+// 動作，獨立彈窗（shoe-modal）跟個人資訊裡的鞋款分頁（profile-modal）
+// 共用同一份——事件監聽器只對自己那個 DOM 子樹裡發生的點擊有反應，
+// 同一份清單畫面如果同時出現在兩個容器裡，個別各寫一份監聽器會漏接
+// 另一邊的點擊，所以抽成共用函式，兩邊的監聽器都呼叫它，各自只保留
+// 「關閉這個容器」這種容器專屬、對方沒有的動作。回傳 true 代表這次
+// 點擊有被這個函式處理過。
+function handleShoeManagementClick(e){
   const toggleAnalysisBtn=e.target.closest('[data-action="toggle-shoe-analysis"]');
   if(toggleAnalysisBtn){
     const id=toggleAnalysisBtn.dataset.id;
     expandedShoeAnalysisId=expandedShoeAnalysisId===id?null:id;
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
-    return;
+    refreshShoeManagementUI();
+    return true;
   }
   if(e.target.closest('[data-action="add-shoe"]')){
     const input=document.getElementById('new-shoe-name');
@@ -11384,27 +11648,27 @@ shoeModalEl_getter().addEventListener('click',e=>{
     const stackInput=document.getElementById('new-shoe-stack');
     const dropInput=document.getElementById('new-shoe-drop');
     const name=input.value.trim();
-    if(!name){input.focus();return;}
+    if(!name){input.focus();return true;}
     const targetKm=targetInput.value?Math.max(1,Math.round(Number(targetInput.value))):DEFAULT_SHOE_TARGET_KM;
     const stackHeightMm=stackInput.value!==''?Number(stackInput.value):null;
     const dropMm=dropInput.value!==''?Number(dropInput.value):null;
     shoes.push({id:uid(),name,targetKm,isRetired:false,stackHeightMm,dropMm,notes:''});
     persistShoes();
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    refreshShoeManagementUI();
     if(currentRace) renderDetail();
-    return;
+    return true;
   }
   if(e.target.closest('[data-action="edit-shoe-target"]')){
     editingShoeTargetId=e.target.closest('[data-action="edit-shoe-target"]').dataset.id;
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    refreshShoeManagementUI();
     const input=document.getElementById('shoe-target-input-'+editingShoeTargetId);
     if(input){ input.focus(); input.select(); }
-    return;
+    return true;
   }
   if(e.target.closest('[data-action="cancel-shoe-target"]')){
     editingShoeTargetId=null;
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
-    return;
+    refreshShoeManagementUI();
+    return true;
   }
   if(e.target.closest('[data-action="save-shoe-target"]')){
     const id=e.target.closest('[data-action="save-shoe-target"]').dataset.id;
@@ -11415,21 +11679,21 @@ shoeModalEl_getter().addEventListener('click',e=>{
       persistShoes();
     }
     editingShoeTargetId=null;
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    refreshShoeManagementUI();
     if(currentRace) renderDetail();
-    return;
+    return true;
   }
   if(e.target.closest('[data-action="edit-shoe-specs"]')){
     editingShoeSpecsId=e.target.closest('[data-action="edit-shoe-specs"]').dataset.id;
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    refreshShoeManagementUI();
     const input=document.getElementById('shoe-stack-input-'+editingShoeSpecsId);
     if(input){ input.focus(); }
-    return;
+    return true;
   }
   if(e.target.closest('[data-action="cancel-shoe-specs"]')){
     editingShoeSpecsId=null;
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
-    return;
+    refreshShoeManagementUI();
+    return true;
   }
   if(e.target.closest('[data-action="save-shoe-specs"]')){
     const id=e.target.closest('[data-action="save-shoe-specs"]').dataset.id;
@@ -11442,53 +11706,64 @@ shoeModalEl_getter().addEventListener('click',e=>{
       persistShoes();
     }
     editingShoeSpecsId=null;
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
-    return;
+    refreshShoeManagementUI();
+    return true;
   }
   if(e.target.closest('[data-action="honor-retire-shoe"]')){
     const id=e.target.closest('[data-action="honor-retire-shoe"]').dataset.id;
     shoeStampingId=id;
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    refreshShoeManagementUI();
     setTimeout(()=>{
       const shoe=shoes.find(s=>s.id===id);
       if(shoe) shoe.isRetired=true;
       shoeStampingId=null;
       persistShoes();
-      shoeModalEl_getter().innerHTML=shoeModalHtml();
+      refreshShoeManagementUI();
       if(currentRace) renderDetail();
       queueNoTriggerBadges(checkAndRecordBadgeUnlocks());
     },900);
-    return;
+    return true;
   }
   if(e.target.closest('[data-action="retire-shoe"]')){
     const id=e.target.closest('[data-action="retire-shoe"]').dataset.id;
     const shoe=shoes.find(s=>s.id===id);
     if(shoe) shoe.isRetired=true;
     persistShoes();
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    refreshShoeManagementUI();
     if(currentRace) renderDetail();
     queueNoTriggerBadges(checkAndRecordBadgeUnlocks());
-    return;
+    return true;
   }
   if(e.target.closest('[data-action="unretire-shoe"]')){
     const id=e.target.closest('[data-action="unretire-shoe"]').dataset.id;
     const shoe=shoes.find(s=>s.id===id);
     if(shoe) shoe.isRetired=false;
     persistShoes();
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    refreshShoeManagementUI();
     if(currentRace) renderDetail();
-    return;
+    return true;
   }
   if(e.target.closest('[data-action="delete-shoe"]')){
     const id=e.target.closest('[data-action="delete-shoe"]').dataset.id;
-    if(computeShoeStats(id).totalRaces>0) return; // 保護：有綁定賽事紀錄的鞋款一律走退役，不允許直接刪除
+    if(computeShoeStats(id).totalRaces>0) return true; // 保護：有綁定賽事紀錄的鞋款一律走退役，不允許直接刪除
     shoes=shoes.filter(s=>s.id!==id);
     state.races.forEach(r=>{ if(r.performanceData.shoeId===id) r.performanceData.shoeId=''; });
     persistShoes();persist();
-    shoeModalEl_getter().innerHTML=shoeModalHtml();
+    refreshShoeManagementUI();
     if(currentRace) renderDetail();
-    return;
+    return true;
   }
+  return false;
+}
+function refreshShoeManagementUI(){
+  if(!shoeModalEl_getter().hidden) shoeModalEl_getter().innerHTML=shoeModalHtml();
+  if(!profileModalEl_getter().hidden&&profileModalTab==='shoes') profileModalEl_getter().innerHTML=profileModalHtml();
+}
+shoeModalEl_getter().addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-shoe-modal"]')){
+    shoeModalEl_getter().hidden=true;shoeModalEl_getter().innerHTML='';expandedShoeAnalysisId=null;return;
+  }
+  handleShoeManagementClick(e);
 });
 
 /* ============================================================
@@ -11526,11 +11801,10 @@ function nutritionDictRowHtml(d){
     </div>
   </div>`;
 }
-function nutritionDictModalHtml(){
-  return `<div class="modal-panel modal-panel-wide">
-    <h2>${t('ui.nutritionDictTitle','補給品資料庫')}</h2>
-    <p class="modal-hint">${t('ui.nutritionDictHint','建立常用補給品的碳水、鈉、咖啡因含量，之後在任何一場賽事的補給時程規劃裡選用，系統會自動加總這場賽事的碳水攝取率。')}</p>
-    <div class="nutrition-dict-add-row">
+// nutritionDictModalHtml()／profileModalHtml() 的補給品分頁共用同一套
+// 下面 nutritionDictManagementBodyHtml() 產生的新增列＋清單。
+function nutritionDictManagementBodyHtml(){
+  return `<div class="nutrition-dict-add-row">
       <input type="text" id="new-dict-name" placeholder="${t('ui.dictNamePlaceholder','名稱，如「Maurten GEL 100」')}">
       <input type="number" id="new-dict-carb" placeholder="${t('ui.dictCarbPlaceholder','碳水(g)')}">
       <input type="number" id="new-dict-sodium" placeholder="${t('ui.dictSodiumPlaceholder','鈉(mg)')}">
@@ -11540,7 +11814,13 @@ function nutritionDictModalHtml(){
     </div>
     <div class="nutrition-dict-list">
       ${nutritionDictionary.length?nutritionDictionary.map(nutritionDictRowHtml).join(''):emptyStateBlock('nutritionSchedule',t('ui.dictNoneYet','尚未新增補給品'))}
-    </div>
+    </div>`;
+}
+function nutritionDictModalHtml(){
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.nutritionDictTitle','補給品資料庫')}</h2>
+    <p class="modal-hint">${t('ui.nutritionDictHint','建立常用補給品的碳水、鈉、咖啡因含量，之後在任何一場賽事的補給時程規劃裡選用，系統會自動加總這場賽事的碳水攝取率。')}</p>
+    ${nutritionDictManagementBodyHtml()}
     <div class="modal-actions"><button class="btn-ghost" data-action="close-nutrition-dict-modal">${t('ui.close','關閉')}</button></div>
   </div>`;
 }
@@ -11550,15 +11830,13 @@ function openNutritionDictModal(){
   nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
   nutritionDictModalEl_getter().hidden=false;
 }
-nutritionDictModalEl_getter().addEventListener('click',e=>{
-  if(e.target.closest('[data-action="close-nutrition-dict-modal"]')){
-    nutritionDictModalEl_getter().hidden=true;nutritionDictModalEl_getter().innerHTML='';editingNutritionDictId=null;
-    if(currentRace) renderDetail();
-    return;
-  }
+// handleNutritionDictManagementClick(e)：補給品資料庫所有的新增／編輯／
+// 刪除動作，跟鞋款那邊同樣的理由（見 handleShoeManagementClick 上方
+// 說明），抽成共用函式給獨立彈窗跟個人資訊裡的補給品分頁一起用。
+function handleNutritionDictManagementClick(e){
   if(e.target.closest('[data-action="add-nutrition-dict-item"]')){
     const name=document.getElementById('new-dict-name').value.trim();
-    if(!name) return;
+    if(!name) return true;
     const carbEl=document.getElementById('new-dict-carb'),sodiumEl=document.getElementById('new-dict-sodium'),caffeineEl=document.getElementById('new-dict-caffeine'),tagsEl=document.getElementById('new-dict-tags');
     nutritionDictionary.push({
       id:uid(),name,
@@ -11568,19 +11846,19 @@ nutritionDictModalEl_getter().addEventListener('click',e=>{
       tags:tagsEl.value.split(',').map(s=>s.trim()).filter(Boolean),
     });
     persistNutritionDictionary();
-    nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
-    return;
+    refreshNutritionDictManagementUI();
+    return true;
   }
   const editBtn=e.target.closest('[data-action="edit-nutrition-dict-item"]');
   if(editBtn){
     editingNutritionDictId=editBtn.dataset.id;
-    nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
-    return;
+    refreshNutritionDictManagementUI();
+    return true;
   }
   if(e.target.closest('[data-action="cancel-nutrition-dict-edit"]')){
     editingNutritionDictId=null;
-    nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
-    return;
+    refreshNutritionDictManagementUI();
+    return true;
   }
   const saveBtn=e.target.closest('[data-action="save-nutrition-dict-item"]');
   if(saveBtn){
@@ -11597,18 +11875,31 @@ nutritionDictModalEl_getter().addEventListener('click',e=>{
       persistNutritionDictionary();
     }
     editingNutritionDictId=null;
-    nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
+    refreshNutritionDictManagementUI();
     if(currentRace) renderDetail();
-    return;
+    return true;
   }
   const delBtn=e.target.closest('[data-action="delete-nutrition-dict-item"]');
   if(delBtn){
     nutritionDictionary=nutritionDictionary.filter(x=>x.id!==delBtn.dataset.id);
     persistNutritionDictionary();
-    nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
+    refreshNutritionDictManagementUI();
+    if(currentRace) renderDetail();
+    return true;
+  }
+  return false;
+}
+function refreshNutritionDictManagementUI(){
+  if(!nutritionDictModalEl_getter().hidden) nutritionDictModalEl_getter().innerHTML=nutritionDictModalHtml();
+  if(!profileModalEl_getter().hidden&&profileModalTab==='nutrition') profileModalEl_getter().innerHTML=profileModalHtml();
+}
+nutritionDictModalEl_getter().addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-nutrition-dict-modal"]')){
+    nutritionDictModalEl_getter().hidden=true;nutritionDictModalEl_getter().innerHTML='';editingNutritionDictId=null;
     if(currentRace) renderDetail();
     return;
   }
+  handleNutritionDictManagementClick(e);
 });
 
 /* ============================================================
@@ -11671,15 +11962,33 @@ function profileBodyTabHtml(p){
 }
 function profileModalHtml(){
   const p=userProfile||emptyUserProfile();
+  const tabContent=profileModalTab==='hr'?profileHrTabHtml(p)
+    :profileModalTab==='body'?profileBodyTabHtml(p)
+    :profileModalTab==='shoes'?profileShoesTabHtml()
+    :profileNutritionTabHtml();
   return `<div class="modal-panel modal-panel-wide">
     <h2>${t('ui.profileTitle','個人資訊')}</h2>
     <div class="profile-tabs">
       <button type="button" class="profile-tab-btn${profileModalTab==='hr'?' active':''}" data-action="profile-tab" data-tab="hr">${t('ui.profileTabHr','心率區間')}</button>
       <button type="button" class="profile-tab-btn${profileModalTab==='body'?' active':''}" data-action="profile-tab" data-tab="body">${t('ui.profileTabBody','身體數據')}</button>
+      <button type="button" class="profile-tab-btn${profileModalTab==='shoes'?' active':''}" data-action="profile-tab" data-tab="shoes">${t('ui.profileTabShoes','鞋款管理')}</button>
+      <button type="button" class="profile-tab-btn${profileModalTab==='nutrition'?' active':''}" data-action="profile-tab" data-tab="nutrition">${t('ui.profileTabNutrition','補給品管理')}</button>
     </div>
-    ${profileModalTab==='hr'?profileHrTabHtml(p):profileBodyTabHtml(p)}
+    ${tabContent}
     <div class="modal-actions"><button class="btn-ghost" data-action="close-profile-modal">${t('ui.close','關閉')}</button></div>
   </div>`;
+}
+// 鞋款、補給品管理原本各自是獨立彈窗（從特定賽事的「裝備」「補給」
+// 分頁點進去），現在額外也能從「個人資訊」裡管理——同一份資料，
+// 只是多一個入口，兩邊都是同一套 shoeManagementBodyHtml()／
+// nutritionDictManagementBodyHtml()，不是各自維護一份重複的清單。
+function profileShoesTabHtml(){
+  return `<p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。')}</p>
+    ${shoeManagementBodyHtml()}`;
+}
+function profileNutritionTabHtml(){
+  return `<p class="modal-hint">${t('ui.nutritionDictHint','建立常用補給品的碳水、鈉、咖啡因含量，之後在任何一場賽事的補給時程規劃裡選用，系統會自動加總這場賽事的碳水攝取率。')}</p>
+    ${nutritionDictManagementBodyHtml()}`;
 }
 const profileModalEl_getter=()=>document.getElementById('profile-modal');
 function openProfileModal(){
@@ -11696,6 +12005,13 @@ profileModalEl_getter().addEventListener('click',e=>{
     profileModalEl_getter().innerHTML=profileModalHtml();
     return;
   }
+  // 鞋款／補給品管理分頁的所有動作，交給跟獨立彈窗共用的同一份處理
+  // 函式（見 handleShoeManagementClick／handleNutritionDictManagementClick
+  // 上方說明）——不管現在是哪個分頁，這兩個函式只會找自己 data-action
+  // 對應的元素，找不到就直接回傳 false、不做任何事，兩個都呼叫一次
+  // 沒有額外判斷分頁的必要，也比較不容易漏接。
+  if(handleShoeManagementClick(e)) return;
+  if(handleNutritionDictManagementClick(e)) return;
 });
 profileModalEl_getter().addEventListener('change',e=>{
   const t=e.target;const path=t.dataset.profilePath;if(!path) return;
@@ -11908,6 +12224,22 @@ document.addEventListener('click',e=>{
 /* ============================================================
    初始化
    ============================================================ */
+// localDataReady：app 剛載入時，「從本機存讀讀出賽事／鞋款／補給品
+// 資料庫」（init() 這裡）跟「Firebase 判斷登入狀態、觸發雲端合併」
+// （handleAuthChange()）是兩條完全獨立、互不等待的非同步流程，過去
+// 沒有做任何先後順序的保證——如果雲端合併剛好比本機讀取先跑完，
+// 合併函式讀到的 state.races／shoes／nutritionDictionary 還是初始的
+// 空值，會把雲端資料直接當成唯一內容合併進去；緊接著本機讀取才跑完，
+// 用「從 storage 讀到什麼就整個蓋過去」的方式覆寫這幾個變數（不是
+// 合併），剛剛合併好的雲端資料就這樣被蓋掉、蒸發，本機資料庫又是
+// 空的。這在資料庫讀取剛好比較慢的裝置上機率特別高（例如手機），
+// 桌機上因為讀取通常比較快、雲端合併通常會排在後面，長期沒有踩到
+// 這個時序，容易被誤判成只有手機才有問題，實際上是這兩條路徑原本
+// 就沒有互相協調，兩台裝置都有踩到的風險，只是機率不同。
+// 修法是讓 init() 把這段本機讀取的 Promise 存起來，handleAuthChange()
+// 動用這幾個變數之前，先 await 它，確保本機資料一定讀取完成、順序
+// 固定之後才開始合併，不會再被後面才跑完的本機讀取蓋掉。
+let localDataReady=null;
 async function init(){
   document.getElementById('app-version').textContent=APP_VERSION;
   document.documentElement.setAttribute('lang',currentLang==='ja'?'ja':currentLang==='en'?'en':'zh-Hant');
@@ -11918,7 +12250,8 @@ async function init(){
   await migrateLocalStorageToIdb();
   await loadSyncOverwrites();
   await loadBadgeUnlocks();
-  await Promise.all([loadRaces(),loadTemplates(),loadShoes(),loadUserProfile(),loadNutritionDictionary()]);
+  localDataReady=Promise.all([loadRaces(),loadTemplates(),loadShoes(),loadUserProfile(),loadNutritionDictionary()]);
+  await localDataReady;
   if(templates.length===0){
     templates=STARTER_TEMPLATES.map(t=>({id:uid(),name:t.name,items:t.items}));
     persistTemplates();
@@ -12027,6 +12360,78 @@ document.addEventListener('drop',e=>{
   }
   kanbanDragIndex=null;
 });
+
+/* ============================================================
+   全域拖曳匯入：把外部檔案（GPX／TCX／FIT 軌跡、JSON 備份、JPG／PNG
+   照片）直接拖進視窗任何位置就能匯入，依副檔名自動分流到對應的既有
+   匯入邏輯（跟「選擇檔案」入口共用同一套函式，不是另外重寫一份）。
+   ============================================================ */
+let globalDropCounter=0;
+// isExternalFileDrag(e)：判斷這次拖曳事件帶的是不是「從作業系統拖進來
+// 的外部檔案」。瀏覽器拖曳外部檔案時，e.dataTransfer.types 會包含
+// 'Files'；上面既有的兩套頁面內部拖放功能（清單重新排序、裝備看板）
+// 用的是 setData('text/plain', ...)，types 裡不會有 'Files'。用這個
+// 分辨兩者，避免這次新增的全域監聽器把既有的內部拖放誤判成外部檔案、
+// 彼此互相干擾——這兩套原本运作正常的功能，不應該被這次新增的東西
+// 連帶影響。
+function isExternalFileDrag(e){
+  return !!(e.dataTransfer&&e.dataTransfer.types&&Array.from(e.dataTransfer.types).includes('Files'));
+}
+const globalDropzoneEl=document.getElementById('global-dropzone');
+window.addEventListener('dragenter',e=>{
+  if(!isExternalFileDrag(e)) return;
+  e.preventDefault();
+  globalDropCounter++;
+  globalDropzoneEl.hidden=false;
+  requestAnimationFrame(()=>globalDropzoneEl.classList.add('is-active'));
+});
+window.addEventListener('dragover',e=>{
+  if(!isExternalFileDrag(e)) return;
+  e.preventDefault(); // 必須擋掉預設行為，否則瀏覽器會直接把檔案開成新分頁
+});
+window.addEventListener('dragleave',e=>{
+  if(!isExternalFileDrag(e)) return;
+  // 用計數器而不是單純「離開了就關閉」，是因為拖曳滑鼠移動到子元素
+  // 上方時，瀏覽器也會對外層元素觸發一次 dragleave——如果不用計數器
+  // 判斷「真的完全離開了整個視窗」，拖曳提示層會在滑鼠移動時瘋狂
+  // 閃爍。
+  globalDropCounter=Math.max(0,globalDropCounter-1);
+  if(globalDropCounter===0){
+    globalDropzoneEl.classList.remove('is-active');
+    setTimeout(()=>{ if(globalDropCounter===0) globalDropzoneEl.hidden=true; },150);
+  }
+});
+window.addEventListener('drop',async e=>{
+  if(!isExternalFileDrag(e)) return;
+  e.preventDefault();
+  globalDropCounter=0;
+  globalDropzoneEl.classList.remove('is-active');
+  globalDropzoneEl.hidden=true;
+  const files=Array.from(e.dataTransfer.files||[]);
+  if(files.length) await routeDroppedFiles(files);
+});
+// routeDroppedFiles(files)：依副檔名分組，各自呼叫既有的匯入函式。
+// JSON、GPX／TCX／FIT 這兩類是「一次匯入一份」的操作，同一批拖進來
+// 的檔案裡如果剛好有好幾個同類型的，只處理排在最前面的那個，不會
+// 每個都各自跳出一次確認彈窗；圖片則是唯一支援一次匯入多張的類型
+// （交給 importImageFiles 自己決定要走封面照還是空間記憶迴廊）。
+// 依序 await、不是平行處理，因為 JSON／GPX 匯入都可能修改
+// currentRace／state.races，平行處理容易互相干擾。
+async function routeDroppedFiles(files){
+  const extOf=name=>(name.split('.').pop()||'').toLowerCase();
+  const jsonFiles=files.filter(f=>extOf(f.name)==='json');
+  const activityFiles=files.filter(f=>['gpx','tcx','fit'].includes(extOf(f.name)));
+  const imageFiles=files.filter(f=>['jpg','jpeg','png'].includes(extOf(f.name)));
+  const recognizedCount=jsonFiles.length+activityFiles.length+imageFiles.length;
+  const unknownCount=files.length-recognizedCount;
+  if(jsonFiles.length) await importJsonFile(jsonFiles[0]);
+  if(activityFiles.length) await importActivityFile(activityFiles[0]);
+  if(imageFiles.length) await importImageFiles(imageFiles);
+  if(unknownCount>0){
+    showToast(t('ui.dropzoneUnsupportedFiles','{n} 個檔案格式不支援，已略過').replace('{n}',unknownCount),'error');
+  }
+  if(recognizedCount>0) logFeatureUse('global_drop_import');
+}
 
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
