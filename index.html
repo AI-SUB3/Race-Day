@@ -869,6 +869,44 @@
   .progress-fill{height:100%;background:var(--trail);border-radius:4px;}
   .progress-fill.urgent{background:var(--flag);}
 
+  /* ---------- 生命週期軌道（Lifecycle Stepper） ---------- */
+  .lifecycle-stepper{margin:14px 0 18px;}
+  .lc-track{display:flex;align-items:flex-start;}
+  .lc-node{
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    background:none;border:none;padding:2px;cursor:pointer;font-family:inherit;flex-shrink:0;
+  }
+  .lc-node-circle{
+    width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;border:2px solid var(--rule);color:var(--ink-soft);
+    background:var(--surface);transition:transform 0.15s ease;
+  }
+  .lc-node-label{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .lc-node:hover .lc-node-circle{transform:scale(1.08);}
+  .lc-node-done .lc-node-circle{background:var(--trail);border-color:var(--trail);color:#fff;}
+  .lc-node-done .lc-node-label{color:var(--ink);}
+  .lc-node-current .lc-node-circle{
+    background:var(--gold);border-color:var(--gold);color:#fff;transform:scale(1.15);
+    position:relative;
+  }
+  .lc-node-current .lc-node-circle::after{
+    content:'';position:absolute;inset:0;border-radius:50%;background:var(--gold);
+    animation:lc-pulse 1.8s ease-out infinite;
+  }
+  .lc-node-current .lc-node-label{color:var(--ink);font-weight:700;}
+  .lc-node-exception .lc-node-circle{background:var(--flag);border-color:var(--flag);color:#fff;transform:scale(1.15);}
+  .lc-node-exception .lc-node-label{color:var(--flag);font-weight:700;}
+  .lc-node-future .lc-node-circle,.lc-node-future .lc-node-label{opacity:0.5;}
+  @keyframes lc-pulse{
+    0%{transform:scale(1);opacity:0.55;}
+    100%{transform:scale(1.9);opacity:0;}
+  }
+  .lc-connector{flex:1;height:4px;background:var(--rule);margin:12px -2px 0;min-width:8px;}
+  .lc-connector-done{background:var(--trail);}
+  .lc-exception-row{display:flex;gap:14px;margin-top:6px;}
+  .lc-exception-link{background:none;border:none;padding:0;font-family:inherit;font-size:12px;color:var(--stone);text-decoration:underline;cursor:pointer;}
+  .lc-exception-link:hover{color:var(--flag);}
+
   /* ---------- Stamp badge ---------- */
   .stamp{
     display:inline-block;padding:2px 9px;border-radius:2px;
@@ -1927,7 +1965,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.78.0';
+const APP_VERSION='v2.79.0';
 
 /* ============================================================
    多語系（i18n）
@@ -1982,6 +2020,7 @@ const JA={
   'ui.filterOverseas':'海外レース',
   'ui.mediaGalleryTitle':'メディアギャラリー',
   'ui.taperBadge':'テーパリング中',
+  'ui.lcMarkDns':'未出走 (DNS) にする','ui.lcMarkDnf':'途中棄権 (DNF) にする',
   'ui.focusPanelLabel':'直前準備',
   'ui.focusCountdown':'あと {n} 日',
   'ui.focusHeroDaysLabel':'日後にスタート',
@@ -2415,6 +2454,7 @@ const EN={
   'ui.filterOverseas':'Overseas',
   'ui.mediaGalleryTitle':'Media Gallery',
   'ui.taperBadge':'Tapering',
+  'ui.lcMarkDns':'Mark as DNS','ui.lcMarkDnf':'Mark as DNF',
   'ui.focusPanelLabel':'Race Prep',
   'ui.focusCountdown':'{n} days to go',
   'ui.focusHeroDaysLabel':'days to race day',
@@ -8911,6 +8951,47 @@ function coverUploadHtml(race){
     <button type="button" class="btn-ghost" data-action="open-cover-picker">${t('ui.coverAdd','+ 新增封面照片')}</button>
   </div>`;
 }
+// 生命週期軌道（Lifecycle Stepper）：把狀態下拉選單視覺化成一條可以
+// 直接點擊切換的進度軌道，放在賽事標題正下方。四個主節點對應
+// STATUS_OPTIONS 裡「正常路徑」的四個狀態（考慮中→抽籤中→已報名→
+// 已完賽），未起跑(DNS)／未完賽(DNF)這兩個是例外分支，不是路徑上的
+// 第五、第六步——這兩個狀態發生的時候，賽事本身已經走到「比賽日」
+// 這個時間點了，只是結果不是「順利完賽」，所以畫面上把它們畫成最後
+// 一個節點的「另一種樣子」（不同顏色、不同圖示），不是接在後面多畫
+// 兩個節點，避免看起來像是「完賽之後還有更後面的階段」這種不存在的
+// 順序關係。四個主節點無論目前是哪個狀態都可以直接點擊——包含目前
+// 是 DNS／DNF 的時候——不特別做一個「返回正常」的按鈕，因為「點擊
+// 想要的狀態」本身就已經是最直接的返回方式，不需要多一層機制。
+const LIFECYCLE_MAIN_SEQUENCE=['considering','lottery_pending','registered','completed'];
+function lifecycleStepperHtml(race){
+  const isException=race.status==='dns'||race.status==='dnf';
+  const mainIdx=LIFECYCLE_MAIN_SEQUENCE.indexOf(race.status);
+  const currentIdx=isException?LIFECYCLE_MAIN_SEQUENCE.length-1:mainIdx;
+  let track='';
+  LIFECYCLE_MAIN_SEQUENCE.forEach((s,i)=>{
+    const isLastNode=i===LIFECYCLE_MAIN_SEQUENCE.length-1;
+    const label=(isLastNode&&isException)?statusLabel(race.status):statusLabel(s);
+    let stateClass;
+    if(isLastNode&&isException) stateClass='exception';
+    else if(i<currentIdx) stateClass='done';
+    else if(i===currentIdx) stateClass='current';
+    else stateClass='future';
+    const circleContent=stateClass==='done'?'✓':(stateClass==='exception'?'!':String(i+1));
+    track+=`<button type="button" class="lc-node lc-node-${stateClass}" data-action="lc-set-status" data-status="${s}" ${stateClass==='current'||stateClass==='exception'?'aria-current="step"':''}>
+      <span class="lc-node-circle">${circleContent}</span>
+      <span class="lc-node-label">${escapeHtml(label)}</span>
+    </button>`;
+    if(!isLastNode) track+=`<span class="lc-connector${i<currentIdx?' lc-connector-done':''}"></span>`;
+  });
+  const exceptionLinks=isException?'':`<div class="lc-exception-row">
+    <button type="button" class="lc-exception-link" data-action="lc-set-status" data-status="dns">${t('ui.lcMarkDns','標記未出賽 (DNS)')}</button>
+    <button type="button" class="lc-exception-link" data-action="lc-set-status" data-status="dnf">${t('ui.lcMarkDnf','標記未完賽 (DNF)')}</button>
+  </div>`;
+  return `<div class="lifecycle-stepper">
+    <div class="lc-track">${track}</div>
+    ${exceptionLinks}
+  </div>`;
+}
 function detailHeaderHtml(race){
   const chip=(race.status==='completed'&&race.results.chipTimeSeconds)?` ・ ${t('field.post.results.chipTimeSeconds','晶片時間')} ${secToHMS(race.results.chipTimeSeconds)}`:'';
   const hasCover=!!race.coverImage;
@@ -8953,6 +9034,7 @@ function detailHeaderHtml(race){
         </div>
       </div>
       <h1>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
+      ${lifecycleStepperHtml(race)}
       ${coverUploadHtml(race)}
       <div class="dh-meta mono">${race.schedule.raceDate||t('ui.dateNotSet','尚未設定日期')} ・ ${countdownLabel(race)}${chip}</div>
       ${race.schedule.raceDate?`<button type="button" class="btn-text-small dh-gcal-quicklink" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
@@ -12155,6 +12237,21 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="download-dossier"]')&&currentRace){ downloadDossierImage(currentRace); logFeatureUse('export_dossier'); }
   if(e.target.closest('[data-action="download-crew-guide"]')&&currentRace){ downloadCrewGuideImage(currentRace); logFeatureUse('export_crew_guide'); }
   if(e.target.closest('[data-action="open-fatigue-mode"]')&&currentRace){ openFatigueMode(); logFeatureUse('open_fatigue_mode'); }
+  const lcBtn=e.target.closest('[data-action="lc-set-status"]');
+  if(lcBtn&&currentRace){
+    // 生命週期軌道的節點本身不直接改資料——找到既有那個 #f-status
+    // 下拉選單，把值設好再送出一個 change 事件，讓事件冒泡到 detailEl
+    // 既有的委派監聽器去處理，完整沿用那邊已經有的存檔、無感智慧
+    // 預設、裝備範本自動套用這一整套邏輯，這裡不重新寫一份。
+    const newStatus=lcBtn.dataset.status;
+    const select=document.getElementById('f-status');
+    if(select&&select.value!==newStatus){
+      select.value=newStatus;
+      select.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    logFeatureUse('lifecycle_stepper_click');
+    return;
+  }
   if(e.target.closest('[data-action="toggle-fatigue-zone-card"]')){
     fatigueShowZoneCard=!fatigueShowZoneCard;
     renderFatigueOverlay();
