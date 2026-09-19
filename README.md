@@ -1,9 +1,9 @@
 # 賽事紀錄（My Race）
 
-一個從報名到終點的個人賽事紀錄網站。純前端、單一 `index.html`，部署在 GitHub Pages，不需要自架後端伺服器。
+一個從報名到終點的個人賽事紀錄網站。純前端、主體是單一 `index.html`（另有一個 `icons/` 圖示資料夾），部署在 GitHub Pages，不需要自架後端伺服器。
 
 - **線上網址**：https://ai-sub3.github.io/Race-Day/
-- **版本**：v3.11.1（[CHANGELOG.md](./CHANGELOG.md)）
+- **版本**：v3.16.0（[CHANGELOG.md](./CHANGELOG.md)）
 - **詳細操作說明**：[USAGE.md](./USAGE.md)
 - **功能介紹頁**：https://ai-sub3.github.io/Race-Day/about/
 - **網站地圖（給訪客看）**：https://ai-sub3.github.io/Race-Day/sitemap/
@@ -37,12 +37,14 @@
 - 外部函式庫皆透過 CDN 載入：SheetJS（Excel 解析）、Firebase JS SDK（選用）
 - GPX/TCX 解析、海拔剖面、配速計算、分享圖／配速手環產生（Canvas）皆為純前端運算，資料不會上傳到任何第三方伺服器
 
-## 部署方式（GitHub Pages）
+## 部署備忘（GitHub Pages）
 
-1. Fork 或下載本 repo
-2. 上傳 `index.html` 到你的 repo 根目錄（檔名須為 `index.html`）
-3. repo 設定 → Pages → Source 選 `Deploy from a branch` → Branch 選 `main` / `/(root)`
-4. 約 1 分鐘後即可在 `https://<你的帳號>.github.io/<repo 名稱>/` 存取
+> 這一段是作者自己的部署筆記，不是給第三方架站用的說明。
+
+1. `index.html` **與 `icons/` 資料夾**放在 repo 根目錄
+   - `icons/` 從 v3.14.0 起是必要的：網站圖示與「加入主畫面」用的圖片改成獨立檔案（原本以 base64 內嵌，佔了 index.html 的 12.6%），少傳這個資料夾網站仍可使用，但圖示會空白
+2. repo 設定 → Pages → Source 選 `Deploy from a branch` → Branch 選 `main` / `/(root)`
+3. 約 1 分鐘後即可在 `https://ai-sub3.github.io/Race-Day/` 存取
 
 ## 啟用雲端同步（選用）
 
@@ -78,4 +80,4 @@
 
 ## 授權
 
-© 2026 劉恩龍 LIU EN LUNG. 本專案採用 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) 授權——個人使用、研究、教育、非營利等非商業用途皆可自由使用、修改、散布；不授權任何商業性使用。完整條款見 [`LICENSE`](./LICENSE)。
+© 2026 劉恩龍 LIU EN LUNG. 版權所有，保留一切權利。**本專案不開源**：原始碼、文件與素材未經書面同意不得重製、修改、散布或再授權；網站本身開放作為個人賽事紀錄工具使用，此使用許可不包含對原始碼的任何權利。完整聲明見 [`LICENSE`](./LICENSE)。
