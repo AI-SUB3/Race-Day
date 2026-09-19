@@ -31,6 +31,9 @@
   :root{
     --paper:#E6E9E6;
     --surface:#FAFAF8;
+    --paper-base:#E6E9E6;
+    --surface-base:#FAFAF8;
+    --ambient-color:transparent;
     --ink:#16231C;
     --ink-soft:#4B564E;
     --rule:#D8DAD3;
@@ -60,6 +63,8 @@
   [data-theme="dark"]{
     --paper:#0D1013;
     --surface:#1E232A;
+    --paper-base:#0D1013;
+    --surface-base:#1E232A;
     --ink:#EDEEE9;
     --ink-soft:#9BA3A0;
     --rule:#2A3038;
@@ -86,6 +91,41 @@
     --paper-glass:rgba(13,16,19,0.82);
     --hover-overlay:rgba(237,238,233,0.08);
   }
+  /* ---- 環境光渲染：把賽事封面照抓出來的主色調，以極低的比例混進
+     整個介面的背景色，讓打開一場賽事的當下不只是「看資料」，連
+     周遭的底色都隱約呼應那張照片的色彩。全部靠 CSS 原生的
+     color-mix() 完成，JS 只需要把抓出來的顏色寫進 --ambient-color
+     這個變數，不用在程式碼裡把 hex 轉 rgb 再兜字串。
+     --ambient-color 平常是 transparent（混色的時候加一份透明，等於
+     完全不影響原本的顏色），只有當下開著的賽事有封面照片、且成功
+     抓出主色調時，才會被 JS 設成實際的顏色。--paper-base／
+     --surface-base 是特地另外留的「原始未混色」版本，讓 color-mix()
+     有一個乾淨的參照起點——不能直接拿 --paper 混自己（`--paper:
+     color-mix(..., var(--paper), ...)` 這種寫法在 CSS 裡是無效的
+     循環參照，套用到同一個元素上會直接讓這個變數整個失效，不是
+     退回原本的值）。
+     用 @supports 包起來，色彩混合函式不支援的瀏覽器完全不會套用
+     這層覆蓋，介面維持原本純粹的底色，不會因為看不懂這個語法就
+     整個背景失效或變透明。 ---- */
+  @supports (color: color-mix(in srgb, red, blue)) {
+    [data-ambient="1"]{
+      --paper: color-mix(in srgb, var(--paper-base) 96%, var(--ambient-color));
+      --surface: color-mix(in srgb, var(--surface-base) 96%, var(--ambient-color));
+    }
+  }
+  #ambient-glow{
+    position:fixed;top:0;left:0;right:0;height:60vh;pointer-events:none;z-index:1;
+    opacity:0;transition:opacity 0.8s ease-in-out;
+    background:radial-gradient(ellipse 100% 45% at 50% 0%, var(--ambient-color) 0%, transparent 70%);
+    mix-blend-mode:multiply;
+  }
+  /* screen 混合模式的效果是「疊加處變亮、發光」，淺色模式的底色本來
+     就接近純白，疊加什麼顏色上去都會被稀釋到幾乎看不見；深色模式
+     底色夠暗，screen 才有東西可以「發光」。淺色模式反過來用
+     multiply（正片疊底，讓疊加處變暗、更飽和），兩種主題下這個
+     光暈才都看得出效果，不是只有深色模式才有用。 */
+  [data-theme="dark"] #ambient-glow{mix-blend-mode:screen;}
+  [data-ambient="1"] #ambient-glow{opacity:0.14;}
   [data-theme="dark"] .empty-state-icons,
   [data-theme="dark"] .sport-icon-wrap{color:var(--trail);}
   [data-theme="dark"] .row-remove{color:var(--stone);}
@@ -97,6 +137,7 @@
     font-family:'Noto Sans TC',sans-serif;
     font-size:16px;
     line-height:1.6;
+    transition:background-color 0.8s ease-in-out;
   }
   [data-lang="ja"] body{font-family:'Noto Sans JP',sans-serif;}
   :focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-glow);transition:box-shadow 0.15s ease;}
@@ -159,6 +200,10 @@
   .foreground-toast strong{font-size:14px;}
   .foreground-toast span{font-size:13px;opacity:0.85;}
   .foreground-toast.sync-notice{cursor:pointer;right:20px;bottom:84px;border:1px solid var(--gold);}
+  .race-undo-toast{flex-direction:row;align-items:center;justify-content:space-between;gap:14px;max-width:360px;}
+  .race-undo-toast span{opacity:1;}
+  .race-undo-btn{color:var(--gold);font-weight:600;flex-shrink:0;white-space:nowrap;}
+  .race-undo-btn:hover{color:var(--surface);}
   .storage-banner{
     position:fixed;bottom:0;left:0;right:0;z-index:200;
     display:flex;align-items:center;justify-content:center;gap:16px;
@@ -251,6 +296,28 @@
   .empty-hint-block{
     display:flex;flex-direction:column;align-items:center;gap:8px;
     padding:22px 8px;color:var(--stone);
+    position:relative;overflow:hidden;border-radius:6px;
+  }
+  /* ---- 空狀態的微光呼吸背景：空白區塊最怕看起來像「系統壞了」，
+     一層極低飽和、緩慢對流的微光可以讓它變成「等著被填滿」的待機
+     狀態。這裡用 ::before 畫一層對角線漸層，慢慢來回移動＋淡入
+     淡出——同樣只動 transform 跟 opacity，交給 GPU 處理，不會因為
+     畫面上同時有好幾個空狀態就拖慢捲動。
+     顏色刻意用幾乎看不出色相的冷灰（rgba 的 alpha 只有 0.05 上下），
+     不是明亮的彩色——空狀態不該比有資料的地方還搶眼。 ---- */
+  .empty-hint-block::before{
+    content:'';position:absolute;inset:-50%;pointer-events:none;
+    background:linear-gradient(135deg, rgba(100,110,130,0.05) 0%, transparent 45%, rgba(120,105,135,0.045) 100%);
+    animation:empty-breathe 9s ease-in-out infinite;
+    will-change:transform,opacity;
+  }
+  .empty-hint-block>*{position:relative;z-index:1;}
+  @keyframes empty-breathe{
+    0%,100%{transform:translate(0,0);opacity:0.45;}
+    50%{transform:translate(6%,4%);opacity:1;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .empty-hint-block::before{animation:none;opacity:0.7;}
   }
   .empty-hint-block svg{width:30px;height:30px;opacity:0.55;}
   .empty-hint-block .empty-hint{padding:0;text-align:center;}
@@ -327,7 +394,6 @@
   .swipe-action-bg .swipe-action-icon{font-size:18px;}
   .swipe-bg-right{background:var(--trail);justify-content:flex-start;padding-left:20px;gap:8px;}
   .swipe-bg-left{background:var(--flag);justify-content:flex-end;padding-right:20px;gap:8px;flex-direction:row-reverse;}
-  .swipe-bg-confirm{background:var(--flag);justify-content:flex-end;padding-right:20px;gap:8px;flex-direction:row-reverse;cursor:pointer;}
   .swipe-card{margin:0;touch-action:pan-y;position:relative;z-index:1;}
   .cal-list-sport-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
   .cal-list-item.selected{background:var(--ink);border-color:var(--ink);}
@@ -603,6 +669,52 @@
   .focus-panel{
     border:1.5px solid var(--gold);border-radius:8px;padding:18px 20px;margin-bottom:22px;
     background:var(--surface);
+  }
+  /* ---- 備戰釘選沒有封面照片時的流體漸層背景：兩塊顏色不同的斑塊
+     套上極大的模糊，邊緣完全融在一起變成無縫漸層，再用非常慢的
+     transform 動畫（不是改 background-position 或顏色）讓它們緩慢
+     漂移——transform 跟 opacity 是瀏覽器交給 GPU 處理的屬性，不會
+     每一影格都觸發版面重算跟重繪，所以即使動畫一直在跑，捲動頁面
+     也不會卡頓。
+     有封面照片的時候完全不會出現這層（照片本身就是主視覺），所以
+     不會有兩層背景互相打架的問題。 ---- */
+  .focus-mesh{position:absolute;inset:0;overflow:hidden;pointer-events:none;border-radius:7px;}
+  .focus-mesh-blob{position:absolute;border-radius:50%;filter:blur(70px);will-change:transform;}
+  .focus-mesh-blob-a{
+    width:55%;height:120%;left:8%;top:-30%;
+    background:rgba(var(--gold-rgb),0.30);
+    animation:focus-mesh-drift-a 19s ease-in-out infinite;
+  }
+  .focus-mesh-blob-b{
+    width:65%;height:130%;right:2%;bottom:-40%;
+    background:var(--trail);opacity:0.22;
+    animation:focus-mesh-drift-b 23s ease-in-out infinite;
+  }
+  @keyframes focus-mesh-drift-a{
+    0%,100%{transform:translate(0,0) scale(1);}
+    50%{transform:translate(18%,10%) scale(1.15);}
+  }
+  @keyframes focus-mesh-drift-b{
+    0%,100%{transform:translate(0,0) scale(1.05);}
+    50%{transform:translate(-14%,-8%) scale(0.92);}
+  }
+  /* 這個 App 其他動畫都有尊重系統的「減少動態效果」設定，這裡也
+     一樣：關掉漂移動畫，但保留斑塊本身的靜態漸層色，畫面不會突然
+     退回一片平板的純色。 */
+  @media (prefers-reduced-motion:reduce){
+    .focus-mesh-blob-a,.focus-mesh-blob-b{animation:none;}
+  }
+  .focus-panel-meshed{position:relative;}
+  .focus-panel-meshed .focus-panel-head,
+  .focus-panel-meshed .focus-panel-grid{position:relative;z-index:1;}
+  /* 面板裡的小卡片原本是不透明的實心底色，會把下面的流體漸層整塊
+     擋掉、變成「漂亮的背景被三個方塊蓋住」。改成半透明，讓漸層從
+     卡片底下透上來，整個面板才是一塊完整的流體，不是背景跟卡片
+     各自為政。只在有流體背景的面板裡才這樣改，一般情況（有封面
+     照片、或其他地方用到同一個卡片樣式）維持原本的實心底色。 */
+  .focus-panel-meshed .focus-panel-card{background:color-mix(in srgb, var(--paper) 72%, transparent);}
+  @supports not (color: color-mix(in srgb, red, blue)){
+    .focus-panel-meshed .focus-panel-card{background:var(--paper);}
   }
   .focus-panel-hero{padding:0;overflow:hidden;}
   .focus-panel-hero .focus-panel-grid{padding:18px 20px 0;margin-bottom:18px;}
@@ -1287,6 +1399,70 @@
      介面，不是一般表單頁面，維持固定的深色調更有「浮在最上層」的
      視覺重量；控制台本體（.cmdk-frame）才用一般的 --surface，會照
      淺色/深色主題正常切換。 ---- */
+  /* ---- 抽屜面板（Drawer）：目前只有「裝備清單」用這個模式，是從
+     長表單改成「儀表板卡片＋點開抽屜編輯」的第一個試作區塊。方向
+     刻意做成有差別——桌機從右側滑入（不遮住左邊的內容，可以一邊
+     對照一邊編輯），手機從底部滑上來（配合拇指操作，跟這個 App
+     其他彈窗在手機上的行為一致）。
+     關閉的方式有三種：右上角的 ✕、點背景遮罩、按 Esc；手機上再加
+     一個「按系統返回鍵也會先收起抽屜、而不是直接離開網站」，用
+     history 的狀態堆疊做到。 ---- */
+  .drawer-overlay{
+    position:fixed;inset:0;z-index:400;background:rgba(10,14,12,0.5);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  }
+  .drawer-overlay[hidden]{display:none;}
+  .drawer-panel{
+    position:fixed;z-index:401;background:var(--surface);
+    display:flex;flex-direction:column;
+    box-shadow:-4px 0 24px rgba(0,0,0,0.18);
+    transition:transform 0.3s cubic-bezier(0.34,1.4,0.64,1);
+  }
+  .drawer-header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:16px 20px;border-bottom:1px solid var(--rule);flex-shrink:0;
+  }
+  .drawer-header h3{font-size:17px;margin:0;}
+  .drawer-body{overflow-y:auto;padding:16px 20px 28px;flex:1;}
+  /* 抽屜頂端已經有標題了，區塊自己那個重複的標題就藏起來，不然
+     同一個畫面上會連續出現兩次「裝備清單」。 */
+  .drawer-body .subsection-head h3{display:none;}
+  .drawer-body .subsection{margin:0;}
+  @media (min-width:641px){
+    .drawer-panel{top:0;bottom:0;right:0;width:460px;max-width:92vw;transform:translateX(100%);}
+    .drawer-overlay:not([hidden]) .drawer-panel{transform:translateX(0);}
+  }
+  @media (max-width:640px){
+    .drawer-panel{
+      bottom:0;left:0;right:0;height:86vh;
+      border-radius:16px 16px 0 0;transform:translateY(100%);
+    }
+    .drawer-overlay:not([hidden]) .drawer-panel{transform:translateY(0);}
+    /* 手機版頂端的小灰條，暗示這是一個可以從底部拉上來的面板，跟
+       這個 App 其他彈窗在手機上的 Bottom Sheet 樣式一致。 */
+    .drawer-header::before{
+      content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);
+      width:40px;height:5px;border-radius:3px;background:var(--rule);
+    }
+    .drawer-header{position:relative;padding-top:22px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .drawer-panel{transition:none;}
+  }
+  /* 儀表板上的裝備摘要卡片：整張卡片就是一個按鈕，點了打開抽屜。 */
+  .dash-card{
+    width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;
+    border:1px solid var(--rule);border-radius:8px;padding:14px 16px;
+    margin:18px 0;
+    background:var(--paper);display:flex;align-items:center;gap:14px;
+    transition:border-color 0.15s ease,transform 0.15s ease;
+  }
+  .dash-card:hover{border-color:var(--trail);}
+  .dash-card:active{transform:scale(0.995);}
+  .dash-card-main{flex:1;min-width:0;}
+  .dash-card-title{font-weight:600;margin-bottom:3px;}
+  .dash-card-sub{color:var(--stone);font-size:13px;}
+  .dash-card-chevron{color:var(--stone);font-size:18px;flex-shrink:0;}
   .cmdk-overlay{
     position:fixed;inset:0;z-index:600;background:rgba(10,14,12,0.55);
     display:flex;align-items:flex-start;justify-content:center;padding:12vh 20px 20px;
@@ -1416,6 +1592,25 @@
     max-height:86vh;overflow-y:auto;
   }
   .modal-panel-wide{max-width:960px;}
+  /* ---- 手機版 Bottom Sheet：彈窗從螢幕底部滑出、可以往下拖曳關閉，
+     取代置中彈窗＋叉叉按鈕那種明顯「這是一個網頁」的既視感。只在
+     窄螢幕生效（跟月曆切換清單檢視用同一個斷點），桌機維持原本的
+     置中彈窗，不需要為滑鼠操作模擬觸控手感。把手（.modal-panel::before
+     畫出來的那顆小藥丸）是純視覺提示，實際判斷「摸到的是不是把手」
+     靠 JS 用觸控起點的 Y 座標離面板頂端多近來算，不是靠比對這個
+     偽元素本身——偽元素不能單獨接收觸控事件，瀏覽器回報的 e.target
+     一律是面板本體。 ---- */
+  @media (max-width:640px){
+    .modal-overlay{align-items:flex-end;padding:0;}
+    .modal-panel{
+      max-width:none;width:100%;border-radius:16px 16px 0 0;
+      max-height:88vh;padding-top:22px;
+    }
+    .modal-panel::before{
+      content:'';display:block;width:40px;height:5px;border-radius:3px;
+      background:var(--rule);margin:0 auto 16px;
+    }
+  }
   .report-prompt-fallback-textarea{width:100%;min-height:260px;font:inherit;font-size:13px;padding:10px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink);resize:vertical;margin-bottom:14px;}
   .modal-panel h2{font-size:20px;margin-bottom:10px;}
   .modal-hint{color:var(--ink-soft);font-size:15px;margin-bottom:16px;}
@@ -1465,6 +1660,7 @@
 </style>
 </head>
 <body>
+<div id="ambient-glow"></div>
 <div id="app">
   <header id="topbar">
     <div class="topbar-row1">
@@ -1553,6 +1749,15 @@
   </div>
 </div>
 <div id="profile-modal" class="modal-overlay" hidden></div>
+<div id="global-drawer" class="drawer-overlay" hidden>
+  <div class="drawer-panel">
+    <div class="drawer-header">
+      <h3 id="drawer-title"></h3>
+      <button type="button" class="btn-ghost icon-btn" data-action="close-drawer" aria-label="關閉">✕</button>
+    </div>
+    <div id="drawer-content" class="drawer-body"></div>
+  </div>
+</div>
 <div id="command-palette" class="cmdk-overlay" hidden>
   <div class="cmdk-frame">
     <input type="text" id="cmdk-input" class="cmdk-input" autocomplete="off" spellcheck="false" data-i18n-placeholder="ui.cmdkPlaceholder" placeholder="搜尋賽事，或輸入 > 執行動作、# 快速篩選…">
@@ -1797,6 +2002,54 @@ function showToast(message,kind){
   document.body.appendChild(el);
   setTimeout(()=>{ el.remove(); },6000);
 }
+/* ============================================================
+   刪除賽事的「復原」提示：以前刪除賽事要「先確認、再真的刪除」
+   （詳情頁按鈕要連按兩次、滑動刪除要滑到底再點一次確認），這裡
+   改成「先刪除、給 5 秒可以反悔」——刪除的當下就已經走既有的軟
+   刪除機制（設定 deletedAt，跟「資料復原」畫面共用同一套資料
+   模型，30 天內都找得回來），這個 5 秒倒數的提示純粹是多一層
+   「立刻、不用特地跑去開資料復原畫面」就能反悔的捷徑，不是另外
+   發明一套獨立於既有軟刪除之外、只存在記憶體裡的暫存機制——就算
+   分頁在倒數期間被關掉或重新整理，資料本來就已經安全存在本機
+   儲存空間裡（標記成已刪除），不會因為沒看到這個提示就真的憑空
+   消失，「資料復原」畫面永遠找得到、永遠可以還原。
+   連續刪好幾筆的情況：不是每刪一筆就蓋掉上一筆的提示、逼上一筆
+   立刻定案不能反悔——同一個 5 秒視窗內刪除的所有賽事，都會被同
+   一個提示追蹤，倒數會跟著最新一次刪除重新算，按一次「復原」會
+   把這個視窗內刪除的全部救回來，不是只救最新一筆。
+   ============================================================ */
+let raceUndoState=null; // {ids:Set<string>, el:HTMLElement, timer}
+function showRaceDeleteUndoToast(raceId,raceName){
+  if(raceUndoState){
+    clearTimeout(raceUndoState.timer);
+    raceUndoState.ids.add(raceId);
+  }else{
+    const el=document.createElement('div');
+    el.className='foreground-toast race-undo-toast';
+    document.body.appendChild(el);
+    raceUndoState={ids:new Set(),el,timer:null};
+    raceUndoState.ids.add(raceId);
+  }
+  const count=raceUndoState.ids.size;
+  const label=count>1?tf('ui.undoDeletedMultiple','已刪除 {n} 場賽事',count):tf('ui.undoDeletedSingle','已刪除：{n}',escapeHtml(raceName));
+  raceUndoState.el.innerHTML=`<span>🗑️ ${label}</span><button type="button" class="btn-text-small race-undo-btn" data-action="undo-race-delete">${t('ui.undo','復原')}</button>`;
+  raceUndoState.timer=setTimeout(()=>{
+    if(raceUndoState){ raceUndoState.el.remove(); raceUndoState=null; }
+  },5000);
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('[data-action="undo-race-delete"]')) return;
+  if(!raceUndoState) return;
+  clearTimeout(raceUndoState.timer);
+  raceUndoState.ids.forEach(id=>{
+    const race=state.races.find(r=>r.id===id);
+    if(race){ race.deletedAt=null; race.updatedAt=new Date().toISOString(); }
+  });
+  persist();renderAll();
+  raceUndoState.el.remove();
+  raceUndoState=null;
+  logFeatureUse('race_delete_undo');
+});
 // startCadenceFeel(btn, cadenceSpm)：用網頁震動 API 模擬這個步頻
 // （spm＝每分鐘步數）的節奏，連續跑 5 秒。intervalMs 是「兩步之間
 // 隔多久」——60000（一分鐘的毫秒數）除以 spm，就是每一步對應的
@@ -2059,11 +2312,11 @@ function emptyRace(name,sportType,status,raceDate){
    狀態與儲存
    ============================================================ */
 const today0=new Date();
-const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',confirmDelete:false,
+const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.86.0';
+const APP_VERSION='v2.91.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2119,7 +2372,7 @@ const JA={
   'ui.mediaGalleryTitle':'メディアギャラリー',
   'ui.taperBadge':'テーパリング中',
   'ui.lcMarkDns':'未出走 (DNS) にする','ui.lcMarkDnf':'途中棄権 (DNF) にする',
-  'ui.swipeComplete':'完走','ui.swipeDelete':'削除','ui.swipeDeleteConfirm':'もう一度タップして削除を確定',
+  'ui.swipeComplete':'完走','ui.swipeDelete':'削除',
   'ui.focusPanelLabel':'直前準備',
   'ui.focusCountdown':'あと {n} 日',
   'ui.focusHeroDaysLabel':'日後にスタート',
@@ -2168,7 +2421,9 @@ const JA={
   'ui.dropzoneUnsupportedFiles':'{n} 件のファイルは対応していない形式のためスキップしました',
   'ui.saving':'保存中…','ui.saved':'保存済み',
   'ui.navBasic':'基本','ui.navRoute':'コース','ui.navWeather':'気象','ui.navLogistics':'予算','ui.navPrep':'装備','ui.navPost':'結果',
-  'ui.deleteRace':'大会を削除','ui.deleteConfirm':'本当に削除しますか？もう一度',
+  'ui.deleteRace':'大会を削除',
+  'ui.undo':'元に戻す','ui.undoDeletedSingle':'削除しました：{n}','ui.undoDeletedMultiple':'{n} 件のレースを削除しました',
+  'ui.dashEquipSummary':'{a} 点・パック済み {b}','ui.dashEquipEmpty':'装備がまだ登録されていません',
   'ui.duplicateRace':'大会を複製','ui.duplicateRaceHint':'場所・コース・装備などを引き継いで新しい大会を作成します（年次シリーズ大会に便利）',
   'ui.moreActions':'その他の操作','ui.dataManagement':'データ管理',
   'ui.duplicateSuffix':'（コピー）',
@@ -2571,7 +2826,7 @@ const EN={
   'ui.mediaGalleryTitle':'Media Gallery',
   'ui.taperBadge':'Tapering',
   'ui.lcMarkDns':'Mark as DNS','ui.lcMarkDnf':'Mark as DNF',
-  'ui.swipeComplete':'Complete','ui.swipeDelete':'Delete','ui.swipeDeleteConfirm':'Tap again to confirm delete',
+  'ui.swipeComplete':'Complete','ui.swipeDelete':'Delete',
   'ui.focusPanelLabel':'Race Prep',
   'ui.focusCountdown':'{n} days to go',
   'ui.focusHeroDaysLabel':'days to race day',
@@ -2620,7 +2875,9 @@ const EN={
   'ui.dropzoneUnsupportedFiles':'{n} file(s) were an unsupported format and were skipped',
   'ui.saving':'Saving…','ui.saved':'Saved',
   'ui.navBasic':'Basic','ui.navRoute':'Course','ui.navWeather':'Weather','ui.navLogistics':'Budget','ui.navPrep':'Gear','ui.navPost':'Results',
-  'ui.deleteRace':'Delete race','ui.deleteConfirm':'Are you sure? Click again to confirm',
+  'ui.deleteRace':'Delete race',
+  'ui.undo':'Undo','ui.undoDeletedSingle':'Deleted: {n}','ui.undoDeletedMultiple':'Deleted {n} races',
+  'ui.dashEquipSummary':'{a} items \u00b7 {b} packed','ui.dashEquipEmpty':'No gear added yet',
   'ui.duplicateRace':'Duplicate Race','ui.duplicateRaceHint':'Carries over location, course, gear and more into a new race (handy for annual series races)',
   'ui.moreActions':'More Actions','ui.dataManagement':'Data Management',
   'ui.duplicateSuffix':' (Copy)',
@@ -5452,6 +5709,61 @@ function equipmentEmptyStateHtml(race){
     <button type="button" class="btn-ghost" data-action="apply-starter-template" data-race-id="${race.id}">${tf('ui.applyStarterTemplate','套用「{n}」範本',escapeHtml(starterTemplateName(idx)))}</button>
   </div>`;
 }
+/* ============================================================
+   抽屜面板（Drawer）— 目前只套用在「裝備清單」這一個區塊
+   這是從「一頁到底的長表單」改成「儀表板卡片＋點開抽屜編輯」的
+   第一個試作。刻意只先做一個區塊：抽屜在 DOM 上不在 detailEl 底下，
+   而這個 App 的自動儲存（change）跟大部分按鈕（click）事件都是掛在
+   detailEl 上的，把內容搬出去等於搬離了事件範圍。先用一個區塊確認
+   這套接線方式真的可靠，再決定要不要推廣到其他區塊。
+   ============================================================ */
+let drawerOpenSection=null;
+function equipmentDashCardHtml(race){
+  const items=race.equipmentChecklist||[];
+  const packed=items.filter(i=>i.isPacked).length;
+  const sub=items.length
+    ? tf2('ui.dashEquipSummary',`${items.length} 項・已打包 ${packed}`,items.length,packed)
+    : t('ui.dashEquipEmpty','尚未新增任何裝備');
+  return `<button type="button" class="dash-card" data-action="open-drawer" data-section="equipment">
+    <span class="dash-card-main">
+      <span class="dash-card-title">${t('list.equipmentChecklist','裝備清單')}</span>
+      <span class="dash-card-sub">${escapeHtml(sub)}</span>
+    </span>
+    <span class="dash-card-chevron" aria-hidden="true">›</span>
+  </button>`;
+}
+function openDrawer(section){
+  const race=currentRace;
+  if(!race) return;
+  drawerOpenSection=section;
+  const drawer=document.getElementById('global-drawer');
+  document.getElementById('drawer-title').textContent=t('list.equipmentChecklist','裝備清單');
+  document.getElementById('drawer-content').innerHTML=renderEquipmentSection(race);
+  drawer.hidden=false;
+  // 手機上按系統返回鍵時，習慣是「收起這層面板」而不是「離開整個
+  // 網站」。推一個歷史狀態進去，返回鍵就會先觸發 popstate、被下面
+  // 的監聽器接住轉成關閉抽屜。
+  history.pushState({drawer:section},'');
+  logFeatureUse('open_drawer_'+section);
+}
+function closeDrawer(opts){
+  const drawer=document.getElementById('global-drawer');
+  if(drawer.hidden) return;
+  drawer.hidden=true;
+  document.getElementById('drawer-content').innerHTML='';
+  drawerOpenSection=null;
+  // 關閉時重新畫一次詳情頁，讓儀表板卡片上的摘要數字（例如已打包
+  // 幾項）反映剛剛在抽屜裡做的修改。
+  if(currentRace) renderDetail();
+  // 如果是使用者自己按 ✕／遮罩／Esc 關的，要把先前推進去的歷史
+  // 狀態退掉，否則返回鍵會變成要多按一次才有反應；如果本來就是
+  // 返回鍵觸發的（fromPopstate），瀏覽器已經退過了，不能再退一次。
+  if(!(opts&&opts.fromPopstate)) history.back();
+}
+window.addEventListener('popstate',()=>{
+  const drawer=document.getElementById('global-drawer');
+  if(!drawer.hidden) closeDrawer({fromPopstate:true});
+});
 function renderEquipmentSection(race){
   const items=race.equipmentChecklist||[];
   const options=templates.map(tp=>`<option value="${tp.id}">${escapeHtml(tp.name)}（${tp.items.length}）</option>`).join('');
@@ -8729,7 +9041,8 @@ function focusPanelHtml(){
       </div>
       <button type="button" class="btn-text-small" data-action="dismiss-focus-panel" data-id="${race.id}">${t('ui.focusDismiss','暫時隱藏')}</button>
     </div>`;
-  return `<div class="focus-panel${hasCover?' focus-panel-hero':''}">
+  return `<div class="focus-panel${hasCover?' focus-panel-hero':' focus-panel-meshed'}">
+    ${hasCover?'':`<div class="focus-mesh" aria-hidden="true"><div class="focus-mesh-blob focus-mesh-blob-a"></div><div class="focus-mesh-blob focus-mesh-blob-b"></div></div>`}
     ${heroHead}
     <div class="focus-panel-grid">
       <div class="focus-panel-card focus-panel-card-ring">
@@ -9385,7 +9698,7 @@ function detailHeaderHtml(race){
               <button type="button" class="action-menu-item" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
               <button type="button" class="action-menu-item" data-action="duplicate-race" title="${t('ui.duplicateRaceHint','複製地點、路線、裝備等欄位，建立新的一場（適合同系列跨年賽事）')}">${t('ui.duplicateRace','複製賽事')}</button>
               <div class="action-menu-divider"></div>
-              <button type="button" class="action-menu-item danger" data-action="delete-race" data-keep-menu-open>${state.confirmDelete?t('ui.deleteConfirm','確定刪除？再按一次'):t('ui.deleteRace','刪除賽事')}</button>
+              <button type="button" class="action-menu-item danger" data-action="delete-race">${t('ui.deleteRace','刪除賽事')}</button>
             </div>
           </div>
         </div>
@@ -9401,10 +9714,15 @@ function detailHeaderHtml(race){
   </header>`;
 }
 function renderDetail(){
-  if(state.creating){destroyRouteMap();detailEl.innerHTML=renderCreateForm();return;}
+  if(state.creating){
+    destroyRouteMap();detailEl.innerHTML=renderCreateForm();
+    applyAmbientTint(createStagedCover?createStagedCover.accentColor:null);
+    return;
+  }
   const race=state.races.find(r=>r.id===state.selectedId);
-  if(!race){destroyRouteMap();detailEl.innerHTML=emptyStateHtml();currentRace=null;return;}
+  if(!race){destroyRouteMap();detailEl.innerHTML=emptyStateHtml();currentRace=null;applyAmbientTint(null);return;}
   currentRace=race;
+  applyAmbientTint(race.coverImageAccentColor||null);
   const openPre=['registered','lottery_pending','considering'].includes(race.status);
   detailEl.innerHTML=`
     ${detailHeaderHtml(race)}
@@ -9447,7 +9765,7 @@ function renderDetail(){
       <div class="subsection">
         <div class="subsection-head"><h3></h3><button type="button" class="btn-ghost" data-action="open-pacing-modal">${t('ui.pacingCalcTitle','配速試算與手環產生器')}</button></div>
       </div>
-      ${renderEquipmentSection(race)}
+      ${equipmentDashCardHtml(race)}
       ${renderNutritionScheduleSection(race)}
     </details>
     <details class="section" id="section-post" ${!openPre?'open':''}>
@@ -9469,6 +9787,16 @@ function renderDetail(){
   renderRouteMapIfNeeded(race);
   setupElevationScrubbing(race);
   applyScrollFadeClasses();
+  // 抽屜開著的時候，一併把抽屜裡的內容也重畫一次。詳情頁上很多操作
+  // （套用範本、切換檢視、新增／刪除項目）完成後都是呼叫 renderDetail()
+  // 來更新畫面，但那只會重畫詳情頁本身；裝備清單搬進抽屜之後，這些
+  // 操作如果在抽屜裡觸發，資料確實有存進去、畫面卻不會更新，看起來
+  // 像按了沒反應。集中在這裡處理，就不用去改那二十幾個各自呼叫
+  // renderDetail() 的地方、也不會有漏改的風險。
+  if(drawerOpenSection==='equipment'){
+    const dc=document.getElementById('drawer-content');
+    if(dc) dc.innerHTML=renderEquipmentSection(race);
+  }
   // 這裡有兩種情況都需要（重新）抓取：完全沒有快取過（第一次），或者
   // 快取是在某些欄位還沒加進抓取範圍之前存下來的舊資料（缺了整個欄位，
   // 不是陣列裡的值剛好是 null）——這種舊快取沒辦法靠回填補齊，因為
@@ -9574,7 +9902,7 @@ function scrollDetailIntoView(){
   if(typeof detailEl.scrollIntoView==='function') detailEl.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function selectRace(id,{scroll}={scroll:true}){
-  state.selectedId=id;state.creating=false;state.confirmDelete=false;
+  state.selectedId=id;state.creating=false;
   renderAll();
   detailEl.classList.remove('fade-in');
   void detailEl.offsetWidth; // 強制觸發 reflow 讓動畫可以重新播放
@@ -9631,7 +9959,7 @@ function dismissFirstUseGlow(){
   try{ localStorage.setItem(FIRST_USE_GLOW_KEY,'1'); }catch(err){}
   document.querySelectorAll('.cta-glow').forEach(el=>el.classList.remove('cta-glow'));
 }
-function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;state.confirmDelete=false;renderAll();scrollDetailIntoView();logFeatureUse('race_create');dismissFirstUseGlow();}
+function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;renderAll();scrollDetailIntoView();logFeatureUse('race_create');dismissFirstUseGlow();}
 
 document.getElementById('btn-new').addEventListener('click',startCreate);
 
@@ -9651,6 +9979,62 @@ filterChipsEl.addEventListener('click',e=>{
 // swipeState：目前正在進行中的滑動手勢（一次只會有一個，因為手指
 // 同時間只能滑一張卡片）。recentlySwipedId 是「這張卡片剛滑過」的
 // 短暫記號——手機瀏覽器在 touchend 之後通常還會補送一個合成的 click
+/* ============================================================
+   Bottom Sheet 下拉關閉手勢（手機版彈窗共用）：彈窗的開關函式散落
+   在很多地方（openShoeModal、openPasteModal……每個彈窗各自一份，
+   沒有一個統一的入口可以掛鉤），所以這裡用「代理監聽」掛在 document
+   上，不論哪個彈窗被打開，只要滑動起點落在面板最上方的把手區，
+   就會觸發下拉關閉——關閉的方式是去找、去點這個彈窗自己既有的
+   [data-action^="close-"] 按鈕（跟既有 Esc 鍵那段邏輯用的是同一招），
+   不是自己動手把 hidden/innerHTML 重設，這樣每個彈窗原本可能附帶的
+   專屬收尾動作（例如焦點位置編輯器要把暫存的草稿清掉）都還是會
+   正常執行，不會因為多了這個手勢入口而被繞過去。
+   ============================================================ */
+const SHEET_HANDLE_ZONE_PX=44; // 觸控起點離面板頂端在這個範圍內，才算摸到把手
+const SHEET_DISMISS_THRESHOLD_PX=110;
+let sheetDragState=null;
+function isMobileSheetLayout(){
+  return window.matchMedia('(max-width:640px)').matches;
+}
+document.addEventListener('touchstart',e=>{
+  if(!isMobileSheetLayout()) return;
+  const panel=e.target.closest('.modal-panel');
+  if(!panel||e.touches.length!==1) return;
+  const rect=panel.getBoundingClientRect();
+  const touch=e.touches[0];
+  if(touch.clientY-rect.top>SHEET_HANDLE_ZONE_PX) return; // 沒摸到把手，放行給內容正常捲動
+  const overlay=panel.closest('.modal-overlay');
+  if(!overlay) return;
+  sheetDragState={panel,overlay,startY:touch.clientY,currentY:0,dragging:false};
+  panel.style.transition='none';
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(!sheetDragState) return;
+  const touch=e.touches[0];
+  const deltaY=touch.clientY-sheetDragState.startY;
+  if(deltaY<=0){ sheetDragState.currentY=0; return; } // 只處理往下拖（要關閉），往上不做事
+  sheetDragState.dragging=true;
+  sheetDragState.currentY=deltaY;
+  sheetDragState.panel.style.transform=`translateY(${deltaY}px)`;
+  e.preventDefault();
+},{passive:false});
+document.addEventListener('touchend',()=>{
+  if(!sheetDragState) return;
+  const s=sheetDragState;sheetDragState=null;
+  s.panel.style.transition='transform 0.22s ease';
+  if(s.dragging&&s.currentY>=SHEET_DISMISS_THRESHOLD_PX){
+    s.panel.style.transform='translateY(100%)';
+    // iOS Safari 完全不支援 Vibration API，這裡的判斷是必要防呆，
+    // 不是可有可無的寫法，沒有這層判斷會直接拋例外、中斷關閉流程。
+    if(navigator.vibrate) navigator.vibrate(10);
+    setTimeout(()=>{
+      const closeBtn=s.overlay.querySelector('[data-action^="close-"]');
+      if(closeBtn) closeBtn.click();
+    },180);
+  }else{
+    s.panel.style.transform='translateY(0)';
+  }
+});
 // 事件，如果不擋掉，滑動完賽／刪除之餘還會順便把賽事詳情頁打開，
 // 這不是使用者要的。
 let swipeState=null;
@@ -9666,16 +10050,11 @@ function resetSwipeCard(card,bg){
   card.style.transform='translateX(0)';
   bg.className='swipe-action-bg';
   bg.innerHTML='';
-  delete bg.dataset.confirmDeleteId;
-  clearTimeout(bg._resetTimer);
 }
 calendarEl.addEventListener('touchstart',e=>{
   const row=e.target.closest('.swipe-row');
   if(!row||e.touches.length!==1) return;
   const card=row.querySelector('.swipe-card'),bg=row.querySelector('.swipe-action-bg');
-  // 這張卡片如果還卡在「已滑到底、等待再次點擊確認刪除」的狀態，
-  // 這次新的觸摸手勢視同放棄那次確認，先收回去，不要疊加兩套狀態。
-  if(bg.dataset.confirmDeleteId) resetSwipeCard(card,bg);
   const touch=e.touches[0];
   swipeState={id:row.dataset.id,row,card,bg,startX:touch.clientX,startY:touch.clientY,currentX:0,dragging:false,direction:null,vibrated:false};
 },{passive:true});
@@ -9734,35 +10113,31 @@ calendarEl.addEventListener('touchend',()=>{
     quickSetRaceStatus(race,'completed').then(()=>{ renderCalendar(); });
     logFeatureUse('swipe_complete');
   }else if(pastThreshold&&s.direction==='left'){
-    // 卡片定格在左側、露出刪除確認區塊，要再點一次才真的刪除——
-    // 跟詳情頁既有的「連按兩次」刪除精神一致，滑動這個新入口一樣
-    // 不會單一個手勢就讓資料消失。5 秒沒有點擊確認會自動收回。
-    s.card.style.transition='transform 0.2s ease';
-    s.card.style.transform=`translateX(-${SWIPE_THRESHOLD_PX}px)`;
-    s.bg.className='swipe-action-bg swipe-bg-confirm';
-    s.bg.innerHTML=`<span>${t('ui.swipeDeleteConfirm','再次點擊以確認刪除')}</span><span class="swipe-action-icon">🗑</span>`;
-    s.bg.dataset.confirmDeleteId=s.id;
-    clearTimeout(s.bg._resetTimer);
-    s.bg._resetTimer=setTimeout(()=>{ if(s.bg.dataset.confirmDeleteId===s.id) resetSwipeCard(s.card,s.bg); },5000);
-    logFeatureUse('swipe_delete_arm');
+    // 以前這裡是「卡片定格＋露出確認區塊，再點一次才真的刪除」的
+    // 兩段式操作；現在改成滑到底立刻刪除、跟完賽同一個節奏——真正
+    // 的安全網是既有的軟刪除機制（deletedAt，30 天內都能從「資料
+    // 復原」找回來），這裡飛出動畫播完之後跳出的 5 秒復原提示只是
+    // 多一層立即的反悔捷徑，不是唯一的安全機制，所以拿掉這層「先
+    // 確認才刪除」不會讓資料變得比較危險。
+    const race=state.races.find(r=>r.id===s.id);
+    if(!race){ resetSwipeCard(s.card,s.bg); return; }
+    const raceName=race.name||t('ui.unnamedRace','(未命名賽事)');
+    s.card.style.transition='transform 0.2s ease,opacity 0.2s ease';
+    s.card.style.transform='translateX(-110%)';
+    s.card.style.opacity='0';
+    if(navigator.vibrate) navigator.vibrate([15,30,15]);
+    race.deletedAt=new Date().toISOString();
+    race.updatedAt=new Date().toISOString();
+    if(state.selectedId===s.id){ state.selectedId=null; currentRace=null; }
+    persist();
+    setTimeout(()=>{ renderCalendar(); },200);
+    showRaceDeleteUndoToast(s.id,raceName);
+    logFeatureUse('swipe_delete');
   }else{
     resetSwipeCard(s.card,s.bg);
   }
 });
 calendarEl.addEventListener('click',e=>{
-  const confirmBg=e.target.closest('.swipe-bg-confirm');
-  if(confirmBg){
-    const id=confirmBg.dataset.confirmDeleteId;
-    const race=state.races.find(r=>r.id===id);
-    if(race){
-      race.deletedAt=new Date().toISOString();
-      race.updatedAt=new Date().toISOString();
-      if(state.selectedId===id){ state.selectedId=null; currentRace=null; }
-      persist();renderAll();
-      logFeatureUse('swipe_delete_confirm');
-    }
-    return;
-  }
   const chip=e.target.closest('.cal-chip,.cal-list-item');if(!chip) return;
   if(recentlySwipedId===chip.dataset.id){ recentlySwipedId=null; return; }
   selectRace(chip.dataset.id);
@@ -9774,6 +10149,46 @@ function shiftCalendarMonth(delta){
   state.calendarMonth=m;state.calendarYear=y;
   renderCalendar();
 }
+// 行事曆邊緣滑動切換月份：範圍刻意收斂在標題列（.cal-nav，本來就是
+// ‹ 年 月 › 這排導覽按鈕所在的地方），不是整個月曆本體——手機版
+// （寬度 ≤640px）的月曆本體幾乎全部都是可以左右滑動來完賽／刪除的
+// 賽事列（.swipe-row，上一輪做的手勢），邊緣滑動如果也綁在那塊
+// 區域，兩種手勢會搶奪同一個觸控起點，變成「滑一下賽事列，到底是
+// 要切月份還是要標記完賽」這種無法分辨的衝突。標題列不管在哪種
+// 檢視模式下都存在、不會被賽事列佔用，而且緊鄰既有的 ‹/› 按鈕，
+// 滑這裡切換月份跟按鈕本身要做的事完全一致，不是另外發明一個要
+// 使用者自己摸索的隱藏手勢熱區。
+const CAL_NAV_SWIPE_THRESHOLD_PX=50;
+let calNavSwipeState=null;
+const calNavEl=document.querySelector('.cal-nav');
+calNavEl.addEventListener('touchstart',e=>{
+  if(e.touches.length!==1) return;
+  const touch=e.touches[0];
+  calNavSwipeState={startX:touch.clientX,startY:touch.clientY,dragging:false};
+},{passive:true});
+calNavEl.addEventListener('touchmove',e=>{
+  if(!calNavSwipeState) return;
+  const touch=e.touches[0];
+  const deltaX=touch.clientX-calNavSwipeState.startX,deltaY=touch.clientY-calNavSwipeState.startY;
+  if(!calNavSwipeState.dragging){
+    if(Math.abs(deltaX)<10&&Math.abs(deltaY)<10) return;
+    // 垂直位移比水平大，代表使用者是想碰到旁邊的東西或手指自然
+    // 抖動，不是要滑動切月份，整個放棄這次手勢，只判斷一次。
+    if(Math.abs(deltaY)>Math.abs(deltaX)){ calNavSwipeState=null; return; }
+    calNavSwipeState.dragging=true;
+  }
+  e.preventDefault();
+},{passive:false});
+calNavEl.addEventListener('touchend',e=>{
+  if(!calNavSwipeState||!calNavSwipeState.dragging){ calNavSwipeState=null; return; }
+  const touch=e.changedTouches[0];
+  const deltaX=touch.clientX-calNavSwipeState.startX;
+  calNavSwipeState=null;
+  if(Math.abs(deltaX)<CAL_NAV_SWIPE_THRESHOLD_PX) return;
+  // 往左滑（deltaX 負）＝看下個月，往右滑＝看上個月，跟翻書、切換
+  // 相簿頁面的方向直覺一致。
+  shiftCalendarMonth(deltaX<0?1:-1);
+});
 document.getElementById('cal-prev').addEventListener('click',()=>shiftCalendarMonth(-1));
 document.getElementById('cal-next').addEventListener('click',()=>shiftCalendarMonth(1));
 document.getElementById('cal-today').addEventListener('click',()=>{
@@ -10375,7 +10790,14 @@ function showSaveStatus(kind){
     },2500);
   }
 }
-detailEl.addEventListener('change',async e=>{
+// handleDetailChange / handleDetailClick：原本直接寫成匿名函式掛在
+// detailEl 上，現在抽成具名函式，因為「裝備清單」這個區塊的內容會
+// 被搬進抽屜面板（#global-drawer）裡顯示——抽屜在 DOM 上不在
+// detailEl 底下，事件不會冒泡過去，如果不把同一份處理函式也掛到
+// 抽屜上，抽屜裡的欄位改了會完全沒有反應、而且不會報錯，是那種
+// 「畫面看起來正常、資料卻悄悄沒存到」最難察覺的問題。兩邊掛的是
+// 同一份函式，不是各自複製一份，避免日後改了一邊忘了另一邊。
+async function handleDetailChange(e){
   const t=e.target;
   if(t.id==='geo-photo-input'){
     if(currentRace&&t.files&&t.files.length){
@@ -10506,9 +10928,9 @@ detailEl.addEventListener('change',async e=>{
     const newlyUnlocked=checkAndRecordBadgeUnlocks();
     if(newlyUnlocked.length){ checkRaceForBadgeUnboxing(currentRace.id); queueNoTriggerBadges(newlyUnlocked); }
   }
-});
+}
 
-detailEl.addEventListener('click',e=>{
+function handleDetailClick(e){
   const addBtn=e.target.closest('[data-action="add-item"]');
   if(addBtn){
     const listKey=addBtn.dataset.list;
@@ -10546,15 +10968,15 @@ detailEl.addEventListener('click',e=>{
   }
   const delBtn=e.target.closest('[data-action="delete-race"]');
   if(delBtn){
-    if(!state.confirmDelete){
-      state.confirmDelete=true;renderDetail();
-      setTimeout(()=>{state.confirmDelete=false;if(currentRace&&currentRace.id===state.selectedId) renderDetail();},4000);
-      return;
-    }
+    const raceName=currentRace.name||t('ui.unnamedRace','(未命名賽事)');
+    const raceId=currentRace.id;
     currentRace.deletedAt=new Date().toISOString();
     currentRace.updatedAt=new Date().toISOString();
-    state.selectedId=null;state.confirmDelete=false;currentRace=null;
-    persist();renderAll();return;
+    state.selectedId=null;currentRace=null;
+    persist();renderAll();
+    showRaceDeleteUndoToast(raceId,raceName);
+    logFeatureUse('race_delete');
+    return;
   }
   if(e.target.closest('[data-action="duplicate-race"]')&&currentRace){
     const copy=duplicateRace(currentRace);
@@ -10683,6 +11105,27 @@ detailEl.addEventListener('click',e=>{
     state.confirmDeleteTemplate=false;
     persistTemplates();renderDetail();return;
   }
+}
+detailEl.addEventListener('change',handleDetailChange);
+detailEl.addEventListener('click',handleDetailClick);
+// 抽屜掛的是上面同一份處理函式，不是另外複製一份——裝備清單搬進
+// 抽屜之後，裡面的欄位編輯（自動儲存）、新增／刪除、套用範本這些
+// 操作走的都還是原本那套邏輯，行為跟放在詳情頁裡時完全一致。
+const drawerEl=document.getElementById('global-drawer');
+drawerEl.addEventListener('change',handleDetailChange);
+drawerEl.addEventListener('click',handleDetailClick);
+drawerEl.addEventListener('click',e=>{
+  // 點右上角 ✕，或點面板以外的遮罩區域，都關閉抽屜。
+  // 只認「直接點在遮罩本身」（e.target 就是 #global-drawer）當作點
+  // 背景關閉，不能用「往上找不到 .drawer-panel 就算背景」來判斷——
+  // 面板裡的按鈕（例如套用範本）按下去之後會重畫抽屜內容，原本被
+  // 點的那個節點已經從畫面上移除了，這時候再往上找當然找不到面板，
+  // 會被誤判成點到背景、把抽屜整個關掉。
+  if(e.target.closest('[data-action="close-drawer"]')||e.target===e.currentTarget) closeDrawer();
+});
+detailEl.addEventListener('click',e=>{
+  const openBtn=e.target.closest('[data-action="open-drawer"]');
+  if(openBtn) openDrawer(openBtn.dataset.section);
 });
 
 /* ============================================================
@@ -10983,6 +11426,22 @@ importModalEl.addEventListener('change',e=>{
    封面照片（本機處理：保留長寬比縮小、壓縮成 JPEG）
    不會上傳到任何伺服器，純瀏覽器端 Canvas 運算。
    ============================================================ */
+// applyAmbientTint(accentColor)：把賽事封面照抓出來的主色調（一個
+// {r,g,b} 物件，或 null）套用到全域的環境光效果——只需要設定
+// --ambient-color 這個 CSS 變數跟 data-ambient 這個屬性，實際的混色
+// 運算全部交給 CSS 的 color-mix() 處理（見 :root 附近的說明），
+// 這裡不用自己把顏色兜進一堆 rgba() 字串。傳 null（或這場賽事根本
+// 沒有封面照、沒有算出主色調）就整個關掉環境光，介面退回原本乾淨、
+// 不受任何賽事影響的底色。
+function applyAmbientTint(accentColor){
+  const root=document.documentElement;
+  if(accentColor){
+    root.style.setProperty('--ambient-color',`rgb(${accentColor.r},${accentColor.g},${accentColor.b})`);
+    root.setAttribute('data-ambient','1');
+  }else{
+    root.removeAttribute('data-ambient');
+  }
+}
 function extractDominantColor(ctx,w,h){
   // 從畫面上取樣一部分像素（不用整張圖，效能考量），排除太灰、太暗、太亮的像素
   // （通常是陰影、反光或天空這類不具代表性的區域），統計出現最多次的色彩區間當主色調。
@@ -13138,6 +13597,10 @@ async function routeDroppedFiles(files){
 
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
+  // 抽屜排在一般彈窗前面處理：抽屜是後開的、疊在最上層，Esc 應該
+  // 先收起最上面那一層。
+  const drawer=document.getElementById('global-drawer');
+  if(drawer&&!drawer.hidden){ closeDrawer(); return; }
   const modalIds=['import-modal','gpx-modal','paste-modal','shoe-modal','pacing-modal','help-modal','recovery-modal','focal-point-modal'];
   for(const id of modalIds){
     const el=document.getElementById(id);
