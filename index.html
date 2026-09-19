@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>賽事紀錄</title>
 <script>
 (function(){
@@ -138,7 +138,16 @@
     font-size:16px;
     line-height:1.6;
     transition:background-color 0.8s ease-in-out;
+    /* 整頁不允許橫向捲動：任何一個算錯寬度的元素都會讓整頁可以左右
+       拖動，視覺焦點就跟著跑掉。寬內容（表格、圖表、軌跡畫廊）本來
+       就各自包在可橫向捲動的容器裡，不受這條影響。 */
+    overflow-x:hidden;
+    /* 手勢意圖：只允許單指上下捲動，雙指縮放交給上面的 JS 攔截。
+       同時關掉 iOS 連點兩下放大時那 300ms 的點擊延遲。 */
+    touch-action:pan-y;
   }
+  /* 圖片與 SVG 不會因為原始尺寸過大而把版面撐開 */
+  img,svg,canvas{max-width:100%;}
   [data-lang="ja"] body{font-family:'Noto Sans JP',sans-serif;}
   :focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-glow);transition:box-shadow 0.15s ease;}
   h1,h2,h3{margin:0;font-weight:700;}
@@ -183,13 +192,40 @@
   }
   .topbar-row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
   .topbar-actions{display:flex;align-items:center;gap:14px;}
-  .new-race-stack{display:flex;flex-direction:column;align-items:stretch;gap:4px;}
   .btn-text-small{
     background:none;border:none;padding:0;font:inherit;font-size:12px;color:var(--ink-soft);
     text-decoration:underline;cursor:pointer;text-align:center;
   }
   .btn-text-small:hover{color:var(--ink);}
-  .auth-area{display:flex;align-items:center;gap:10px;}
+  /* 帳號選單：頭像當觸發器，帳號相關的動作全部收在裡面。 */
+  .account-trigger{
+    width:34px;height:34px;flex-shrink:0;padding:0;
+    border-radius:50%;border:1px solid var(--rule);background:var(--surface);
+    color:var(--stone);cursor:pointer;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .account-trigger:hover{border-color:var(--trail);color:var(--ink);}
+  .account-trigger svg{width:19px;height:19px;}
+  .account-trigger img{width:100%;height:100%;object-fit:cover;display:block;}
+  .account-trigger.has-photo{border-color:var(--trail);}
+  .account-menu .action-menu-panel{min-width:210px;padding-top:4px;}
+  /* 選單裡改成直向堆疊——原本這一排是橫向擠在標題列上，收進選單後
+     每一項各佔一行才讀得清楚。 */
+  .auth-area{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:2px 0;}
+  .auth-area .auth-user{
+    display:flex;align-items:center;gap:8px;padding:6px 14px 8px;
+    color:var(--ink);
+  }
+  .auth-area .auth-user img{width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+  .auth-area .auth-hint{padding:6px 14px 8px;color:var(--stone);}
+  .auth-area .auth-error{padding:2px 14px 6px;}
+  /* 選單裡的按鈕統一用選單項目的外觀，不要保留原本行內連結的樣子 */
+  .auth-area .btn-text,.auth-area .btn-ghost{
+    display:block;width:100%;text-align:left;
+    padding:8px 14px;font-size:14px;text-decoration:none;
+    background:none;border:none;color:var(--ink);cursor:pointer;
+  }
+  .auth-area .btn-text:hover,.auth-area .btn-ghost:hover{background:var(--hover-overlay);}
   .auth-hint{color:var(--stone);}
   .auth-error{color:var(--flag);max-width:260px;}
   .foreground-toast{
@@ -464,6 +500,29 @@
     transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),box-shadow 0.3s ease;}
   .honor-card.pressing{transform:scale(0.96);}
   .honor-card.charging-1{transform:scale(0.98);box-shadow:0 0 15px rgba(var(--gold-rgb),0.45);}
+  /* ---- 沒有震動馬達的裝置（iOS 上所有瀏覽器都不支援 Vibration API，
+     因為它們共用 WebKit；桌機通常也沒有馬達）：把視覺的蓄力回饋加強，
+     讓「三個階段」光靠眼睛也分辨得出來，不然在 iPhone 上長按只會覺得
+     「好像沒反應」。加強的是既有的兩個階段，不是另外加新東西——
+     光暈更亮、範圍更大，第二階段補一圈描邊，讓臨界點更明確。 ---- */
+  html.no-haptics .honor-card.charging-1{
+    box-shadow:0 0 26px rgba(var(--gold-rgb),0.6);
+  }
+  html.no-haptics .honor-card.charging-2{
+    box-shadow:0 0 46px rgba(var(--gold-rgb),0.95), inset 0 0 0 2px rgba(var(--gold-rgb),0.85);
+  }
+  /* 進度條：只在沒有震動回饋時出現，把「還要按多久」這件事直接畫出來。
+     用 transform 而不是 width 做動畫，交給 GPU 處理。 */
+  html.no-haptics .honor-card.pressable::after{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:3px;
+    background:var(--gold);border-radius:0 0 10px 10px;
+    transform:scaleX(0);transform-origin:left center;
+  }
+  html.no-haptics .honor-card.pressing::after{
+    transform:scaleX(1);
+    transition:transform 1.5s linear;
+  }
+  html.no-haptics .honor-card{position:relative;overflow:hidden;}
   .honor-card.charging-2{
     box-shadow:0 0 34px rgba(var(--gold-rgb),0.85);
     animation:honor-rumble 0.09s infinite alternate;
@@ -1200,7 +1259,6 @@
     font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--rule);border-radius:3px;
     background:var(--surface);color:var(--ink);
   }
-  .lang-caption{color:var(--stone);white-space:nowrap;}
   .btn-ghost.danger{color:var(--flag);border-color:var(--rule);}
   .btn-ghost.danger:hover{border-color:var(--flag);}
   .btn-text{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:14px;padding:0;}
@@ -1338,6 +1396,21 @@
     padding:8px 10px;border:1px solid var(--rule);border-radius:3px;
     background:var(--surface);color:var(--ink);width:100%;
     transition:border-color 0.15s ease;
+  }
+  /* ---- iOS 的對焦自動放大：只要輸入框「算出來的字級」小於 16px，
+     點進去的瞬間 iOS 就會把整頁放大，而且離開欄位之後不會自己縮
+     回來——這正是「跑版」的主因。上面的手勢攔截擋得住使用者主動
+     捏合，但擋不住這個由系統發動的放大，所以必須從字級本身解決。
+     只在觸控裝置上放大到 16px（用 hover:none 判斷），桌機維持原本
+     較精緻的字級，不會因為這個修正而整個變胖。 ---- */
+  @media (hover:none){
+    .field input,.field select,.field textarea,
+    .shoe-add-row input,.shoe-edit-input,
+    .nutrition-dict-add-row input,.nutrition-dict-row input,
+    .report-prompt-fallback-textarea,
+    #cmdk-input,#new-shoe-name,#paste-json-input{
+      font-size:16px;
+    }
   }
   .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--trail);}
   .field input[type="number"],.field input[data-kind="duration"]{font-family:'IBM Plex Mono',monospace;}
@@ -1889,14 +1962,22 @@
             <option value="ja">日本語</option>
             <option value="en">English</option>
           </select>
-          <span class="lang-caption small">支援：繁體中文・日本語・English</span>
         </div>
-        <div id="auth-area" class="auth-area"></div>
-        <button id="btn-open-profile" class="btn-text-small" data-action="open-profile-modal" data-i18n="ui.createProfile">建立個人資訊</button>
-        <div class="new-race-stack">
-          <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
-          <button id="btn-sample-data" class="btn-text-small" data-i18n="ui.sampleData">範例資料</button>
+        <!-- 帳號與次要動作全部收進這個選單：原本這一列平鋪了頭像、
+             使用者名稱、同步診斷、登出、建立個人資訊、範例資料六項，
+             手機上會擠成三四行。沿用既有的 data-menu-trigger 選單機制，
+             不另外造一套。 -->
+        <div class="action-menu account-menu">
+          <button type="button" id="btn-account-menu" class="account-trigger" data-menu-trigger="account-menu-panel"
+            aria-haspopup="true" aria-expanded="false" aria-label="帳號與設定"></button>
+          <div id="account-menu-panel" class="action-menu-panel" hidden>
+            <div id="auth-area" class="auth-area"></div>
+            <div class="action-menu-divider"></div>
+            <button id="btn-open-profile" type="button" class="action-menu-item" data-action="open-profile-modal" data-i18n="ui.createProfile">建立個人資訊</button>
+            <button id="btn-sample-data" type="button" class="action-menu-item" data-i18n="ui.sampleData">範例資料</button>
+          </div>
         </div>
+        <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
       </div>
     </div>
   </header>
@@ -2530,7 +2611,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.3.0';
+const APP_VERSION='v3.6.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2637,18 +2718,22 @@ const JA={
   'ui.navBasic':'基本','ui.navRoute':'コース','ui.navWeather':'気象','ui.navLogistics':'予算','ui.navPrep':'装備','ui.navPost':'結果',
   'ui.deleteRace':'大会を削除',
   'ui.undo':'元に戻す','ui.undoDeletedSingle':'削除しました：{n}','ui.undoDeletedMultiple':'{n} 件のレースを削除しました',
-  'ui.dashEquipSummary':'{a} 点・パック済み {b}','ui.dashEquipEmpty':'装備がまだ登録されていません',
+  'ui.dashEquipSummary':'{a} 点/  パック済み {b}','ui.dashEquipEmpty':'装備がまだ登録されていません',
   'ui.drawerResultsTitle':'記録とデータ','ui.drawerReviewTitle':'レース後の振り返り',
   'ui.drawerBasicTitle':'大会の基本情報','ui.drawerScheduleTitle':'日程とエントリー',
   'ui.drawerLogisticsTitle':'予算と旅程','ui.dashLogisticsEmpty':'予算・旅程が未入力です',
+  'ui.drawerNutritionTitle':'補給プラン','ui.drawerTrainingTitle':'トレーニング計画とテーパー',
+  'ui.dashGel':'ジェル','ui.dashSalt':'塩タブ','ui.dashNutritionEmpty':'補給プランが未設定です',
+  'ui.dashTaper':'テーパー','ui.dashWeekly':'週間走行距離','ui.dashTrainingEmpty':'トレーニング計画が未設定です',
+  'ui.dashGoalsEmpty':'目標タイムが未設定です',
   'ui.drawerRouteTitle':'コースデータ','ui.dashRouteEmpty':'コースデータが未入力です','ui.dashCutoff':'制限時間',
   'ui.drawerWeatherTitle':'気象データ','ui.dashWeatherEmpty':'気象データが未入力です','ui.dashHumidity':'湿度',
   'ui.hofTitle':'キャリア総括','ui.hofPressHint':'長押しでキャリア総括を表示','ui.hofNoPb':'フルマラソンの記録がまだありません',
   'ui.hofTotalDistance':'生涯総距離','ui.hofPbCount':'自己ベスト更新回数','ui.hofOverseas':'海外レース','ui.hofYears':'活動年数',
-  'ui.hofFuel':'エネルギー補給','ui.hofFuelServings':'個の補給・{n} レースから','ui.hofFuelUnit':'個',
+  'ui.hofFuel':'エネルギー補給','ui.hofFuelServings':'個の補給/  {n} レースから','ui.hofFuelUnit':'個',
   'ui.hofFuelCarb':'炭水化物','ui.hofFuelSodium':'ナトリウム','ui.hofFuelCaffeine':'カフェイン',
   'ui.hofTracks':'ルートギャラリー','ui.hofArsenal':'シューズランキング','ui.hofNoShoes':'シューズを紐づけた完走記録がまだありません','ui.cmdkHallOfFame':'キャリア総括',
-  'ui.dashCpSummary':'{a} 箇所・{b} 箇所に制限時間','ui.dashCpEmpty':'CPがまだ登録されていません',
+  'ui.dashCpSummary':'{a} 箇所/  {b} 箇所に制限時間','ui.dashCpEmpty':'CPがまだ登録されていません',
   'ui.dashMediaSummary':'{n} 件のリンク','ui.dashMediaEmpty':'リンクがまだ登録されていません',
   'ui.dashBasicEmpty':'基本情報が未入力です','ui.dashScheduleEmpty':'日程が未入力です','ui.dashBib':'ゼッケン',
   'ui.dashRank':'総合 {n} 位','ui.dashResultsEmpty':'記録が未入力です',
@@ -2804,7 +2889,7 @@ const JA={
   'ui.trophyCabinetTitle':'トロフィーケース',
   'ui.trophyFilterAll':'すべて','ui.trophyFilterUnlocked':'解除済み','ui.trophyFilterInProgress':'進行中','ui.trophyFilterNotStarted':'未着手','ui.trophyFilterEmpty':'この条件に一致するバッジはありません',
   'ui.yearInReviewLabel':'年間振り返り','ui.yearInReviewRaceCount':'完走レース {n} 件','ui.yearInReviewDistance':'総距離','ui.yearInReviewElevation':'総獲得標高',
-  'ui.yearInReviewPbCount':'自己ベスト更新回数','ui.yearInReviewNewBadges':'新規解除バッジ','ui.yearInReviewTopShoe':'最も履いたシューズ','ui.yearInReviewShoeDetail':'{count} 回・{km} km',
+  'ui.yearInReviewPbCount':'自己ベスト更新回数','ui.yearInReviewNewBadges':'新規解除バッジ','ui.yearInReviewTopShoe':'最も履いたシューズ','ui.yearInReviewShoeDetail':'{count} 回/  {km} km',
   'ui.yearInReviewWeatherExtreme':'気象記録','ui.yearInReviewColdest':'最も寒かったレース','ui.yearInReviewHottest':'最も暑かったレース','ui.yearInReviewCta':'年間振り返りカード','ui.yearInReviewSuffix':'-年間振り返り.png','ui.yearInReviewDownload':'ダウンロード',
   'ui.yearInReviewRouteTraces':'今年走ったルート','ui.yearInReviewMoreRoutes':'他 {n} 件',
   'ui.storyModeButton':'{year} 年間振り返り','ui.storyTitleSub':'ハイライトレース {n} 件','ui.storyWeatherLabel':'当日の天気','ui.storyPrev':'前へ','ui.storyNext':'次へ',
@@ -3106,10 +3191,14 @@ const EN={
   'ui.navBasic':'Basic','ui.navRoute':'Course','ui.navWeather':'Weather','ui.navLogistics':'Budget','ui.navPrep':'Gear','ui.navPost':'Results',
   'ui.deleteRace':'Delete race',
   'ui.undo':'Undo','ui.undoDeletedSingle':'Deleted: {n}','ui.undoDeletedMultiple':'Deleted {n} races',
-  'ui.dashEquipSummary':'{a} items \u00b7 {b} packed','ui.dashEquipEmpty':'No gear added yet',
+  'ui.dashEquipSummary':'{a} items/  {b} packed','ui.dashEquipEmpty':'No gear added yet',
   'ui.drawerResultsTitle':'Results & Data','ui.drawerReviewTitle':'Post-Race Review',
   'ui.drawerBasicTitle':'Race Details','ui.drawerScheduleTitle':'Schedule & Entry',
   'ui.drawerLogisticsTitle':'Budget & Logistics','ui.dashLogisticsEmpty':'No budget or logistics yet',
+  'ui.drawerNutritionTitle':'Fuel Plan','ui.drawerTrainingTitle':'Training Plan & Taper',
+  'ui.dashGel':'Gels','ui.dashSalt':'Salt tabs','ui.dashNutritionEmpty':'No fuel plan set yet',
+  'ui.dashTaper':'Taper','ui.dashWeekly':'Weekly','ui.dashTrainingEmpty':'No training plan set yet',
+  'ui.dashGoalsEmpty':'No target times set yet',
   'ui.drawerRouteTitle':'Course Data','ui.dashRouteEmpty':'No course data yet','ui.dashCutoff':'Cutoff',
   'ui.drawerWeatherTitle':'Weather Data','ui.dashWeatherEmpty':'No weather data yet','ui.dashHumidity':'Humidity',
   'ui.hofTitle':'Career Review','ui.hofPressHint':'Press and hold to unlock','ui.hofNoPb':'No marathon record yet',
@@ -3117,7 +3206,7 @@ const EN={
   'ui.hofFuel':'Fuel Consumed','ui.hofFuelServings':'servings across {n} races','ui.hofFuelUnit':'x',
   'ui.hofFuelCarb':'Carbs','ui.hofFuelSodium':'Sodium','ui.hofFuelCaffeine':'Caffeine',
   'ui.hofTracks':'Route Gallery','ui.hofArsenal':'Shoe Rankings','ui.hofNoShoes':'No finishes linked to a shoe yet','ui.cmdkHallOfFame':'Career Review',
-  'ui.dashCpSummary':'{a} stations \u00b7 {b} with cutoffs','ui.dashCpEmpty':'No checkpoints yet',
+  'ui.dashCpSummary':'{a} stations/  {b} with cutoffs','ui.dashCpEmpty':'No checkpoints yet',
   'ui.dashMediaSummary':'{n} links','ui.dashMediaEmpty':'No links yet',
   'ui.dashBasicEmpty':'No details entered yet','ui.dashScheduleEmpty':'No dates entered yet','ui.dashBib':'Bib',
   'ui.dashRank':'Overall #{n}','ui.dashResultsEmpty':'No results entered yet',
@@ -3266,7 +3355,7 @@ const EN={
   'ui.trophyCabinetTitle':'Trophy Case',
   'ui.trophyFilterAll':'All','ui.trophyFilterUnlocked':'Unlocked','ui.trophyFilterInProgress':'In Progress','ui.trophyFilterNotStarted':'Not Started','ui.trophyFilterEmpty':'No badges match this filter',
   'ui.yearInReviewLabel':'Year in Review','ui.yearInReviewRaceCount':'{n} races finished','ui.yearInReviewDistance':'Total Distance','ui.yearInReviewElevation':'Total Elevation',
-  'ui.yearInReviewPbCount':'PBs Broken','ui.yearInReviewNewBadges':'New Badges','ui.yearInReviewTopShoe':'Most-Worn Shoe','ui.yearInReviewShoeDetail':'{count} races・{km} km',
+  'ui.yearInReviewPbCount':'PBs Broken','ui.yearInReviewNewBadges':'New Badges','ui.yearInReviewTopShoe':'Most-Worn Shoe','ui.yearInReviewShoeDetail':'{count} races/  {km} km',
   'ui.yearInReviewWeatherExtreme':'Weather Extremes','ui.yearInReviewColdest':'Coldest Race','ui.yearInReviewHottest':'Hottest Race','ui.yearInReviewCta':'Year in Review Card','ui.yearInReviewSuffix':'-year-in-review.png','ui.yearInReviewDownload':'Download',
   'ui.yearInReviewRouteTraces':'Routes run this year','ui.yearInReviewMoreRoutes':'+{n} more',
   'ui.storyModeButton':'{year} Year in Review','ui.storyTitleSub':'{n} highlight races','ui.storyWeatherLabel':'Weather that day','ui.storyPrev':'Previous','ui.storyNext':'Next',
@@ -4134,7 +4223,20 @@ async function mergeCloudAndLocal(cloudRaces){
   if(result.overwrittenCount>0) pendingSyncOverwriteNotice+=result.overwrittenCount;
 }
 let authError=null;
+// renderAccountTrigger()：畫出帳號選單的觸發按鈕。有登入就用 Google
+// 頭像，沒有就用一個通用的人形圖示——頭像本身就是「這是你的帳號」
+// 最直覺的提示，不需要再配一行文字說明。
+function renderAccountTrigger(){
+  const btn=document.getElementById('btn-account-menu');
+  if(!btn) return;
+  const photo=state.user&&state.user.photoURL;
+  btn.innerHTML=photo
+    ?`<img src="${escapeHtml(photo)}" alt="">`
+    :`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>`;
+  btn.classList.toggle('has-photo',!!photo);
+}
 function renderAuthArea(){
+  renderAccountTrigger();
   const el=document.getElementById('auth-area');
   if(!el) return;
   if(!cloudEnabled()){
@@ -6090,9 +6192,9 @@ function basicInfoDashCardHtml(race){
   const sport=SPORT_OPTIONS.find(o=>o.value===race.sportType);
   if(sport) parts.push(t('opt.sport.'+sport.value,sport.label));
   const loc=[race.location&&race.location.city,race.location&&race.location.country].filter(x=>(x||'').trim());
-  if(loc.length) parts.push(loc.join('・'));
+  if(loc.length) parts.push(loc.join('/  '));
   if((race.series||'').trim()) parts.push(race.series.trim());
-  const sub=parts.length?parts.join('・'):t('ui.dashBasicEmpty','尚未填寫基本資料');
+  const sub=parts.length?parts.join('/  '):t('ui.dashBasicEmpty','尚未填寫基本資料');
   return dashCardHtml('basicInfo',t('ui.drawerBasicTitle','賽事基本資料'),sub);
 }
 function scheduleDashCardHtml(race){
@@ -6102,7 +6204,7 @@ function scheduleDashCardHtml(race){
   const st=race.schedule&&race.schedule.startTime;
   if(st) parts.push(st);
   if((race.bibNumber||'').trim()) parts.push(t('ui.dashBib','號碼布')+' '+race.bibNumber.trim());
-  const sub=parts.length?parts.join('・'):t('ui.dashScheduleEmpty','尚未填寫時間');
+  const sub=parts.length?parts.join('/  '):t('ui.dashScheduleEmpty','尚未填寫時間');
   return dashCardHtml('schedule',t('ui.drawerScheduleTitle','時間與報名'),sub);
 }
 function weatherDashCardHtml(race){
@@ -6112,14 +6214,14 @@ function weatherDashCardHtml(race){
   else if(cf.avgTempC!=null) parts.push(cf.avgTempC+'°C');
   if(dw.condition) parts.push(labelFor(WEATHER_OPTIONS,dw.condition,'weather'));
   if(dw.humidityPct!=null) parts.push(t('ui.dashHumidity','濕度')+' '+dw.humidityPct+'%');
-  const sub=parts.length?parts.join('・'):t('ui.dashWeatherEmpty','尚未填寫氣象資料');
+  const sub=parts.length?parts.join('/  '):t('ui.dashWeatherEmpty','尚未填寫氣象資料');
   return dashCardHtml('weather',t('ui.drawerWeatherTitle','氣象資料'),sub);
 }
 function checkpointsDashCardHtml(race){
   const cps=race.checkpoints||[];
   const withCutoff=cps.filter(c=>c.cutoffTimeSeconds!=null).length;
   const sub=cps.length
-    ? tf2('ui.dashCpSummary',`${cps.length} 個・${withCutoff} 個有關門時間`,cps.length,withCutoff)
+    ? tf2('ui.dashCpSummary',`${cps.length} 個/  ${withCutoff} 個有關門時間`,cps.length,withCutoff)
     : t('ui.dashCpEmpty','尚未新增 CP 站');
   return dashCardHtml('checkpoints',t('list.checkpoints','CP / 補給站明細'),sub);
 }
@@ -6130,13 +6232,39 @@ function mediaLinksDashCardHtml(race){
     : t('ui.dashMediaEmpty','尚未新增連結');
   return dashCardHtml('mediaLinks',t('list.mediaLinks','多媒體與連結'),sub);
 }
+function nutritionPlanDashCardHtml(race){
+  const n=race.nutritionPlan||{};
+  const parts=[];
+  if(n.gelCount!=null) parts.push(t('ui.dashGel','能量膠')+' '+n.gelCount);
+  if(n.electrolyteTabletCount!=null) parts.push(t('ui.dashSalt','鹽錠')+' '+n.electrolyteTabletCount);
+  if(n.hydrationCapacityMl!=null) parts.push(n.hydrationCapacityMl+' ml');
+  const sub=parts.length?parts.join('/  '):t('ui.dashNutritionEmpty','尚未設定補給');
+  return dashCardHtml('nutritionPlan',t('ui.drawerNutritionTitle','補給設定'),sub);
+}
+function trainingPlanDashCardHtml(race){
+  const tp=race.trainingPlan||{};
+  const parts=[];
+  if(tp.planStartDate&&tp.planEndDate) parts.push(tp.planStartDate+' → '+tp.planEndDate);
+  else if(tp.planStartDate) parts.push(tp.planStartDate+' →');
+  if(tp.taperStartDate) parts.push(t('ui.dashTaper','減量')+' '+tp.taperStartDate);
+  if(tp.weeklyMileageTargetKm!=null) parts.push(t('ui.dashWeekly','週跑量')+' '+tp.weeklyMileageTargetKm+' km');
+  const sub=parts.length?parts.join('/  '):t('ui.dashTrainingEmpty','尚未設定訓練計畫');
+  return dashCardHtml('trainingPlan',t('ui.drawerTrainingTitle','訓練計畫與減量期'),sub);
+}
+function goalsDashCardHtml(race){
+  const filled=(race.goals||[]).filter(g=>g.targetTimeSeconds!=null);
+  const sub=filled.length
+    ? filled.map(g=>g.tier+' '+secToHMS(g.targetTimeSeconds)).join('/  ')
+    : t('ui.dashGoalsEmpty','尚未設定目標時間');
+  return dashCardHtml('goals',t('ui.goalsTitle','賽前目標'),sub);
+}
 function routeDashCardHtml(race){
   const r=race.route||{};
   const parts=[];
   if(r.distanceKm!=null) parts.push(r.distanceKm+' km');
   if(r.elevationGainM!=null) parts.push('+'+Math.round(r.elevationGainM)+' m');
   if(r.cutoffTimeSeconds!=null) parts.push(t('ui.dashCutoff','關門')+' '+secToHMS(r.cutoffTimeSeconds));
-  const sub=parts.length?parts.join('・'):t('ui.dashRouteEmpty','尚未填寫路線數據');
+  const sub=parts.length?parts.join('/  '):t('ui.dashRouteEmpty','尚未填寫路線數據');
   return dashCardHtml('route',t('ui.drawerRouteTitle','路線數據'),sub);
 }
 function logisticsDashCardHtml(race){
@@ -6152,7 +6280,7 @@ function logisticsDashCardHtml(race){
     [(race.companions||[]).length,t('list.companions','同行者')],
   ].filter(([n])=>n>0).map(([n,label])=>label+' '+n);
   parts.push(...counts);
-  const sub=parts.length?parts.join('・'):t('ui.dashLogisticsEmpty','尚未填寫預算與行程');
+  const sub=parts.length?parts.join('/  '):t('ui.dashLogisticsEmpty','尚未填寫預算與行程');
   return dashCardHtml('logistics',t('ui.drawerLogisticsTitle','預算與行程'),sub);
 }
 function resultsDashCardHtml(race){
@@ -6163,7 +6291,7 @@ function resultsDashCardHtml(race){
   if(r.isPb) parts.push(t('ui.pbBadge','個人最佳 PB'));
   const pd=race.performanceData||{};
   if(pd.avgHr!=null) parts.push(pd.avgHr+' bpm');
-  const sub=parts.length?parts.join('・'):t('ui.dashResultsEmpty','尚未填寫成績');
+  const sub=parts.length?parts.join('/  '):t('ui.dashResultsEmpty','尚未填寫成績');
   return dashCardHtml('results',t('ui.drawerResultsTitle','成績與數據'),sub);
 }
 function reviewDashCardHtml(race){
@@ -6176,7 +6304,7 @@ function equipmentDashCardHtml(race){
   const items=race.equipmentChecklist||[];
   const packed=items.filter(i=>i.isPacked).length;
   const sub=items.length
-    ? tf2('ui.dashEquipSummary',`${items.length} 項・已打包 ${packed}`,items.length,packed)
+    ? tf2('ui.dashEquipSummary',`${items.length} 項/  已打包 ${packed}`,items.length,packed)
     : t('ui.dashEquipEmpty','尚未新增任何裝備');
   return dashCardHtml('equipment',t('list.equipmentChecklist','裝備清單'),sub);
 }
@@ -6219,6 +6347,18 @@ const DRAWER_SECTIONS={
   mediaLinks:{
     title:()=>t('list.mediaLinks','多媒體與連結'),
     body:race=>renderRepeatable(race,'mediaLinks'),
+  },
+  nutritionPlan:{
+    title:()=>t('ui.drawerNutritionTitle','補給設定'),
+    body:race=>`<div class="section-body">${SECTION_PREP.filter(f=>f.path.startsWith('nutritionPlan.')).map(f=>renderField(race,f,'prep')).join('')}</div>`,
+  },
+  trainingPlan:{
+    title:()=>t('ui.drawerTrainingTitle','訓練計畫與減量期'),
+    body:race=>`<div class="section-body">${SECTION_PREP.filter(f=>f.path.startsWith('trainingPlan.')).map(f=>renderField(race,f,'prep')).join('')}</div>`,
+  },
+  goals:{
+    title:()=>t('ui.goalsTitle','賽前目標'),
+    body:race=>renderGoals(race),
   },
   route:{
     title:()=>t('ui.drawerRouteTitle','路線數據'),
@@ -8043,7 +8183,7 @@ async function buildYearInReviewCanvas(year){
     y=canvasWrapTextCentered(ctx,s.topShoe.shoe.name,W/2,y,W-240,42,2);
     y+=6;
     ctx.fillStyle='#9BA3A0';ctx.font=`22px ${monoFont}`;
-    ctx.fillText(t('ui.yearInReviewShoeDetail','{count} 場・{km} km').replace('{count}',s.topShoe.count).replace('{km}',s.topShoe.distance.toFixed(0)),W/2,y+34);
+    ctx.fillText(t('ui.yearInReviewShoeDetail','{count} 場/  {km} km').replace('{count}',s.topShoe.count).replace('{km}',s.topShoe.distance.toFixed(0)),W/2,y+34);
     y+=90;
   }
 
@@ -8212,7 +8352,7 @@ function storySlideHtml(){
     const w=race.raceDayWeather;
     const hasWeather=w&&(w.feelsLikeTempC!=null||w.condition);
     const weatherText=hasWeather
-      ?[w.feelsLikeTempC!=null?w.feelsLikeTempC.toFixed(1)+'°C':null,w.condition?t('opt.weather.'+w.condition,(WEATHER_OPTIONS.find(o=>o.value===w.condition)||{}).label||w.condition):null].filter(Boolean).join('・')
+      ?[w.feelsLikeTempC!=null?w.feelsLikeTempC.toFixed(1)+'°C':null,w.condition?t('opt.weather.'+w.condition,(WEATHER_OPTIONS.find(o=>o.value===w.condition)||{}).label||w.condition):null].filter(Boolean).join('/  ')
       :null;
     slideHtml=`<div class="story-slide">
       <img class="story-slide-bg" src="${race.coverImage}" alt="" style="${focalPointStyle(race)}">
@@ -9762,7 +9902,7 @@ function climatePerformanceChartSvg(){
   const dots=points.map(p=>{
     const cx=sx(p.tempC).toFixed(1),cy=sy(p.degradationPct).toFixed(1);
     const degLabel=p.isPb?'PB':(p.degradationPct.toFixed(1)+'%');
-    const tipText=`${p.race.name||t('ui.unnamedRace','(未命名賽事)')}・${p.tempC.toFixed(1)}°C・${degLabel}`;
+    const tipText=`${p.race.name||t('ui.unnamedRace','(未命名賽事)')}/  ${p.tempC.toFixed(1)}°C/  ${degLabel}`;
     return `<circle cx="${cx}" cy="${cy}" r="${p.isPb?5:4}" fill="${p.isPb?'var(--gold)':'var(--contour)'}" opacity="0.82"><title>${escapeHtml(tipText)}</title></circle>`;
   }).join('');
   const axisLabels=`
@@ -10057,7 +10197,7 @@ function hofTrackCardHtml(race){
     </svg>
     <div class="hof-track-meta">
       <div class="hof-track-name">${escapeHtml(race.name||'')}</div>
-      <div class="hof-track-stats mono">${[year,dist,time].filter(Boolean).join('・')}</div>
+      <div class="hof-track-stats mono">${[year,dist,time].filter(Boolean).join('/  ')}</div>
     </div>
     ${isPb?`<span class="hof-track-badge">PB</span>`:''}
   </div>`;
@@ -10111,14 +10251,14 @@ function hofFuelHtml(){
   return `<h3 class="hof-section-title">${t('ui.hofFuel','能量補給')}</h3>
     <div class="hof-fuel-head">
       <div class="hof-fuel-total mono">${f.totalServings.toFixed(0)}</div>
-      <div class="hof-fuel-total-label">${tf('ui.hofFuelServings','份補給・來自 {n} 場賽事',f.racesWithFuel)}</div>
+      <div class="hof-fuel-total-label">${tf('ui.hofFuelServings','份補給/  來自 {n} 場賽事',f.racesWithFuel)}</div>
     </div>
     ${chips.length?`<div class="hof-fuel-chips">${chips.map(([v,l])=>`<div class="hof-fuel-chip">
       <span class="hof-fuel-chip-value mono">${v}</span><span class="hof-fuel-chip-label">${l}</span>
     </div>`).join('')}</div>`:''}
     <div class="hof-fuel-list">${f.ranking.map(x=>`<div class="hof-shoe-row">
       <span class="hof-shoe-name">${escapeHtml(x.name)}</span>
-      <span class="hof-shoe-stat mono">${x.qty.toFixed(0)} ${t('ui.hofFuelUnit','份')}・${x.races} ${t('ui.unitRaces','場')}</span>
+      <span class="hof-shoe-stat mono">${x.qty.toFixed(0)} ${t('ui.hofFuelUnit','份')}/  ${x.races} ${t('ui.unitRaces','場')}</span>
     </div>`).join('')}</div>`;
 }
 function computeHallOfFameData(){
@@ -10177,7 +10317,7 @@ function hallOfFameHtml(){
   const shoeRows=d.shoeRanking.length
     ? d.shoeRanking.map(sh=>`<div class="hof-shoe-row">
         <span class="hof-shoe-name">${escapeHtml(sh.name)}</span>
-        <span class="hof-shoe-stat mono">${sh.races} ${t('ui.unitRaces','場')}・${sh.distance.toFixed(0)} km</span>
+        <span class="hof-shoe-stat mono">${sh.races} ${t('ui.unitRaces','場')}/  ${sh.distance.toFixed(0)} km</span>
       </div>`).join('')
     : `<p class="hof-empty">${t('ui.hofNoShoes','還沒有綁定過鞋款的完賽紀錄')}</p>`;
   return `<button type="button" class="hof-close" data-action="close-hof" aria-label="${t('ui.close','關閉')}">✕</button>
@@ -10691,8 +10831,9 @@ function renderDetail(){
     </details>
     <details class="section" id="section-prep">
       <summary>${t('ui.sectionPrep','裝備、補給與戰略（賽前準備）')}</summary>
-      <div class="section-body">${SECTION_PREP.map(f=>renderField(race,f,'prep')).join('')}</div>
-      ${renderGoals(race)}
+      ${nutritionPlanDashCardHtml(race)}
+      ${trainingPlanDashCardHtml(race)}
+      ${goalsDashCardHtml(race)}
       ${eppSectionHtml(race)}
       <div class="subsection">
         <div class="subsection-head"><h3></h3><button type="button" class="btn-ghost" data-action="open-pacing-modal">${t('ui.pacingCalcTitle','配速試算與手環產生器')}</button></div>
@@ -13598,9 +13739,9 @@ function shoeManagementBodyHtml(){
       </div>
     </div>`;
     const specsSummary=(s.stackHeightMm!=null||s.dropMm!=null)
-      ?`${t('ui.shoeStackShort','鞋底')} ${s.stackHeightMm!=null?s.stackHeightMm+'mm':'—'}・${t('ui.shoeDropShort','足跟差')} ${s.dropMm!=null?s.dropMm+'mm':'—'}`
+      ?`${t('ui.shoeStackShort','鞋底')} ${s.stackHeightMm!=null?s.stackHeightMm+'mm':'—'}/  ${t('ui.shoeDropShort','足跟差')} ${s.dropMm!=null?s.dropMm+'mm':'—'}`
       :t('ui.shoeSpecsEmpty','尚未填規格');
-    const breakdownHtml=`${t('ui.shoeBreakdownRace','賽事')} ${stats.raceDistance.toFixed(1)}${stats.trainingDistance>0?`・${t('ui.shoeBreakdownTraining','訓練')} ${stats.trainingDistance.toFixed(1)}`:''}・${stats.totalRaces} ${t('ui.unitRaces','場比賽')}`;
+    const breakdownHtml=`${t('ui.shoeBreakdownRace','賽事')} ${stats.raceDistance.toFixed(1)}${stats.trainingDistance>0?`/  ${t('ui.shoeBreakdownTraining','訓練')} ${stats.trainingDistance.toFixed(1)}`:''}/  ${stats.totalRaces} ${t('ui.unitRaces','場比賽')}`;
     return `<div class="shoe-row${s.isRetired?' shoe-row-retired':''}${shoeStampingId===s.id?' shoe-row-stamping':''}" id="shoe-row-${s.id}">
       ${shoeStampingId===s.id?`<div class="shoe-stamp-overlay">${t('ui.shoeRetiredBadge','光榮退役')}</div>`:''}
       <div class="shoe-row-top">
@@ -13820,7 +13961,7 @@ function nutritionDictRowHtml(d){
   return `<div class="nutrition-dict-row" id="nutrition-dict-row-${d.id}">
     <div class="nutrition-dict-row-main">
       <span class="nutrition-dict-name">${escapeHtml(d.name)}</span>
-      <span class="nutrition-dict-stats mono small">${parts.join('・')||t('ui.dictNoData','尚未填營養資訊')}</span>
+      <span class="nutrition-dict-stats mono small">${parts.join('/  ')||t('ui.dictNoData','尚未填營養資訊')}</span>
     </div>
     <div class="nutrition-dict-row-actions">
       <button type="button" class="btn-text-small" data-action="edit-nutrition-dict-item" data-id="${d.id}">${t('ui.edit','編輯')}</button>
@@ -14310,6 +14451,11 @@ document.addEventListener('click',e=>{
 let localDataReady=null;
 async function init(){
   document.getElementById('app-version').textContent=APP_VERSION;
+  // 沒有 Vibration API 的裝置（iOS 上所有瀏覽器都是，因為共用 WebKit；
+  // 大部分桌機也沒有馬達）掛一個 class，讓長按蓄力的視覺回饋可以加強
+  // 到「光看也分得出三個階段」。只在啟動時判斷一次，不用每次按下去
+  // 都重新問一遍。
+  if(!navigator.vibrate) document.documentElement.classList.add('no-haptics');
   document.documentElement.setAttribute('lang',currentLang==='ja'?'ja':currentLang==='en'?'en':'zh-Hant');
   document.documentElement.setAttribute('data-lang',currentLang);
   applyStaticTranslations();
@@ -14726,6 +14872,31 @@ document.addEventListener('paste',async e=>{
     showToast(t('ui.pasteNoRaceContext','請先開啟一場賽事的詳情頁，或點「新增賽事」，才能貼上資料快速填入'),'error');
   }
 });
+/* ============================================================
+   鎖定畫面縮放（像原生 App 那樣不會跟著手指放大縮小）
+   viewport 的 user-scalable=no 只有 Android 會遵守——iOS 從 10 開始
+   就刻意忽略它（為了無障礙），所以在 iPhone 上一定要用 JS 攔截手勢
+   才會真的鎖住。兩邊都做，各自負責自己的平台。
+   攔的是 WebKit 專屬的 gesture 事件（雙指縮放）跟連點兩下放大，
+   不是所有觸控事件——單指捲動、既有的滑動完賽／刪除、海拔圖的
+   拖曳游標、裝備看板的拖放都不受影響，因為那些都是單指操作。
+   ============================================================ */
+['gesturestart','gesturechange','gestureend'].forEach(type=>{
+  document.addEventListener(type,e=>{ e.preventDefault(); },{passive:false});
+});
+// 連點兩下放大：只在「兩次點擊間隔很短」時擋掉，一般的連續點擊
+// （例如快速點兩個不同按鈕）不受影響。
+let lastTouchEndAt=0;
+document.addEventListener('touchend',e=>{
+  const now=Date.now();
+  if(now-lastTouchEndAt<=300) e.preventDefault();
+  lastTouchEndAt=now;
+},{passive:false});
+// 桌機瀏覽器的 Ctrl/⌘＋滾輪縮放：這個 App 的版面是為固定比例設計的，
+// 在桌機上也一併鎖住，行為才一致。
+document.addEventListener('wheel',e=>{
+  if(e.ctrlKey||e.metaKey) e.preventDefault();
+},{passive:false});
 init();
 </script>
 
