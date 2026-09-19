@@ -2660,7 +2660,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.11.0';
+const APP_VERSION='v3.11.1';
 
 /* ============================================================
    多語系（i18n）
@@ -2981,6 +2981,7 @@ const JA={
   // ---- 成績儀表板 ----
   'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
   'ui.resultAvgHr':'平均心拍数','ui.resultElevGain':'累積標高',
+  'ui.fitLegsDetected':'{n} 種目の記録を検出しました','ui.fitNoLegs':'このファイルにマルチスポーツの区間データがありません（session {n} 件）。全体の記録のみ表示します',
   'ui.legBreakdownTitle':'種目別タイム',
   'ui.leg_swimming':'スイム','ui.leg_cycling':'バイク','ui.leg_running':'ラン','ui.leg_transition':'トランジション','ui.leg_walking':'ウォーク','ui.leg_hiking':'ハイク',
   'ui.resultAvgCadence':'平均ケイデンス','ui.feelCadenceHint':'この歩数のリズムを振動で体感する（5秒間）',
@@ -3457,6 +3458,7 @@ const EN={
   'ui.badgeUnlockCaption':'Earned: {a} ({b})','ui.badgeUnlockCaptionDate':'Earned: {n}',
   'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
+  'ui.fitLegsDetected':'Detected {n} legs','ui.fitNoLegs':'No multisport leg data in this file ({n} sessions found) \u2014 showing overall results only',
   'ui.legBreakdownTitle':'Leg Splits',
   'ui.leg_swimming':'Swim','ui.leg_cycling':'Bike','ui.leg_running':'Run','ui.leg_transition':'Transition','ui.leg_walking':'Walk','ui.leg_hiking':'Hike',
   'ui.resultAvgCadence':'Avg Cadence','ui.feelCadenceHint':'Feel this cadence\u2019s rhythm via vibration (5 seconds)',
@@ -13581,6 +13583,15 @@ function applyActivitySummaryToRace(race,s){
   if(!race.performanceData.dataSource) race.performanceData.dataSource='運動手錶匯入 (GPX/TCX/FIT)';
   if(s.splits&&s.splits.length) race.splits=s.splits;
   if(s.legs&&s.legs.length) race.legs=s.legs;
+  // 只要是 FIT 檔就回報分段偵測結果（fitSessionCount 只有 FIT 路徑會設定，
+  // GPX／TCX 是 undefined，不會誤報）。
+  if(s.fitSessionCount!=null){
+    if(s.legs&&s.legs.length>=2){
+      showToast(tf('ui.fitLegsDetected','已偵測到 {n} 段分項成績',s.legs.length));
+    }else{
+      showToast(tf('ui.fitNoLegs','這個檔案沒有多項運動分段資料（找到 {n} 筆 session），只會顯示整場成績',s.fitSessionCount));
+    }
+  }
   if(s.elevationProfile&&s.elevationProfile.length) race.route.elevationProfile=s.elevationProfile;
   if(s.trackPoints&&s.trackPoints.length) race.route.trackPoints=s.trackPoints;
   if(s.timedTrackPoints&&s.timedTrackPoints.length) race.route.timedTrackPoints=s.timedTrackPoints;
@@ -13592,6 +13603,10 @@ async function parseActivityFile(file){
     const points=parseFitPoints(buffer);
     const summary=summarizeTrackPoints(points);
     summary.legs=attachLegMetricsFromPoints(buildRaceLegs(points.sessions,summary.splits),points);
+    // 把解析結果記下來，匯入完成後告訴使用者「這個檔案裡到底有沒有
+    // 多項運動的分段」。沒有這個回饋的話，分項成績沒出現時完全無從
+    // 判斷是檔案沒有這種資料、還是程式沒讀到。
+    summary.fitSessionCount=(points.sessions||[]).length;
     return summary;
   }
   const text=await file.text();
