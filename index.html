@@ -1424,10 +1424,13 @@
   }
   .drawer-header h3{font-size:17px;margin:0;}
   .drawer-body{overflow-y:auto;padding:16px 20px 28px;flex:1;}
-  /* 抽屜頂端已經有標題了，區塊自己那個重複的標題就藏起來，不然
-     同一個畫面上會連續出現兩次「裝備清單」。 */
-  .drawer-body .subsection-head h3{display:none;}
-  .drawer-body .subsection{margin:0;}
+  /* 抽屜頂端已經有標題了，如果區塊自己那個標題跟抽屜標題重複就藏
+     起來（例如裝備清單抽屜裡不用再寫一次「裝備清單」）。但「預算與
+     行程」這種一個抽屜裡放了住宿／交通／同行者好幾份清單的情況，
+     每份清單的標題都要留著，不然只會看到三組「＋新增」按鈕、分不出
+     哪個是哪個——所以用 data-keep-heading 標記需要保留的那些。 */
+  .drawer-body .subsection-head h3:not([data-keep-heading]){display:none;}
+  .drawer-body .subsection{margin:0 0 18px;}
   @media (min-width:641px){
     .drawer-panel{top:0;bottom:0;right:0;width:460px;max-width:92vw;transform:translateX(100%);}
     .drawer-overlay:not([hidden]) .drawer-panel{transform:translateX(0);}
@@ -2316,7 +2319,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.92.0';
+const APP_VERSION='v2.96.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2424,6 +2427,13 @@ const JA={
   'ui.deleteRace':'大会を削除',
   'ui.undo':'元に戻す','ui.undoDeletedSingle':'削除しました：{n}','ui.undoDeletedMultiple':'{n} 件のレースを削除しました',
   'ui.dashEquipSummary':'{a} 点・パック済み {b}','ui.dashEquipEmpty':'装備がまだ登録されていません',
+  'ui.drawerResultsTitle':'記録とデータ','ui.drawerReviewTitle':'レース後の振り返り',
+  'ui.drawerBasicTitle':'大会の基本情報','ui.drawerScheduleTitle':'日程とエントリー',
+  'ui.drawerLogisticsTitle':'予算と旅程','ui.dashLogisticsEmpty':'予算・旅程が未入力です',
+  'ui.drawerRouteTitle':'コースデータ','ui.dashRouteEmpty':'コースデータが未入力です','ui.dashCutoff':'制限時間',
+  'ui.dashBasicEmpty':'基本情報が未入力です','ui.dashScheduleEmpty':'日程が未入力です','ui.dashBib':'ゼッケン',
+  'ui.dashRank':'総合 {n} 位','ui.dashResultsEmpty':'記録が未入力です',
+  'ui.dashReviewFilled':'{n} 件記入済み','ui.dashReviewEmpty':'振り返りが未入力です',
   'ui.duplicateRace':'大会を複製','ui.duplicateRaceHint':'場所・コース・装備などを引き継いで新しい大会を作成します（年次シリーズ大会に便利）',
   'ui.moreActions':'その他の操作','ui.dataManagement':'データ管理',
   'ui.duplicateSuffix':'（コピー）',
@@ -2878,6 +2888,13 @@ const EN={
   'ui.deleteRace':'Delete race',
   'ui.undo':'Undo','ui.undoDeletedSingle':'Deleted: {n}','ui.undoDeletedMultiple':'Deleted {n} races',
   'ui.dashEquipSummary':'{a} items \u00b7 {b} packed','ui.dashEquipEmpty':'No gear added yet',
+  'ui.drawerResultsTitle':'Results & Data','ui.drawerReviewTitle':'Post-Race Review',
+  'ui.drawerBasicTitle':'Race Details','ui.drawerScheduleTitle':'Schedule & Entry',
+  'ui.drawerLogisticsTitle':'Budget & Logistics','ui.dashLogisticsEmpty':'No budget or logistics yet',
+  'ui.drawerRouteTitle':'Course Data','ui.dashRouteEmpty':'No course data yet','ui.dashCutoff':'Cutoff',
+  'ui.dashBasicEmpty':'No details entered yet','ui.dashScheduleEmpty':'No dates entered yet','ui.dashBib':'Bib',
+  'ui.dashRank':'Overall #{n}','ui.dashResultsEmpty':'No results entered yet',
+  'ui.dashReviewFilled':'{n} notes written','ui.dashReviewEmpty':'No review written yet',
   'ui.duplicateRace':'Duplicate Race','ui.duplicateRaceHint':'Carries over location, course, gear and more into a new race (handy for annual series races)',
   'ui.moreActions':'More Actions','ui.dataManagement':'Data Management',
   'ui.duplicateSuffix':' (Copy)',
@@ -4283,6 +4300,34 @@ function applySmartDefaults(race,changedPath){
 // 通常是空的，因為「狀態本身改變」目前沒有任何一條智慧預設規則會
 // 對它起反應，保留這個回傳值只是讓這個函式的行為跟其他呼叫
 // applySmartDefaults() 的地方維持一致的介面，不代表現在就有用到）。
+// setRaceStatusFromUi(race, newStatus)：從畫面上改狀態時走這一份。
+// 核心資料邏輯（鞋款門檻提醒、無感智慧預設、裝備範本自動套用、存檔）
+// 在 quickSetRaceStatus() 裡，跟手機滑動完賽共用；這一層再加上畫面
+// 專屬的事情——存檔提示、重繪、完賽時自動展開並捲到賽後紀錄。
+// 抽出來的理由：生命週期軌道（考慮中→抽籤中→…那排節點）原本是去找
+// 畫面上的 #f-status 下拉選單、設值再送出 change 事件來間接觸發這段
+// 邏輯；但「基本資訊與時間」的欄位搬進抽屜之後，抽屜沒打開時那個
+// 下拉選單根本不在畫面上，軌道會變成點了完全沒反應、也不會報錯。
+// 改成兩個入口都直接呼叫這一份，不再依賴某個 DOM 元素存不存在。
+async function setRaceStatusFromUi(race,newStatus){
+  const prevStatus=race.status;
+  showSaveStatus('saving');
+  const smartFilled=await quickSetRaceStatus(race,newStatus);
+  renderCalendar();
+  if(smartFilled.length){
+    smartFilledHighlightPaths=new Set(smartFilled);
+    setTimeout(()=>{ smartFilledHighlightPaths=new Set(); },2500);
+  }
+  renderDetail();
+  showSaveStatus('saved');
+  if(newStatus==='completed'&&prevStatus!=='completed'){
+    const postSection=document.getElementById('section-post');
+    if(postSection){
+      postSection.open=true;
+      postSection.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }
+}
 async function quickSetRaceStatus(race,newStatus){
   const prevStatus=race.status;
   const shoeForAlert=(newStatus==='completed'&&prevStatus!=='completed'&&race.performanceData.shoeId)
@@ -5583,7 +5628,7 @@ function renderRepeatable(race,listKey){
   const meta=LIST_META[listKey];
   const items=race[listKey]||[];
   return `<div class="subsection">
-    <div class="subsection-head"><h3>${t('list.'+listKey,meta.title)}</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="${listKey}">${t('ui.addItem','+ 新增')}</button></div>
+    <div class="subsection-head"><h3 data-keep-heading>${t('list.'+listKey,meta.title)}</h3><button type="button" class="btn-ghost" data-action="add-item" data-list="${listKey}">${t('ui.addItem','+ 新增')}</button></div>
     <div class="repeat-rows">
       ${items.length?items.map((it,i)=>`
         <div class="repeat-row${REORDERABLE_LISTS.includes(listKey)&&items.length>1?' reorderable':''}">
@@ -5718,27 +5763,140 @@ function equipmentEmptyStateHtml(race){
    這套接線方式真的可靠，再決定要不要推廣到其他區塊。
    ============================================================ */
 let drawerOpenSection=null;
+// dashCardHtml(section, title, sub)：儀表板上的摘要卡片，整張就是一個
+// 按鈕，點了打開對應的抽屜。
+function dashCardHtml(section,title,sub){
+  return `<button type="button" class="dash-card" data-action="open-drawer" data-section="${section}">
+    <span class="dash-card-main">
+      <span class="dash-card-title">${escapeHtml(title)}</span>
+      <span class="dash-card-sub">${escapeHtml(sub)}</span>
+    </span>
+    <span class="dash-card-chevron" aria-hidden="true">›</span>
+  </button>`;
+}
+function basicInfoDashCardHtml(race){
+  const parts=[];
+  const sport=SPORT_OPTIONS.find(o=>o.value===race.sportType);
+  if(sport) parts.push(t('opt.sport.'+sport.value,sport.label));
+  const loc=[race.location&&race.location.city,race.location&&race.location.country].filter(x=>(x||'').trim());
+  if(loc.length) parts.push(loc.join('・'));
+  if((race.series||'').trim()) parts.push(race.series.trim());
+  const sub=parts.length?parts.join('・'):t('ui.dashBasicEmpty','尚未填寫基本資料');
+  return dashCardHtml('basicInfo',t('ui.drawerBasicTitle','賽事基本資料'),sub);
+}
+function scheduleDashCardHtml(race){
+  const parts=[];
+  const d=race.schedule&&race.schedule.raceDate;
+  if(d) parts.push(d);
+  const st=race.schedule&&race.schedule.startTime;
+  if(st) parts.push(st);
+  if((race.bibNumber||'').trim()) parts.push(t('ui.dashBib','號碼布')+' '+race.bibNumber.trim());
+  const sub=parts.length?parts.join('・'):t('ui.dashScheduleEmpty','尚未填寫時間');
+  return dashCardHtml('schedule',t('ui.drawerScheduleTitle','時間與報名'),sub);
+}
+function routeDashCardHtml(race){
+  const r=race.route||{};
+  const parts=[];
+  if(r.distanceKm!=null) parts.push(r.distanceKm+' km');
+  if(r.elevationGainM!=null) parts.push('+'+Math.round(r.elevationGainM)+' m');
+  if(r.cutoffTimeSeconds!=null) parts.push(t('ui.dashCutoff','關門')+' '+secToHMS(r.cutoffTimeSeconds));
+  const sub=parts.length?parts.join('・'):t('ui.dashRouteEmpty','尚未填寫路線數據');
+  return dashCardHtml('route',t('ui.drawerRouteTitle','路線數據'),sub);
+}
+function logisticsDashCardHtml(race){
+  const b=race.budget||{};
+  const parts=[];
+  if(b.registrationFee!=null){
+    const cur=(b.currency||'').trim();
+    parts.push((cur?cur+' ':'')+b.registrationFee);
+  }
+  const counts=[
+    [(race.accommodations||[]).length,t('list.accommodations','住宿')],
+    [(race.transportation||[]).length,t('list.transportation','交通')],
+    [(race.companions||[]).length,t('list.companions','同行者')],
+  ].filter(([n])=>n>0).map(([n,label])=>label+' '+n);
+  parts.push(...counts);
+  const sub=parts.length?parts.join('・'):t('ui.dashLogisticsEmpty','尚未填寫預算與行程');
+  return dashCardHtml('logistics',t('ui.drawerLogisticsTitle','預算與行程'),sub);
+}
+function resultsDashCardHtml(race){
+  const r=race.results||{};
+  const parts=[];
+  if(r.chipTimeSeconds!=null) parts.push(secToHMS(r.chipTimeSeconds));
+  if(r.overallRank!=null) parts.push(tf('ui.dashRank','總排 {n}',r.overallRank));
+  if(r.isPb) parts.push(t('ui.pbBadge','個人最佳 PB'));
+  const pd=race.performanceData||{};
+  if(pd.avgHr!=null) parts.push(pd.avgHr+' bpm');
+  const sub=parts.length?parts.join('・'):t('ui.dashResultsEmpty','尚未填寫成績');
+  return dashCardHtml('results',t('ui.drawerResultsTitle','成績與數據'),sub);
+}
+function reviewDashCardHtml(race){
+  const rv=race.review||{};
+  const filled=['hitTheWallNotes','courseReview','pros','cons','lessonsLearned'].filter(k=>(rv[k]||'').trim()).length;
+  const sub=filled?tf('ui.dashReviewFilled','已填寫 {n} 則',filled):t('ui.dashReviewEmpty','尚未填寫心得');
+  return dashCardHtml('review',t('ui.drawerReviewTitle','賽後心得'),sub);
+}
 function equipmentDashCardHtml(race){
   const items=race.equipmentChecklist||[];
   const packed=items.filter(i=>i.isPacked).length;
   const sub=items.length
     ? tf2('ui.dashEquipSummary',`${items.length} 項・已打包 ${packed}`,items.length,packed)
     : t('ui.dashEquipEmpty','尚未新增任何裝備');
-  return `<button type="button" class="dash-card" data-action="open-drawer" data-section="equipment">
-    <span class="dash-card-main">
-      <span class="dash-card-title">${t('list.equipmentChecklist','裝備清單')}</span>
-      <span class="dash-card-sub">${escapeHtml(sub)}</span>
-    </span>
-    <span class="dash-card-chevron" aria-hidden="true">›</span>
-  </button>`;
+  return dashCardHtml('equipment',t('list.equipmentChecklist','裝備清單'),sub);
 }
+// BASIC_INFO_PATHS：「基本資訊與時間」這 22 個欄位拆成兩個抽屜的依據。
+// 這一份是「這場賽事是什麼」——名稱、系列、運動種類、狀態、地點；
+// 其餘的是「什麼時候、報名相關」——比賽日期、起跑時間、報名期程、
+// 抽籤資訊、號碼布。22 個欄位塞進同一個面板只是把長頁面換成長面板，
+// 沒有真的解決問題。
+const BASIC_INFO_PATHS=['name','alias','officialUrl','series','status','sportType','raceFormat',
+  'location.venueName','location.city','location.country','crewApparelNote'];
+// DRAWER_SECTIONS：抽屜可以裝的區塊登記表。每一筆是「標題」跟「內容
+// 怎麼畫」兩件事，openDrawer() 只負責查表、塞內容、滑出來，不用為了
+// 多一個區塊就去改開關邏輯本身。
+const DRAWER_SECTIONS={
+  equipment:{
+    title:()=>t('list.equipmentChecklist','裝備清單'),
+    body:race=>renderEquipmentSection(race),
+  },
+  results:{
+    title:()=>t('ui.drawerResultsTitle','成績與數據'),
+    body:race=>`<div class="section-body">${SECTION_POST.filter(f=>!f.path.startsWith('review.')).map(f=>renderField(race,f,'post')).join('')}</div>
+      ${(race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}`,
+  },
+  basicInfo:{
+    title:()=>t('ui.drawerBasicTitle','賽事基本資料'),
+    body:race=>`<div class="section-body">${SECTION_BASIC.filter(f=>BASIC_INFO_PATHS.includes(f.path)).map(f=>renderField(race,f,'basic')).join('')}</div>`,
+  },
+  schedule:{
+    title:()=>t('ui.drawerScheduleTitle','時間與報名'),
+    body:race=>`<div class="section-body">${SECTION_BASIC.filter(f=>!BASIC_INFO_PATHS.includes(f.path)).map(f=>renderField(race,f,'basic')).join('')}</div>`,
+  },
+  route:{
+    title:()=>t('ui.drawerRouteTitle','路線數據'),
+    body:race=>`<div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f,'route')).join('')}</div>`,
+  },
+  logistics:{
+    title:()=>t('ui.drawerLogisticsTitle','預算與行程'),
+    body:race=>`<div class="section-body">${SECTION_LOGISTICS.map(f=>renderField(race,f,'logistics')).join('')}</div>
+      ${renderRepeatable(race,'accommodations')}
+      ${renderRepeatable(race,'transportation')}
+      ${renderRepeatable(race,'companions')}`,
+  },
+  review:{
+    title:()=>t('ui.drawerReviewTitle','賽後心得'),
+    body:race=>`<div class="section-body">${SECTION_POST.filter(f=>f.path.startsWith('review.')).map(f=>renderField(race,f,'post')+(f.path==='review.lessonsLearned'?reviewTemplateButtonsHtml(race):'')).join('')}</div>`,
+  },
+};
 function openDrawer(section){
   const race=currentRace;
   if(!race) return;
+  const def=DRAWER_SECTIONS[section];
+  if(!def) return;
   drawerOpenSection=section;
   const drawer=document.getElementById('global-drawer');
-  document.getElementById('drawer-title').textContent=t('list.equipmentChecklist','裝備清單');
-  document.getElementById('drawer-content').innerHTML=renderEquipmentSection(race);
+  document.getElementById('drawer-title').textContent=def.title();
+  document.getElementById('drawer-content').innerHTML=def.body(race);
   drawer.hidden=false;
   // 手機上按系統返回鍵時，習慣是「收起這層面板」而不是「離開整個
   // 網站」。推一個歷史狀態進去，返回鍵就會先觸發 popstate、被下面
@@ -9760,11 +9918,12 @@ function renderDetail(){
     ${renderSeriesComparison(race)}
     <details class="section" id="section-basic">
       <summary>${t('ui.sectionBasic','基本資訊與時間')}</summary>
-      <div class="section-body">${SECTION_BASIC.map(f=>renderField(race,f,'basic')).join('')}</div>
+      ${basicInfoDashCardHtml(race)}
+      ${scheduleDashCardHtml(race)}
     </details>
     <details class="section" id="section-route">
       <summary>${t('ui.sectionRoute','地理與路線')}</summary>
-      <div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f,'route')).join('')}</div>
+      ${routeDashCardHtml(race)}
       ${elevationProfileHtml(race)}
       ${routeMapHtml(race)}
       ${geoPhotoSectionHtml(race)}
@@ -9782,10 +9941,7 @@ function renderDetail(){
     </details>
     <details class="section" id="section-logistics">
       <summary>${t('ui.sectionLogistics','預算與行程規劃')}</summary>
-      <div class="section-body">${SECTION_LOGISTICS.map(f=>renderField(race,f,'logistics')).join('')}</div>
-      ${renderRepeatable(race,'accommodations')}
-      ${renderRepeatable(race,'transportation')}
-      ${renderRepeatable(race,'companions')}
+      ${logisticsDashCardHtml(race)}
     </details>
     <details class="section" id="section-prep">
       <summary>${t('ui.sectionPrep','裝備、補給與戰略（賽前準備）')}</summary>
@@ -9807,8 +9963,8 @@ function renderDetail(){
         <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX / FIT）')}</button>
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
       </div>
-      <div class="section-body">${SECTION_POST.map(f=>renderField(race,f,'post')+(f.path==='review.lessonsLearned'?reviewTemplateButtonsHtml(race):'')).join('')}</div>
-      ${(race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}
+      ${resultsDashCardHtml(race)}
+      ${reviewDashCardHtml(race)}
       ${renderRepeatable(race,'mediaLinks')}
       ${mediaGalleryHtml(race)}
     </details>
@@ -9823,9 +9979,9 @@ function renderDetail(){
   // 操作如果在抽屜裡觸發，資料確實有存進去、畫面卻不會更新，看起來
   // 像按了沒反應。集中在這裡處理，就不用去改那二十幾個各自呼叫
   // renderDetail() 的地方、也不會有漏改的風險。
-  if(drawerOpenSection==='equipment'){
+  if(drawerOpenSection&&DRAWER_SECTIONS[drawerOpenSection]){
     const dc=document.getElementById('drawer-content');
-    if(dc) dc.innerHTML=renderEquipmentSection(race);
+    if(dc) dc.innerHTML=DRAWER_SECTIONS[drawerOpenSection].body(race);
   }
   // 這裡有兩種情況都需要（重新）抓取：完全沒有快取過（第一次），或者
   // 快取是在某些欄位還沒加進抓取範圍之前存下來的舊資料（缺了整個欄位，
@@ -10879,28 +11035,7 @@ async function handleDetailChange(e){
   else if(t.type==='number') value=(t.value===''?null:Number(t.value));
   else value=t.value;
   if(path==='status'){
-    // 狀態這個欄位的核心邏輯（鞋款門檻提醒、無感智慧預設、裝備範本
-    // 自動套用、存檔）抽成 quickSetRaceStatus()，跟手機版滑動清單向右
-    // 滑完賽共用同一份；這裡只處理「詳情頁欄位編輯」這個入口自己
-    // 專屬的部分——存檔中／已存檔提示、畫面重繪、完賽時自動捲動到
-    // 賽後紀錄區塊。
-    const prevStatus=currentRace.status;
-    showSaveStatus('saving');
-    const smartFilled=await quickSetRaceStatus(currentRace,value);
-    renderCalendar();
-    if(smartFilled.length){
-      smartFilledHighlightPaths=new Set(smartFilled);
-      setTimeout(()=>{ smartFilledHighlightPaths=new Set(); },2500);
-    }
-    renderDetail();
-    showSaveStatus('saved');
-    if(value==='completed'&&prevStatus!=='completed'){
-      const postSection=document.getElementById('section-post');
-      if(postSection){
-        postSection.open=true;
-        postSection.scrollIntoView({behavior:'smooth',block:'start'});
-      }
-    }
+    await setRaceStatusFromUi(currentRace,value);
   }else{
     setPath(currentRace,path,value);
     currentRace.updatedAt=new Date().toISOString();
@@ -13334,16 +13469,11 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-fatigue-mode"]')&&currentRace){ openFatigueMode(); logFeatureUse('open_fatigue_mode'); }
   const lcBtn=e.target.closest('[data-action="lc-set-status"]');
   if(lcBtn&&currentRace){
-    // 生命週期軌道的節點本身不直接改資料——找到既有那個 #f-status
-    // 下拉選單，把值設好再送出一個 change 事件，讓事件冒泡到 detailEl
-    // 既有的委派監聽器去處理，完整沿用那邊已經有的存檔、無感智慧
-    // 預設、裝備範本自動套用這一整套邏輯，這裡不重新寫一份。
+    // 直接呼叫共用的 setRaceStatusFromUi()，不再去找畫面上的 #f-status
+    // 下拉選單來間接觸發——那個欄位現在收在抽屜裡，沒打開時不在畫面
+    // 上，靠 DOM 元素轉手會變成點了沒反應。
     const newStatus=lcBtn.dataset.status;
-    const select=document.getElementById('f-status');
-    if(select&&select.value!==newStatus){
-      select.value=newStatus;
-      select.dispatchEvent(new Event('change',{bubbles:true}));
-    }
+    if(currentRace.status!==newStatus) setRaceStatusFromUi(currentRace,newStatus);
     logFeatureUse('lifecycle_stepper_click');
     return;
   }
