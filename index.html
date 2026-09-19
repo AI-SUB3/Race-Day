@@ -457,6 +457,29 @@
   .honor-card-label{font-size:12px;color:var(--stone);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
   .honor-card-value{font-size:56px;font-weight:700;color:var(--gold);line-height:1;letter-spacing:0.01em;}
   .time-colon{opacity:0.4;}
+  /* ---- 長按 PB 數字解鎖生涯回顧：1.5 秒的三階段蓄力。
+     user-select 與 touch-callout 關掉，避免長按時跳出 iOS 的
+     選取/分享選單，把蓄力手勢打斷。 ---- */
+  .honor-card.pressable{cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+    transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),box-shadow 0.3s ease;}
+  .honor-card.pressing{transform:scale(0.96);}
+  .honor-card.charging-1{transform:scale(0.98);box-shadow:0 0 15px rgba(var(--gold-rgb),0.45);}
+  .honor-card.charging-2{
+    box-shadow:0 0 34px rgba(var(--gold-rgb),0.85);
+    animation:honor-rumble 0.09s infinite alternate;
+  }
+  /* 抖動幅度刻意做得很小（1px），在手機上是「感覺得到引擎在震」而不是
+     「畫面壞掉在跳」。縮放值跟 charging-2 的 transform 合寫在
+     keyframes 裡——animation 的 transform 會蓋掉同元素上的 transform
+     宣告，分開寫的話放大效果會在抖動開始的瞬間消失。 */
+  @keyframes honor-rumble{
+    from{transform:scale(1.02) translateX(-1px);}
+    to{transform:scale(1.02) translateX(1px);}
+  }
+  .honor-card-hint{font-size:11px;color:var(--stone);margin-top:10px;opacity:0.75;}
+  @media (prefers-reduced-motion:reduce){
+    .honor-card.charging-2{animation:none;transform:scale(1.02);}
+  }
 
   /* ---------- 徽章開箱動畫 ---------- */
   .badge-unbox-overlay{
@@ -1023,7 +1046,44 @@
     border:1.5px solid var(--rule);cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.28);
   }
   .help-fab img{width:100%;height:100%;object-fit:contain;display:block;}
-  .help-fab:hover{transform:scale(1.05);}
+  /* ---- 磁性吸附與動態反光：只套用在有滑鼠的裝置上。
+     這個 App 右下角其實有兩顆懸浮按鈕，但「新增賽事」那顆是
+     display:none、只在手機版（≤640px）才出現——手機沒有游標，
+     磁性吸附無從觸發，所以磁性效果做在桌機版一定看得到的
+     「使用說明」這顆上。
+     位移用 --mag-x／--mag-y 兩個變數傳遞，原本的 :hover 放大則
+     改用 --mag-scale，兩者合併寫在同一個 transform 裡——CSS 的
+     transform 同一個元素只能有一個值，如果 :hover 另外寫一條
+     transform:scale()，會把 JS 寫進來的位移整個覆蓋掉。 ---- */
+  @media (hover:hover) and (pointer:fine){
+    .help-fab{
+      transform:translate(var(--mag-x,0px),var(--mag-y,0px)) scale(var(--mag-scale,1));
+      /* 放開時的回彈曲線帶有一點過衝，模擬實體彈簧的慣性；跟隨
+         游標的當下則由 JS 加上 .magnet-active 把過渡關掉，不然
+         會有拖泥帶水的延遲感。 */
+      transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+      position:relative;
+    }
+    .help-fab.magnet-active{transition:none;}
+    .help-fab:hover{--mag-scale:1.05;}
+    /* 追光層：疊在按鈕上的放射狀高光，圓心跟著游標跑。按鈕本身
+       已經有 overflow:hidden，光斑不會溢出圓形邊界。 */
+    .help-fab::before{
+      content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+      border-radius:50%;opacity:0;transition:opacity 0.25s ease;
+      background:radial-gradient(circle at var(--glare-x,50%) var(--glare-y,50%),
+        rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.25) 35%, transparent 65%);
+    }
+    .help-fab:hover::before{opacity:1;}
+  }
+  /* 沒有滑鼠、或使用者開了「減少動態效果」時，維持原本單純的放大回饋 */
+  @media not all and (hover:hover){
+    .help-fab:hover{transform:scale(1.05);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .help-fab{transform:none!important;transition:none;}
+    .help-fab::before{display:none;}
+  }
   .help-fab-caption{
     background:var(--ink);color:var(--surface);font-size:12px;font-weight:500;
     padding:6px 12px;border-radius:14px;white-space:nowrap;
@@ -1537,6 +1597,113 @@
   /* ---- 動態回顧輪播（Story Mode）：故意用寫死的深色，不跟著淺色/深色
      主題變動，理由跟徽章成就圖卡一樣——這是沉浸式的相片瀏覽畫面，不是
      一般表單頁面。 ---- */
+  /* ---- 生涯回顧主卡：長按 PB 數字解鎖的全螢幕畫面。
+     底色寫死深色、不跟隨淺色/深色主題，跟既有的「動態回顧輪播」
+     一致——這是一個聚焦的儀式性畫面，不是一般的資料頁。 ---- */
+  .hof-overlay{
+    position:fixed;inset:0;z-index:210;overflow-y:auto;
+    background:#0B0E0D;color:#EDEEE9;
+    animation:hof-fade-in 0.5s ease;
+  }
+  .hof-overlay[hidden]{display:none;}
+  @keyframes hof-fade-in{from{opacity:0;}to{opacity:1;}}
+  .hof-inner{max-width:560px;margin:0 auto;padding:60px 20px 80px;position:relative;}
+  .hof-close{
+    position:fixed;top:16px;right:16px;z-index:2;
+    background:rgba(255,255,255,0.1);color:#EDEEE9;border:none;
+    width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;
+  }
+  .hof-close:hover{background:rgba(255,255,255,0.2);}
+  .hof-title{font-size:13px;letter-spacing:0.18em;text-transform:uppercase;
+    color:rgba(237,238,233,0.55);text-align:center;margin-bottom:26px;}
+  /* 英雄卡：沿用獎牌牆那套 3D 傾斜的做法，變數由同一個引擎寫入 */
+  .hof-hero{
+    position:relative;border-radius:16px;padding:34px 24px 30px;text-align:center;
+    background:linear-gradient(145deg,#15201B 0%,#0E1512 100%);
+    border:1px solid rgba(var(--gold-rgb),0.35);
+    box-shadow:0 18px 50px rgba(0,0,0,0.5);
+    margin-bottom:30px;overflow:hidden;
+  }
+  .hof-hero-label{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;
+    color:rgba(var(--gold-rgb),0.85);margin-bottom:10px;}
+  .hof-hero-value{font-size:58px;font-weight:700;color:var(--gold);line-height:1;}
+  .hof-hero-race{margin-top:12px;font-size:15px;color:rgba(237,238,233,0.8);}
+  .hof-hero-date{margin-top:4px;font-size:13px;color:rgba(237,238,233,0.5);}
+  .hof-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:30px;}
+  .hof-tile{
+    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px;padding:18px 16px;
+  }
+  .hof-tile-wide{grid-column:1/-1;}
+  .hof-tile-value{font-size:26px;font-weight:700;color:#EDEEE9;line-height:1.1;}
+  .hof-tile-label{font-size:12px;color:rgba(237,238,233,0.55);margin-top:6px;}
+  .hof-section-title{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;
+    color:rgba(237,238,233,0.5);margin:0 0 12px;}
+  /* ---- 軌跡畫廊：橫向捲動，每張卡片對齊停靠。
+     用原生的 scroll-snap 而不是自己寫 touch 事件——原生捲動本來就
+     帶有邊緣阻尼與慣性，手感比自己算位移好，也不會跟外層的垂直
+     捲動打架。 ---- */
+  .hof-track-gallery{
+    display:flex;gap:12px;overflow-x:auto;padding:2px 2px 14px;margin-bottom:26px;
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.2) transparent;
+  }
+  .hof-track-gallery::-webkit-scrollbar{height:6px;}
+  .hof-track-gallery::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.18);border-radius:3px;}
+  .hof-track-card{
+    position:relative;flex:0 0 168px;scroll-snap-align:start;
+    background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px;padding:8px 8px 12px;
+  }
+  .hof-track-svg{width:100%;height:auto;display:block;}
+  .hof-track-meta{padding:0 4px;}
+  .hof-track-name{
+    font-size:13px;color:#EDEEE9;margin-bottom:3px;
+    /* 賽事名稱長度差很多，統一截成一行，不然卡片高度會參差不齊 */
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .hof-track-stats{font-size:11px;color:rgba(237,238,233,0.5);}
+  .hof-track-badge{
+    position:absolute;top:10px;right:10px;
+    background:var(--gold);color:#0B0E0D;font-size:10px;font-weight:700;
+    padding:2px 7px;border-radius:8px;letter-spacing:0.04em;
+  }
+  .hof-shoe-row{
+    display:flex;align-items:baseline;gap:10px;padding:11px 0;
+    border-bottom:1px solid rgba(255,255,255,0.07);
+  }
+  .hof-shoe-row:last-child{border-bottom:none;}
+  .hof-shoe-name{flex:1;font-size:14px;color:#EDEEE9;}
+  .hof-shoe-stat{font-size:13px;color:rgba(237,238,233,0.6);white-space:nowrap;}
+  .hof-empty{color:rgba(237,238,233,0.45);font-size:13px;}
+  /* ---- 能量補給區：用流體漸層當底，呼應「燃料艙」的意象。
+     漸層是靜態的（沒有動畫）——這張卡片已經有彩帶、霓虹軌跡、
+     3D 傾斜好幾個動態元素，再加一個會動的背景只會讓畫面更吵。 ---- */
+  .hof-fuel-head{
+    display:flex;align-items:baseline;gap:10px;
+    padding:18px 18px 16px;border-radius:12px 12px 0 0;
+    background:radial-gradient(ellipse 120% 100% at 15% 0%, rgba(184,69,31,0.30) 0%, transparent 60%),
+               radial-gradient(ellipse 100% 100% at 85% 100%, rgba(var(--gold-rgb),0.22) 0%, transparent 62%),
+               rgba(255,255,255,0.035);
+    border:1px solid rgba(255,255,255,0.08);border-bottom:none;
+  }
+  .hof-fuel-total{font-size:34px;font-weight:700;color:#EDEEE9;line-height:1;}
+  .hof-fuel-total-label{font-size:12px;color:rgba(237,238,233,0.6);}
+  .hof-fuel-chips{
+    display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px 14px;
+    background:rgba(255,255,255,0.02);
+    border-left:1px solid rgba(255,255,255,0.08);border-right:1px solid rgba(255,255,255,0.08);
+  }
+  .hof-fuel-chip{
+    display:flex;flex-direction:column;gap:2px;
+    background:rgba(0,0,0,0.3);border-radius:8px;padding:8px 12px;min-width:76px;
+  }
+  .hof-fuel-chip-value{font-size:15px;font-weight:600;color:#EDEEE9;}
+  .hof-fuel-chip-label{font-size:11px;color:rgba(237,238,233,0.5);}
+  .hof-fuel-list{
+    padding:4px 18px 8px;border:1px solid rgba(255,255,255,0.08);border-top:none;
+    border-radius:0 0 12px 12px;margin-bottom:10px;
+  }
   .story-overlay{
     position:fixed;inset:0;background:#000;z-index:200;
     display:flex;align-items:center;justify-content:center;
@@ -1811,6 +1978,7 @@
   </div>
 </div>
 <div id="story-mode-overlay" class="story-overlay" hidden></div>
+<div id="hof-overlay" class="hof-overlay" hidden></div>
 <div id="fatigue-mode-overlay" class="fatigue-overlay" hidden></div>
 <div id="report-prompt-fallback-modal" class="modal-overlay" hidden></div>
 <div id="pacing-modal" class="modal-overlay" hidden></div>
@@ -2362,7 +2530,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.98.0';
+const APP_VERSION='v3.3.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2475,6 +2643,11 @@ const JA={
   'ui.drawerLogisticsTitle':'予算と旅程','ui.dashLogisticsEmpty':'予算・旅程が未入力です',
   'ui.drawerRouteTitle':'コースデータ','ui.dashRouteEmpty':'コースデータが未入力です','ui.dashCutoff':'制限時間',
   'ui.drawerWeatherTitle':'気象データ','ui.dashWeatherEmpty':'気象データが未入力です','ui.dashHumidity':'湿度',
+  'ui.hofTitle':'キャリア総括','ui.hofPressHint':'長押しでキャリア総括を表示','ui.hofNoPb':'フルマラソンの記録がまだありません',
+  'ui.hofTotalDistance':'生涯総距離','ui.hofPbCount':'自己ベスト更新回数','ui.hofOverseas':'海外レース','ui.hofYears':'活動年数',
+  'ui.hofFuel':'エネルギー補給','ui.hofFuelServings':'個の補給・{n} レースから','ui.hofFuelUnit':'個',
+  'ui.hofFuelCarb':'炭水化物','ui.hofFuelSodium':'ナトリウム','ui.hofFuelCaffeine':'カフェイン',
+  'ui.hofTracks':'ルートギャラリー','ui.hofArsenal':'シューズランキング','ui.hofNoShoes':'シューズを紐づけた完走記録がまだありません','ui.cmdkHallOfFame':'キャリア総括',
   'ui.dashCpSummary':'{a} 箇所・{b} 箇所に制限時間','ui.dashCpEmpty':'CPがまだ登録されていません',
   'ui.dashMediaSummary':'{n} 件のリンク','ui.dashMediaEmpty':'リンクがまだ登録されていません',
   'ui.dashBasicEmpty':'基本情報が未入力です','ui.dashScheduleEmpty':'日程が未入力です','ui.dashBib':'ゼッケン',
@@ -2659,7 +2832,7 @@ const JA={
   'ui.reportPromptExecuted':'{total}箇所中{done}箇所で計画通り補給できました',
   'ui.reportPromptReview':'振り返り','ui.reportPromptHitWall':'ウォールにぶつかった時の感想','ui.reportPromptCourseReview':'コースの感想','ui.reportPromptPros':'良かった点','ui.reportPromptCons':'改善点','ui.reportPromptLessons':'学んだこと',
   'ui.reportPromptFallbackTitle':'以下の内容を手動でコピーしてください','ui.reportPromptFallbackHint':'クリップボードへの自動コピーに失敗しました。下のテキストを全選択してコピーしてください。','ui.reportPromptCopied':'クリップボードにコピーしました！',
-  'ui.trophyCat_explore':'探検と領域','ui.trophyCat_terrain':'地形と極限','ui.trophyCat_speed':'スピードと戦略','ui.trophyCat_crossover':'クロスオーバーと装備',
+  'ui.trophyCat_explore':'探検と領域','ui.trophyCat_terrain':'地形と極限','ui.trophyCat_speed':'スピードと戦略','ui.trophyCat_crossover':'クロスオーバーと装備','ui.trophyCat_gear':'ギアと補給',
   'ui.badgeUnlockedLabel':'バッジ解除','ui.badgeCollect':'バッジを受け取る',
   'ui.badgeDownloadShare':'達成画像をダウンロード','ui.badgeShareSuffix':'-バッジ達成.png',
   'ui.badgeShareRaceStats':'レースデータ','ui.badgeShareRouteTrack':'コースの軌跡',
@@ -2939,6 +3112,11 @@ const EN={
   'ui.drawerLogisticsTitle':'Budget & Logistics','ui.dashLogisticsEmpty':'No budget or logistics yet',
   'ui.drawerRouteTitle':'Course Data','ui.dashRouteEmpty':'No course data yet','ui.dashCutoff':'Cutoff',
   'ui.drawerWeatherTitle':'Weather Data','ui.dashWeatherEmpty':'No weather data yet','ui.dashHumidity':'Humidity',
+  'ui.hofTitle':'Career Review','ui.hofPressHint':'Press and hold to unlock','ui.hofNoPb':'No marathon record yet',
+  'ui.hofTotalDistance':'Lifetime distance','ui.hofPbCount':'Personal bests','ui.hofOverseas':'Overseas races','ui.hofYears':'Years racing',
+  'ui.hofFuel':'Fuel Consumed','ui.hofFuelServings':'servings across {n} races','ui.hofFuelUnit':'x',
+  'ui.hofFuelCarb':'Carbs','ui.hofFuelSodium':'Sodium','ui.hofFuelCaffeine':'Caffeine',
+  'ui.hofTracks':'Route Gallery','ui.hofArsenal':'Shoe Rankings','ui.hofNoShoes':'No finishes linked to a shoe yet','ui.cmdkHallOfFame':'Career Review',
   'ui.dashCpSummary':'{a} stations \u00b7 {b} with cutoffs','ui.dashCpEmpty':'No checkpoints yet',
   'ui.dashMediaSummary':'{n} links','ui.dashMediaEmpty':'No links yet',
   'ui.dashBasicEmpty':'No details entered yet','ui.dashScheduleEmpty':'No dates entered yet','ui.dashBib':'Bib',
@@ -3116,7 +3294,7 @@ const EN={
   'ui.reportPromptExecuted':'Followed the plan at {done}/{total} fueling points',
   'ui.reportPromptReview':'Reflection','ui.reportPromptHitWall':'Hitting the wall','ui.reportPromptCourseReview':'Course notes','ui.reportPromptPros':'What went well','ui.reportPromptCons':'What to improve','ui.reportPromptLessons':'Lessons learned',
   'ui.reportPromptFallbackTitle':'Please copy the text below manually','ui.reportPromptFallbackHint':'Automatic clipboard copy failed. Select all the text below and copy it manually.','ui.reportPromptCopied':'Copied to clipboard!',
-  'ui.trophyCat_explore':'Exploration & Territory','ui.trophyCat_terrain':'Terrain & Extremes','ui.trophyCat_speed':'Speed & Strategy','ui.trophyCat_crossover':'Crossover & Gear',
+  'ui.trophyCat_explore':'Exploration & Territory','ui.trophyCat_terrain':'Terrain & Extremes','ui.trophyCat_speed':'Speed & Strategy','ui.trophyCat_crossover':'Crossover & Gear','ui.trophyCat_gear':'Gear & Fuel',
   'ui.badgeUnlockedLabel':'Badge Unlocked','ui.badgeCollect':'Collect Badge',
   'ui.badgeDownloadShare':'Download Achievement Image','ui.badgeShareSuffix':'-badge-achievement.png',
   'ui.badgeShareRaceStats':'Race Data','ui.badgeShareRouteTrack':'Route Track',
@@ -5426,6 +5604,90 @@ const BADGE_DEFINITIONS=[
         return info&&info.zone===2;
       });
       return {unlocked:hits.length>0,progress:hits.length>0?100:0,triggerRaceId:hits[0]?hits[0].id:null};
+    }},
+  // ---- 5. 裝備與補給類 ----
+  // 這一類全部只讀既有資料（鞋款里程、補給時程的已補給勾選、賽事
+  // 爬升與日期），不需要另外建任何「使用者操作追蹤」機制——那種
+  // 徽章（連續幾次只用鍵盤、幾秒內完成某動作）要靠 session 級別的
+  // 行為記錄，是另一套東西，沒有跟著測過就不混進來。
+  {id:'shoe_centurion',order:31,category:'gear',icon:'👟',name:'百里戰靴',hint:'單一雙鞋累計里程（比賽＋訓練）達到 500 公里',
+    check(ctx){
+      let best=0,bestShoe=null;
+      shoes.forEach(sh=>{
+        const d=computeShoeStats(sh.id).totalDistance;
+        if(d>best){ best=d; bestShoe=sh; }
+      });
+      const trigger=bestShoe?ctx.completed.filter(r=>r.performanceData.shoeId===bestShoe.id).slice(-1)[0]:null;
+      return countUnlockedBadge(Math.floor(best),500,trigger&&trigger.id);
+    }},
+  {id:'shoe_retirement',order:32,category:'gear',icon:'🎖️',name:'光榮除役',hint:'讓一雙鞋跑到預期壽命後正式退役',
+    check(ctx){
+      const retired=shoes.filter(sh=>sh.isRetired);
+      return {unlocked:retired.length>0,progress:retired.length>0?100:0,triggerRaceId:null};
+    }},
+  {id:'shoe_rotation',order:33,category:'gear',icon:'🔄',name:'輪替大師',hint:'在完賽紀錄中使用過 3 雙以上不同的鞋款',
+    check(ctx){
+      const used=new Set(ctx.completed.map(r=>r.performanceData.shoeId).filter(Boolean));
+      let trigger=null;const seen=new Set();
+      for(const r of ctx.completed){
+        const id=r.performanceData.shoeId;
+        if(id&&!seen.has(id)){ seen.add(id); if(seen.size>=3&&!trigger) trigger=r.id; }
+      }
+      return countUnlockedBadge(used.size,3,trigger);
+    }},
+  {id:'fuel_logger',order:34,category:'gear',icon:'🧃',name:'補給紀實者',hint:'在 5 場賽事中確實記錄下實際補給（勾選「已補給」）',
+    check(ctx){
+      const hits=ctx.completed.filter(r=>(r.nutritionSchedule||[]).some(it=>it.consumed));
+      return countUnlockedBadge(hits.length,5,hits[4]&&hits[4].id);
+    }},
+  {id:'carb_engine',order:35,category:'gear',icon:'⛽',name:'碳水引擎',hint:'單場賽事實際補給的碳水總量達到 200 公克',
+    check(ctx){
+      let best=0,trigger=null;
+      ctx.completed.forEach(r=>{
+        let carb=0;
+        (r.nutritionSchedule||[]).forEach(it=>{
+          if(!it.consumed||!it.dictionaryItemId) return;
+          const d=nutritionDictionary.find(x=>x.id===it.dictionaryItemId);
+          if(d&&d.carbGrams!=null) carb+=d.carbGrams*((it.qty!=null&&it.qty>0)?it.qty:1);
+        });
+        if(carb>best){ best=carb; trigger=r.id; }
+      });
+      return countUnlockedBadge(Math.floor(best),200,trigger);
+    }},
+  {id:'caffeine_pilot',order:36,category:'gear',icon:'☕',name:'咖啡因飛行員',hint:'單場賽事實際補給的咖啡因總量達到 200 毫克',
+    check(ctx){
+      let best=0,trigger=null;
+      ctx.completed.forEach(r=>{
+        let caf=0;
+        (r.nutritionSchedule||[]).forEach(it=>{
+          if(!it.consumed||!it.dictionaryItemId) return;
+          const d=nutritionDictionary.find(x=>x.id===it.dictionaryItemId);
+          if(d&&d.caffeineMg!=null) caf+=d.caffeineMg*((it.qty!=null&&it.qty>0)?it.qty:1);
+        });
+        if(caf>best){ best=caf; trigger=r.id; }
+      });
+      return countUnlockedBadge(Math.floor(best),200,trigger);
+    }},
+  {id:'everest_climber',order:37,category:'gear',icon:'🏔️',name:'珠峰高度',hint:'生涯累計爬升達到 8,848 公尺（一座聖母峰）',
+    check(ctx){
+      let sum=0,trigger=null;
+      for(const r of ctx.completed){
+        sum+=r.route.elevationGainM||0;
+        if(sum>=8848&&!trigger) trigger=r.id;
+      }
+      return countUnlockedBadge(Math.floor(sum),8848,trigger);
+    }},
+  {id:'annual_streak',order:38,category:'gear',icon:'📅',name:'年年不缺席',hint:'連續 3 個年份都有完賽紀錄',
+    check(ctx){
+      const years=[...new Set(ctx.completed.map(r=>r.schedule.raceDate.slice(0,4)))].sort();
+      let best=1,cur=1,bestEndYear=years[0];
+      for(let i=1;i<years.length;i++){
+        if(Number(years[i])===Number(years[i-1])+1){ cur++; if(cur>best){ best=cur; bestEndYear=years[i]; } }
+        else cur=1;
+      }
+      if(!years.length) return countUnlockedBadge(0,3,null);
+      const trigger=ctx.completed.filter(r=>r.schedule.raceDate.startsWith(bestEndYear))[0];
+      return countUnlockedBadge(best,3,trigger&&trigger.id);
     }},
 ];
 
@@ -9597,7 +9859,7 @@ function animateCareerTickers(){
   });
 }
 const BADGE_CATEGORY_LABELS={
-  explore:'探索與疆域',terrain:'地形與極限',speed:'速度與戰略',crossover:'跨界與裝備',
+  explore:'探索與疆域',terrain:'地形與極限',speed:'速度與戰略',crossover:'跨界與裝備',gear:'裝備與補給',
 };
 function badgeUnlockCaption(badgeId){
   const u=badgeUnlocks[badgeId];
@@ -9664,7 +9926,9 @@ function trophyBadgeCardHtml(item,opts){
 }
 function trophyCabinetBodyHtml(){
   const all=trophyBadgeStatusList();
-  const categories=['explore','terrain','speed','crossover'];
+  // 類別清單從徽章定義本身推導，不寫死——寫死的話新增一個類別的
+  // 徽章會完全不顯示，而且不會報任何錯，很難發現。
+  const categories=[...new Set(BADGE_DEFINITIONS.map(b=>b.category))];
   const filterTabsHtml=`<div class="chips trophy-filter-tabs">
     ${TROPHY_FILTER_OPTIONS.map(([val,key,label])=>
       `<button type="button" class="chip${trophyCabinetFilter===val?' active':''}" data-action="set-trophy-filter" data-filter="${val}">${t(key,label)}</button>`
@@ -9729,12 +9993,285 @@ function yearInReviewPickerHtml(){
     <button type="button" class="chip" data-action="download-year-review">${t('ui.yearInReviewDownload','下載')}</button>
   </div>`;
 }
+/* ============================================================
+   生涯回顧主卡（Hall of Fame）
+   資料全部從 state.races / shoes 即時算出來，沒有任何寫死的賽事
+   名稱或數字——這張卡片要能對任何人的資料都成立，寫死特定賽事
+   的話，資料一變就會變成假的。
+   ============================================================ */
+/* trackToSvgPath(trackPoints, w, h, pad)：把 GPS 軌跡的經緯度轉成一條
+   SVG 路徑。投影方式跟既有的 drawRouteTrackOnCanvas()（分享圖用的）
+   一致——等距長方投影＋用中心緯度的餘弦修正經度，避免高緯度的軌跡
+   被橫向拉長；縮放取長短邊較小的那個倍率，等比例塞進框裡不變形。
+   刻意不共用同一個函式：那個是畫在 canvas 上、這個是產生 SVG 字串，
+   輸出型態完全不同，硬要抽共用只會多一層轉接。共用的是「算法」，
+   不是程式碼本身。
+   點數上限：長距離賽事的軌跡動輒上萬點，全部塞進 path 會讓 DOM
+   字串肥大又沒有視覺差異，等距抽樣到 300 點以內就夠看出形狀。 */
+function trackToSvgPath(trackPoints,w,h,pad){
+  if(!trackPoints||trackPoints.length<2) return null;
+  pad=pad==null?10:pad;
+  const MAX_POINTS=300;
+  let pts=trackPoints;
+  if(pts.length>MAX_POINTS){
+    const step=pts.length/MAX_POINTS;
+    const sampled=[];
+    for(let i=0;i<MAX_POINTS;i++) sampled.push(pts[Math.floor(i*step)]);
+    sampled.push(pts[pts.length-1]); // 終點一定要保留，不然軌跡會少一截
+    pts=sampled;
+  }
+  const lats=pts.map(p=>p.lat),lons=pts.map(p=>p.lon);
+  const minLat=Math.min(...lats),maxLat=Math.max(...lats);
+  const minLon=Math.min(...lons),maxLon=Math.max(...lons);
+  const lonScale=Math.cos(((minLat+maxLat)/2)*Math.PI/180)||1;
+  const spanLat=(maxLat-minLat)||0.0001;
+  const spanLon=((maxLon-minLon)*lonScale)||0.0001;
+  const scale=Math.min((w-pad*2)/spanLon,(h-pad*2)/spanLat);
+  const drawW=spanLon*scale,drawH=spanLat*scale;
+  const ox=(w-drawW)/2,oy=(h-drawH)/2;
+  const xy=p=>[(ox+(p.lon-minLon)*lonScale*scale).toFixed(1),(oy+(maxLat-p.lat)*scale).toFixed(1)];
+  const d=pts.map((p,i)=>{const[x,y]=xy(p);return (i?'L':'M')+x+' '+y;}).join(' ');
+  const [sx,sy]=xy(pts[0]),[ex,ey]=xy(pts[pts.length-1]);
+  return {d,sx,sy,ex,ey};
+}
+function hofTrackCardHtml(race){
+  const W=200,H=200;
+  const path=trackToSvgPath(race.route.trackPoints,W,H,14);
+  if(!path) return '';
+  const year=(race.schedule.raceDate||'').slice(0,4);
+  const dist=race.route.distanceKm!=null?race.route.distanceKm.toFixed(1)+' km':'';
+  const time=race.results&&race.results.chipTimeSeconds!=null?secToHMS(race.results.chipTimeSeconds):'';
+  const isPb=!!(race.results&&race.results.isPb);
+  // PB 用金色、其餘用螢光綠；發光靠 SVG 的 feDropShadow 濾鏡做，
+  // 不是疊好幾層半透明的線條，效能比較好也比較乾淨。
+  const stroke=isPb?'var(--gold)':'#4FE08A';
+  return `<div class="hof-track-card">
+    <svg viewBox="0 0 ${W} ${H}" class="hof-track-svg" aria-hidden="true">
+      <defs><filter id="hof-glow-${race.id}" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="${stroke}" flood-opacity="0.85"/>
+      </filter></defs>
+      <path d="${path.d}" fill="none" stroke="${stroke}" stroke-width="2.4"
+        stroke-linecap="round" stroke-linejoin="round" filter="url(#hof-glow-${race.id})"/>
+      <circle cx="${path.sx}" cy="${path.sy}" r="3.6" fill="#4C9A72"/>
+      <circle cx="${path.ex}" cy="${path.ey}" r="3.6" fill="#E2603A"/>
+    </svg>
+    <div class="hof-track-meta">
+      <div class="hof-track-name">${escapeHtml(race.name||'')}</div>
+      <div class="hof-track-stats mono">${[year,dist,time].filter(Boolean).join('・')}</div>
+    </div>
+    ${isPb?`<span class="hof-track-badge">PB</span>`:''}
+  </div>`;
+}
+/* computeFuelStats()：生涯補給消耗統計。
+   只計入「已補給」打勾的項目，不是所有排進計畫的項目——補給時程是
+   賽前規劃，實際賽中吃了什麼要看那個勾。把計畫當成實際消耗會高估，
+   而這張卡片講的是「你生涯吃掉了多少」，不是「你打算吃多少」。
+   數量沒填的項目以 1 份計：使用者把項目排進時程又勾了已補給，代表
+   確實吃了，只是懶得填數量，當成 0 份反而更不準。
+   碳水／鈉／咖啡因只有在該項目有連到補給品資料庫、且資料庫有填那個
+   欄位時才累加，跟既有的單場統計 computeNutritionTotals() 同一套
+   規則，兩邊算出來的數字才會對得起來。 */
+function computeFuelStats(){
+  const completed=state.races.filter(r=>r.status==='completed'&&!r.deletedAt);
+  const byItem=new Map();
+  let totalCarbG=0,totalSodiumMg=0,totalCaffeineMg=0,totalServings=0,racesWithFuel=0;
+  completed.forEach(race=>{
+    const items=(race.nutritionSchedule||[]).filter(it=>it.consumed);
+    if(items.length) racesWithFuel++;
+    items.forEach(it=>{
+      const dict=it.dictionaryItemId?nutritionDictionary.find(d=>d.id===it.dictionaryItemId):null;
+      const name=(dict&&dict.name)||(it.item||'').trim();
+      if(!name) return;
+      const qty=(it.qty!=null&&it.qty>0)?it.qty:1;
+      totalServings+=qty;
+      const cur=byItem.get(name)||{name,qty:0,races:new Set()};
+      cur.qty+=qty;
+      cur.races.add(race.id);
+      byItem.set(name,cur);
+      if(dict){
+        if(dict.carbGrams!=null) totalCarbG+=dict.carbGrams*qty;
+        if(dict.sodiumMg!=null) totalSodiumMg+=dict.sodiumMg*qty;
+        if(dict.caffeineMg!=null) totalCaffeineMg+=dict.caffeineMg*qty;
+      }
+    });
+  });
+  const ranking=[...byItem.values()]
+    .map(x=>({name:x.name,qty:x.qty,races:x.races.size}))
+    .sort((a,b)=>b.qty-a.qty)
+    .slice(0,6);
+  return {ranking,totalCarbG,totalSodiumMg,totalCaffeineMg,totalServings,racesWithFuel};
+}
+function hofFuelHtml(){
+  const f=computeFuelStats();
+  if(!f.totalServings) return '';
+  const chips=[];
+  if(f.totalCarbG>0) chips.push([Math.round(f.totalCarbG)+' g',t('ui.hofFuelCarb','碳水')]);
+  if(f.totalSodiumMg>0) chips.push([(f.totalSodiumMg/1000).toFixed(1)+' g',t('ui.hofFuelSodium','鈉')]);
+  if(f.totalCaffeineMg>0) chips.push([Math.round(f.totalCaffeineMg)+' mg',t('ui.hofFuelCaffeine','咖啡因')]);
+  return `<h3 class="hof-section-title">${t('ui.hofFuel','能量補給')}</h3>
+    <div class="hof-fuel-head">
+      <div class="hof-fuel-total mono">${f.totalServings.toFixed(0)}</div>
+      <div class="hof-fuel-total-label">${tf('ui.hofFuelServings','份補給・來自 {n} 場賽事',f.racesWithFuel)}</div>
+    </div>
+    ${chips.length?`<div class="hof-fuel-chips">${chips.map(([v,l])=>`<div class="hof-fuel-chip">
+      <span class="hof-fuel-chip-value mono">${v}</span><span class="hof-fuel-chip-label">${l}</span>
+    </div>`).join('')}</div>`:''}
+    <div class="hof-fuel-list">${f.ranking.map(x=>`<div class="hof-shoe-row">
+      <span class="hof-shoe-name">${escapeHtml(x.name)}</span>
+      <span class="hof-shoe-stat mono">${x.qty.toFixed(0)} ${t('ui.hofFuelUnit','份')}・${x.races} ${t('ui.unitRaces','場')}</span>
+    </div>`).join('')}</div>`;
+}
+function computeHallOfFameData(){
+  const completed=state.races.filter(r=>r.status==='completed'&&!r.deletedAt);
+  const s=computeCareerStats();
+  // 找出締造全馬 PB 的那一場，用來在英雄卡上標出賽事名稱與日期
+  let pbRace=null;
+  if(s.marathonPB!=null){
+    pbRace=completed.filter(r=>r.route.distanceKm>=41&&r.route.distanceKm<=43.5
+      &&r.results.chipTimeSeconds===s.marathonPB)[0]||null;
+  }
+  const overseas=completed.filter(r=>isOverseasRace(r)).length;
+  const pbCount=completed.filter(r=>r.results&&r.results.isPb).length;
+  const totalDistance=completed.reduce((sum,r)=>sum+(r.route.distanceKm||0),0);
+  const countries=new Set(completed.map(r=>(r.location&&r.location.country||'').trim()).filter(Boolean));
+  const years=new Set(completed.map(r=>(r.schedule.raceDate||'').slice(0,4)).filter(Boolean));
+  // 鞋款排行：用既有的 computeShoeStats()（含比賽里程＋自填訓練里程），
+  // 只列出真的有上場比賽過的，純訓練鞋不算進「戰靴」。
+  const shoeRanking=shoes.map(sh=>{
+    const st=computeShoeStats(sh.id);
+    return {name:sh.name,races:st.totalRaces,distance:st.totalDistance};
+  }).filter(x=>x.races>0).sort((a,b)=>b.distance-a.distance).slice(0,5);
+  // 軌跡畫廊收錄「有 GPS 軌跡」的完賽紀錄，PB 與海外賽事優先排在前面
+  // ——這張卡是生涯精華，不是全部賽事的清單，所以有上限。沒有軌跡的
+  // 賽事畫不出形狀，直接排除。
+  const trackRaces=completed
+    .filter(r=>r.route.trackPoints&&r.route.trackPoints.length>=2)
+    .sort((a,b)=>{
+      const pri=r=>((r.results&&r.results.isPb)?2:0)+(isOverseasRace(r)?1:0);
+      const dp=pri(b)-pri(a);
+      if(dp) return dp;
+      return (b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||'');
+    })
+    .slice(0,12);
+  return {...s,pbRace,overseas,pbCount,totalDistance,
+    countryCount:countries.size,yearCount:years.size,shoeRanking,trackRaces};
+}
+function hallOfFameHtml(){
+  const d=computeHallOfFameData();
+  const hero=d.marathonPB!=null?`<div class="hof-hero" id="hof-hero">
+      ${confettiHtml()}
+      <div class="hof-hero-label">${t('ui.careerMarathonPB','全馬 PB')}</div>
+      <div class="hof-hero-value mono">${secToHMSDenoised(d.marathonPB)}</div>
+      ${d.pbRace?`<div class="hof-hero-race">${escapeHtml(d.pbRace.name||'')}</div>
+        <div class="hof-hero-date mono">${escapeHtml(d.pbRace.schedule.raceDate||'')}</div>`:''}
+    </div>`
+    :`<div class="hof-hero"><div class="hof-hero-label">${t('ui.hofNoPb','尚無全馬紀錄')}</div></div>`;
+  const tiles=[
+    [d.totalCompleted,t('ui.careerTotalRaces','總完賽場次')],
+    [d.totalDistance.toFixed(0)+' km',t('ui.hofTotalDistance','生涯總里程')],
+    [Math.round(d.totalElevationM)+' m',t('ui.careerTotalElevation','生涯累計爬升')],
+    [d.pbCount,t('ui.hofPbCount','破 PB 次數')],
+  ];
+  if(d.overseas>0) tiles.push([d.overseas,t('ui.hofOverseas','海外參賽')]);
+  if(d.yearCount>0) tiles.push([d.yearCount,t('ui.hofYears','征戰年數')]);
+  const shoeRows=d.shoeRanking.length
+    ? d.shoeRanking.map(sh=>`<div class="hof-shoe-row">
+        <span class="hof-shoe-name">${escapeHtml(sh.name)}</span>
+        <span class="hof-shoe-stat mono">${sh.races} ${t('ui.unitRaces','場')}・${sh.distance.toFixed(0)} km</span>
+      </div>`).join('')
+    : `<p class="hof-empty">${t('ui.hofNoShoes','還沒有綁定過鞋款的完賽紀錄')}</p>`;
+  return `<button type="button" class="hof-close" data-action="close-hof" aria-label="${t('ui.close','關閉')}">✕</button>
+    <div class="hof-inner">
+      <div class="hof-title">${t('ui.hofTitle','生涯回顧')}</div>
+      ${hero}
+      <div class="hof-grid">${tiles.map(([v,l])=>`<div class="hof-tile">
+        <div class="hof-tile-value mono">${v}</div>
+        <div class="hof-tile-label">${l}</div>
+      </div>`).join('')}</div>
+      ${d.trackRaces.length?`<h3 class="hof-section-title">${t('ui.hofTracks','軌跡畫廊')}</h3>
+      <div class="hof-track-gallery">${d.trackRaces.map(hofTrackCardHtml).join('')}</div>`:''}
+      <h3 class="hof-section-title">${t('ui.hofArsenal','戰靴排行')}</h3>
+      ${shoeRows}
+      ${hofFuelHtml()}
+    </div>`;
+}
+function openHallOfFame(){
+  const el=document.getElementById('hof-overlay');
+  if(!el) return;
+  el.innerHTML=hallOfFameHtml();
+  el.hidden=false;
+  document.body.style.overflow='hidden';
+  if(navigator.vibrate) navigator.vibrate([100,50,100]);
+  logFeatureUse('open_hall_of_fame');
+}
+function closeHallOfFame(){
+  const el=document.getElementById('hof-overlay');
+  if(!el||el.hidden) return;
+  el.hidden=true;
+  el.innerHTML='';
+  document.body.style.overflow='';
+}
+/* 長按蓄力：0.5s 微震、1.0s 中震、1.5s 解鎖。手指一離開或滑走就
+   整組取消——所有計時器都存起來一起清掉，不然放開之後還會有殘留
+   的震動或樣式跳出來。滑鼠也支援（mousedown/mouseup），桌機一樣
+   能用，只是沒有震動回饋。 */
+let hofPressTimers=[],hofUnlockTimer=null,hofPressStart=null;
+function cancelHofPress(){
+  clearTimeout(hofUnlockTimer);hofUnlockTimer=null;
+  hofPressTimers.forEach(clearTimeout);hofPressTimers=[];
+  hofPressStart=null;
+  document.querySelectorAll('.honor-card').forEach(el=>{
+    el.classList.remove('pressing','charging-1','charging-2');
+  });
+}
+function startHofPress(card,x,y){
+  cancelHofPress();
+  hofPressStart={x,y};
+  card.classList.add('pressing');
+  hofPressTimers.push(setTimeout(()=>{
+    if(navigator.vibrate) navigator.vibrate(10);
+    card.classList.add('charging-1');
+  },500));
+  hofPressTimers.push(setTimeout(()=>{
+    if(navigator.vibrate) navigator.vibrate(30);
+    card.classList.remove('charging-1');
+    card.classList.add('charging-2');
+  },1000));
+  hofUnlockTimer=setTimeout(()=>{
+    cancelHofPress();
+    openHallOfFame();
+  },1500);
+}
+document.addEventListener('touchstart',e=>{
+  const card=e.target&&e.target.closest&&e.target.closest('.honor-card.pressable');
+  if(!card||e.touches.length!==1) return;
+  startHofPress(card,e.touches[0].clientX,e.touches[0].clientY);
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  // 手指按住之後滑走超過 10px 就視同取消——這個容許值讓「按住時手指
+  // 自然的微小晃動」不會誤取消，但真的想滑動捲頁時會正確放棄蓄力。
+  if(!hofPressStart||!e.touches.length) return;
+  const t=e.touches[0];
+  if(Math.hypot(t.clientX-hofPressStart.x,t.clientY-hofPressStart.y)>10) cancelHofPress();
+},{passive:true});
+document.addEventListener('touchend',cancelHofPress,{passive:true});
+document.addEventListener('touchcancel',cancelHofPress,{passive:true});
+document.addEventListener('mousedown',e=>{
+  const card=e.target&&e.target.closest&&e.target.closest('.honor-card.pressable');
+  if(!card||e.button!==0) return;
+  startHofPress(card,e.clientX,e.clientY);
+});
+document.addEventListener('mouseup',cancelHofPress);
+document.addEventListener('click',e=>{
+  if(e.target&&e.target.closest&&e.target.closest('[data-action="close-hof"]')) closeHallOfFame();
+});
 function renderCareerSummary(){
   if(state.races.length<5) return '';
   const s=computeCareerStats();
-  const honorCard=s.marathonPB!=null?`<div class="honor-card">
+  const honorCard=s.marathonPB!=null?`<div class="honor-card pressable">
     <div class="honor-card-label">${t('ui.careerMarathonPB','全馬 PB')}</div>
     <div class="honor-card-value mono">${secToHMSDenoised(s.marathonPB)}</div>
+    <div class="honor-card-hint">${t('ui.hofPressHint','長按解鎖生涯回顧')}</div>
   </div>`:'';
   const items=[{icon:CAREER_FLAG_ICON,label:t('ui.careerTotalRaces','總完賽場次'),animate:true,value:s.totalCompleted,decimals:0,suffix:' '+t('ui.unitRaces','場'),key:'totalCompleted'}];
   if(s.yearDistance>0) items.push({icon:CAREER_ROUTE_ICON,label:t('ui.careerYearDistance','今年累計里程'),animate:true,value:s.yearDistance,decimals:1,suffix:' '+t('ui.unitKm','公里'),key:'yearDistance'});
@@ -9769,6 +10306,67 @@ function renderCareerSummary(){
    觸發頻率可能高於螢幕更新率，每次都直接寫 style 等於做了畫面上
    根本看不到的白工，還會拖慢捲動。
    ============================================================ */
+/* ============================================================
+   懸浮按鈕的磁性吸附與追光
+   引力範圍不另外包一層透明的 div（那會動到既有的版面結構，而這顆
+   按鈕外層的 .help-fab-wrap 還帶著旁邊那句提示文字，多包一層容易
+   把兩者的相對位置弄亂），改成直接算「游標到按鈕中心的距離」，
+   超過半徑就當作在範圍外——效果一樣，但不需要碰 DOM。
+   位移只取游標距離的 0.3 倍，按鈕會朝游標方向被「拉」過去一點點、
+   而不是黏著游標跑，這個張力感才是磁性的重點。
+   ============================================================ */
+const MAGNET_RADIUS_PX=90;   // 引力作用範圍（從按鈕中心算起）
+const MAGNET_STRENGTH=0.3;   // 位移係數：游標距離的三成
+let magnetPending=null,magnetRafId=null;
+function magnetSupported(){
+  return window.matchMedia
+    &&window.matchMedia('(hover:hover) and (pointer:fine)').matches
+    &&!window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+}
+function applyMagnetFrame(){
+  magnetRafId=null;
+  if(!magnetPending) return;
+  const {el,mx,my,gx,gy}=magnetPending;
+  magnetPending=null;
+  if(!el.isConnected) return;
+  el.style.setProperty('--mag-x',mx.toFixed(1)+'px');
+  el.style.setProperty('--mag-y',my.toFixed(1)+'px');
+  el.style.setProperty('--glare-x',gx.toFixed(1)+'%');
+  el.style.setProperty('--glare-y',gy.toFixed(1)+'%');
+}
+function releaseMagnet(el){
+  if(magnetPending&&magnetPending.el===el) magnetPending=null;
+  el.classList.remove('magnet-active');
+  el.style.setProperty('--mag-x','0px');
+  el.style.setProperty('--mag-y','0px');
+}
+document.addEventListener('mousemove',e=>{
+  if(!magnetSupported()) return;
+  const el=document.getElementById('btn-help');
+  if(!el) return;
+  const rect=el.getBoundingClientRect();
+  if(!rect.width) return;
+  const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+  const dx=e.clientX-cx,dy=e.clientY-cy;
+  if(Math.hypot(dx,dy)>MAGNET_RADIUS_PX){
+    // 只有在真的還被吸著的時候才重設，避免游標在畫面上隨便動一下
+    // 就一直寫入樣式。
+    if(el.classList.contains('magnet-active')) releaseMagnet(el);
+    return;
+  }
+  el.classList.add('magnet-active');
+  magnetPending={
+    el,
+    mx:dx*MAGNET_STRENGTH,
+    my:dy*MAGNET_STRENGTH,
+    // 高光位置用「游標相對按鈕左上角的百分比」，夾在 0~100 之間：
+    // 引力範圍比按鈕本身大，游標還在範圍內但已經離開按鈕邊界時，
+    // 不夾的話百分比會跑到負數或超過 100，高光會整個飛出去。
+    gx:Math.max(0,Math.min(100,((e.clientX-rect.left)/rect.width)*100)),
+    gy:Math.max(0,Math.min(100,((e.clientY-rect.top)/rect.height)*100)),
+  };
+  if(magnetRafId==null) magnetRafId=requestAnimationFrame(applyMagnetFrame);
+},{passive:true});
 const TILT_MAX_DEG=9;
 let tiltPending=null,tiltRafId=null;
 function tiltSupported(){
@@ -9789,7 +10387,9 @@ function applyTiltFrame(){
 }
 document.addEventListener('mousemove',e=>{
   if(!tiltSupported()) return;
-  const card=e.target.closest('.photo-card');
+  // e.target 不一定是元素節點（事件直接派送到 document、或落在文字節點
+  // 上時就不是），沒有 closest() 這個方法，直接呼叫會拋例外。
+  const card=e.target&&e.target.closest&&e.target.closest('.photo-card');
   if(!card) return;
   const rect=card.getBoundingClientRect();
   if(!rect.width||!rect.height) return;
@@ -9809,7 +10409,7 @@ document.addEventListener('mousemove',e=>{
   if(tiltRafId==null) tiltRafId=requestAnimationFrame(applyTiltFrame);
 },{passive:true});
 document.addEventListener('mouseout',e=>{
-  const card=e.target.closest('.photo-card');
+  const card=e.target&&e.target.closest&&e.target.closest('.photo-card');
   if(!card) return;
   // mouseout 在卡片內部元素之間移動時也會觸發，要確認游標是真的
   // 離開整張卡片（relatedTarget 已經不在這張卡片裡）才歸零，不然
@@ -13905,6 +14505,8 @@ document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
   // 抽屜排在一般彈窗前面處理：抽屜是後開的、疊在最上層，Esc 應該
   // 先收起最上面那一層。
+  const hof=document.getElementById('hof-overlay');
+  if(hof&&!hof.hidden){ closeHallOfFame(); return; }
   const drawer=document.getElementById('global-drawer');
   if(drawer&&!drawer.hidden){ closeDrawer(); return; }
   const modalIds=['import-modal','gpx-modal','paste-modal','shoe-modal','pacing-modal','help-modal','recovery-modal','focal-point-modal'];
@@ -13938,6 +14540,7 @@ const CMDK_ACTIONS=[
   {id:'export-json',icon:'💾',labelKey:'ui.cmdkExportJson',labelFallback:'匯出 JSON',keywords:'export backup json 備份',run:()=>document.getElementById('btn-export').click()},
   {id:'export-csv',icon:'📊',labelKey:'ui.cmdkExportCsv',labelFallback:'匯出 CSV（扁平化）',keywords:'export csv excel',run:()=>document.getElementById('btn-export-csv').click()},
   {id:'sample-data',icon:'🧪',labelKey:'ui.cmdkSampleData',labelFallback:'範例資料',keywords:'sample demo example 示範',run:()=>document.getElementById('btn-sample-data').click()},
+  {id:'hall-of-fame',icon:'🏆',labelKey:'ui.cmdkHallOfFame',labelFallback:'生涯回顧',keywords:'wrap hall of fame career review 回顧 生涯',available:()=>state.races.filter(r=>r.status==='completed'&&!r.deletedAt).length>0,run:()=>openHallOfFame()},
   {id:'sync-diag',icon:'🔍',labelKey:'ui.cmdkSyncDiag',labelFallback:'同步診斷',keywords:'sync diagnostics 同步 診斷',available:()=>cloudEnabled()&&!!state.user,run:()=>openSyncDiagModal()},
 ];
 const CMDK_QUICK_FILTERS=[
