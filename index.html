@@ -1899,6 +1899,22 @@
   }
   .report-prompt-fallback-textarea{width:100%;min-height:260px;font:inherit;font-size:13px;padding:10px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink);resize:vertical;margin-bottom:14px;}
   .modal-panel h2{font-size:20px;margin-bottom:10px;}
+  /* 同步診斷的對照表：本機 vs 雲端並排，數字對不上的那一列標出來。 */
+  .sync-diag-table{width:100%;border-collapse:collapse;margin:14px 0 16px;font-size:14px;}
+  .sync-diag-table th{
+    text-align:left;font-weight:600;font-size:12px;color:var(--stone);
+    padding:0 8px 6px 0;border-bottom:1px solid var(--rule);
+  }
+  .sync-diag-table th:not(:first-child),
+  .sync-diag-table td:not(:first-child){text-align:right;width:80px;}
+  .sync-diag-table td{padding:8px 8px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top;}
+  .sync-diag-table tr:last-child td{border-bottom:none;}
+  .sync-diag-dim{color:var(--stone);}
+  .sync-diag-nosync{color:var(--stone);font-size:12px;}
+  /* 數字對不上＝這正是開這個畫面要找的線索，用警示色標出來 */
+  .sync-diag-mismatch td{color:var(--flag);}
+  .sync-diag-mismatch td:first-child{font-weight:600;}
+  .sync-diag-note{color:var(--stone);line-height:1.6;margin-top:4px;}
   .modal-hint{color:var(--ink-soft);font-size:15px;margin-bottom:16px;}
   .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
   .modal-actions-top{margin-top:0;margin-bottom:14px;}
@@ -2611,7 +2627,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.6.0';
+const APP_VERSION='v3.9.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2638,6 +2654,7 @@ function setLang(lang){
   applyStaticTranslations();
   renderAll();
   renderAuthArea();
+  syncSampleDataButtonLabel();
 }
 function applyStaticTranslations(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
@@ -2660,7 +2677,7 @@ const JA={
   // ---- 靜態 UI（topbar／按鈕／通用字串） ----
   'ui.appTitle':'レース記録','ui.appTagline':'エントリーからゴールまでの完全な記録',
   'ui.newRace':'+ 大会を追加','ui.searchPlaceholder':'大会名・都市で検索…','ui.today':'今日',
-  'ui.sampleData':'サンプルデータ',
+  'ui.sampleData':'サンプルデータ','ui.clearSampleData':'サンプルデータを削除','ui.sampleDataCleared':'サンプル {n} 件を削除しました',
   'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'カバー写真付きの完走レースがまだありません。完走したらぜひ写真を追加して、メダル棚を育てましょう！',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
   'ui.filterOverseas':'海外レース',
@@ -2702,6 +2719,11 @@ const JA={
   'ui.syncDiagLocalShoes':'ローカルのシューズ：','ui.syncDiagLocalNutrition':'ローカルの補給食データ：',
   'ui.syncDiagRun':'今すぐクラウドのデータを確認','ui.syncDiagQuerying':'確認中…','ui.syncDiagQueryFailed':'確認に失敗しました：',
   'ui.syncDiagCloudShoes':'クラウドのシューズ：','ui.syncDiagCloudNutrition':'クラウドの補給食データ：',
+  'ui.syncDiagColItem':'データ','ui.syncDiagColLocal':'ローカル','ui.syncDiagColCloud':'クラウド',
+  'ui.syncDiagItemRaces':'レース記録','ui.syncDiagItemShoes':'シューズ','ui.syncDiagItemNutrition':'補給食データベース',
+  'ui.syncDiagItemProfile':'プロフィール（体重・心拍）','ui.syncDiagItemTemplates':'装備テンプレート','ui.syncDiagItemBadges':'バッジ解除記録',
+  'ui.syncDiagNotSynced':'同期なし','ui.syncDiagTrashed':'ゴミ箱に {n} 件',
+  'ui.syncDiagAllSyncedNote':'6種類すべて同期されます。結合ルールは「ローカル優先」：クラウドにあってローカルにない項目は取り込み、ローカルにすでにある値はクラウドで上書きされません。',
   'ui.syncDiagCloudUpdatedAt':'クラウドの最終更新日時：','ui.syncDiagCloudEmpty':'クラウドにはこのデータがまだ存在しません（一度も正常に送信されていません）',
   'ui.importJson':'JSONを読み込む',
   'ui.errJsonNotArray':'ファイルの内容が有効なレース一覧ではありません（配列である必要があります）',
@@ -3133,7 +3155,7 @@ const EN={
   // ---- static UI ----
   'ui.appTitle':'Race Log','ui.appTagline':'Your complete record, from sign-up to finish line',
   'ui.newRace':'+ New Race','ui.searchPlaceholder':'Search by race name or city…','ui.today':'Today',
-  'ui.sampleData':'Sample Data',
+  'ui.sampleData':'Sample Data','ui.clearSampleData':'Clear Sample Data','ui.sampleDataCleared':'Removed {n} sample races',
   'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No completed races with cover photos yet. Add a photo once you finish one and start building your trophy wall!',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
   'ui.filterOverseas':'Overseas',
@@ -3175,6 +3197,11 @@ const EN={
   'ui.syncDiagLocalShoes':'Local Shoes: ','ui.syncDiagLocalNutrition':'Local Nutrition Items: ',
   'ui.syncDiagRun':'Check Cloud Data Now','ui.syncDiagQuerying':'Checking\u2026','ui.syncDiagQueryFailed':'Check failed: ',
   'ui.syncDiagCloudShoes':'Cloud Shoes: ','ui.syncDiagCloudNutrition':'Cloud Nutrition Items: ',
+  'ui.syncDiagColItem':'Data','ui.syncDiagColLocal':'Local','ui.syncDiagColCloud':'Cloud',
+  'ui.syncDiagItemRaces':'Races','ui.syncDiagItemShoes':'Shoes','ui.syncDiagItemNutrition':'Nutrition Database',
+  'ui.syncDiagItemProfile':'Profile (weight / HR)','ui.syncDiagItemTemplates':'Gear Templates','ui.syncDiagItemBadges':'Badge Unlocks',
+  'ui.syncDiagNotSynced':'not synced','ui.syncDiagTrashed':'{n} more in trash',
+  'ui.syncDiagAllSyncedNote':'All six types sync. Merge rule is local-first: anything in the cloud but missing locally is pulled in, and values you already have here are never overwritten.',
   'ui.syncDiagCloudUpdatedAt':'Cloud Last Updated: ','ui.syncDiagCloudEmpty':'The cloud has no data yet (never successfully pushed)',
   'ui.importJson':'Import JSON',
   'ui.errJsonNotArray':'This file is not a valid race list (expected an array)',
@@ -4022,12 +4049,43 @@ function buildExampleRaces(){
 function hasExampleRaces(){
   return state.races.some(r=>EXAMPLE_RACE_IDS.includes(r.id));
 }
+// 範例資料按鈕是一個切換：沒有範例資料時匯入，已經有的時候再按一次
+// 就清掉。清除只會刪掉 id 在 EXAMPLE_RACE_IDS 這份固定清單裡的那五筆，
+// 使用者自己建立的賽事 id 是隨機產生的，永遠不會落在這份清單裡，所以
+// 不可能被誤刪。
+// 這裡用真刪除而不是軟刪除（deletedAt）：範例資料是可以隨時一鍵再匯入
+// 的示範內容，丟進「資料復原」的垃圾桶只會讓真正需要救回的賽事被五筆
+// 範例洗掉。
+function clearExampleRaces(){
+  const before=state.races.length;
+  state.races=state.races.filter(r=>!EXAMPLE_RACE_IDS.includes(r.id));
+  const removed=before-state.races.length;
+  if(state.selectedId&&EXAMPLE_RACE_IDS.includes(state.selectedId)){
+    state.selectedId=null;currentRace=null;
+  }
+  return removed;
+}
+function syncSampleDataButtonLabel(){
+  const btn=document.getElementById('btn-sample-data');
+  if(!btn) return;
+  // 改的是 data-i18n 這個屬性本身，讓既有的翻譯機制照常接手——直接寫
+  // textContent 的話，一切換語言就會被翻譯流程覆蓋回去。
+  const clearing=hasExampleRaces();
+  const key=clearing?'ui.clearSampleData':'ui.sampleData';
+  const zh=clearing?'清除範例資料':'範例資料';
+  btn.setAttribute('data-i18n',key);
+  // dataset.zhText 是翻譯機制拿來當繁體中文原文的快取，它只在第一次
+  // 執行時記錄一次。這裡切換的是 key，如果不同步更新這份快取，切到
+  // 中文時會顯示上一個狀態留下來的舊字串。
+  btn.dataset.zhText=zh;
+  btn.textContent=t(key,zh);
+}
 document.getElementById('btn-sample-data').addEventListener('click',()=>{
   dismissFirstUseGlow();
-  const existing=state.races.find(r=>EXAMPLE_RACE_IDS.includes(r.id)&&!r.deletedAt);
-  if(existing){
-    state.selectedId=existing.id;state.creating=false;
-    renderAll();scrollDetailIntoView();
+  if(hasExampleRaces()){
+    const removed=clearExampleRaces();
+    persist();renderAll();syncSampleDataButtonLabel();
+    showToast(tf('ui.sampleDataCleared','已清除 {n} 場範例賽事',removed));
     return;
   }
   const examples=buildExampleRaces();
@@ -4035,7 +4093,7 @@ document.getElementById('btn-sample-data').addEventListener('click',()=>{
   state.selectedId=examples[0].id;state.creating=false;
   const d=new Date(examples[0].schedule.raceDate+'T00:00:00');
   if(!isNaN(d)){state.calendarYear=d.getFullYear();state.calendarMonth=d.getMonth();}
-  persist();renderAll();scrollDetailIntoView();
+  persist();renderAll();syncSampleDataButtonLabel();scrollDetailIntoView();
 });
 
 function duplicateRace(race){
@@ -4147,9 +4205,13 @@ function scheduleGlobalListsSync(){
 async function cloudSyncGlobalLists(){
   if(!state.user||!cloudEnabled()) return;
   try{
-    await window.__cloud.syncGlobalLists(state.user.uid,shoes,nutritionDictionary);
+    await window.__cloud.syncGlobalLists(state.user.uid,shoes,nutritionDictionary,{
+      userProfile:userProfile||null,
+      templates:templates||[],
+      badgeUnlocks:badgeUnlocks||{},
+    });
   }catch(err){
-    console.error('鞋款／補給品資料庫雲端同步失敗',err);
+    console.error('全域資料雲端同步失敗',err);
   }
 }
 // 兩份清單都沒有像賽事那樣逐筆記錄 updatedAt 時間戳記，沒辦法比較
@@ -4168,6 +4230,41 @@ function mergeGlobalListsIntoState(cloud){
   if(Array.isArray(cloud.nutritionDictionary)){
     const localIds=new Set(nutritionDictionary.map(n=>n.id));
     cloud.nutritionDictionary.forEach(n=>{ if(!localIds.has(n.id)) nutritionDictionary.push(migrateNutritionDictItem(n)); });
+  }
+  // 裝備範本：跟鞋款、補給品一樣照 id 聯集，本機已有的那筆不動。
+  if(Array.isArray(cloud.templates)){
+    const localIds=new Set(templates.map(x=>x.id));
+    cloud.templates.forEach(x=>{ if(x&&x.id&&!localIds.has(x.id)) templates.push(x); });
+  }
+  // 徽章解鎖：兩邊都有同一枚徽章時，保留「比較早」的解鎖時間——徽章
+  // 記錄的是「什麼時候第一次達成」，在 B 裝置上重新判定出來的較晚時間
+  // 不該覆蓋掉 A 裝置上真正達成的那一刻。
+  if(cloud.badgeUnlocks&&typeof cloud.badgeUnlocks==='object'){
+    Object.keys(cloud.badgeUnlocks).forEach(id=>{
+      const c=cloud.badgeUnlocks[id];
+      if(!c) return;
+      const l=badgeUnlocks[id];
+      if(!l){ badgeUnlocks[id]=c; return; }
+      if(c.unlockedAt&&l.unlockedAt&&c.unlockedAt<l.unlockedAt) badgeUnlocks[id]=Object.assign({},l,{unlockedAt:c.unlockedAt});
+    });
+  }
+  // 個人資料是單一份設定、沒辦法像清單那樣聯集，所以改成「逐欄位補空」：
+  // 本機這個欄位是空的才從雲端拿，本機已經填過的一律保留。這樣不管哪
+  // 台裝置比較新，都不會把使用者在這台裝置上親手輸入的數值蓋掉；換新
+  // 裝置（整份都是空的）時則等同於把雲端那份完整帶過來。
+  if(cloud.userProfile&&typeof cloud.userProfile==='object'){
+    const c=migrateUserProfile(cloud.userProfile);
+    if(!userProfile) userProfile=emptyUserProfile();
+    ['age','gender','weightKg','heightCm','bodyFatPct','muscleMassKg'].forEach(k=>{
+      const localEmpty=userProfile[k]==null||userProfile[k]==='';
+      if(localEmpty&&c[k]!=null&&c[k]!=='') userProfile[k]=c[k];
+    });
+    Object.keys(c.hr||{}).forEach(sport=>{
+      userProfile.hr[sport]=userProfile.hr[sport]||{restingHr:null,maxHr:null};
+      ['restingHr','maxHr'].forEach(k=>{
+        if(userProfile.hr[sport][k]==null&&c.hr[sport][k]!=null) userProfile.hr[sport][k]=c.hr[sport][k];
+      });
+    });
   }
 }
 async function cloudSyncAllRaces(){
@@ -4297,7 +4394,7 @@ let signInAttemptInFlight=false;
    最後更新時間、查詢過程有沒有出錯）直接做成手機也能點的畫面，
    不用開發者工具。
    ============================================================ */
-let syncDiagCloudResult=null,syncDiagCloudError=null,syncDiagLoading=false,syncDiagQueried=false;
+let syncDiagCloudResult=null,syncDiagCloudRaces=null,syncDiagCloudError=null,syncDiagLoading=false,syncDiagQueried=false;
 function syncDiagModalHtml(){
   const loggedIn=!!state.user;
   const loginInfo=loggedIn
@@ -4312,9 +4409,10 @@ function syncDiagModalHtml(){
     cloudSection=`<p class="auth-error small">${t('ui.syncDiagQueryFailed','查詢失敗：')}${escapeHtml(syncDiagCloudError)}</p>`;
   }else if(syncDiagQueried){
     const r=syncDiagCloudResult;
+    // 數量已經在上面的對照表裡了，這裡只補表格放不下的資訊：最後更新
+    // 時間，以及「雲端根本還沒有這份資料」這個狀態。
     cloudSection=r
-      ?`<p class="mono small">${t('ui.syncDiagCloudShoes','雲端鞋款：')}${(r.shoes||[]).length}　${t('ui.syncDiagCloudNutrition','雲端補給品：')}${(r.nutritionDictionary||[]).length}</p>
-         <p class="small">${t('ui.syncDiagCloudUpdatedAt','雲端最後更新時間：')}<span class="mono">${escapeHtml(r.updatedAt||'—')}</span></p>`
+      ?`<p class="small">${t('ui.syncDiagCloudUpdatedAt','雲端最後更新時間：')}<span class="mono">${escapeHtml(r.updatedAt||'—')}</span></p>`
       :`<p class="small">${t('ui.syncDiagCloudEmpty','雲端目前完全沒有這份資料（從來沒有成功推送過）')}</p>`;
   }else{
     cloudSection='';
@@ -4323,15 +4421,64 @@ function syncDiagModalHtml(){
     <h2>${t('ui.syncDiagTitle','同步診斷')}</h2>
     <p class="small">${t('ui.syncDiagVersion','App 版本：')}<span class="mono">${APP_VERSION}</span></p>
     <p class="small">${loginInfo}</p>
-    <p class="mono small">${t('ui.syncDiagLocalShoes','本機鞋款：')}${shoes.length}　${t('ui.syncDiagLocalNutrition','本機補給品：')}${nutritionDictionary.length}</p>
+    ${syncDiagTableHtml()}
     ${loggedIn?`<button type="button" class="btn-ghost" data-action="run-sync-diag" ${syncDiagLoading?'disabled':''}>${t('ui.syncDiagRun','立即查詢雲端資料')}</button>`:''}
     ${cloudSection}
+    <p class="small sync-diag-note">${t('ui.syncDiagAllSyncedNote','六種資料都會同步。合併規則是「本機優先」：雲端有、本機沒有的會補進來，本機已經有的一律保留，不會被雲端覆蓋掉。')}</p>
     <div class="modal-actions"><button class="btn-ghost" data-action="close-sync-diag">${t('ui.close','關閉')}</button></div>
   </div>`;
 }
+/* SYNC_DIAG_ITEMS：把「每一種資料在本機有幾筆、雲端有幾筆、到底會不會
+   同步」攤成一張表。synced:false 的項目是真的沒有推上雲端的——這一點
+   一定要誠實標出來，不然使用者換裝置時會以為登入就萬事俱備，結果心率
+   區間、體重這些設定其實沒跟過來。
+   cloud 欄位傳 null 代表「這個項目沒有雲端對應，不用顯示雲端數字」。 */
+function syncDiagItems(){
+  const r=syncDiagCloudResult,rc=syncDiagCloudRaces;
+  const activeRaces=state.races.filter(x=>!x.deletedAt).length;
+  const trashedRaces=state.races.filter(x=>x.deletedAt).length;
+  const profileFilled=countFilledProfileFields();
+  return [
+    {key:'races',label:t('ui.syncDiagItemRaces','賽事紀錄'),synced:true,
+      local:activeRaces,cloud:rc==null?null:rc.filter(x=>!x.deletedAt).length,
+      note:trashedRaces?tf('ui.syncDiagTrashed','另有 {n} 筆在垃圾桶',trashedRaces):''},
+    {key:'shoes',label:t('ui.syncDiagItemShoes','鞋款'),synced:true,
+      local:shoes.length,cloud:r?(r.shoes||[]).length:null},
+    {key:'nutrition',label:t('ui.syncDiagItemNutrition','補給品資料庫'),synced:true,
+      local:nutritionDictionary.length,cloud:r?(r.nutritionDictionary||[]).length:null},
+    {key:'profile',label:t('ui.syncDiagItemProfile','個人資料（體重／心率）'),synced:true,
+      local:profileFilled,cloud:r?countFilledProfileFields(migrateUserProfile(r.userProfile)):null},
+    {key:'templates',label:t('ui.syncDiagItemTemplates','裝備範本'),synced:true,
+      local:templates.length,cloud:r?(r.templates||[]).length:null},
+    {key:'badges',label:t('ui.syncDiagItemBadges','徽章解鎖紀錄'),synced:true,
+      local:Object.keys(badgeUnlocks||{}).length,cloud:r?Object.keys(r.badgeUnlocks||{}).length:null},
+  ];
+}
+function syncDiagTableHtml(){
+  const rows=syncDiagItems().map(it=>{
+    const cloudCell=!it.synced
+      ? `<span class="sync-diag-nosync">${t('ui.syncDiagNotSynced','不同步')}</span>`
+      : (it.cloud==null?'<span class="sync-diag-dim">—</span>':`<span class="mono">${it.cloud}</span>`);
+    // 兩邊都查過、數字卻對不上時標出來：這正是使用者開這個畫面想知道的事。
+    const mismatch=it.synced&&it.cloud!=null&&it.cloud!==it.local;
+    return `<tr class="${mismatch?'sync-diag-mismatch':''}">
+      <td>${it.label}${it.note?`<br><span class="sync-diag-dim small">${it.note}</span>`:''}</td>
+      <td class="mono">${it.local}</td>
+      <td>${cloudCell}</td>
+    </tr>`;
+  }).join('');
+  return `<table class="sync-diag-table">
+    <thead><tr>
+      <th>${t('ui.syncDiagColItem','資料')}</th>
+      <th>${t('ui.syncDiagColLocal','本機')}</th>
+      <th>${t('ui.syncDiagColCloud','雲端')}</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
 const syncDiagModalEl_getter=()=>document.getElementById('sync-diag-modal');
 function openSyncDiagModal(){
-  syncDiagCloudResult=null;syncDiagCloudError=null;syncDiagLoading=false;syncDiagQueried=false;
+  syncDiagCloudResult=null;syncDiagCloudRaces=null;syncDiagCloudError=null;syncDiagLoading=false;syncDiagQueried=false;
   syncDiagModalEl_getter().innerHTML=syncDiagModalHtml();
   syncDiagModalEl_getter().hidden=false;
 }
@@ -4340,7 +4487,14 @@ async function runSyncDiag(){
   syncDiagLoading=true;syncDiagCloudError=null;
   syncDiagModalEl_getter().innerHTML=syncDiagModalHtml();
   try{
-    syncDiagCloudResult=await window.__cloud.fetchGlobalLists(state.user.uid);
+    // 兩份雲端資料一起抓：賽事是一筆一份文件（races 集合），鞋款與
+    // 補給品則整包存在 meta/globalLists。兩邊都要查，表格才完整。
+    const [lists,races]=await Promise.all([
+      window.__cloud.fetchGlobalLists(state.user.uid),
+      window.__cloud.fetchAll(state.user.uid),
+    ]);
+    syncDiagCloudResult=lists;
+    syncDiagCloudRaces=races||[];
     syncDiagQueried=true;
   }catch(err){
     syncDiagCloudError=(err&&err.message)?err.message:String(err);
@@ -4388,6 +4542,9 @@ async function handleAuthChange(user){
       mergeGlobalListsIntoState(cloudGlobalLists);
       await persistShoes();
       await persistNutritionDictionary();
+      await persistTemplates();
+      await persistUserProfile();
+      await persistBadgeUnlocks();
       await cloudSyncGlobalLists();
       renderAll();
       refreshOpenGlobalListModals();
@@ -4453,6 +4610,7 @@ async function persistTemplates(){
   }catch(err){
     console.error('範本儲存失敗',err);
   }
+  scheduleGlobalListsSync();
 }
 
 const STARTER_TEMPLATES=[
@@ -4710,6 +4868,25 @@ function emptyUserProfile(){
     },
   };
 }
+// countFilledProfileFields()：個人資料實際填了幾個欄位。心率是巢狀在
+// hr.running / hr.cycling / hr.swimming 底下的 restingHr / maxHr，不是
+// 平鋪在最外層——同步診斷要顯示筆數、合併時要判斷「本機是不是空的」，
+// 兩邊都靠這個函式，避免各寫一份、其中一份記錯結構。
+function countFilledProfileFields(p){
+  const src=p||userProfile;
+  if(!src) return 0;
+  let n=0;
+  ['age','gender','weightKg','heightCm','bodyFatPct','muscleMassKg'].forEach(k=>{
+    const v=src[k];
+    if(v!=null&&v!=='') n++;
+  });
+  Object.keys(src.hr||{}).forEach(sport=>{
+    const z=src.hr[sport]||{};
+    if(z.restingHr!=null) n++;
+    if(z.maxHr!=null) n++;
+  });
+  return n;
+}
 function migrateUserProfile(p){
   const base=emptyUserProfile();
   if(!p) return base;
@@ -4733,6 +4910,7 @@ async function persistUserProfile(){
   }catch(err){
     console.error('個人資訊儲存失敗',err);
   }
+  scheduleGlobalListsSync();
 }
 // 儲備心率法（Karvonen）：心率區間 = 安靜心率 + (最大心率−安靜心率) × 強度百分比。
 // Z1 下限採安靜心率本身，往上依 60/70/80/90/100% 切成五段，跟主流穿戴裝置
@@ -5006,6 +5184,7 @@ async function persistBadgeUnlocks(){
   }catch(err){
     console.error('徽章解鎖紀錄儲存失敗',err);
   }
+  scheduleGlobalListsSync();
 }
 
 /* ============================================================
@@ -11792,7 +11971,7 @@ function raceToICSEvent(race){
 }
 function buildICS(races){
   const events=races.map(raceToICSEvent).filter(Boolean).join('\r\n');
-  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//賽事紀錄//RaceDay//ZH','CALSCALE:GREGORIAN',events,'END:VCALENDAR'].join('\r\n');
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//賽事紀錄//MyRace//ZH','CALSCALE:GREGORIAN',events,'END:VCALENDAR'].join('\r\n');
 }
 function buildGoogleCalendarUrl(race){
   if(!race.schedule.raceDate) return null;
@@ -14471,6 +14650,7 @@ async function init(){
     persistTemplates();
   }
   if(purgeOldTrash()) persist();
+  syncSampleDataButtonLabel();
   checkAndRecordBadgeUnlocks();
   renderAll();
   updateTopbarHeightVar();
@@ -14975,8 +15155,14 @@ init();
       const snap=await getDoc(doc(db,'users',uid,'meta','globalLists'));
       return snap.exists()?snap.data():null;
     },
-    async syncGlobalLists(uid, shoes, nutritionDictionary){
-      await setDoc(doc(db,'users',uid,'meta','globalLists'), {shoes, nutritionDictionary, updatedAt:new Date().toISOString()});
+    // extras（個人資料、裝備範本、徽章解鎖）刻意存進同一份 globalLists
+    // 文件，而不是各開一份：安全性規則已經涵蓋 meta/{docId}，不用改規則；
+    // 資料量都很小；而且一次寫入就全部到齊，不會發生「範本寫成功、徽章
+    // 寫失敗」這種各自半套的狀態。
+    async syncGlobalLists(uid, shoes, nutritionDictionary, extras){
+      await setDoc(doc(db,'users',uid,'meta','globalLists'), Object.assign({
+        shoes, nutritionDictionary, updatedAt:new Date().toISOString(),
+      }, extras||{}));
     },
     // 功能點擊次數統計：counts 是一次要送出的 {功能代號: 這次要加的次數}，
     // 用 increment() 讓 Firestore 在伺服器端做原子加總，不管多少個訪客
