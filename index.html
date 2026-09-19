@@ -704,6 +704,28 @@
   .cadence-feel-btn:hover{background:var(--rule);}
   .cadence-feel-btn.feeling{animation:cadence-feel-pulse 0.6s ease-in-out infinite;cursor:default;}
   @keyframes cadence-feel-pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+  .leg-breakdown{margin:14px 0 4px;}
+  .leg-breakdown-title{font-size:12px;color:var(--stone);letter-spacing:0.08em;margin:0 0 8px;font-weight:600;}
+  .leg-list{display:flex;flex-direction:column;}
+  .leg-row{
+    display:flex;align-items:baseline;gap:10px;padding:9px 0;
+    border-bottom:1px solid var(--rule);flex-wrap:wrap;
+  }
+  .leg-row:last-child{border-bottom:none;}
+  .leg-icon{flex-shrink:0;font-size:15px;}
+  .leg-name{min-width:56px;font-weight:600;font-size:14px;}
+  .leg-time{font-size:15px;font-weight:600;}
+  .leg-meta{flex:1;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;color:var(--ink-soft);font-size:13px;justify-content:flex-end;}
+  /* 窄螢幕上四項數據擠在同一行會斷得很難看（數字跟單位被拆到兩行）。
+     改成名稱與時間佔第一行，數據整組移到第二行靠左排。 */
+  @media (max-width:640px){
+    .leg-row{gap:6px 8px;}
+    .leg-meta{flex:1 0 100%;justify-content:flex-start;padding-left:25px;}
+  }
+  .leg-sep{color:var(--stone);}
+  /* 轉換區只是過場，視覺上淡一點，不要跟三個主項目搶注意力 */
+  .leg-transition{opacity:0.62;}
+  .leg-transition .leg-name,.leg-transition .leg-time{font-weight:400;}
   .results-dashboard-actions{display:flex;flex-wrap:wrap;gap:10px;}
 
   /* ---------- Split analysis ---------- */
@@ -2618,6 +2640,8 @@ function emptyRace(name,sportType,status,raceDate){
     results:{gunTimeSeconds:null,chipTimeSeconds:null,overallRank:null,overallParticipants:null,ageGroupRank:null,ageGroupParticipants:null,isPb:false,firstHalfSeconds:null,secondHalfSeconds:null},
     performanceData:{avgHr:null,maxHr:null,avgCadence:null,avgPowerWatts:null,dataSource:'',notes:'',shoeId:''},
     splits:[],
+    // legs：多項運動（鐵人三項／二鐵）各分段的統計。單項賽事永遠是空陣列。
+    legs:[],
     review:{hitTheWallNotes:'',courseReview:'',pros:'',cons:'',lessonsLearned:''},
     mediaLinks:[],
     liveForecast:null,
@@ -2636,7 +2660,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.10.0';
+const APP_VERSION='v3.11.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2957,6 +2981,8 @@ const JA={
   // ---- 成績儀表板 ----
   'ui.resultPace':'ペース','ui.resultOverallRank':'総合順位','ui.resultAgeGroupRank':'年代別順位',
   'ui.resultAvgHr':'平均心拍数','ui.resultElevGain':'累積標高',
+  'ui.legBreakdownTitle':'種目別タイム',
+  'ui.leg_swimming':'スイム','ui.leg_cycling':'バイク','ui.leg_running':'ラン','ui.leg_transition':'トランジション','ui.leg_walking':'ウォーク','ui.leg_hiking':'ハイク',
   'ui.resultAvgCadence':'平均ケイデンス','ui.feelCadenceHint':'この歩数のリズムを振動で体感する（5秒間）',
   'ui.vibrateNotSupported':'このブラウザはWeb振動に対応していません（iOS Safariは現在この機能を全く対応していません）',
   'ui.pbBadge':'自己ベスト PB','ui.generateShareImage':'シェア画像を作成',
@@ -3017,6 +3043,8 @@ const JA={
   'ui.recoveryRestore':'復元',
   'ui.recoveryPurge':'完全に削除',
   'ui.recoveryPurgeAll':'すべて削除（{n}）','ui.recoveryPurgeAllConfirm':'本当に削除しますか？もう一度',
+  'ui.recoveryDismissAll':'すべて削除（{n}）','ui.recoveryDismissAllConfirm':'本当に削除しますか？もう一度',
+  'ui.recoveryDismissedAll':'{n} 件の上書き記録を削除しました',
   'ui.recoveryPurgedAll':'{n} 件を完全に削除しました',
   'ui.recoveryDeletedEmpty':'削除した大会はありません',
   'ui.recoveryOverwriteTitle':'同期の上書き履歴',
@@ -3429,6 +3457,8 @@ const EN={
   'ui.badgeUnlockCaption':'Earned: {a} ({b})','ui.badgeUnlockCaptionDate':'Earned: {n}',
   'ui.resultPace':'Pace','ui.resultOverallRank':'Overall rank','ui.resultAgeGroupRank':'Age-group rank',
   'ui.resultAvgHr':'Avg heart rate','ui.resultElevGain':'Elevation gain',
+  'ui.legBreakdownTitle':'Leg Splits',
+  'ui.leg_swimming':'Swim','ui.leg_cycling':'Bike','ui.leg_running':'Run','ui.leg_transition':'Transition','ui.leg_walking':'Walk','ui.leg_hiking':'Hike',
   'ui.resultAvgCadence':'Avg Cadence','ui.feelCadenceHint':'Feel this cadence\u2019s rhythm via vibration (5 seconds)',
   'ui.vibrateNotSupported':'This browser doesn\u2019t support web vibration (iOS Safari currently has no support for this at all)',
   'ui.pbBadge':'Personal Best','ui.generateShareImage':'Generate share image',
@@ -3485,6 +3515,8 @@ const EN={
   'ui.recoveryRestore':'Restore',
   'ui.recoveryPurge':'Delete Permanently',
   'ui.recoveryPurgeAll':'Empty Trash ({n})','ui.recoveryPurgeAllConfirm':'Sure? Click again',
+  'ui.recoveryDismissAll':'Clear All ({n})','ui.recoveryDismissAllConfirm':'Sure? Click again',
+  'ui.recoveryDismissedAll':'Removed {n} overwrite records',
   'ui.recoveryPurgedAll':'Permanently deleted {n} races',
   'ui.recoveryDeletedEmpty':'No deleted races',
   'ui.recoveryOverwriteTitle':'Sync Overwrite History',
@@ -3883,6 +3915,7 @@ function migrateRace(r){
     r.raceDayWeather.marineConditions={waveHeightM:null,swellPeriodSeconds:null,waterTempC:null};
   }
   if(r.route&&r.route.timedTrackPoints==null) r.route.timedTrackPoints=[];
+  if(!Array.isArray(r.legs)) r.legs=[];
   if(r.geoPhotos==null) r.geoPhotos=[];
   if(r.photoTimeOffsetSeconds==null) r.photoTimeOffsetSeconds=0;
   if(r.route&&r.route.gpsDenoised==null) r.route.gpsDenoised=false;
@@ -6812,17 +6845,65 @@ function hrZoneHtml(hr,race){
   if(!info) return `${hr} bpm`;
   return `<span style="color:${info.color}">${hr} bpm</span> ${hrZoneBarsSvg(info.zone,info.color)} <span class="hr-zone-tag" style="background:${info.color}">Z${info.zone}</span>`;
 }
+/* legPaceLabel(leg)：每一段用該項運動自己的慣用單位顯示強度。
+   全部統一成 min/km 是技術上正確、實際上沒人這樣讀的做法——游泳看的
+   是每 100 公尺、自行車看的是時速。轉換區沒有配速可言，只顯示時間。 */
+function legPaceLabel(leg){
+  if(!leg.distanceKm||!leg.durationSeconds) return null;
+  if(leg.sport==='swimming'){
+    const secPer100=leg.durationSeconds/(leg.distanceKm*10);
+    const m=Math.floor(secPer100/60),s=Math.round(secPer100%60);
+    return `${m}'${String(s).padStart(2,'0')}"/100m`;
+  }
+  if(leg.sport==='cycling'){
+    return (leg.distanceKm/(leg.durationSeconds/3600)).toFixed(1)+' km/h';
+  }
+  if(leg.sport==='transition') return null;
+  return formatPace(leg.durationSeconds/leg.distanceKm)+'/km';
+}
+const LEG_SPORT_ICONS={swimming:'🏊',cycling:'🚴',running:'🏃',transition:'🔁',walking:'🚶',hiking:'🥾'};
+function legSportLabel(leg){
+  const key='ui.leg_'+leg.sport;
+  const fallback={swimming:'游泳',cycling:'自行車',running:'跑步',transition:'轉換區',walking:'健走',hiking:'健行'}[leg.sport]||leg.sport;
+  return t(key,fallback);
+}
+function renderLegBreakdown(race){
+  const legs=race.legs||[];
+  if(legs.length<2) return '';
+  return `<div class="leg-breakdown">
+    <h4 class="leg-breakdown-title">${t('ui.legBreakdownTitle','分項成績')}</h4>
+    <div class="leg-list">${legs.map(leg=>{
+      const pace=legPaceLabel(leg);
+      const bits=[];
+      if(leg.distanceKm) bits.push(`<span class="mono">${leg.distanceKm.toFixed(2)} km</span>`);
+      if(pace) bits.push(`<span class="mono">${pace}</span>`);
+      if(leg.avgHr!=null) bits.push(hrZoneHtml(leg.avgHr,race));
+      if(leg.avgCadence!=null) bits.push(`<span class="mono">${leg.avgCadence} spm</span>`);
+      return `<div class="leg-row leg-${escapeHtml(leg.sport)}">
+        <span class="leg-icon" aria-hidden="true">${LEG_SPORT_ICONS[leg.sport]||'•'}</span>
+        <span class="leg-name">${escapeHtml(legSportLabel(leg))}</span>
+        <span class="leg-time mono">${leg.durationSeconds!=null?secToHMS(leg.durationSeconds):'—'}</span>
+        <span class="leg-meta">${bits.join('<span class="leg-sep">/  </span>')}</span>
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+}
 function renderResultsDashboard(race){
   if(race.status!=='completed'||race.results.chipTimeSeconds==null) return '';
   const chipT=race.results.chipTimeSeconds;
   const isPb=!!race.results.isPb;
-  const pace=race.route.distanceKm?formatPace(chipT/race.route.distanceKm):null;
+  // 多項運動不顯示「全場平均配速」：把游泳、騎車、跑步的時間與距離
+  // 混在一起除出來的數字沒有任何意義（例如 113 公里的鐵人三項會算出
+  // 2'49"/km 這種看起來像世界紀錄的配速），下面的分項成績才是真正
+  // 能讀的數字。平均心率與平均步頻同理。
+  const isMultisport=(race.legs||[]).length>=2;
+  const pace=(!isMultisport&&race.route.distanceKm)?formatPace(chipT/race.route.distanceKm):null;
   const badges=[];
   if(pace) badges.push([t('ui.resultPace','配速'),pace+'/km',false]);
   if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),race.results.overallRank+(race.results.overallParticipants?`／${race.results.overallParticipants}`:''),false]);
   if(race.results.ageGroupRank!=null) badges.push([t('field.post.results.ageGroupRank','分組名次'),race.results.ageGroupRank+(race.results.ageGroupParticipants?`／${race.results.ageGroupParticipants}`:''),false]);
-  if(race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),hrZoneHtml(race.performanceData.avgHr,race),true]);
-  if(race.performanceData.avgCadence!=null){
+  if(!isMultisport&&race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),hrZoneHtml(race.performanceData.avgHr,race),true]);
+  if(!isMultisport&&race.performanceData.avgCadence!=null){
     const cad=race.performanceData.avgCadence;
     badges.push([t('ui.resultAvgCadence','平均步頻'),
       `<span class="mono">${cad} spm</span><button type="button" class="cadence-feel-btn" data-action="feel-cadence" data-cadence="${cad}" title="${t('ui.feelCadenceHint','用震動體驗這個步頻的節奏（5 秒）')}">👋</button>`,
@@ -6835,6 +6916,7 @@ function renderResultsDashboard(race){
       ${isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
     </div>
     ${badges.length?`<div class="results-badge-grid">${badges.map(([label,val,isHtml])=>`<div class="results-badge"><span class="results-badge-label">${label}</span><span class="results-badge-value mono">${isHtml?val:escapeHtml(String(val))}</span></div>`).join('')}</div>`:''}
+    ${renderLegBreakdown(race)}
     <div class="results-dashboard-actions">
       <button type="button" class="btn-ghost" data-action="generate-share-image">${t('ui.generateShareImage','產生分享圖')}</button>
     </div>
@@ -12874,6 +12956,57 @@ function computeSplitsFromPoints(pts){
   }
   return splits;
 }
+/* buildRaceLegs(sessions, splits)：把 FIT 的 session 清單整理成「一段
+   一段的賽程」，每段附上自己的距離、時間、心率與步頻。
+   為什麼不直接用 session 裡的平均值：session 訊息確實有 avg_heart_rate
+   之類的欄位，但不是每支錶都會寫，而且這個 App 的解析器目前只讀了
+   幾個欄位。改成從實際的紀錄點自己算，來源一致、也不會因為某支錶
+   少寫欄位就整段空白。
+   轉換區（sport=3）也會保留成獨立一段——T1／T2 花多久是鐵人三項
+   很在意的數字，直接丟掉很可惜。 */
+function buildRaceLegs(sessions,splits){
+  if(!Array.isArray(sessions)||sessions.length<2) return []; // 單項賽事不需要分段
+  return sessions.map((s,i)=>{
+    const startMs=s.startTime?s.startTime.getTime():null;
+    const endMs=s.endTime?s.endTime.getTime()
+      :(startMs!=null&&s.elapsedSeconds!=null?startMs+s.elapsedSeconds*1000:null);
+    const seconds=s.elapsedSeconds!=null?Math.round(s.elapsedSeconds)
+      :(startMs!=null&&endMs!=null?Math.round((endMs-startMs)/1000):null);
+    return {
+      order:i+1,
+      sport:s.sport||'generic',
+      startTime:s.startTime?s.startTime.toISOString():null,
+      endTime:endMs!=null?new Date(endMs).toISOString():null,
+      durationSeconds:seconds,
+      distanceKm:s.distanceM!=null?Math.round(s.distanceM/1000*1000)/1000:null,
+      avgHr:null,maxHr:null,avgCadence:null,
+    };
+  });
+}
+/* attachLegMetricsFromPoints(legs, points)：用實際紀錄點補上每一段的
+   心率與步頻。依時間戳把點分配到對應的 session 區間——這是唯一可靠的
+   對應方式，因為距離會在轉換區歸零、重疊，用距離分不開。 */
+function attachLegMetricsFromPoints(legs,points){
+  if(!legs||!legs.length||!points||!points.length) return legs;
+  legs.forEach(leg=>{
+    if(!leg.startTime||!leg.endTime) return;
+    const a=new Date(leg.startTime).getTime(),b=new Date(leg.endTime).getTime();
+    let hrSum=0,hrN=0,cadSum=0,cadN=0,hrMax=null;
+    points.forEach(p=>{
+      if(!p.time) return;
+      const t=p.time.getTime();
+      // 區間取「含起點、不含終點」：分段是連續銜接的（上一段的結束時間
+      // 就是下一段的開始時間），兩端都含的話，正好落在交界的那個取樣點
+      // 會同時被算進兩段，讓交界附近的平均值互相污染。
+      if(t<a||t>=b) return;
+      if(p.hr!=null){ hrSum+=p.hr; hrN++; if(hrMax==null||p.hr>hrMax) hrMax=p.hr; }
+      if(p.cad!=null){ cadSum+=p.cad; cadN++; }
+    });
+    if(hrN){ leg.avgHr=Math.round(hrSum/hrN); leg.maxHr=hrMax; }
+    if(cadN) leg.avgCadence=Math.round(cadSum/cadN);
+  });
+  return legs;
+}
 function downsampleElevationProfile(pts,maxPoints){
   const valid=pts.filter(p=>p.lat!=null&&p.lon!=null&&p.ele!=null);
   if(valid.length<2) return [];
@@ -13218,6 +13351,7 @@ function parseFitPoints(buffer){
   let offset=headerSize;
   const localDefs={};
   const points=[];
+  const sessions=[];
 
   function readField(off,size,baseType,little){
     const info=fitBaseTypeInfo(baseType);
@@ -13275,6 +13409,23 @@ function parseFitPoints(buffer){
         offset+=f.size;
       }
       for(const df of def.devFields) offset+=df.size;
+      // session 訊息（18）：多項運動（鐵人三項）的 FIT 檔會為每一段
+      // 賽程各寫一筆 session，裡面帶有這段是哪種運動、起始時間、總時長。
+      // 這是手錶自己記下來的權威資料，比用配速去猜「這段應該是游泳還是
+      // 騎車」可靠得多——後者遇到爬坡慢騎、或轉換區慢跑就會判斷錯誤。
+      // 單項賽事只會有一筆 session，照樣解析、不會出錯。
+      if(def.globalMesgNum===18){
+        const rawStart=values[2],rawEnd=values[253];
+        const sportRaw=values[5];
+        sessions.push({
+          sport:FIT_SPORT_NAMES[sportRaw]||('sport'+sportRaw),
+          sportCode:sportRaw==null?null:sportRaw,
+          startTime:(rawStart!=null)?new Date(FIT_EPOCH_MS+rawStart*1000):null,
+          endTime:(rawEnd!=null)?new Date(FIT_EPOCH_MS+rawEnd*1000):null,
+          elapsedSeconds:values[7]!=null?values[7]/1000:null,
+          distanceM:values[9]!=null?values[9]/100:null,
+        });
+      }
       if(def.globalMesgNum===20){ // 'record' message
         const rawLat=values[0],rawLon=values[1];
         const lat=(rawLat!=null)?rawLat*(180/Math.pow(2,31)):null;
@@ -13289,8 +13440,15 @@ function parseFitPoints(buffer){
       }
     }
   }
+  // 回傳陣列本體維持原樣（呼叫端照舊把它當成點的陣列用），多項運動的
+  // 分段資訊掛在 .sessions 上，不影響任何既有的使用方式。
+  points.sessions=sessions.filter(s=>s.startTime);
   return points;
 }
+// FIT 規格裡 sport 欄位的代號對照。3 是「轉換」——鐵人三項的 T1／T2
+// 會各寫成一筆 sport=3 的 session，所以轉換時間是直接讀出來的，不用
+// 自己從時間差推算。
+const FIT_SPORT_NAMES={0:'generic',1:'running',2:'cycling',3:'transition',5:'swimming',11:'walking',17:'hiking',18:'multisport'};
 
 function parseGpxDoc(xml){
   const pts=[...xml.getElementsByTagName('trkpt')].map(pt=>{
@@ -13422,6 +13580,7 @@ function applyActivitySummaryToRace(race,s){
   if(s.avgCadence!=null) race.performanceData.avgCadence=s.avgCadence;
   if(!race.performanceData.dataSource) race.performanceData.dataSource='運動手錶匯入 (GPX/TCX/FIT)';
   if(s.splits&&s.splits.length) race.splits=s.splits;
+  if(s.legs&&s.legs.length) race.legs=s.legs;
   if(s.elevationProfile&&s.elevationProfile.length) race.route.elevationProfile=s.elevationProfile;
   if(s.trackPoints&&s.trackPoints.length) race.route.trackPoints=s.trackPoints;
   if(s.timedTrackPoints&&s.timedTrackPoints.length) race.route.timedTrackPoints=s.timedTrackPoints;
@@ -13431,7 +13590,9 @@ async function parseActivityFile(file){
   if(ext==='fit'){
     const buffer=await file.arrayBuffer();
     const points=parseFitPoints(buffer);
-    return summarizeTrackPoints(points);
+    const summary=summarizeTrackPoints(points);
+    summary.legs=attachLegMetricsFromPoints(buildRaceLegs(points.sessions,summary.splits),points);
+    return summary;
   }
   const text=await file.text();
   return parseGpxOrTcx(text);
@@ -13761,7 +13922,14 @@ function recoveryModalHtml(){
         </div>`).join('')}</div>`:emptyStateBlock('trash',t('ui.recoveryDeletedEmpty','目前沒有已刪除的賽事'))}
     </div>
     <div class="recovery-section">
-      <h3>${t('ui.recoveryOverwriteTitle','同步覆蓋紀錄')}</h3>
+      <div class="recovery-section-head">
+        <h3>${t('ui.recoveryOverwriteTitle','同步覆蓋紀錄')}</h3>
+        ${syncOverwrites.length?`<button type="button" class="btn-text danger recovery-purge-all" data-action="dismiss-all-overwrites">${
+          recoveryConfirmDismissAll
+            ? t('ui.recoveryDismissAllConfirm','確定移除？再按一次')
+            : tf('ui.recoveryDismissAll','移除全部（{n}）',syncOverwrites.length)
+        }</button>`:''}
+      </div>
       <p class="modal-hint">${t('ui.recoveryOverwriteHint','多裝置同步時，如果同一場賽事在兩邊都被修改過，系統會自動套用較新的版本，並把被覆蓋的版本留在這裡（最多 20 筆）。')}</p>
       ${syncOverwrites.length?`<div class="recovery-list">${syncOverwrites.map(en=>`
         <div class="recovery-row">
@@ -13789,6 +13957,7 @@ function closeRecoveryModal(){
   // 關掉畫面時把「已解除保險」的狀態一併清掉，不然下次打開按鈕還停在
   // 確認狀態，一按就直接清空。
   resetPurgeAllConfirm();
+  resetDismissAllConfirm();
   recoveryModalEl_getter().hidden=true;recoveryModalEl_getter().innerHTML='';
 }
 function restoreDeletedRace(id){
@@ -13854,13 +14023,46 @@ function restoreOverwriteEntry(entryId){
     state.races.push(migrateRace(JSON.parse(JSON.stringify(entry.race))));
   }
   syncOverwrites=syncOverwrites.filter(e=>e.id!==entryId).slice(0,20);
+  // 跟還原賽事同樣的道理：使用者改去還原某一個版本，代表意圖已經變了，
+  // 「移除全部」的確認狀態要一併解除，不然回頭一按就全部清光。
+  resetDismissAllConfirm();
   persistSyncOverwrites();
   persist();renderAll();renderRecoveryButton();openRecoveryModal();
 }
 function dismissOverwriteEntry(entryId){
   syncOverwrites=syncOverwrites.filter(e=>e.id!==entryId);
+  resetDismissAllConfirm();
   persistSyncOverwrites();
   openRecoveryModal();
+}
+// 跟「清空全部」同一套兩段式確認。移除覆蓋紀錄雖然不會動到賽事本身
+// （賽事還是目前那個較新的版本），但被覆蓋的舊版本就再也還原不回來
+// 了，所以一樣值得一道保險。
+let recoveryConfirmDismissAll=false,recoveryConfirmDismissAllTimer=null;
+function resetDismissAllConfirm(){
+  recoveryConfirmDismissAll=false;
+  clearTimeout(recoveryConfirmDismissAllTimer);
+  recoveryConfirmDismissAllTimer=null;
+}
+function dismissAllOverwrites(){
+  const count=syncOverwrites.length;
+  if(!count) return;
+  if(!recoveryConfirmDismissAll){
+    recoveryConfirmDismissAll=true;
+    clearTimeout(recoveryConfirmDismissAllTimer);
+    recoveryConfirmDismissAllTimer=setTimeout(()=>{
+      recoveryConfirmDismissAll=false;
+      const el=document.getElementById('recovery-modal');
+      if(el&&!el.hidden) openRecoveryModal();
+    },5000);
+    openRecoveryModal();
+    return;
+  }
+  resetDismissAllConfirm();
+  syncOverwrites=[];
+  persistSyncOverwrites();
+  openRecoveryModal();
+  showToast(tf('ui.recoveryDismissedAll','已移除 {n} 筆覆蓋紀錄',count));
 }
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="start-create"]')){startCreate();return;}
@@ -13871,6 +14073,7 @@ document.addEventListener('click',e=>{
   const purgeBtn=e.target.closest('[data-action="purge-race"]');
   if(purgeBtn){ purgeDeletedRace(purgeBtn.dataset.id); return; }
   if(e.target.closest('[data-action="purge-all-races"]')){ purgeAllDeletedRaces(); return; }
+  if(e.target.closest('[data-action="dismiss-all-overwrites"]')){ dismissAllOverwrites(); return; }
   const restoreOwBtn=e.target.closest('[data-action="restore-overwrite"]');
   if(restoreOwBtn){ restoreOverwriteEntry(restoreOwBtn.dataset.entry); return; }
   const dismissOwBtn=e.target.closest('[data-action="dismiss-overwrite"]');
