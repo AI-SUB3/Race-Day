@@ -737,24 +737,33 @@
   .shoe-section-title{color:var(--stone);text-transform:uppercase;letter-spacing:0.06em;margin:18px 0 8px;}
   .shoe-section-title:first-of-type{margin-top:0;}
   .shoe-list{display:flex;flex-direction:column;gap:10px;}
-  .shoe-row{position:relative;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--rule);border-radius:5px;overflow:hidden;}
+  .shoe-row{position:relative;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1px solid var(--rule);border-radius:5px;overflow:hidden;}
   .shoe-row-retired{filter:grayscale(100%);opacity:0.6;}
   .shoe-row-top{display:flex;align-items:center;gap:10px;}
   .shoe-row-name{flex:1;font-size:15px;font-weight:600;}
   .shoe-retired-badge{display:inline-block;padding:2px 9px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap;}
-  .shoe-health-row{display:flex;align-items:center;gap:10px;}
+  .shoe-health-row{display:flex;align-items:center;gap:10px;margin-top:2px;}
   .shoe-hp-bar{display:flex;gap:3px;flex:1;max-width:180px;}
   .shoe-hp-segment{flex:1;height:9px;border-radius:2px;background:var(--rule);}
   .shoe-hp-segment.blink{animation:shoe-hp-blink 1s ease-in-out infinite;}
   @keyframes shoe-hp-blink{0%,100%{opacity:1;}50%{opacity:0.35;}}
   .shoe-health-status{flex-shrink:0;font-weight:600;white-space:nowrap;}
-  .shoe-row-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-  .shoe-row-stats{color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px;}
-  .shoe-target-edit-btn{background:none;border:none;color:var(--stone);cursor:pointer;font-size:12px;padding:0 2px;opacity:0.7;}
+  /* 鞋款一多（幾十雙）的時候，一眼掃過去最重要的是「里程還剩多少」
+     跟「這雙鞋叫什麼」，規格、場次這些次要資訊故意調淡、調小，不會
+     跟主要數字搶注意力；編輯按鈕平常也是淡淡的，滑過去才轉深色。 ---- */
+  .shoe-stat-headline{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;color:var(--ink);}
+  .shoe-stat-sub{color:var(--stone);}
+  .shoe-target-edit-btn{background:none;border:none;color:var(--stone);cursor:pointer;font-size:13px;padding:0 2px;opacity:0.6;}
   .shoe-target-edit-btn:hover{opacity:1;color:var(--trail);}
-  .shoe-target-edit{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
-  .shoe-target-input{width:64px;font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--trail);border-radius:3px;background:var(--surface);color:var(--ink);}
-  .shoe-row-actions{display:flex;align-items:center;gap:14px;}
+  .shoe-edit-form{background:var(--stamp-bg-trail);border-radius:6px;padding:10px;margin-top:2px;}
+  .shoe-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;}
+  .shoe-edit-grid label{display:flex;flex-direction:column;gap:3px;}
+  .shoe-edit-grid .small{color:var(--stone);}
+  .shoe-edit-input{width:100%;font:inherit;font-size:14px;padding:5px 7px;border:1px solid var(--trail);border-radius:3px;background:var(--surface);color:var(--ink);box-sizing:border-box;}
+  .shoe-edit-actions{display:flex;gap:8px;margin-top:10px;}
+  .btn-small{padding:6px 12px;font-size:13px;}
+  .shoe-row-actions{display:flex;align-items:center;gap:12px;margin-top:2px;opacity:0.75;}
+  .shoe-row-actions:hover{opacity:1;}
 
   /* ---------- 補給品資料庫（Nutrition dictionary） ---------- */
   .nutrition-dict-add-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
@@ -2054,7 +2063,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.85.0';
+const APP_VERSION='v2.86.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2151,6 +2160,7 @@ const JA={
   'ui.errJsonInvalidRace':'ファイル内に形式が正しくないレースデータがあります',
   'ui.jsonImportDone':'JSONの読み込み完了',
   'ui.jsonImportSummary':'{a} 件追加、{b} 件はバージョンの競合により古い方を「データ復元」に保存しました',
+  'ui.shoeTrainingImportDone':'練習距離のインポート完了','ui.shoeTrainingImportSummary':'{a} 足を照合、{b} 件は対応するシューズが見つかりませんでした',
   'ui.jsonImportFailed':'JSONの読み込みに失敗しました',
   'ui.imageNeedRaceContext':'この写真を読み込むには、先にレースの詳細画面を開くか「レースを追加」をクリックしてください',
   'ui.imageMultiNoTrackFallback':'このレースにはまだタイムスタンプ付きのGPS軌跡がないため、複数の写真をルートに対応付けできません。1枚目をカバー写真に設定し、残りの写真は無視しました',
@@ -2286,19 +2296,20 @@ const JA={
   'ui.profileAge':'年齢','ui.profileGender':'性別','ui.genderMale':'男性','ui.genderFemale':'女性','ui.genderOther':'その他',
   'ui.profileWeight':'体重','ui.profileHeight':'身長','ui.profileBodyFat':'体脂肪率','ui.profileMuscleMass':'筋肉量',
   'ui.profileBodyHint':'体重はパワーウェイトレシオなどの計算に使用されます。その他の項目は任意です。',
-  'ui.shoeHint':'レースで履いたシューズを記録し、完走レースの累計距離から交換時期の目安にできます（本アプリに記録されたレース距離のみ集計、練習分は含みません）。',
+  'ui.shoeHint':'レースで履いたシューズを記録し、累積距離（レース距離＋自分で入力した練習距離）から交換時期の目安にできます。',
   'ui.shoeNamePlaceholder':'シューズ名（例：ASICS Metaspeed）','ui.shoeAdd':'追加','ui.shoeNoneYet':'まだシューズが登録されていません',
   'ui.shoeStats':'走行距離','ui.shoeManage':'シューズを管理','ui.raceShoe':'着用シューズ',
-  'ui.shoeStatsLine':'{a} レース・{b}',
   'ui.shoeTargetPlaceholder':'想定寿命(km)',
   'ui.shoeStackPlaceholder':'ソール厚(mm、任意)','ui.shoeDropPlaceholder':'ドロップ(mm、任意)','ui.shoeStackShort':'ソール厚','ui.shoeDropShort':'ドロップ',
-  'ui.shoeSpecsEmpty':'スペック未入力','ui.shoeEditSpecs':'ソール厚／ドロップを編集',
+  'ui.shoeSpecsEmpty':'スペック未入力',
   'ui.shoeActiveSection':'現役','ui.shoeRetiredSection':'引退済み','ui.shoeRetiredBadge':'名誉引退',
   'ui.shoeRetire':'引退させる','ui.shoeUnretire':'現役に戻す',
   'ui.shoeStatusInService':'現役','ui.shoeStatusDecline':'ミッドソールの反発力が低下し始めています','ui.shoeStatusReplace':'交換推奨距離に到達。怪我のリスクに注意',
   'ui.shoeAlert80':'お知らせ：{n} の累計距離が想定寿命の80%に達しました。そろそろ次の一足を検討しましょう！',
   'ui.shoeAlert100':'お知らせ：{n} の累計距離が想定寿命の100%に達しました。早めの交換をおすすめします！',
-  'ui.shoeEditTarget':'想定寿命を編集','ui.shoeHonorRetire':'✅ 引退として記録','ui.save':'保存',
+  'ui.shoeHonorRetire':'✅ 引退として記録','ui.save':'保存',
+  'ui.shoeTargetLabel':'想定寿命','ui.shoeTrainingLabel':'練習距離','ui.shoeStackLabel':'ソール厚','ui.shoeDropLabel':'ドロップ',
+  'ui.shoeEdit':'距離・スペックを編集','ui.shoeBreakdownRace':'レース','ui.shoeBreakdownTraining':'練習',
   'ui.edit':'編集',
   'ui.nutritionDictTitle':'栄養データベース','ui.nutritionDictHint':'よく使う補給食品の炭水化物・ナトリウム・カフェイン量を登録しておくと、どのレースの補給計画にも使い回せて、そのレースの炭水化物摂取率を自動集計できます。',
   'ui.dictNamePlaceholder':'名称、例：「Maurten GEL 100」','ui.dictCarbPlaceholder':'炭水化物(g)','ui.dictSodiumPlaceholder':'ナトリウム(mg)','ui.dictCaffeinePlaceholder':'カフェイン(mg)','ui.dictTagsPlaceholder':'タグ（カンマ区切り）',
@@ -2601,6 +2612,7 @@ const EN={
   'ui.errJsonInvalidRace':'This file contains incorrectly formatted race data',
   'ui.jsonImportDone':'JSON import complete',
   'ui.jsonImportSummary':'{a} added; {b} had a version conflict — the older version was kept in "Data Recovery"',
+  'ui.shoeTrainingImportDone':'Training mileage import complete','ui.shoeTrainingImportSummary':'Matched {a} shoes; {b} had no matching shoe',
   'ui.jsonImportFailed':'JSON import failed',
   'ui.imageNeedRaceContext':'To import this photo, first open a race\u2019s detail page or click \u201cAdd Race\u201d',
   'ui.imageMultiNoTrackFallback':'This race doesn\u2019t have a timestamped GPS track yet, so multiple photos can\u2019t be matched to the route. The first photo was set as the cover image; the rest were ignored',
@@ -2729,19 +2741,20 @@ const EN={
   'ui.profileAge':'Age','ui.profileGender':'Gender','ui.genderMale':'Male','ui.genderFemale':'Female','ui.genderOther':'Other',
   'ui.profileWeight':'Weight','ui.profileHeight':'Height','ui.profileBodyFat':'Body Fat','ui.profileMuscleMass':'Muscle Mass',
   'ui.profileBodyHint':'Weight is used for power-to-weight ratio and similar calculations. The other fields are optional.',
-  'ui.shoeHint':'Track which shoes you wore for each race, and see accumulated race mileage per pair to help gauge when to retire them (only counts race distance logged in this app, not training miles).',
+  'ui.shoeHint':'Track which shoes you wore for each race, and see accumulated mileage (race distance plus any training mileage you enter) to help gauge when to retire them.',
   'ui.shoeNamePlaceholder':'Shoe name, e.g. "ASICS Metaspeed"','ui.shoeAdd':'Add','ui.shoeNoneYet':'No shoes added yet',
   'ui.shoeStats':'Mileage','ui.shoeManage':'Manage shoes','ui.raceShoe':'Shoes worn',
-  'ui.shoeStatsLine':'{a} races · {b}',
   'ui.shoeTargetPlaceholder':'Target lifespan (km)',
   'ui.shoeStackPlaceholder':'Stack height (mm, optional)','ui.shoeDropPlaceholder':'Drop (mm, optional)','ui.shoeStackShort':'Stack','ui.shoeDropShort':'Drop',
-  'ui.shoeSpecsEmpty':'Specs not set yet','ui.shoeEditSpecs':'Edit stack height / drop',
+  'ui.shoeSpecsEmpty':'Specs not set yet',
   'ui.shoeActiveSection':'Active','ui.shoeRetiredSection':'Retired','ui.shoeRetiredBadge':'Retired with honors',
   'ui.shoeRetire':'Retire','ui.shoeUnretire':'Return to service',
   'ui.shoeStatusInService':'In service','ui.shoeStatusDecline':'Midsole cushioning starting to break down','ui.shoeStatusReplace':'Past target lifespan — watch injury risk',
   'ui.shoeAlert80':'Heads up: {n} has reached 80% of its target lifespan — start scouting your next pair!',
   'ui.shoeAlert100':'Heads up: {n} has reached 100% of its target lifespan — time to retire it soon!',
-  'ui.shoeEditTarget':'Edit target lifespan','ui.shoeHonorRetire':'✅ Mark as Retired','ui.save':'Save',
+  'ui.shoeHonorRetire':'✅ Mark as Retired','ui.save':'Save',
+  'ui.shoeTargetLabel':'Target lifespan','ui.shoeTrainingLabel':'Training mileage','ui.shoeStackLabel':'Stack height','ui.shoeDropLabel':'Drop',
+  'ui.shoeEdit':'Edit mileage & specs','ui.shoeBreakdownRace':'Race','ui.shoeBreakdownTraining':'Training',
   'ui.edit':'Edit',
   'ui.nutritionDictTitle':'Nutrition Database','ui.nutritionDictHint':'Save the carb, sodium, and caffeine content of your go-to fueling products once, then reuse them in any fueling plan — the carb intake rate for that race gets totaled up automatically.',
   'ui.dictNamePlaceholder':'Name, e.g. "Maurten GEL 100"','ui.dictCarbPlaceholder':'Carbs (g)','ui.dictSodiumPlaceholder':'Sodium (mg)','ui.dictCaffeinePlaceholder':'Caffeine (mg)','ui.dictTagsPlaceholder':'Tags (comma-separated)',
@@ -4160,6 +4173,7 @@ function migrateShoe(s){
   if(s.notes==null) s.notes='';
   if(s.stackHeightMm===undefined) s.stackHeightMm=null;
   if(s.dropMm===undefined) s.dropMm=null;
+  if(s.trainingKm==null) s.trainingKm=0;
   return s;
 }
 async function loadShoes(){
@@ -4227,10 +4241,20 @@ function computeNutritionTotals(race){
   });
   return {totalCarbG,totalSodiumMg,totalCaffeineMg,countedItems,totalItems:items.length};
 }
+// computeShoeStats(shoeId)：這雙鞋的總里程，包含兩個來源——這個 App
+// 記錄的比賽距離（raceDistance，從綁定這雙鞋的完賽賽事加總），跟
+// 使用者自己填的訓練里程（trainingDistance，這個 App 本身不記錄日常
+// 訓練，這個數字通常是從 Strava 之類的運動記錄軟體另外抄過來的）。
+// totalDistance 是兩者相加，既有呼叫這個函式只取 .totalDistance 的
+// 地方（例如判斷鞋子有沒有到壽命）不用改，會自動把訓練里程也算
+// 進去；需要分開顯示兩個來源的地方（鞋款管理畫面）則另外取
+// .raceDistance／.trainingDistance。
 function computeShoeStats(shoeId){
   const races=state.races.filter(r=>r.performanceData&&r.performanceData.shoeId===shoeId&&r.status==='completed'&&!r.deletedAt);
-  const totalDistance=races.reduce((s,r)=>s+(r.route.distanceKm||0),0);
-  return {totalRaces:races.length,totalDistance};
+  const raceDistance=races.reduce((s,r)=>s+(r.route.distanceKm||0),0);
+  const shoe=shoes.find(s=>s.id===shoeId);
+  const trainingDistance=(shoe&&shoe.trainingKm)||0;
+  return {totalRaces:races.length,raceDistance,trainingDistance,totalDistance:raceDistance+trainingDistance};
 }
 // 戰靴勝率：穿這雙鞋跑過的每一場完賽賽事，抓 PB 率（幾場裡面破了幾次
 // PB，依 results.isPb 這個使用者自己勾選的欄位算，不是系統自動判斷）
@@ -10155,6 +10179,42 @@ document.getElementById('btn-import-json').addEventListener('click',()=>{
 // 賽事，本來就不會有 id，缺 id 的項目直接補一個新的，不會因為少了
 // 一個原本只有「還原自己備份」這個情境才會有的欄位，就把整批貼上
 // 的資料拒於門外。
+// importShoeTrainingKm(parsed)：批次更新多雙鞋的「訓練里程」欄位，
+// 用鞋款名稱做寬鬆比對（雙方字串誰包含誰都算，不要求完全一樣）——
+// 這個 App 的鞋款名稱是自由輸入的文字，跟外部運動記錄軟體（例如
+// Strava）匯出的名稱不會完全一致，硬性要求完全相符只會讓大部分
+// 資料配不上；同一個關鍵字如果同時比對到兩雙以上的鞋，代表無法
+// 判斷該歸給哪一雙，這種情況一律跳過、算進「找不到對應」，不會
+// 隨便挑一雙硬套。只會更新 trainingKm 這一個欄位，不會動到其他
+// 資料，就算真的配錯了，頂多是某雙鞋的數字不準，透過既有的編輯
+// 功能就能修正，不是無法復原的操作。
+function importShoeTrainingKm(parsed){
+  let matched=0,unmatched=0;
+  parsed.forEach(item=>{
+    const name=(item.name||'').trim();
+    if(!name||item.trainingKm==null) return;
+    const nameLower=name.toLowerCase();
+    const candidates=shoes.filter(s=>{
+      const sLower=(s.name||'').toLowerCase();
+      return sLower&&(sLower.includes(nameLower)||nameLower.includes(sLower));
+    });
+    if(candidates.length===1){
+      candidates[0].trainingKm=Math.max(0,Number(item.trainingKm));
+      matched++;
+    }else{
+      unmatched++;
+    }
+  });
+  if(matched>0) persistShoes();
+  refreshShoeManagementUI();
+  const el=document.createElement('div');
+  el.className='foreground-toast'+(unmatched?' sync-notice':'');
+  el.innerHTML=`<strong>${t('ui.shoeTrainingImportDone','訓練里程匯入完成')}</strong><span>${tf2('ui.shoeTrainingImportSummary',`比對成功 ${matched} 雙，${unmatched} 筆找不到對應鞋款`,matched,unmatched)}</span>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.remove(); },8000);
+  if(matched>0) logFeatureUse('import_shoe_training_km');
+  return matched>0;
+}
 function importRacesArray(parsed){
   try{
     if(!Array.isArray(parsed)) throw new Error(t('ui.errJsonNotArray','檔案內容不是有效的賽事清單（需要是一個陣列）'));
@@ -12081,8 +12141,10 @@ document.addEventListener('click',e=>{
 /* ============================================================
    鞋款管理
    ============================================================ */
-let editingShoeTargetId=null;
-let editingShoeSpecsId=null;
+// editingShoeId：目前正在展開編輯表單的那一雙鞋（預期壽命／訓練里程／
+// 鞋底厚度／足跟差四個欄位合併成一個編輯區塊，一次只會有一雙鞋在
+// 編輯狀態，不是像舊版那樣分開兩個獨立狀態各自管一半欄位）。
+let editingShoeId=null;
 let shoeStampingId=null;
 let expandedShoeAnalysisId=null;
 function shoeAnalysisHtml(shoeId){
@@ -12147,33 +12209,28 @@ function shoeManagementBodyHtml(){
     const statusLabel=shoeHealthStatusLabel(pct);
     const canDelete=stats.totalRaces===0;
     const isFullyWorn=pct>=100;
-    const isEditingTarget=editingShoeTargetId===s.id;
-    const statLine=isEditingTarget
-      ?`<span class="shoe-target-edit">
-          <span class="mono small">${stats.totalRaces} ${t('ui.unitRaces','場')}・${stats.totalDistance.toFixed(1)} /</span>
-          <input type="number" id="shoe-target-input-${s.id}" class="shoe-target-input" value="${s.targetKm||DEFAULT_SHOE_TARGET_KM}" min="1" step="1">
-          <span class="mono small">${t('ui.unitKm','公里')}</span>
-          <button type="button" class="btn-text-small" data-action="save-shoe-target" data-id="${s.id}">${t('ui.save','儲存')}</button>
-          <button type="button" class="btn-text-small" data-action="cancel-shoe-target" data-id="${s.id}">${t('ui.cancel','取消')}</button>
-        </span>`
-      :`<span class="shoe-row-stats mono small">${tf2('ui.shoeStatsLine',`${stats.totalRaces} 場・${stats.totalDistance.toFixed(1)} / ${s.targetKm||DEFAULT_SHOE_TARGET_KM} ${t('ui.unitKm','公里')}`,stats.totalRaces,`${stats.totalDistance.toFixed(1)} / ${s.targetKm||DEFAULT_SHOE_TARGET_KM} ${t('ui.unitKm','公里')}`)}
-          ${!s.isRetired?`<button type="button" class="shoe-target-edit-btn" data-action="edit-shoe-target" data-id="${s.id}" title="${t('ui.shoeEditTarget','編輯預期壽命')}">✎</button>`:''}
-        </span>`;
-    const isEditingSpecs=editingShoeSpecsId===s.id;
-    const specsLine=isEditingSpecs
-      ?`<span class="shoe-target-edit">
-          <span class="mono small">${t('ui.shoeStackShort','鞋底')}</span>
-          <input type="number" id="shoe-stack-input-${s.id}" class="shoe-target-input" value="${s.stackHeightMm!=null?s.stackHeightMm:''}" min="0" step="0.5">
-          <span class="mono small">mm・${t('ui.shoeDropShort','足跟差')}</span>
-          <input type="number" id="shoe-drop-input-${s.id}" class="shoe-target-input" value="${s.dropMm!=null?s.dropMm:''}" min="0" step="0.5">
-          <span class="mono small">mm</span>
-          <button type="button" class="btn-text-small" data-action="save-shoe-specs" data-id="${s.id}">${t('ui.save','儲存')}</button>
-          <button type="button" class="btn-text-small" data-action="cancel-shoe-specs" data-id="${s.id}">${t('ui.cancel','取消')}</button>
-        </span>`
-      :`<span class="shoe-row-stats mono small">${(s.stackHeightMm!=null||s.dropMm!=null)?`${t('ui.shoeStackShort','鞋底')} ${s.stackHeightMm!=null?s.stackHeightMm+'mm':'—'}・${t('ui.shoeDropShort','足跟差')} ${s.dropMm!=null?s.dropMm+'mm':'—'}`:t('ui.shoeSpecsEmpty','尚未填規格')}
-          <button type="button" class="shoe-target-edit-btn" data-action="edit-shoe-specs" data-id="${s.id}" title="${t('ui.shoeEditSpecs','編輯鞋底厚度／足跟差')}">✎</button>
-        </span>`;
+    const isEditing=editingShoeId===s.id;
     const isExpanded=expandedShoeAnalysisId===s.id;
+    // 編輯表單：預期壽命、訓練里程、鞋底厚度、足跟差四個欄位合併成
+    // 一個區塊、一組儲存／取消，不是像舊版那樣拆成兩個各自獨立的
+    // 編輯狀態——鞋子一多（例如同時管理幾十雙），逐一分開編輯反而
+    // 更難找、更瑣碎。
+    const editFormHtml=`<div class="shoe-edit-form">
+      <div class="shoe-edit-grid">
+        <label><span class="small">${t('ui.shoeTargetLabel','預期壽命')}</span><input type="number" id="shoe-edit-target-${s.id}" class="shoe-edit-input" value="${s.targetKm||DEFAULT_SHOE_TARGET_KM}" min="1" step="1"></label>
+        <label><span class="small">${t('ui.shoeTrainingLabel','訓練里程')}</span><input type="number" id="shoe-edit-training-${s.id}" class="shoe-edit-input" value="${s.trainingKm||0}" min="0" step="0.1"></label>
+        <label><span class="small">${t('ui.shoeStackLabel','鞋底厚度')}</span><input type="number" id="shoe-edit-stack-${s.id}" class="shoe-edit-input" value="${s.stackHeightMm!=null?s.stackHeightMm:''}" min="0" step="0.5" placeholder="mm"></label>
+        <label><span class="small">${t('ui.shoeDropLabel','足跟差')}</span><input type="number" id="shoe-edit-drop-${s.id}" class="shoe-edit-input" value="${s.dropMm!=null?s.dropMm:''}" min="0" step="0.5" placeholder="mm"></label>
+      </div>
+      <div class="shoe-edit-actions">
+        <button type="button" class="btn-primary btn-small" data-action="save-shoe-edit" data-id="${s.id}">${t('ui.save','儲存')}</button>
+        <button type="button" class="btn-ghost btn-small" data-action="cancel-shoe-edit" data-id="${s.id}">${t('ui.cancel','取消')}</button>
+      </div>
+    </div>`;
+    const specsSummary=(s.stackHeightMm!=null||s.dropMm!=null)
+      ?`${t('ui.shoeStackShort','鞋底')} ${s.stackHeightMm!=null?s.stackHeightMm+'mm':'—'}・${t('ui.shoeDropShort','足跟差')} ${s.dropMm!=null?s.dropMm+'mm':'—'}`
+      :t('ui.shoeSpecsEmpty','尚未填規格');
+    const breakdownHtml=`${t('ui.shoeBreakdownRace','賽事')} ${stats.raceDistance.toFixed(1)}${stats.trainingDistance>0?`・${t('ui.shoeBreakdownTraining','訓練')} ${stats.trainingDistance.toFixed(1)}`:''}・${stats.totalRaces} ${t('ui.unitRaces','場比賽')}`;
     return `<div class="shoe-row${s.isRetired?' shoe-row-retired':''}${shoeStampingId===s.id?' shoe-row-stamping':''}" id="shoe-row-${s.id}">
       ${shoeStampingId===s.id?`<div class="shoe-stamp-overlay">${t('ui.shoeRetiredBadge','光榮退役')}</div>`:''}
       <div class="shoe-row-top">
@@ -12184,18 +12241,21 @@ function shoeManagementBodyHtml(){
         <div class="shoe-hp-bar">${shoeHealthSegmentsHtml(pct)}</div>
         <span class="shoe-health-status small" style="color:${color}">${statusLabel}</span>
       </div>
-      <div class="shoe-row-bottom">
-        ${statLine}
-        ${specsLine}
-        <div class="shoe-row-actions">
-          ${stats.totalRaces>0?`<button type="button" class="btn-text-small" data-action="toggle-shoe-analysis" data-id="${s.id}">${isExpanded?t('ui.shoeAnalysisHide','收起戰力分析'):t('ui.shoeAnalysisShow','戰力分析')}</button>`:''}
-          ${s.isRetired
-            ?`<button type="button" class="btn-text-small" data-action="unretire-shoe" data-id="${s.id}">${t('ui.shoeUnretire','恢復服役')}</button>`
-            :(isFullyWorn
-              ?`<button type="button" class="btn-primary btn-honor-retire" data-action="honor-retire-shoe" data-id="${s.id}">${t('ui.shoeHonorRetire','✅ 標記為退役')}</button>`
-              :`<button type="button" class="btn-text-small" data-action="retire-shoe" data-id="${s.id}">${t('ui.shoeRetire','退役')}</button>`)}
-          ${canDelete?`<button type="button" class="btn-text-small danger" data-action="delete-shoe" data-id="${s.id}">${t('ui.delete','刪除')}</button>`:''}
-        </div>
+      ${isEditing?editFormHtml:`
+      <div class="shoe-stat-headline">
+        <span class="mono">${stats.totalDistance.toFixed(1)} / ${s.targetKm||DEFAULT_SHOE_TARGET_KM} ${t('ui.unitKm','公里')}</span>
+        <button type="button" class="shoe-target-edit-btn" data-action="edit-shoe" data-id="${s.id}" title="${t('ui.shoeEdit','編輯里程與規格')}">✎</button>
+      </div>
+      <div class="shoe-stat-sub small mono">${breakdownHtml}</div>
+      <div class="shoe-stat-sub small">${specsSummary}</div>`}
+      <div class="shoe-row-actions">
+        ${stats.totalRaces>0?`<button type="button" class="btn-text-small" data-action="toggle-shoe-analysis" data-id="${s.id}">${isExpanded?t('ui.shoeAnalysisHide','收起戰力分析'):t('ui.shoeAnalysisShow','戰力分析')}</button>`:''}
+        ${s.isRetired
+          ?`<button type="button" class="btn-text-small" data-action="unretire-shoe" data-id="${s.id}">${t('ui.shoeUnretire','恢復服役')}</button>`
+          :(isFullyWorn
+            ?`<button type="button" class="btn-primary btn-honor-retire" data-action="honor-retire-shoe" data-id="${s.id}">${t('ui.shoeHonorRetire','✅ 標記為退役')}</button>`
+            :`<button type="button" class="btn-text-small" data-action="retire-shoe" data-id="${s.id}">${t('ui.shoeRetire','退役')}</button>`)}
+        ${canDelete?`<button type="button" class="btn-text-small danger" data-action="delete-shoe" data-id="${s.id}">${t('ui.delete','刪除')}</button>`:''}
       </div>
       ${isExpanded?shoeAnalysisHtml(s.id):''}
     </div>`;
@@ -12219,7 +12279,7 @@ function shoeManagementBodyHtml(){
 function shoeModalHtml(){
   return `<div class="modal-panel modal-panel-wide">
     <h2>${t('ui.shoeManageTitle','鞋款管理')}</h2>
-    <p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。')}</p>
+    <p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積里程（比賽距離＋自己填的訓練里程）幫助評估退役時機。')}</p>
     ${shoeManagementBodyHtml()}
     <div class="modal-actions"><button class="btn-ghost" data-action="close-shoe-modal">${t('ui.close','關閉')}</button></div>
   </div>`;
@@ -12254,61 +12314,41 @@ function handleShoeManagementClick(e){
     const targetKm=targetInput.value?Math.max(1,Math.round(Number(targetInput.value))):DEFAULT_SHOE_TARGET_KM;
     const stackHeightMm=stackInput.value!==''?Number(stackInput.value):null;
     const dropMm=dropInput.value!==''?Number(dropInput.value):null;
-    shoes.push({id:uid(),name,targetKm,isRetired:false,stackHeightMm,dropMm,notes:''});
+    shoes.push({id:uid(),name,targetKm,isRetired:false,stackHeightMm,dropMm,notes:'',trainingKm:0});
     persistShoes();
     refreshShoeManagementUI();
     if(currentRace) renderDetail();
     return true;
   }
-  if(e.target.closest('[data-action="edit-shoe-target"]')){
-    editingShoeTargetId=e.target.closest('[data-action="edit-shoe-target"]').dataset.id;
+  if(e.target.closest('[data-action="edit-shoe"]')){
+    editingShoeId=e.target.closest('[data-action="edit-shoe"]').dataset.id;
     refreshShoeManagementUI();
-    const input=document.getElementById('shoe-target-input-'+editingShoeTargetId);
+    const input=document.getElementById('shoe-edit-target-'+editingShoeId);
     if(input){ input.focus(); input.select(); }
     return true;
   }
-  if(e.target.closest('[data-action="cancel-shoe-target"]')){
-    editingShoeTargetId=null;
+  if(e.target.closest('[data-action="cancel-shoe-edit"]')){
+    editingShoeId=null;
     refreshShoeManagementUI();
     return true;
   }
-  if(e.target.closest('[data-action="save-shoe-target"]')){
-    const id=e.target.closest('[data-action="save-shoe-target"]').dataset.id;
-    const input=document.getElementById('shoe-target-input-'+id);
-    const shoe=shoes.find(s=>s.id===id);
-    if(shoe&&input&&input.value){
-      shoe.targetKm=Math.max(1,Math.round(Number(input.value)));
-      persistShoes();
-    }
-    editingShoeTargetId=null;
-    refreshShoeManagementUI();
-    if(currentRace) renderDetail();
-    return true;
-  }
-  if(e.target.closest('[data-action="edit-shoe-specs"]')){
-    editingShoeSpecsId=e.target.closest('[data-action="edit-shoe-specs"]').dataset.id;
-    refreshShoeManagementUI();
-    const input=document.getElementById('shoe-stack-input-'+editingShoeSpecsId);
-    if(input){ input.focus(); }
-    return true;
-  }
-  if(e.target.closest('[data-action="cancel-shoe-specs"]')){
-    editingShoeSpecsId=null;
-    refreshShoeManagementUI();
-    return true;
-  }
-  if(e.target.closest('[data-action="save-shoe-specs"]')){
-    const id=e.target.closest('[data-action="save-shoe-specs"]').dataset.id;
-    const stackInput=document.getElementById('shoe-stack-input-'+id);
-    const dropInput=document.getElementById('shoe-drop-input-'+id);
+  if(e.target.closest('[data-action="save-shoe-edit"]')){
+    const id=e.target.closest('[data-action="save-shoe-edit"]').dataset.id;
+    const targetInput=document.getElementById('shoe-edit-target-'+id);
+    const trainingInput=document.getElementById('shoe-edit-training-'+id);
+    const stackInput=document.getElementById('shoe-edit-stack-'+id);
+    const dropInput=document.getElementById('shoe-edit-drop-'+id);
     const shoe=shoes.find(s=>s.id===id);
     if(shoe){
+      if(targetInput&&targetInput.value) shoe.targetKm=Math.max(1,Math.round(Number(targetInput.value)));
+      shoe.trainingKm=(trainingInput&&trainingInput.value!=='')?Math.max(0,Number(trainingInput.value)):0;
       shoe.stackHeightMm=(stackInput&&stackInput.value!=='')?Number(stackInput.value):null;
       shoe.dropMm=(dropInput&&dropInput.value!=='')?Number(dropInput.value):null;
       persistShoes();
     }
-    editingShoeSpecsId=null;
+    editingShoeId=null;
     refreshShoeManagementUI();
+    if(currentRace) renderDetail();
     return true;
   }
   if(e.target.closest('[data-action="honor-retire-shoe"]')){
@@ -12600,7 +12640,7 @@ function profileModalHtml(){
 // 只是多一個入口，兩邊都是同一套 shoeManagementBodyHtml()／
 // nutritionDictManagementBodyHtml()，不是各自維護一份重複的清單。
 function profileShoesTabHtml(){
-  return `<p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積比賽里程幫助評估退役時機（僅計算本 app 記錄的比賽距離，不含訓練里程）。')}</p>
+  return `<p class="modal-hint">${t('ui.shoeHint','記錄比賽穿的鞋款，累積里程（比賽距離＋自己填的訓練里程）幫助評估退役時機。')}</p>
     ${shoeManagementBodyHtml()}`;
 }
 function profileNutritionTabHtml(){
@@ -13296,7 +13336,13 @@ document.addEventListener('paste',async e=>{
 
   e.preventDefault();
   if(Array.isArray(parsed)){
-    if(importRacesArray(parsed)) logFeatureUse('global_paste_json_array');
+    // 判斷這個陣列是「賽事清單」還是「鞋款訓練里程更新」：每一項都
+    // 有 name／trainingKm，但沒有賽事才會有的 schedule／sportType
+    // 欄位，就當作是鞋款更新，不是走賽事匯入那一條路。
+    const looksLikeShoeUpdate=parsed.length>0&&parsed.every(item=>item&&typeof item==='object'&&item.name!=null&&item.trainingKm!=null&&item.schedule==null&&item.sportType==null);
+    if(looksLikeShoeUpdate){
+      if(importShoeTrainingKm(parsed)) logFeatureUse('global_paste_shoe_training');
+    }else if(importRacesArray(parsed)) logFeatureUse('global_paste_json_array');
   }else if(currentRace){
     delete parsed.id;delete parsed.createdAt;
     deepMergeInto(currentRace,parsed);
