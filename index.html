@@ -255,7 +255,7 @@
     background:var(--surface);cursor:pointer;padding:0;text-align:left;font:inherit;
     transition:box-shadow 0.15s,border-color 0.15s,transform 0.15s ease;
   }
-  .photo-card:hover{border-color:var(--trail);box-shadow:0 4px 14px rgba(0,0,0,0.12);transform:translateY(-2px);}
+  .photo-card:hover{border-color:var(--trail);box-shadow:0 4px 14px rgba(0,0,0,0.12);}
   .photo-card:active{transform:scale(0.98);}
   .photo-card.selected{border-color:var(--trail);border-width:2px;}
   .photo-card-img{width:100%;aspect-ratio:1/1;background:var(--paper);overflow:hidden;}
@@ -263,6 +263,49 @@
   .photo-card:hover .photo-card-img img{transform:scale(1.03);}
   .photo-card-info{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;transition:background-color 0.2s ease;}
   .photo-card:hover .photo-card-info{background:var(--paper);}
+  /* ---- 獎牌牆的 3D 傾斜與反光：滑鼠在卡片上移動時，卡片會朝游標
+     方向傾斜，表面有一道跟著游標走的光斑，模擬實體閃卡反射環境光。
+     只在「有滑鼠可以懸停」的裝置上啟用（@media hover:hover），觸控
+     裝置沒有「懸停」這個狀態，手指一離開畫面卡片就會卡在某個傾斜
+     角度回不來，做了反而是扣分。
+     旋轉角度跟光斑位置都由 JS 寫進 CSS 變數，CSS 只負責套用——
+     JS 不直接改 transform 字串，變數讀寫比重組字串好維護，也方便
+     在「減少動態效果」時用 CSS 單方面關掉。 ---- */
+  @media (hover:hover) and (pointer:fine){
+    .photo-grid{perspective:1000px;}
+    .photo-card{
+      transform-style:preserve-3d;
+      transform:rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));
+      will-change:transform;
+    }
+    /* 游標離開後靠這個過渡緩緩轉回水平；追蹤中的即時跟隨則由 JS 在
+       每一格畫面直接寫入變數，那時候把過渡關掉，不然會有延遲感。 */
+    .photo-card.tilt-resetting{transition:transform 0.45s cubic-bezier(0.22,1,0.36,1);}
+    /* 反光層：半透明白色放射狀漸層，圓心跟著游標跑。用 overlay 混合
+       模式疊在卡片上，亮處更亮、暗處保持暗，比直接鋪一層白色更接近
+       玻璃反光的實際樣子。pointer-events:none 確保它不會擋住點擊。 */
+    .photo-card::after{
+      content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+      border-radius:inherit;opacity:0;transition:opacity 0.3s ease;
+      background:radial-gradient(circle at var(--glare-x,50%) var(--glare-y,50%),
+        rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.12) 30%, transparent 60%);
+      mix-blend-mode:overlay;
+    }
+    .photo-card:hover::after{opacity:1;}
+    .photo-card{position:relative;}
+    /* 圖層景深：卡片傾斜時，文字區塊浮在照片前方一點點，產生視差。
+       數值刻意壓在 18px（提案建議的 40px 在這個尺寸的卡片上會讓文字
+       明顯飄出卡片邊界、跟相鄰卡片重疊），有立體感但不會散掉。 */
+    .photo-card-info{transform:translateZ(18px);}
+    .photo-card-pb{transform:translateZ(12px);}
+  }
+  /* 尊重系統的「減少動態效果」：關掉傾斜與反光，卡片維持平面，
+     其餘的懸停效果（邊框變色、陰影）不受影響。 */
+  @media (prefers-reduced-motion:reduce){
+    .photo-card{transform:none!important;}
+    .photo-card::after{display:none;}
+    .photo-card-info,.photo-card-pb{transform:none;}
+  }
   .photo-card-pb{align-self:flex-start;font-size:11px;color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:1px 8px;margin-bottom:2px;}
   .photo-card-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .photo-card-date{font-size:12px;color:var(--stone);}
@@ -2319,7 +2362,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.96.0';
+const APP_VERSION='v2.98.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2431,6 +2474,9 @@ const JA={
   'ui.drawerBasicTitle':'大会の基本情報','ui.drawerScheduleTitle':'日程とエントリー',
   'ui.drawerLogisticsTitle':'予算と旅程','ui.dashLogisticsEmpty':'予算・旅程が未入力です',
   'ui.drawerRouteTitle':'コースデータ','ui.dashRouteEmpty':'コースデータが未入力です','ui.dashCutoff':'制限時間',
+  'ui.drawerWeatherTitle':'気象データ','ui.dashWeatherEmpty':'気象データが未入力です','ui.dashHumidity':'湿度',
+  'ui.dashCpSummary':'{a} 箇所・{b} 箇所に制限時間','ui.dashCpEmpty':'CPがまだ登録されていません',
+  'ui.dashMediaSummary':'{n} 件のリンク','ui.dashMediaEmpty':'リンクがまだ登録されていません',
   'ui.dashBasicEmpty':'基本情報が未入力です','ui.dashScheduleEmpty':'日程が未入力です','ui.dashBib':'ゼッケン',
   'ui.dashRank':'総合 {n} 位','ui.dashResultsEmpty':'記録が未入力です',
   'ui.dashReviewFilled':'{n} 件記入済み','ui.dashReviewEmpty':'振り返りが未入力です',
@@ -2892,6 +2938,9 @@ const EN={
   'ui.drawerBasicTitle':'Race Details','ui.drawerScheduleTitle':'Schedule & Entry',
   'ui.drawerLogisticsTitle':'Budget & Logistics','ui.dashLogisticsEmpty':'No budget or logistics yet',
   'ui.drawerRouteTitle':'Course Data','ui.dashRouteEmpty':'No course data yet','ui.dashCutoff':'Cutoff',
+  'ui.drawerWeatherTitle':'Weather Data','ui.dashWeatherEmpty':'No weather data yet','ui.dashHumidity':'Humidity',
+  'ui.dashCpSummary':'{a} stations \u00b7 {b} with cutoffs','ui.dashCpEmpty':'No checkpoints yet',
+  'ui.dashMediaSummary':'{n} links','ui.dashMediaEmpty':'No links yet',
   'ui.dashBasicEmpty':'No details entered yet','ui.dashScheduleEmpty':'No dates entered yet','ui.dashBib':'Bib',
   'ui.dashRank':'Overall #{n}','ui.dashResultsEmpty':'No results entered yet',
   'ui.dashReviewFilled':'{n} notes written','ui.dashReviewEmpty':'No review written yet',
@@ -5794,6 +5843,31 @@ function scheduleDashCardHtml(race){
   const sub=parts.length?parts.join('・'):t('ui.dashScheduleEmpty','尚未填寫時間');
   return dashCardHtml('schedule',t('ui.drawerScheduleTitle','時間與報名'),sub);
 }
+function weatherDashCardHtml(race){
+  const cf=race.climateForecast||{},dw=race.raceDayWeather||{};
+  const parts=[];
+  if(dw.feelsLikeTempC!=null) parts.push(dw.feelsLikeTempC+'°C');
+  else if(cf.avgTempC!=null) parts.push(cf.avgTempC+'°C');
+  if(dw.condition) parts.push(labelFor(WEATHER_OPTIONS,dw.condition,'weather'));
+  if(dw.humidityPct!=null) parts.push(t('ui.dashHumidity','濕度')+' '+dw.humidityPct+'%');
+  const sub=parts.length?parts.join('・'):t('ui.dashWeatherEmpty','尚未填寫氣象資料');
+  return dashCardHtml('weather',t('ui.drawerWeatherTitle','氣象資料'),sub);
+}
+function checkpointsDashCardHtml(race){
+  const cps=race.checkpoints||[];
+  const withCutoff=cps.filter(c=>c.cutoffTimeSeconds!=null).length;
+  const sub=cps.length
+    ? tf2('ui.dashCpSummary',`${cps.length} 個・${withCutoff} 個有關門時間`,cps.length,withCutoff)
+    : t('ui.dashCpEmpty','尚未新增 CP 站');
+  return dashCardHtml('checkpoints',t('list.checkpoints','CP / 補給站明細'),sub);
+}
+function mediaLinksDashCardHtml(race){
+  const items=race.mediaLinks||[];
+  const sub=items.length
+    ? tf('ui.dashMediaSummary','{n} 筆連結',items.length)
+    : t('ui.dashMediaEmpty','尚未新增連結');
+  return dashCardHtml('mediaLinks',t('list.mediaLinks','多媒體與連結'),sub);
+}
 function routeDashCardHtml(race){
   const r=race.route||{};
   const parts=[];
@@ -5871,6 +5945,18 @@ const DRAWER_SECTIONS={
   schedule:{
     title:()=>t('ui.drawerScheduleTitle','時間與報名'),
     body:race=>`<div class="section-body">${SECTION_BASIC.filter(f=>!BASIC_INFO_PATHS.includes(f.path)).map(f=>renderField(race,f,'basic')).join('')}</div>`,
+  },
+  weather:{
+    title:()=>t('ui.drawerWeatherTitle','氣象資料'),
+    body:race=>`<div class="section-body">${SECTION_WEATHER.map(f=>renderField(race,f,'weather')).join('')}</div>`,
+  },
+  checkpoints:{
+    title:()=>t('list.checkpoints','CP / 補給站明細'),
+    body:race=>renderRepeatable(race,'checkpoints'),
+  },
+  mediaLinks:{
+    title:()=>t('list.mediaLinks','多媒體與連結'),
+    body:race=>renderRepeatable(race,'mediaLinks'),
   },
   route:{
     title:()=>t('ui.drawerRouteTitle','路線數據'),
@@ -9674,6 +9760,66 @@ function renderCareerSummary(){
   </div>`;
 }
 
+/* ============================================================
+   獎牌牆 3D 傾斜引擎
+   監聽器用事件委派掛在 document 上（不是每次重畫獎牌牆後逐一綁在
+   每張卡片上），因為獎牌牆會因為篩選、切換檢視、新增賽事等原因
+   重新產生 DOM，逐一綁定的話每次重畫都要重綁一次，很容易漏掉。
+   實際的 DOM 寫入包在 requestAnimationFrame 裡：滑鼠移動事件的
+   觸發頻率可能高於螢幕更新率，每次都直接寫 style 等於做了畫面上
+   根本看不到的白工，還會拖慢捲動。
+   ============================================================ */
+const TILT_MAX_DEG=9;
+let tiltPending=null,tiltRafId=null;
+function tiltSupported(){
+  return window.matchMedia
+    &&window.matchMedia('(hover:hover) and (pointer:fine)').matches
+    &&!window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+}
+function applyTiltFrame(){
+  tiltRafId=null;
+  if(!tiltPending) return;
+  const {card,tiltX,tiltY,glareX,glareY}=tiltPending;
+  tiltPending=null;
+  if(!card.isConnected) return;
+  card.style.setProperty('--tilt-x',tiltX.toFixed(2)+'deg');
+  card.style.setProperty('--tilt-y',tiltY.toFixed(2)+'deg');
+  card.style.setProperty('--glare-x',glareX.toFixed(1)+'%');
+  card.style.setProperty('--glare-y',glareY.toFixed(1)+'%');
+}
+document.addEventListener('mousemove',e=>{
+  if(!tiltSupported()) return;
+  const card=e.target.closest('.photo-card');
+  if(!card) return;
+  const rect=card.getBoundingClientRect();
+  if(!rect.width||!rect.height) return;
+  // 把游標位置正規化成 -0.5 ~ +0.5（卡片正中心是 0），再乘上最大
+  // 傾斜角度。rotateX 要取負號：游標往上（y 變小）時，卡片上緣要
+  // 往後仰、下緣往前傾，這在 CSS 的旋轉方向上剛好是相反的。
+  const px=(e.clientX-rect.left)/rect.width;
+  const py=(e.clientY-rect.top)/rect.height;
+  tiltPending={
+    card,
+    tiltX:-((py-0.5)*2)*TILT_MAX_DEG,
+    tiltY:((px-0.5)*2)*TILT_MAX_DEG,
+    glareX:px*100,
+    glareY:py*100,
+  };
+  card.classList.remove('tilt-resetting');
+  if(tiltRafId==null) tiltRafId=requestAnimationFrame(applyTiltFrame);
+},{passive:true});
+document.addEventListener('mouseout',e=>{
+  const card=e.target.closest('.photo-card');
+  if(!card) return;
+  // mouseout 在卡片內部元素之間移動時也會觸發，要確認游標是真的
+  // 離開整張卡片（relatedTarget 已經不在這張卡片裡）才歸零，不然
+  // 滑過卡片裡的文字就會閃一下。
+  if(e.relatedTarget&&card.contains(e.relatedTarget)) return;
+  if(tiltPending&&tiltPending.card===card) tiltPending=null;
+  card.classList.add('tilt-resetting');
+  card.style.setProperty('--tilt-x','0deg');
+  card.style.setProperty('--tilt-y','0deg');
+},{passive:true});
 function renderPhotoGrid(){
   const withPhotos=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.coverImage);
   withPhotos.sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
@@ -9928,7 +10074,7 @@ function renderDetail(){
       ${routeMapHtml(race)}
       ${geoPhotoSectionHtml(race)}
       ${gpsDenoiseSectionHtml(race)}
-      ${renderRepeatable(race,'checkpoints')}
+      ${checkpointsDashCardHtml(race)}
     </details>
     <details class="section" id="section-weather">
       <summary>${t('ui.sectionWeather','氣象')}</summary>
@@ -9936,7 +10082,7 @@ function renderDetail(){
         ${race.historicalWeather?historicalWeatherCompactHtml(race.historicalWeather,race)
           :(raceIsHistorical(race)&&raceHasGpsTrack(race)?`<p class="empty-hint small">${historicalWeatherFetchingRaceId===race.id?t('ui.weatherFetching','抓取中…'):t('ui.historicalWeatherPending','正在查詢賽事當天的歷史天氣…')}</p>`:'')}
         ${marineConditionsCompactHtml(race)}
-        ${SECTION_WEATHER.map(f=>renderField(race,f,'weather')).join('')}
+        ${weatherDashCardHtml(race)}
       </div>
     </details>
     <details class="section" id="section-logistics">
@@ -9965,7 +10111,7 @@ function renderDetail(){
       </div>
       ${resultsDashCardHtml(race)}
       ${reviewDashCardHtml(race)}
-      ${renderRepeatable(race,'mediaLinks')}
+      ${mediaLinksDashCardHtml(race)}
       ${mediaGalleryHtml(race)}
     </details>
   `;
