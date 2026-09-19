@@ -2316,7 +2316,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v2.91.0';
+const APP_VERSION='v2.92.0';
 
 /* ============================================================
    多語系（i18n）
@@ -5868,6 +5868,37 @@ const QUICK_NAV_SECTIONS=[
 function quickNavHtml(){
   return `<nav class="quick-nav">${QUICK_NAV_SECTIONS.map(([id,key,fallback])=>`<a href="#${id}" data-target="${id}">${t(key,fallback)}</a>`).join('')}</nav>`;
 }
+/* ============================================================
+   賽事詳情頁的區塊改成手風琴（Accordion）：預設全部收合，同一時間
+   只展開一個，展開新的就把其他的收起來。
+   之所以用 toggle 事件而不是攔截 summary 的點擊：<details> 展開收合
+   本來就是瀏覽器原生行為，攔截點擊等於要自己重做一遍（還要處理鍵盤
+   操作、無障礙焦點），交給原生處理、事後再把其他區塊關掉比較單純，
+   鍵盤使用者按 Enter 展開也一樣會觸發，不會漏掉。
+   toggle 事件不會冒泡，所以要用捕獲階段（第三個參數 true）掛在
+   document 上，才接得到每一個 <details> 的事件——不然就得在每次
+   重畫詳情頁之後，逐一對六個區塊重新掛監聽器。
+   ============================================================ */
+function collapseOtherSections(openedEl){
+  QUICK_NAV_SECTIONS.forEach(([id])=>{
+    const el=document.getElementById(id);
+    if(el&&el!==openedEl&&el.open) el.open=false;
+  });
+}
+document.addEventListener('toggle',e=>{
+  const el=e.target;
+  if(!el.classList||!el.classList.contains('section')||!el.open) return;
+  if(!detailEl.contains(el)) return; // 只管詳情頁裡的區塊，其他地方用到 <details> 的不受影響
+  collapseOtherSections(el);
+  // 地圖是在區塊還收合著的時候就初始化的，Leaflet 在那個當下算出來的
+  // 可視範圍／圖磚排版不一定正確（這是 Leaflet 放在隱藏容器裡的經典
+  // 問題：圖磚只鋪半邊、或整塊灰白）。展開的時候叫它重新量一次尺寸，
+  // 成本很低，但可以避免「展開路線區塊後地圖破圖」這種只在特定順序
+  // 下才會出現、很難重現的狀況。
+  if(el.id==='section-route'&&currentRouteMap&&currentRouteMap.invalidateSize){
+    setTimeout(()=>{ try{ currentRouteMap.invalidateSize(); }catch(err){} },50);
+  }
+},true);
 // detectSeriesPb(race)：這場賽事的晶片時間，是不是比「同系列」其他
 // 賽事裡最快的還要快。刻意只在同系列內比較，用的是跟上面「系列賽事
 // 比較（跨年）」那張表完全一樣的比較基準（同系列＝多半是同一條賽道、
@@ -9723,16 +9754,15 @@ function renderDetail(){
   if(!race){destroyRouteMap();detailEl.innerHTML=emptyStateHtml();currentRace=null;applyAmbientTint(null);return;}
   currentRace=race;
   applyAmbientTint(race.coverImageAccentColor||null);
-  const openPre=['registered','lottery_pending','considering'].includes(race.status);
   detailEl.innerHTML=`
     ${detailHeaderHtml(race)}
     ${quickNavHtml()}
     ${renderSeriesComparison(race)}
-    <details class="section" id="section-basic" open>
+    <details class="section" id="section-basic">
       <summary>${t('ui.sectionBasic','基本資訊與時間')}</summary>
       <div class="section-body">${SECTION_BASIC.map(f=>renderField(race,f,'basic')).join('')}</div>
     </details>
-    <details class="section" id="section-route" ${(openPre||(race.route.trackPoints&&race.route.trackPoints.length>=2))?'open':''}>
+    <details class="section" id="section-route">
       <summary>${t('ui.sectionRoute','地理與路線')}</summary>
       <div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f,'route')).join('')}</div>
       ${elevationProfileHtml(race)}
@@ -9750,14 +9780,14 @@ function renderDetail(){
         ${SECTION_WEATHER.map(f=>renderField(race,f,'weather')).join('')}
       </div>
     </details>
-    <details class="section" id="section-logistics" ${openPre?'open':''}>
+    <details class="section" id="section-logistics">
       <summary>${t('ui.sectionLogistics','預算與行程規劃')}</summary>
       <div class="section-body">${SECTION_LOGISTICS.map(f=>renderField(race,f,'logistics')).join('')}</div>
       ${renderRepeatable(race,'accommodations')}
       ${renderRepeatable(race,'transportation')}
       ${renderRepeatable(race,'companions')}
     </details>
-    <details class="section" id="section-prep" ${openPre?'open':''}>
+    <details class="section" id="section-prep">
       <summary>${t('ui.sectionPrep','裝備、補給與戰略（賽前準備）')}</summary>
       <div class="section-body">${SECTION_PREP.map(f=>renderField(race,f,'prep')).join('')}</div>
       ${renderGoals(race)}
@@ -9768,7 +9798,7 @@ function renderDetail(){
       ${equipmentDashCardHtml(race)}
       ${renderNutritionScheduleSection(race)}
     </details>
-    <details class="section" id="section-post" ${!openPre?'open':''}>
+    <details class="section" id="section-post">
       <summary>${t('ui.sectionPost','賽後紀錄與個人數據')}</summary>
       ${renderResultsDashboard(race)}
       ${renderSplitAnalysis(race)}
