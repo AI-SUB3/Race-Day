@@ -1086,8 +1086,17 @@
   .recovery-section h3{font-size:15px;margin-bottom:6px;}
   .recovery-list{display:flex;flex-direction:column;gap:8px;}
   .recovery-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--rule);border-radius:3px;}
-  .recovery-row-name{flex:1;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .recovery-row-name{flex:1;min-width:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .recovery-row-date{color:var(--stone);white-space:nowrap;}
+  /* 手機上一列塞不下「名稱＋日期＋兩顆按鈕」，名稱會被擠到只剩一個字。
+     改成上下兩段：名稱獨佔一行完整顯示，日期與按鈕排在下一行。 */
+  @media (max-width:640px){
+    .recovery-row{flex-wrap:wrap;gap:6px 10px;}
+    .recovery-row-name{flex:1 0 100%;white-space:normal;}
+    .recovery-row-date{flex:1;}
+  }
+  .recovery-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .recovery-purge-all{flex-shrink:0;}
 
   /* ---------- Pacing calculator ---------- */
   .pacing-inputs{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px;}
@@ -2627,7 +2636,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.9.0';
+const APP_VERSION='v3.10.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3007,6 +3016,8 @@ const JA={
   'ui.recoveryDeletedOn':'削除日：',
   'ui.recoveryRestore':'復元',
   'ui.recoveryPurge':'完全に削除',
+  'ui.recoveryPurgeAll':'すべて削除（{n}）','ui.recoveryPurgeAllConfirm':'本当に削除しますか？もう一度',
+  'ui.recoveryPurgedAll':'{n} 件を完全に削除しました',
   'ui.recoveryDeletedEmpty':'削除した大会はありません',
   'ui.recoveryOverwriteTitle':'同期の上書き履歴',
   'ui.recoveryOverwriteHint':'複数端末で同期する際、同じ大会が両方で編集されていた場合は新しい方を自動的に適用し、上書きされた方はここに残します（最大20件）。',
@@ -3473,6 +3484,8 @@ const EN={
   'ui.recoveryDeletedOn':'Deleted on ',
   'ui.recoveryRestore':'Restore',
   'ui.recoveryPurge':'Delete Permanently',
+  'ui.recoveryPurgeAll':'Empty Trash ({n})','ui.recoveryPurgeAllConfirm':'Sure? Click again',
+  'ui.recoveryPurgedAll':'Permanently deleted {n} races',
   'ui.recoveryDeletedEmpty':'No deleted races',
   'ui.recoveryOverwriteTitle':'Sync Overwrite History',
   'ui.recoveryOverwriteHint':'When syncing across devices, if the same race was edited on both sides, the newer version is applied automatically and the overwritten one is kept here (up to 20 entries).',
@@ -13730,7 +13743,14 @@ function recoveryModalHtml(){
   return `<div class="modal-panel modal-panel-wide">
     <h2>${t('ui.recoveryTitle','資料復原')}</h2>
     <div class="recovery-section">
-      <h3>${t('ui.recoveryDeletedTitle','已刪除的賽事')}</h3>
+      <div class="recovery-section-head">
+        <h3>${t('ui.recoveryDeletedTitle','已刪除的賽事')}</h3>
+        ${deleted.length?`<button type="button" class="btn-text danger recovery-purge-all" data-action="purge-all-races">${
+          recoveryConfirmPurgeAll
+            ? t('ui.recoveryPurgeAllConfirm','確定清空？再按一次')
+            : tf('ui.recoveryPurgeAll','清空全部（{n}）',deleted.length)
+        }</button>`:''}
+      </div>
       <p class="modal-hint">${tf('ui.recoveryDeletedHint',`刪除的賽事會先保留 ${TRASH_RETENTION_DAYS} 天，超過會自動清空。`,TRASH_RETENTION_DAYS)}</p>
       ${deleted.length?`<div class="recovery-list">${deleted.map(r=>`
         <div class="recovery-row">
@@ -13766,17 +13786,55 @@ function openRecoveryModal(){
   recoveryModalEl_getter().hidden=false;
 }
 function closeRecoveryModal(){
+  // 關掉畫面時把「已解除保險」的狀態一併清掉，不然下次打開按鈕還停在
+  // 確認狀態，一按就直接清空。
+  resetPurgeAllConfirm();
   recoveryModalEl_getter().hidden=true;recoveryModalEl_getter().innerHTML='';
 }
 function restoreDeletedRace(id){
   const r=state.races.find(x=>x.id===id);
   if(!r) return;
   r.deletedAt=null;r.updatedAt=new Date().toISOString();
+  // 還原任何一筆之後，把「清空全部」的確認狀態解除：使用者在按下第一次
+  // 清空、還沒確認之前改去還原某一筆，代表意圖已經變了，這時按鈕不該
+  // 還停在「再按一次就全部清光」的狀態。
+  resetPurgeAllConfirm();
   persist();renderAll();renderRecoveryButton();openRecoveryModal();
 }
 function purgeDeletedRace(id){
   state.races=state.races.filter(x=>x.id!==id);
+  recoveryConfirmPurgeAll=false;
   persist();renderRecoveryButton();openRecoveryModal();
+}
+// 清空垃圾桶是不可逆的，所以沿用這個 App 既有的「按兩次才生效」模式
+// （刪除範本那顆按鈕也是這樣），而不是跳一個系統對話框。第一次點擊只
+// 把按鈕文字換成確認提示，5 秒內沒有再按一次就自動取消，避免使用者
+// 離開畫面後回來，按鈕還停在「已解除保險」的狀態。
+let recoveryConfirmPurgeAll=false,recoveryConfirmPurgeAllTimer=null;
+function resetPurgeAllConfirm(){
+  recoveryConfirmPurgeAll=false;
+  clearTimeout(recoveryConfirmPurgeAllTimer);
+  recoveryConfirmPurgeAllTimer=null;
+}
+function purgeAllDeletedRaces(){
+  const count=state.races.filter(r=>r.deletedAt).length;
+  if(!count) return;
+  if(!recoveryConfirmPurgeAll){
+    recoveryConfirmPurgeAll=true;
+    clearTimeout(recoveryConfirmPurgeAllTimer);
+    recoveryConfirmPurgeAllTimer=setTimeout(()=>{
+      recoveryConfirmPurgeAll=false;
+      const el=document.getElementById('recovery-modal');
+      if(el&&!el.hidden) openRecoveryModal();
+    },5000);
+    openRecoveryModal();
+    return;
+  }
+  resetPurgeAllConfirm();
+  // 只刪掉真的在垃圾桶裡的（有 deletedAt 的），沒刪除的賽事一律不動。
+  state.races=state.races.filter(r=>!r.deletedAt);
+  persist();renderRecoveryButton();openRecoveryModal();
+  showToast(tf('ui.recoveryPurgedAll','已永久刪除 {n} 場賽事',count));
 }
 function restoreOverwriteEntry(entryId){
   const idx=syncOverwrites.findIndex(e=>e.id===entryId);
@@ -13812,6 +13870,7 @@ document.addEventListener('click',e=>{
   if(restoreBtn){ restoreDeletedRace(restoreBtn.dataset.id); return; }
   const purgeBtn=e.target.closest('[data-action="purge-race"]');
   if(purgeBtn){ purgeDeletedRace(purgeBtn.dataset.id); return; }
+  if(e.target.closest('[data-action="purge-all-races"]')){ purgeAllDeletedRaces(); return; }
   const restoreOwBtn=e.target.closest('[data-action="restore-overwrite"]');
   if(restoreOwBtn){ restoreOverwriteEntry(restoreOwBtn.dataset.entry); return; }
   const dismissOwBtn=e.target.closest('[data-action="dismiss-overwrite"]');
