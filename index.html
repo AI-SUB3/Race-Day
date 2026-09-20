@@ -747,9 +747,22 @@
   .hr-zone-tag{display:inline-block;font-size:10px;font-weight:700;color:#fff;padding:1px 5px;border-radius:8px;vertical-align:middle;}
   .splits-chart-wrap{margin:4px 2px 18px;overflow-x:auto;}
   .splits-chart-wrap.scroll-fade{-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
+  /* 分段表：目標是一列 40px。原本一列要 130px（配速三行＋心率兩行），
+     42 公里的表要滑 5,500px；改成單行之後只要三分之一。
+     視覺上把「Excel 格子」的感覺拿掉：沒有直線、沒有每格外框，只留
+     很淡的橫向分隔與斑馬底色，表頭黏在頂端捲動時不會不見。 */
   .splits-chart-table{width:100%;border-collapse:collapse;font-size:13px;}
-  .splits-chart-table th{text-align:left;padding:5px 8px;color:var(--stone);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--rule);}
-  .splits-chart-table td{padding:0 8px;border-bottom:1px solid var(--rule);}
+  .splits-chart-table th{
+    position:sticky;top:0;z-index:1;background:var(--paper);
+    text-align:left;padding:6px 8px;color:var(--stone);font-size:11px;font-weight:600;
+    letter-spacing:0.04em;border-bottom:1px solid var(--rule);
+  }
+  .splits-th-hint{font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7;margin-left:4px;}
+  .splits-chart-table td{padding:6px 8px;border-bottom:1px solid color-mix(in srgb,var(--rule) 55%,transparent);vertical-align:middle;}
+  .splits-chart-table tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--surface) 55%,transparent);}
+  .splits-chart-table tr:last-child td{border-bottom:none;}
+  .splits-dist{width:44px;color:var(--stone);font-size:12px;white-space:nowrap;}
+  .splits-hr{white-space:nowrap;width:78px;}
   /* 三維度游標聯動：滑鼠停在海拔剖面圖或地圖上時，對應的分段配速列
      用這個樣式標出來。淡金色跟海拔圖上的游標圓點、生命週期軌道
      「目前」節點用的是同一個 --gold，維持「這是互動當下的焦點」
@@ -758,10 +771,14 @@
   .splits-chart-table tr.sync-row-active td{font-weight:700;}
   .splits-chart-pace-cell{padding:0!important;}
 
-  .splits-chart-bar{display:flex;align-items:center;padding:6px 8px;height:100%;}
-  .splits-gap-stack{display:flex;flex-direction:column;line-height:1.35;}
+  .splits-pace-line{display:flex;align-items:baseline;gap:5px;white-space:nowrap;line-height:1.2;}
   .splits-gap-primary{color:var(--ink);font-weight:700;font-size:13px;}
-  .splits-gap-secondary{color:var(--stone);}
+  .splits-gap-secondary{color:var(--stone);font-size:12px;}
+  .splits-gap-dot{color:var(--stone);opacity:0.5;font-size:12px;}
+  /* 相對強度改用一條 3px 的細線，取代原本整格鋪滿的深綠底——資訊一樣
+     （越長越快），但不再壓在文字底下、也不再讓整張表看起來又重又花。 */
+  .splits-effort-track{height:3px;margin-top:4px;background:color-mix(in srgb,var(--rule) 70%,transparent);border-radius:2px;overflow:hidden;}
+  .splits-effort-fill{height:100%;background:linear-gradient(90deg,var(--trail),color-mix(in srgb,var(--trail) 60%,var(--gold)));border-radius:2px;}
 
   /* ---------- Elevation profile ---------- */
   .elevation-profile{margin:4px 2px 18px;}
@@ -2003,6 +2020,25 @@
   .series-table td{padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;}
   .series-table tr.current{background:rgba(46,107,73,0.08);}
   .series-table td.pb-time{color:var(--gold);font-weight:700;}
+  /* ---- 全站資料表共用的質感層 ----
+     原本每張表都是「每格一條實線」的 Excel 風格。這裡統一改成：分隔線
+     淡到只剩一點暗示、偶數列鋪一層極淡的底色當作視線引導、表頭字級
+     壓小並拉開字距。不動任何欄位寬度或內容，純粹是把「格子感」拿掉。 */
+  .table-view td,.series-table td,.shoe-analysis-table td,.epp-segment-table td,.import-table td,.sync-diag-table td{
+    border-bottom:1px solid color-mix(in srgb,var(--rule) 55%,transparent);
+  }
+  .table-view tbody tr:nth-child(even) td,
+  .series-table tbody tr:nth-child(even) td,
+  .shoe-analysis-table tbody tr:nth-child(even) td,
+  .epp-segment-table tbody tr:nth-child(even) td,
+  .sync-diag-table tbody tr:nth-child(even) td{
+    background:color-mix(in srgb,var(--surface) 55%,transparent);
+  }
+  .table-view tbody tr:last-child td,.series-table tbody tr:last-child td,.shoe-analysis-table tbody tr:last-child td{border-bottom:none;}
+  .series-table th,.import-table th,.epp-segment-table th{font-size:11px;font-weight:600;color:var(--stone);letter-spacing:0.04em;}
+  /* 選取列的深色底要蓋過斑馬底 */
+  .table-view-row.selected td{background:var(--ink)!important;}
+  .table-view-row:hover td{background:var(--surface)!important;}
 
   /* ---------- Equipment templates ---------- */
   .template-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
@@ -2725,7 +2761,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.16.0';
+const APP_VERSION='v3.17.0';
 
 /* ============================================================
    多語系（i18n）
@@ -6941,6 +6977,15 @@ function hrZoneInfo(hr,maxHr){
   if(pct<0.9) return {zone:4,color:'var(--gold)'};
   return {zone:5,color:'var(--flag)'};
 }
+// hrZoneCompactHtml：給分段表這種一列只有 40px 高的地方用。只保留數字
+// 跟區間標籤（標籤本身就是不靠顏色的文字提示，色盲使用者一樣看得懂），
+// 拿掉柱狀圖示——三個東西並排在窄螢幕上會被擠成兩行，整張表就長高一倍。
+function hrZoneCompactHtml(hr,race){
+  if(hr==null) return '<span class="stone">—</span>';
+  const info=hrZoneInfoForRace(hr,race);
+  if(!info) return `<span class="mono">${hr}</span>`;
+  return `<span class="mono" style="color:${info.color}">${hr}</span> <span class="hr-zone-tag" style="background:${info.color}">Z${info.zone}</span>`;
+}
 function hrZoneHtml(hr,race){
   if(hr==null) return '—';
   const info=hrZoneInfoForRace(hr,race);
@@ -7312,17 +7357,20 @@ function renderSplitsChart(race){
     cumKm=rangeEnd;
     const fillPct=Math.max(4,Math.round(((maxPace-displayPaces[i])/range)*100));
     const distLabel=formatDistanceCompact(rangeEnd)||'—';
+    // 配速壓成一行：GAP 粗體、實際配速淡色，中間用「·」隔開，不再每一列
+    // 都寫一次「(GAP)」「(實際配速)」——那兩個標籤是整張表最長的字串，
+    // 也是原本每列被撐到三行、整張表高得要一直往下滑的主因。標籤改成
+    // 在表頭寫一次就好。
     const paceHtml=gaps[i]!=null
-      ?`<span class="splits-gap-stack"><span class="mono splits-gap-primary">${formatPace(gaps[i])}/km (GAP)</span><span class="splits-gap-secondary mono small">${formatPace(s.avgPaceSecPerKm)}/km (${t('ui.splitsActualPace','實際配速')})</span></span>`
-      :`<span class="mono">${formatPace(s.avgPaceSecPerKm)}/km</span>`;
+      ?`<span class="mono splits-gap-primary">${formatPace(gaps[i])}</span><span class="splits-gap-dot">·</span><span class="mono splits-gap-secondary">${formatPace(s.avgPaceSecPerKm)}</span>`
+      :`<span class="mono splits-gap-primary">${formatPace(s.avgPaceSecPerKm)}</span>`;
     return `<tr data-km-end="${rangeEnd.toFixed(3)}" data-km-span="${s.distanceKm.toFixed(3)}">
-      <td class="mono num">${distLabel}</td>
+      <td class="mono splits-dist">${distLabel}</td>
       <td class="splits-chart-pace-cell">
-        <span class="splits-chart-bar" style="background:linear-gradient(to right, var(--trail) ${fillPct}%, transparent ${fillPct}%)">
-          ${paceHtml}
-        </span>
+        <div class="splits-pace-line">${paceHtml}</div>
+        <div class="splits-effort-track"><div class="splits-effort-fill" style="width:${fillPct}%"></div></div>
       </td>
-      <td class="mono num">${hrZoneHtml(s.avgHr,race)}</td>
+      <td class="num splits-hr">${hrZoneCompactHtml(s.avgHr,race)}</td>
     </tr>`;
   }).join('');
   return `<div class="splits-chart-wrap">
@@ -7330,7 +7378,7 @@ function renderSplitsChart(race){
     <table class="splits-chart-table" id="splits-chart-table-${race.id}">
       <thead><tr>
         <th>${t('ui.splitsChartDistance','距離')}</th>
-        <th>${t('ui.resultPace','配速')}</th>
+        <th>${t('ui.resultPace','配速')} <span class="splits-th-hint">GAP · ${t('ui.splitsActualPace','實際')}</span></th>
         <th class="num">${t('ui.resultAvgHr','心率')}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
