@@ -1,0 +1,144 @@
+# 賽事紀錄 — 進度交接摘要
+
+> 貼到新對話開頭即可接續。最後更新：v3.27.0
+
+---
+
+## 專案基本資料
+
+- **名稱**：賽事紀錄（英文品牌 My Race；介面英文名 Race Log）
+- **Repo**：AI-SUB3/Race-Day → https://ai-sub3.github.io/Race-Day/
+- **架構**：純前端，主體是單一 `index.html`（約 938 KB），無建置步驟
+- **Firebase**：race-day-6da0b（Blaze），Google 登入 + Firestore
+- **工作路徑**：`/home/claude/race-schema/index.html`
+
+### 部署檔案（缺一不可）
+
+```
+repo 根目錄/
+├── index.html
+├── icons/            ← v3.14.0 起必要，少傳圖示會空白
+│   ├── manifest.webmanifest
+│   ├── icon-192.png / icon-512.png
+│   ├── apple-touch-icon.png
+│   └── help-avatar.png
+├── about/ · sitemap/ · glossary/ · functions/
+├── README.md · USAGE.md · CHANGELOG.md · CHANGELOG-archive.md · LICENSE
+├── test_suite.py     ← 回歸測試（不需部署，但請保存）
+└── firestore.rules · robots.txt · sitemap.xml
+```
+
+---
+
+## 工作方式（請沿用）
+
+1. **每一輪流程**：先查證現況 → 改 → 寫 Playwright 測試驗證 → **實際截圖看畫面** → 跑全站回歸 → 版本號 +1 → 更新 CHANGELOG/USAGE/README → 交付檔案
+2. **交付檔名一律 `index.html`**（GitHub Pages 需求）
+3. **每次改完必跑**：
+   - JS 語法檢查（把 `<script>` 內容丟進 `new Function`）
+   - HTML 標籤平衡檢查
+   - `/tmp/test_drawer_regression.py`（全站回歸）
+4. **程式碼註解用繁體中文，寫「為什麼」不寫「做什麼」**
+5. **提案不照單全收**：查證後不合理的部分要說明理由並提替代方案
+
+### 測試套件
+
+`test_suite.py`（58 項檢查，9 個群組）取代原本散落的 219 支臨時腳本，
+**請跟 index.html 一起保存並持續增補**。
+
+```bash
+pip install playwright && playwright install chromium
+
+python3 test_suite.py                 # 全部（約 30 秒）
+python3 test_suite.py security mobile # 指定群組
+python3 test_suite.py --list          # 列出群組
+APP=/path/to/index.html python3 test_suite.py
+```
+
+群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data`
+
+離開碼：0 通過 / 1 有失敗 / 2 參數錯誤（可直接接 CI）。
+已用「故意注入 XSS 漏洞」驗證過它真的抓得到回歸，不是只會印綠勾。
+
+**新增檢查時的原則**：斷言「行為」不斷言實作細節（class 名稱、DOM 順序），
+否則改版面就要跟著改測試，測試最後會被當成雜訊略過。
+
+---
+
+## 已完成（v3.x 重點）
+
+### 架構
+- **抽屜面板化**：13 個抽屜（equipment / results / review / basicInfo / schedule / weather / checkpoints / mediaLinks / nutritionPlan / trainingPlan / goals / route / logistics），詳情頁全部變成「摘要卡片 + 點開編輯」
+- **雲端同步六種資料**：賽事、鞋款、補給品資料庫、個人資料、裝備範本、徽章解鎖。合併規則「本機優先」，不覆蓋本機已有值
+- **同步診斷**：本機 vs 雲端對照表，數字不一致標警示色，另顯示儲存空間用量（>80% 轉紅）
+- **儲存失敗一定跳警示**（七種資料全涵蓋）
+
+### 功能
+- **生涯回顧主卡**：長按 PB 數字 1.5 秒解鎖（或 Cmd+K → `wrap`），含軌跡畫廊（GPX→SVG 霓虹線條）、戰靴排行、能量補給統計
+- **鐵人三項分項成績**：FIT session 解析，游泳／T1／自行車／T2／跑步各自的距離、時間、心率、配速（各用自己的單位）
+- **賽事五維雷達圖**：距離／爬升／氣溫嚴苛／高心率／穩定度，Canvas 原生繪製
+- **徽章 103 枚**，五大類
+- **動態回顧輪播（Story Mode）入口在 Cmd+K**（v3.25.0 移除導覽列按鈕）。手機上目前無入口，指令面板只能用鍵盤開
+
+### 視覺／互動
+- 獎牌牆 3D 傾斜與反光、懸浮按鈕磁性吸附、iOS 空間景深（彈窗時主畫面退後失焦）
+- 畫面縮放鎖定（含 iOS 的 JS 手勢攔截）
+- 表格去 Excel 化，分段表固定高度內捲
+
+### 運動別正確性（近期重點）
+- **跑步步頻 ×2**（FIT 記單腳，區間 30–110 才換算，可安全重跑）
+- **游泳用每 100m 配速**，不顯示步頻與總爬升
+- **多項運動不顯示全場平均**配速／心率／步頻
+- **分享圖同樣受上述規則管轄**（v3.27.0 補修）。詳情頁改運動別邏輯時，記得分享圖 `buildShareCanvas()` 是另一份程式碼，不會自動跟著改
+
+---
+
+## 目前卡在哪 / 待辦
+
+### 需要你決定
+1. **Repo 是否轉私有**：LICENSE 已改成「版權所有，保留一切權利」，但 **repo 公開就看得到原始碼**。真正不開源需付費方案（GitHub Pro）才能從私有 repo 部署 Pages
+
+### 已知限制（已記錄，非錯誤）
+- **超馬步頻誤判**：走路多的超馬若總步頻落在 100–110，會被誤乘成 200–220。需用配速輔助判斷才能解
+- **Android 首次長按不震動**：Chrome 要求先點過畫面，touchstart 不算手勢。已自動降級為加強視覺回饋
+- **CSP**：JS 全行內，有意義的 CSP 需先拆出獨立 .js，屬架構級改動
+
+### 下一步候選
+- 行為追蹤型徽章（連續鍵盤操作、停留時間等）需 session 級追蹤機制，獨立一輪
+- 其他表格（賽事清單、系列比較、鞋款分析）尚未做高度處理
+- 時間欄位驗證提示（若實際遇到格式填錯）
+
+---
+
+## 關鍵決策（不要推翻，除非有新理由）
+
+| 決策 | 理由 |
+|---|---|
+| 配色沿用既有土色系 | 金=PB／達成、綠=進行中焦點、橘紅=警示。加高彩度色會讓語彙失效 |
+| 不做時間分段輸入框 | 時間欄位共用解析邏輯，改動牽動全站；三格在手機上更難用 |
+| 匯入紀錄檔一律覆蓋（含成績時間） | v3.24.0 依使用者要求推翻 v3.22.0 的「時間不覆蓋」。程式不替使用者保留，改成套用前逐欄標出「會取代現有的 ⋯」，不想覆蓋就取消。檔案沒有的欄位仍不清空 |
+| 缺資料回傳 null 不是 0 | 0 在雷達圖上看起來像「很輕鬆」，跟「沒資料」是兩回事 |
+| 分項成績用 FIT session 而非配速猜測 | 猜測遇到爬坡慢騎或轉換區小跑會判斷錯 |
+| 範例資料真刪除不進垃圾桶 | 隨時可一鍵重匯，留垃圾桶會洗掉真正要救的賽事 |
+| 徽章只做資料算得出來的 | 行為追蹤是另一套機制，需獨立驗證 |
+| 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
+| 外部套件走 jsDelivr 的 npm 路徑並鎖死版號 | SRI 雜湊要驗得出來才敢用。jsDelivr 逐位元組轉送 npm 原檔，雜湊能從官方 tarball 算出並比對；cdnjs 自行重新打包無從驗證。浮動版號（`@6`）配 SRI 則是定時炸彈，上游一發版就整包被擋 |
+| 破壞性操作用兩段式確認 | 沿用既有模式，5 秒自動解除，狀態各自獨立 |
+
+---
+
+## 近期修過的坑（避免重蹈）
+
+- **`e.target.closest()` 未防呆**：事件派送到 document 時 `e.target` 非元素節點會拋例外
+- **`filter`/`transform` 會破壞 `position:fixed` 子孫**：套在 `#main-content`（FAB 在 `</main>` 之外）才安全
+- **manifest 路徑相對於 manifest 自身**，不是相對於網頁
+- **翻譯鍵有動態組合**（`'ui.leg_'+sport`），不能只靠搜尋判斷是否無用
+- **`saveJson`/`loadJson` 必須往外拋**，包 try/catch 會讓儲存警示永遠不觸發
+- **CHANGELOG 版本號曾重複**，新增前先確認號碼未被使用
+- **升級 xlsx / idb-keyval 時必須同時換 `integrity` 雜湊**，只改版號會被瀏覽器擋掉。作法：`npm pack <套件>@<版本>` 解開後 `openssl dgst -sha384 -binary <檔案> | openssl base64 -A`
+
+---
+
+## 待你回報
+
+- 手機上獎牌牆與搜尋的實際流暢度。v3.26.0 把縮圖從 320px 提到 480px 換畫質，沙盒量到首屏 75ms→100ms，**實機是否還順要你回報**；太卡的話把 `COVER_THUMB_PX` 調回 420 或 360 就好，重產是自動的

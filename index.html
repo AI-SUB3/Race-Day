@@ -24,9 +24,14 @@
 <meta name="apple-mobile-web-app-title" content="賽事紀錄">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
+<!-- 外部套件一律鎖「確切版本 + SRI 雜湊」：SRI 比對的是檔案內容，版本寫成 @6 這種浮動範圍時，
+     上游一發新版雜湊就對不上、套件會被瀏覽器直接擋掉，等於埋了一顆定時炸彈。
+     xlsx 從 cdnjs 換到 jsDelivr 的 npm 路徑，是因為 jsDelivr 逐位元組轉送 npm 套件原檔，
+     雜湊能從 npm 官方 tarball 算出來並對得起來；cdnjs 會自行重新打包，我們無從驗證雜湊正確與否。 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/idb-keyval@6.3.0/dist/umd.js" integrity="sha384-heZBNbZ5qOuEy6kN0six3ZVIzCVxqm0GmdO13Biy02ZPr/Ec/pXgGK5IBi2+z+XP" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root{
     --paper:#E6E9E6;
@@ -2062,7 +2067,6 @@
   .sync-diag-mismatch td:first-child{font-weight:600;}
   .storage-usage-warn{color:var(--flag);font-weight:600;}
   .sync-diag-note{color:var(--stone);line-height:1.6;margin-top:4px;}
-  .gpx-keep-note{display:block;font-size:12px;color:var(--stone);margin-top:2px;}
   .gpx-overwrite-note{display:block;font-size:12px;color:var(--flag);margin-top:2px;}
   .modal-hint{color:var(--ink-soft);font-size:15px;margin-bottom:16px;}
   .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
@@ -2182,7 +2186,6 @@
         <button id="cal-table-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.tableViewToggle" title="切換為緊湊表格檢視" aria-label="切換為緊湊表格檢視">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14h18M9 4v16"/></svg>
         </button>
-        <button id="btn-story-mode" class="btn-ghost" hidden></button>
       </div>
       <input id="search-input" type="search" data-i18n-placeholder="ui.searchPlaceholder" placeholder="搜尋賽事名稱、城市…">
       <div id="filter-chips" class="chips"></div>
@@ -2853,7 +2856,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.22.0';
+const APP_VERSION='v3.27.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3105,7 +3108,7 @@ const JA={
   'ui.pacingCalc':'計算','ui.pacingDistanceCol':'距離','ui.pacingTimeCol':'通過予定タイム',
   'ui.pacingInvalid':'有効な目標タイムと距離を入力してください','ui.downloadWristband':'リストバンド画像をダウンロード',
   'ui.wristbandTitle':'ペースリストバンド',
-  'ui.shareImageSuffix':'-シェア画像.png','ui.wristbandFilename':'ペース手帳.png',
+  'ui.shareImageSuffix':'-シェア画像.png','ui.shareShoe':'シューズ','ui.shareFuel':'補給','ui.shareFuelPlanned':'補給（予定）','ui.fuelGel':'ジェル','ui.fuelTablet':'塩タブレット','ui.fuelHydration':'ハイドレーション','ui.wristbandFilename':'ペース手帳.png',
   // ---- 補給時程 ----
   
   // ---- 鞋款管理 ----
@@ -3145,7 +3148,7 @@ const JA={
   'ui.yearInReviewPbCount':'自己ベスト更新回数','ui.yearInReviewNewBadges':'新規解除バッジ','ui.yearInReviewTopShoe':'最も履いたシューズ','ui.yearInReviewShoeDetail':'{count} 回/  {km} km',
   'ui.yearInReviewWeatherExtreme':'気象記録','ui.yearInReviewColdest':'最も寒かったレース','ui.yearInReviewHottest':'最も暑かったレース','ui.yearInReviewCta':'年間振り返りカード','ui.yearInReviewSuffix':'-年間振り返り.png','ui.yearInReviewDownload':'ダウンロード',
   'ui.yearInReviewRouteTraces':'今年走ったルート','ui.yearInReviewMoreRoutes':'他 {n} 件',
-  'ui.storyModeButton':'{year} 年間振り返り','ui.storyTitleSub':'ハイライトレース {n} 件','ui.storyWeatherLabel':'当日の天気','ui.storyPrev':'前へ','ui.storyNext':'次へ',
+  'ui.cmdkStoryMode':'年間振り返りスライドショー','ui.storyTitleSub':'ハイライトレース {n} 件','ui.storyWeatherLabel':'当日の天気','ui.storyPrev':'前へ','ui.storyNext':'次へ',
   'ui.openFatigueMode':'疲労モードを開く（レース中用）','ui.fatigueExit':'疲労モードを終了','ui.fatigueUndo':'ひとつ戻す',
   'ui.fatigueNextCp':'次のCP','ui.fatigueNextFuel':'次の補給','ui.fatigueSwipeRightHint':'右にスワイプ＝到着を記録','ui.fatigueSwipeLeftHint':'左にスワイプ＝補給済みを記録',
   'ui.fatigueZoneCardToggle':'心拍ゾーン早見表','ui.fatigueContrastToggle':'電子ペーパー高コントラスト',
@@ -3204,9 +3207,9 @@ const JA={
   // ---- GPX/TCX 匯入 ----
   'ui.gpxImportBtn':'アクティビティファイルを読み込む（GPX / TCX / FIT）',
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
-  'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（すでに公式記録が入力されている項目は上書きしません）：',
+  'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.gpxKeepExisting':'既存の {n} を保持（上書きしません）','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3593,7 +3596,7 @@ const EN={
   'ui.pacingCalc':'Calculate','ui.pacingDistanceCol':'Distance','ui.pacingTimeCol':'Expected split time',
   'ui.pacingInvalid':'Please enter a valid target time and distance','ui.downloadWristband':'Download wristband image',
   'ui.wristbandTitle':'Pace Wristband',
-  'ui.shareImageSuffix':'-share-image.png','ui.wristbandFilename':'pace-wristband.png',
+  'ui.shareImageSuffix':'-share-image.png','ui.shareShoe':'Shoes','ui.shareFuel':'Fuel','ui.shareFuelPlanned':'Fuel (planned)','ui.fuelGel':'Gel','ui.fuelTablet':'Salt tabs','ui.fuelHydration':'Hydration','ui.wristbandFilename':'pace-wristband.png',
   
   'ui.shoeManageTitle':'Shoe Manager',
   'ui.createProfile':'Create Personal Info','ui.profileTitle':'Personal Info',
@@ -3631,7 +3634,7 @@ const EN={
   'ui.yearInReviewPbCount':'PBs Broken','ui.yearInReviewNewBadges':'New Badges','ui.yearInReviewTopShoe':'Most-Worn Shoe','ui.yearInReviewShoeDetail':'{count} races/  {km} km',
   'ui.yearInReviewWeatherExtreme':'Weather Extremes','ui.yearInReviewColdest':'Coldest Race','ui.yearInReviewHottest':'Hottest Race','ui.yearInReviewCta':'Year in Review Card','ui.yearInReviewSuffix':'-year-in-review.png','ui.yearInReviewDownload':'Download',
   'ui.yearInReviewRouteTraces':'Routes run this year','ui.yearInReviewMoreRoutes':'+{n} more',
-  'ui.storyModeButton':'{year} Year in Review','ui.storyTitleSub':'{n} highlight races','ui.storyWeatherLabel':'Weather that day','ui.storyPrev':'Previous','ui.storyNext':'Next',
+  'ui.cmdkStoryMode':'Year in review slideshow','ui.storyTitleSub':'{n} highlight races','ui.storyWeatherLabel':'Weather that day','ui.storyPrev':'Previous','ui.storyNext':'Next',
   'ui.openFatigueMode':'Open Fatigue Mode (for race day)','ui.fatigueExit':'Exit Fatigue Mode','ui.fatigueUndo':'Undo last',
   'ui.fatigueNextCp':'Next CP','ui.fatigueNextFuel':'Next Fuel','ui.fatigueSwipeRightHint':'Swipe right = mark arrived','ui.fatigueSwipeLeftHint':'Swipe left = mark fueled',
   'ui.fatigueZoneCardToggle':'HR Zone Reference','ui.fatigueContrastToggle':'E-Paper High Contrast',
@@ -3688,9 +3691,9 @@ const EN={
   
   'ui.gpxImportBtn':'Import activity file (GPX / TCX / FIT)',
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
-  'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (fields that already have official results will not be overwritten):',
+  'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.gpxKeepExisting':'keeps existing {n} \u2014 not overwritten','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -8237,11 +8240,20 @@ async function buildShareCanvas(race){
     ctx.fillText(t('ui.pbBadge','個人最佳 PB'),80,timeY+50);
   }
 
-  const pace=race.route.distanceKm?formatPace(race.results.chipTimeSeconds/race.route.distanceKm):null;
+  // 運動別的數據規則跟詳情頁一致：分享圖是最容易被外人看到的畫面，
+  // 這裡出現「泳渡配速 89'25"/km、爬升 531 公尺」比在自己頁面上看到
+  // 更糟——它會被截圖轉傳出去。
+  const isMultisport=(race.legs||[]).length>=2;
+  const isSwim=race.sportType==='swimming';
+  const chipT=race.results.chipTimeSeconds||0;
   const badges=[];
-  if(pace) badges.push([t('ui.resultPace','配速'),pace+'/km']);
+  if(!isMultisport&&race.route.distanceKm&&chipT){
+    badges.push([t('ui.resultPace','配速'),
+      isSwim?formatSwimPace(chipT/(race.route.distanceKm*10))
+            :formatPace(chipT/race.route.distanceKm)+'/km']);
+  }
   if(race.route.distanceKm) badges.push([t('field.route.route.distanceKm','距離'),race.route.distanceKm+' 公里']);
-  if(race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺']);
+  if(!isSwim&&race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺']);
   if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),String(race.results.overallRank)]);
 
   const badgeY=timeY+(isPb?110:70);
@@ -8256,11 +8268,101 @@ async function buildShareCanvas(race){
     ctx.fillText(b[1],bx,badgeY+42);
   });
 
+  // ---- 下半部：戰靴／補給／軌跡 ----
+  // 原本這裡是一整片空白（約 300px），資訊量最少的地方佔了畫面三分之一。
+  const rows=[];
+  if(isRunningSportType(race.sportType)&&race.performanceData.shoeId){
+    // 鞋款只對跑步相關賽事有意義：自行車、游泳的賽事本來就不綁鞋款，
+    // 硬是顯示只會讓人以為資料填錯。
+    const shoe=shoes.find(x=>x.id===race.performanceData.shoeId);
+    if(shoe&&shoe.name) rows.push([t('ui.shareShoe','戰靴'),shoe.name]);
+  }
+  const fuel=summarizeRaceFuel(race);
+  if(fuel) rows.push([fuel.planned?t('ui.shareFuelPlanned','補給（計畫）'):t('ui.shareFuel','補給'),fuel.parts]);
+
+  const trackPoints=(race.route.trackPoints||[]);
+  const hasTrack=trackPoints.length>=2;
+  const contentTop=badgeY+112;
+  const contentBottom=H-130;
+  // 有軌跡就讓文字退到左半邊，沒有就整行都給文字——不預留一塊永遠空著的欄位。
+  const textMaxW=hasTrack?(rows.length?430:0):(W-160);
+  rows.forEach((row,i)=>{
+    const y=contentTop+i*108;
+    ctx.fillStyle='#6B7178';
+    ctx.font=`24px ${uiFont}`;
+    ctx.fillText(row[0],80,y);
+    ctx.fillStyle='#EDEEE9';
+    ctx.font=`bold 34px ${uiFont}`;
+    // 一律壓成一行：補給項目多的時候換行會疊到下一列，而被 canvasWrapText
+    // 從中間截斷的「咖啡因…」既難看也讀不出到底還有幾項。
+    const value=Array.isArray(row[1])?fitPartsToWidth(ctx,row[1],textMaxW||(W-160)):row[1];
+    canvasWrapText(ctx,value,80,y+46,textMaxW||(W-160),44,1);
+  });
+  if(hasTrack){
+    const areaX=rows.length?560:80;
+    const areaW=(W-80)-areaX;
+    const areaH=contentBottom-contentTop+40;
+    drawGoldGlowTrack(ctx,trackPoints,areaX+areaW/2,contentTop-20+areaH/2,areaW-40,areaH-40);
+  }
+
   ctx.fillStyle='#4C9A72';
   ctx.font=`24px ${uiFont}`;
   ctx.fillText(sportLabel(race.sportType),80,H-70);
 
   return canvas;
+}
+/* fitPartsToWidth(ctx, parts, maxW)：把項目塞到一行放得下為止，放不下的
+   用「+N」交代還有幾項——比截斷成「咖啡因…」誠實，也看得出總數。 */
+function fitPartsToWidth(ctx,parts,maxW){
+  if(!parts.length) return '';
+  const sep='・';
+  let shown=[];
+  for(let i=0;i<parts.length;i++){
+    const rest=parts.length-(i+1);
+    const candidate=shown.concat(parts[i]).join(sep)+(rest?`　+${rest}`:'');
+    if(shown.length&&ctx.measureText(candidate).width>maxW) break;
+    shown.push(parts[i]);
+  }
+  const rest=parts.length-shown.length;
+  return shown.join(sep)+(rest?`　+${rest}`:'');
+}
+/* summarizeRaceFuel(race)：這場實際吃了什麼。優先用補給時程裡勾過
+   「賽後：已補給」的項目，那是實際發生的事；完全沒有勾選時才退回
+   補給設定裡的計畫數量，並標示成「計畫」——把計畫當成實際寫在分享圖
+   上是在說謊，但整塊空著也沒必要。 */
+function summarizeRaceFuel(race){
+  const taken=(race.nutritionSchedule||[]).filter(it=>it&&it.consumed&&String(it.item||'').trim());
+  if(taken.length){
+    const byItem=new Map();
+    taken.forEach(it=>{
+      const name=String(it.item).trim();
+      const qty=Number(it.qty)>0?Number(it.qty):1;
+      byItem.set(name,(byItem.get(name)||0)+qty);
+    });
+    return {planned:false,
+      parts:[...byItem.entries()].sort((a,b)=>b[1]-a[1]).map(([n,q])=>q>1?`${n} ×${q}`:n)};
+  }
+  const plan=race.nutritionPlan||{};
+  const parts=[];
+  if(plan.gelCount>0) parts.push(`${t('ui.fuelGel','能量膠')} ×${plan.gelCount}`);
+  if(plan.electrolyteTabletCount>0) parts.push(`${t('ui.fuelTablet','鹽錠')} ×${plan.electrolyteTabletCount}`);
+  if(plan.hydrationCapacityMl>0) parts.push(`${t('ui.fuelHydration','水袋')} ${plan.hydrationCapacityMl}ml`);
+  return parts.length?{planned:true,parts}:null;
+}
+/* drawGoldGlowTrack()：金色發光的軌跡，背景透明（直接畫在既有底色上，
+   不鋪任何卡片或方框）。用三層疊加而不是單一 shadowBlur——單層只會
+   得到「描了一圈模糊邊」的結果，疊加才有愈靠中心愈亮的發光感。
+   composite 用 lighter：深色底上相加才會亮，正常疊加只會愈畫愈濁。 */
+function drawGoldGlowTrack(ctx,trackPoints,cx,cy,maxW,maxH){
+  if(!trackPoints||trackPoints.length<2||maxW<=0||maxH<=0) return false;
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+  drawRouteTrackOnCanvas(ctx,trackPoints,cx,cy,maxW,maxH,'rgba(217,177,92,0.16)',26,0);
+  drawRouteTrackOnCanvas(ctx,trackPoints,cx,cy,maxW,maxH,'rgba(230,196,120,0.30)',13,0);
+  ctx.restore();
+  // 亮芯與起終點回到正常疊加：用 lighter 畫白色核心會過曝成一團白。
+  drawRouteTrackOnCanvas(ctx,trackPoints,cx,cy,maxW,maxH,'#F4E3B4',4,7);
+  return true;
 }
 async function downloadShareImage(race){
   const canvas=await buildShareCanvas(race);
@@ -9107,15 +9209,6 @@ function mostRecentStoryModeYear(){
   for(const y of years){ if(getStoryModeRaces(y).length) return y; }
   return null;
 }
-function updateStoryModeButton(){
-  const btn=document.getElementById('btn-story-mode');
-  if(!btn) return;
-  const year=mostRecentStoryModeYear();
-  if(!year){ btn.hidden=true; return; }
-  btn.hidden=false;
-  btn.textContent=t('ui.storyModeButton','{year} 年度回顧').replace('{year}',year);
-  btn.dataset.year=year;
-}
 let storyMode={races:[],index:0,timer:null,year:null};
 const STORY_SLIDE_DURATION=5000;
 function storyOverlayEl(){ return document.getElementById('story-mode-overlay'); }
@@ -9208,10 +9301,6 @@ document.getElementById('report-prompt-fallback-modal').addEventListener('click'
     const modal=document.getElementById('report-prompt-fallback-modal');
     modal.hidden=true;modal.innerHTML='';
   }
-});
-document.getElementById('btn-story-mode').addEventListener('click',()=>{
-  const year=document.getElementById('btn-story-mode').dataset.year;
-  if(year) openStoryMode(year);
 });
 
 /* ============================================================
@@ -11811,7 +11900,7 @@ function renderCreateForm(){
 
 function renderAll(){
   document.body.classList.toggle('viewing-detail',!!(state.selectedId||state.creating));
-  renderCalendar();renderDetail();renderRecoveryButton();updateStoryModeButton();
+  renderCalendar();renderDetail();renderRecoveryButton();
 }
 function scrollDetailIntoView(){
   if(typeof detailEl.scrollIntoView==='function') detailEl.scrollIntoView({behavior:'smooth',block:'start'});
@@ -12111,10 +12200,23 @@ document.getElementById('cal-today').addEventListener('click',()=>{
   state.calendarYear=t.getFullYear();state.calendarMonth=t.getMonth();
   renderCalendar();
 });
+/* scrollPhotoWallIntoView()：切成獎牌牆時，畫面上半部（生涯數據、榮譽櫃）
+   完全沒有變化，牆本身在一個半螢幕之外，唯一的回饋是按鈕自己變深色——
+   而那個變化就發生在使用者正在看的地方之外，會以為沒切成功。
+   牆的位置刻意維持原樣（仍在榮譽櫃下方），只是自動捲過去。
+   扣掉 --topbar-height 是因為頂欄是 sticky 的，直接對齊會被蓋住。 */
+function scrollPhotoWallIntoView(){
+  const wrap=document.querySelector('.photo-grid-wrap');
+  if(!wrap) return;
+  const topbar=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-height'),10)||90;
+  const top=wrap.getBoundingClientRect().top+window.scrollY-topbar-12;
+  const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({top:Math.max(0,top),behavior:reduceMotion?'auto':'smooth'});
+}
 document.getElementById('cal-view-toggle').addEventListener('click',()=>{
   state.viewMode=state.viewMode==='grid'?'calendar':'grid';
   renderCalendar();
-  if(state.viewMode==='grid') logFeatureUse('view_photo_wall');
+  if(state.viewMode==='grid'){ logFeatureUse('view_photo_wall'); scrollPhotoWallIntoView(); }
 });
 document.getElementById('cal-table-toggle').addEventListener('click',()=>{
   state.viewMode=state.viewMode==='table'?'calendar':'table';
@@ -13372,30 +13474,58 @@ function extractDominantColor(ctx,w,h){
    重新解碼一百張 760px 的圖——實測中階手機上獎牌牆要 490ms、搜尋每
    次觸發要 500ms，卡就是卡在這裡。縮圖約 15 KB，解碼量降到原本的
    七分之一。
-   320px 而不是更小：獎牌牆的卡片在桌機上接近 300px 寬，Retina 螢幕
-   再小就會糊；月曆格子那種 24px 的地方用 320px 也只是多花一點點。 */
-const COVER_THUMB_PX=320;
+   480px（v3.26.0 從 320px 提高）：獎牌牆的卡片實測是桌機 245 CSS px、
+   手機 170 CSS px，乘上 Retina 的 2～3 倍像素密度，實際需要的是
+   490～510 像素。原本的 320px 只有需求的六成，在手機上看起來就是糊的
+   ——這不是壓縮品質的問題，是解析度根本不夠。
+   為什麼停在 480 不再往上：760px 大圖本身才 80 KB，縮圖若做到 640px
+   要 69 KB，等於存了第二份幾乎一樣大的檔案，那不如直接用大圖；而直接
+   用大圖實測會讓獎牌牆的渲染從 75ms 變成 152ms（60 場、沙盒環境），
+   因為 base64 是直接串進 innerHTML 的，字串本身就是成本。480px 剛好
+   打平需求，代價是渲染 75ms→100ms、每張約 20KB→48KB。 */
+const COVER_THUMB_PX=480;
+const COVER_THUMB_QUALITY=0.8;
 function makeCoverThumb(srcCanvas,w,h){
   const scale=Math.min(1,COVER_THUMB_PX/Math.max(w,h));
-  if(scale>=1) return srcCanvas.toDataURL('image/jpeg',0.72);
+  if(scale>=1) return srcCanvas.toDataURL('image/jpeg',COVER_THUMB_QUALITY);
   const tw=Math.round(w*scale),th=Math.round(h*scale);
   const c=document.createElement('canvas');
   c.width=tw;c.height=th;
   c.getContext('2d').drawImage(srcCanvas,0,0,tw,th);
-  return c.toDataURL('image/jpeg',0.72);
+  return c.toDataURL('image/jpeg',COVER_THUMB_QUALITY);
+}
+/* imageSizeOf(dataUrl)：只為了量長寬，解完就丟。 */
+function imageSizeOf(dataUrl){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>resolve({w:img.width,h:img.height});
+    img.onerror=()=>reject(new Error('decode failed'));
+    img.src=dataUrl;
+  });
 }
 // coverThumbOf(race)：小圖優先用縮圖，沒有縮圖（舊資料還沒補產生）就退
 // 回大圖，畫面永遠不會因為缺縮圖而空白。
-/* backfillCoverThumbs()：這個功能推出前存的賽事只有 760px 大圖、沒有
-   縮圖。啟動後在背景逐一補產生，一次做一張、每張之間讓出主執行緒，
-   不會讓開啟 App 的瞬間卡住。做完才存檔一次，不是每張存一次。
-   在補完之前，coverThumbOf() 會退回大圖，畫面照常顯示。 */
+/* backfillCoverThumbs()：補兩種情況——完全沒有縮圖的舊賽事，以及
+   v3.26.0 之前用 320px 產生、現在看起來糊掉的縮圖。啟動後在背景逐一
+   處理，一次做一張、每張之間讓出主執行緒，不會讓開啟 App 的瞬間卡住。
+   做完才存檔一次，不是每張存一次。在補完之前，coverThumbOf() 會退回
+   大圖或舊縮圖，畫面照常顯示。
+   判斷「要不要重產」刻意用實際解碼出來的寬高，不另外存版本欄位：
+   多一個欄位就要一路改到 schema 與雲端文件，而這裡的解碼成本很小。
+   原圖本來就比 480 小的（例如截圖），重產也不會變清楚，所以要比對
+   原圖尺寸再決定，否則每次啟動都會白做一輪還觸發存檔。 */
 async function backfillCoverThumbs(){
-  const todo=state.races.filter(r=>r.coverImage&&!r.coverThumb);
-  if(!todo.length) return;
+  const withCover=state.races.filter(r=>r.coverImage);
+  if(!withCover.length) return;
   let done=0;
-  for(const r of todo){
+  for(const r of withCover){
     try{
+      if(r.coverThumb){
+        const thumb=await imageSizeOf(r.coverThumb);
+        if(Math.max(thumb.w,thumb.h)>=COVER_THUMB_PX) continue;
+        const full=await imageSizeOf(r.coverImage);
+        if(Math.max(full.w,full.h)<=Math.max(thumb.w,thumb.h)) continue;
+      }
       r.coverThumb=await thumbFromDataUrl(r.coverImage);
       done++;
     }catch(err){ console.error('補產生縮圖失敗',r.id,err); }
@@ -14179,22 +14309,22 @@ function gpxSummaryHtml(summary,filename){
   const fileEsc=escapeHtml(filename);
   return `<div class="modal-panel">
     <h2>${t('ui.gpxModalTitle','匯入運動紀錄檔')}</h2>
-    <p class="modal-hint">${t('ui.gpxHintFull',`從 <strong>${fileEsc}</strong> 讀到以下數據，確認後套用到「${raceName}」（已有官方成績的欄位不會被覆蓋）：`).replace('{file}',fileEsc).replace('{race}',raceName)}</p>
+    <p class="modal-hint">${t('ui.gpxHintFull',`從 <strong>${fileEsc}</strong> 讀到以下數據，確認後套用到「${raceName}」（<strong>會覆蓋現有欄位</strong>，被取代的值標示在下方）：`).replace('{file}',fileEsc).replace('{race}',raceName)}</p>
     <ul class="gpx-summary">
       <li>${t('ui.gpxDistance','距離')} <span class="mono">${summary.distanceKm} 公里</span>${
-        // 距離沒有「已有值就不覆蓋」的保護，會直接蓋掉。把舊值標出來，
-        // 使用者才有機會在套用前發現「這場的距離本來是別的數字」。
+        // 套用一律覆蓋，所以現有值只要不同就標出來，使用者才有機會在
+        // 套用前發現「這場的距離本來是別的數字」，不想覆蓋就按取消。
         (currentRace.route.distanceKm!=null&&currentRace.route.distanceKm!==summary.distanceKm)
           ?`<span class="gpx-overwrite-note">${tf('ui.gpxWillReplace','會取代現有的 {n} 公里',currentRace.route.distanceKm)}</span>`
           :''
       }</li>
       <li>${t('ui.gpxElevGain','總爬升')} <span class="mono">${summary.elevationGainM!=null?summary.elevationGainM+' 公尺':'—'}</span></li>
       <li>${t('ui.gpxTime','時間')} <span class="mono">${summary.durationSeconds!=null?secToHMS(summary.durationSeconds):'—'}</span>${
-        // 時間是唯一「已有值就不覆蓋」的欄位，但原本只在上方用一句話概括
-        // 帶過，使用者看不出這一次到底會不會被套用。直接把現有的值寫出來，
-        // 才不會出現「匯入了 1:33:46，畫面卻還是 3:44:25」這種困惑。
-        (summary.durationSeconds!=null&&currentRace.results.chipTimeSeconds!=null)
-          ?`<span class="gpx-keep-note">${tf('ui.gpxKeepExisting','保留現有 {n}，不會被覆蓋',secToHMS(currentRace.results.chipTimeSeconds))}</span>`
+        // 時間過去是唯一不覆蓋的欄位，現在也覆蓋了。這一行是整個對話框裡
+        // 最需要看清楚的——官方晶片成績會被手錶時間蓋掉，就是在這裡發生。
+        (summary.durationSeconds!=null&&currentRace.results.chipTimeSeconds!=null
+          &&currentRace.results.chipTimeSeconds!==summary.durationSeconds)
+          ?`<span class="gpx-overwrite-note">${tf('ui.gpxWillReplaceValue','會取代現有的 {n}',secToHMS(currentRace.results.chipTimeSeconds))}</span>`
           :''
       }</li>
       <li>${t('ui.gpxAvgHr','平均心率')} <span class="mono">${summary.avgHr!=null?summary.avgHr+' bpm':'—'}</span></li>
@@ -14218,11 +14348,17 @@ let pendingGpxSummary=null;
 function applyActivitySummaryToRace(race,s){
   if(s.distanceKm) race.route.distanceKm=s.distanceKm;
   if(s.elevationGainM!=null) race.route.elevationGainM=s.elevationGainM;
-  if(s.durationSeconds!=null&&race.results.chipTimeSeconds==null) race.results.chipTimeSeconds=s.durationSeconds;
+  // 檔案即最終來源：所有欄位一律覆蓋，成績時間也不例外。
+  // 舊規則（已有時間就不覆蓋）是程式替使用者做的決定，代價是「匯入了 1:33:46
+  // 畫面卻還是 3:44:25」這種查不出原因的矛盾；而且一旦填錯就再也蓋不掉，
+  // 只能手動改。保護機制改成「套用前把每一格會變成什麼攤開來看」，
+  // 決定權留在看得到差異的人手上——不想覆蓋就按取消。
+  if(s.durationSeconds!=null) race.results.chipTimeSeconds=s.durationSeconds;
   if(s.avgHr!=null) race.performanceData.avgHr=s.avgHr;
   if(s.maxHr!=null) race.performanceData.maxHr=s.maxHr;
   if(s.avgCadence!=null) race.performanceData.avgCadence=normalizeRunningCadence(s.avgCadence,race.sportType);
-  if(!race.performanceData.dataSource) race.performanceData.dataSource='運動手錶匯入 (GPX/TCX/FIT)';
+  // 資料來源同樣覆蓋：匯入之後這場的數據確實來自檔案，留著舊標註會對不上。
+  race.performanceData.dataSource='運動手錶匯入 (GPX/TCX/FIT)';
   if(s.splits&&s.splits.length) race.splits=s.splits;
   if(s.legs&&s.legs.length) race.legs=s.legs;
   // 只要是 FIT 檔就回報分段偵測結果（fitSessionCount 只有 FIT 路徑會設定，
@@ -15788,6 +15924,7 @@ const CMDK_ACTIONS=[
   {id:'export-csv',icon:'📊',labelKey:'ui.cmdkExportCsv',labelFallback:'匯出 CSV（扁平化）',keywords:'export csv excel',run:()=>document.getElementById('btn-export-csv').click()},
   {id:'sample-data',icon:'🧪',labelKey:'ui.cmdkSampleData',labelFallback:'範例資料',keywords:'sample demo example 示範',run:()=>document.getElementById('btn-sample-data').click()},
   {id:'hall-of-fame',icon:'🏆',labelKey:'ui.cmdkHallOfFame',labelFallback:'生涯回顧',keywords:'wrap hall of fame career review 回顧 生涯',available:()=>state.races.filter(r=>r.status==='completed'&&!r.deletedAt).length>0,run:()=>openHallOfFame()},
+  {id:'story-mode',icon:'📸',labelKey:'ui.cmdkStoryMode',labelFallback:'年度回顧相片輪播',keywords:'story year in review 年度 回顧 相片 輪播',available:()=>mostRecentStoryModeYear()!==null,run:()=>openStoryMode(mostRecentStoryModeYear())},
   {id:'sync-diag',icon:'🔍',labelKey:'ui.cmdkSyncDiag',labelFallback:'同步診斷',keywords:'sync diagnostics 同步 診斷',available:()=>cloudEnabled()&&!!state.user,run:()=>openSyncDiagModal()},
 ];
 const CMDK_QUICK_FILTERS=[

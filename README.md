@@ -3,7 +3,7 @@
 一個從報名到終點的個人賽事紀錄網站。純前端、主體是單一 `index.html`（另有一個 `icons/` 圖示資料夾），部署在 GitHub Pages，不需要自架後端伺服器。
 
 - **線上網址**：https://ai-sub3.github.io/Race-Day/
-- **版本**：v3.22.0（[CHANGELOG.md](./CHANGELOG.md)）
+- **版本**：v3.27.0（[CHANGELOG.md](./CHANGELOG.md)）
 - **詳細操作說明**：[USAGE.md](./USAGE.md)
 - **功能介紹頁**：https://ai-sub3.github.io/Race-Day/about/
 - **網站地圖（給訪客看）**：https://ai-sub3.github.io/Race-Day/sitemap/
@@ -34,7 +34,8 @@
 
 - 純靜態網頁：一個 `index.html`，內嵌 CSS 與 JavaScript，無建置流程、無框架
 - 儲存：IndexedDB（獨立架站時，經由開源套件 idb-keyval，CDN 連不到時自動退回 `localStorage`）或 Claude 內建 artifact 儲存（預覽環境），Firebase Firestore 為選用的雲端同步層
-- 外部函式庫皆透過 CDN 載入：SheetJS（Excel 解析）、Firebase JS SDK（選用）
+- 外部函式庫皆透過 CDN 載入：SheetJS（Excel 解析）、idb-keyval（IndexedDB 封裝）、Firebase JS SDK（選用）。
+  前兩者鎖定確切版本並加上 SRI（`integrity` 雜湊）驗證，CDN 端內容若被竄改，瀏覽器會拒絕執行；兩者載入失敗都有既有的降級路徑（idb-keyval → `localStorage`；SheetJS → 匯入時明確報錯）
 - GPX/TCX 解析、海拔剖面、配速計算、分享圖／配速手環產生（Canvas）皆為純前端運算，資料不會上傳到任何第三方伺服器
 
 ## 部署備忘（GitHub Pages）
