@@ -745,7 +745,20 @@
 
   /* ---------- HR zones & splits chart ---------- */
   .hr-zone-tag{display:inline-block;font-size:10px;font-weight:700;color:#fff;padding:1px 5px;border-radius:8px;vertical-align:middle;}
-  .splits-chart-wrap{margin:4px 2px 18px;overflow-x:auto;}
+  /* 42 公里的分段表有 42 列，一列 34px 就是 1,449px——整整 1.7 個手機
+     螢幕全是表格，使用者得一路滑過去才能看到下面的內容。改成固定高度
+     內部捲動：預設露出約 11 列，想看完整的就在表格內部滑。表頭本來就
+     是 sticky，捲動時欄位名稱不會消失。
+     用 max-height 而不是寫死 height：分段少的賽事（例如只有 5 段）不會
+     留一塊空白。 */
+  .splits-chart-block{margin:4px 2px 18px;}
+  .splits-chart-wrap{overflow-x:auto;max-height:380px;overflow-y:auto;overscroll-behavior:contain;}
+  /* 捲動區底部給一個漸層提示「下面還有」，不然固定高度會讓人以為到底了 */
+  .splits-chart-scrollbox{position:relative;}
+  .splits-chart-scrollbox::after{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:28px;pointer-events:none;
+    background:linear-gradient(to bottom,transparent,var(--paper));
+  }
   .splits-chart-wrap.scroll-fade{-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
   /* 分段表：目標是一列 40px。原本一列要 130px（配速三行＋心率兩行），
      42 公里的表要滑 5,500px；改成單行之後只要三分之一。
@@ -754,12 +767,15 @@
   .splits-chart-table{width:100%;border-collapse:collapse;font-size:13px;}
   .splits-chart-table th{
     position:sticky;top:0;z-index:1;background:var(--paper);
-    text-align:left;padding:6px 8px;color:var(--stone);font-size:11px;font-weight:600;
-    letter-spacing:0.04em;border-bottom:1px solid var(--rule);
+    text-align:left;padding:6px 8px 7px;color:var(--stone);font-size:10px;font-weight:600;
+    letter-spacing:0.12em;text-transform:uppercase;border-bottom:1px solid var(--rule);
   }
   .splits-th-hint{font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7;margin-left:4px;}
   .splits-chart-table td{padding:6px 8px;border-bottom:1px solid color-mix(in srgb,var(--rule) 55%,transparent);vertical-align:middle;}
-  .splits-chart-table tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--surface) 55%,transparent);}
+  .splits-chart-table tbody tr:hover td{background:color-mix(in srgb,var(--surface) 70%,transparent);}
+  /* 每 5 公里給一條稍微明顯一點的線：取代斑馬紋的視線引導功能，
+     而且比「一列淺一列深」更有意義——跑者本來就是以 5K 為單位在讀配速。 */
+  .splits-chart-table tbody tr[data-milestone="1"] td{border-bottom-color:var(--rule);}
   .splits-chart-table tr:last-child td{border-bottom:none;}
   .splits-dist{width:44px;color:var(--stone);font-size:12px;white-space:nowrap;}
   .splits-hr{white-space:nowrap;width:78px;}
@@ -2027,12 +2043,16 @@
   .table-view td,.series-table td,.shoe-analysis-table td,.epp-segment-table td,.import-table td,.sync-diag-table td{
     border-bottom:1px solid color-mix(in srgb,var(--rule) 55%,transparent);
   }
-  .table-view tbody tr:nth-child(even) td,
-  .series-table tbody tr:nth-child(even) td,
-  .shoe-analysis-table tbody tr:nth-child(even) td,
-  .epp-segment-table tbody tr:nth-child(even) td,
-  .sync-diag-table tbody tr:nth-child(even) td{
-    background:color-mix(in srgb,var(--surface) 55%,transparent);
+  /* 斑馬紋是「這是一張試算表」最強烈的視覺訊號，拿掉之後改用：
+     橫向分隔線再淡一階、表頭與內容拉開字級與顏色的差距、數字欄位
+     用等寬字並右對齊。密度不變，但看起來是一份排版過的資料，
+     不是一格一格的儲存格。 */
+  .table-view tbody tr:hover td,
+  .series-table tbody tr:hover td,
+  .shoe-analysis-table tbody tr:hover td,
+  .epp-segment-table tbody tr:hover td,
+  .sync-diag-table tbody tr:hover td{
+    background:color-mix(in srgb,var(--surface) 70%,transparent);
   }
   .table-view tbody tr:last-child td,.series-table tbody tr:last-child td,.shoe-analysis-table tbody tr:last-child td{border-bottom:none;}
   .series-table th,.import-table th,.epp-segment-table th{font-size:11px;font-weight:600;color:var(--stone);letter-spacing:0.04em;}
@@ -7364,7 +7384,10 @@ function renderSplitsChart(race){
     const paceHtml=gaps[i]!=null
       ?`<span class="mono splits-gap-primary">${formatPace(gaps[i])}</span><span class="splits-gap-dot">·</span><span class="mono splits-gap-secondary">${formatPace(s.avgPaceSecPerKm)}</span>`
       :`<span class="mono splits-gap-primary">${formatPace(s.avgPaceSecPerKm)}</span>`;
-    return `<tr data-km-end="${rangeEnd.toFixed(3)}" data-km-span="${s.distanceKm.toFixed(3)}">
+    // 每跨過一個 5 公里整數就標記一次，讓表格有「每 5K 一段」的節奏感，
+    // 取代原本斑馬紋的視線引導功能——跑者本來就是以 5K 為單位讀配速的。
+    const isMilestone=Math.floor(rangeEnd/5)>Math.floor((rangeEnd-s.distanceKm)/5);
+    return `<tr data-km-end="${rangeEnd.toFixed(3)}" data-km-span="${s.distanceKm.toFixed(3)}"${isMilestone?' data-milestone="1"':''}>
       <td class="mono splits-dist">${distLabel}</td>
       <td class="splits-chart-pace-cell">
         <div class="splits-pace-line">${paceHtml}</div>
@@ -7373,16 +7396,23 @@ function renderSplitsChart(race){
       <td class="num splits-hr">${hrZoneCompactHtml(s.avgHr,race)}</td>
     </tr>`;
   }).join('');
-  return `<div class="splits-chart-wrap">
+  // 外面再包一層 scrollbox：固定高度的捲動區底部需要一個漸層提示「下面
+  // 還有」，那個漸層必須疊在捲動區之上、不能跟著內容一起捲走，所以不能
+  // 放在捲動容器本身。
+  // 標題放在捲動區「外面」——放裡面的話一滑就跟著跑掉，使用者會失去
+  // 「我正在看哪張表」的定位。捲動區只包表格本身。
+  return `<div class="splits-chart-block">
     <div class="yearly-chart-title small">${t('ui.splitsChartTitle','分段配速一覽')}</div>
-    <table class="splits-chart-table" id="splits-chart-table-${race.id}">
-      <thead><tr>
-        <th>${t('ui.splitsChartDistance','距離')}</th>
-        <th>${t('ui.resultPace','配速')} <span class="splits-th-hint">GAP · ${t('ui.splitsActualPace','實際')}</span></th>
-        <th class="num">${t('ui.resultAvgHr','心率')}</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div class="splits-chart-scrollbox"><div class="splits-chart-wrap">
+      <table class="splits-chart-table" id="splits-chart-table-${race.id}">
+        <thead><tr>
+          <th>${t('ui.splitsChartDistance','距離')}</th>
+          <th>${t('ui.resultPace','配速')} <span class="splits-th-hint">GAP · ${t('ui.splitsActualPace','實際')}</span></th>
+          <th class="num">${t('ui.resultAvgHr','心率')}</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div></div>
   </div>`;
 }
 
