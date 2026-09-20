@@ -1482,7 +1482,54 @@
       font-size:16px;
     }
   }
-  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--trail);}
+  /* 單位後綴：疊在輸入框右緣，輸入框右側留出對應的內距避免數字被壓到。
+     pointer-events:none 讓點在單位上時焦點仍然落進輸入框。 */
+  /* 欄位分組卡片：每一組用一層極淡的底色與細邊框框起來，組與組之間
+     拉開間距。不用強烈的邊框或陰影——目的只是「讓人看出這幾個欄位是
+     同一類」，不是把畫面切成一格一格。 */
+  .field-group{
+    border:1px solid var(--rule);border-radius:10px;
+    padding:14px 14px 2px;margin-bottom:18px;
+    background:color-mix(in srgb,var(--surface) 35%,transparent);
+  }
+  .field-group-title{
+    font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--stone);margin:0 0 12px;
+  }
+  /* 路面比例堆疊長條 */
+  .surface-mix{margin:2px 0 14px;}
+  .surface-mix-bar{
+    display:flex;height:10px;border-radius:5px;overflow:hidden;
+    background:var(--rule);margin-bottom:8px;
+  }
+  .surface-seg{display:block;height:100%;}
+  .surface-seg-paved{background:var(--stone);}
+  .surface-seg-trail{background:var(--trail);}
+  .surface-seg-stairs{background:var(--gold);}
+  .surface-mix-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-soft);align-items:center;}
+  .surface-key{display:inline-flex;align-items:center;gap:5px;}
+  .surface-dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  .surface-mix-warn{color:var(--flag);font-weight:600;}
+  .field-input-wrap{position:relative;display:block;}
+  .field-input-wrap.has-unit input{padding-right:42px;}
+  .field-unit{
+    position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    font-size:13px;color:var(--stone);pointer-events:none;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  /* 補充說明：字級壓小、顏色壓淡，讓它明顯屬於「附註」而不是欄位本身 */
+  .field-hint{font-size:12px;color:var(--stone);line-height:1.5;margin-top:-1px;}
+  /* 對焦狀態：除了邊框變色，再加一圈很淡的光暈。原本只有邊框換色，
+     在深色底上對比不夠、不容易看出焦點在哪一格。
+     顏色沿用這個 App 既有的主色（--trail 綠），不另外引進霓虹橘或青藍
+     ——那兩個顏色跟整體的土色系調性衝突，而且這個 App 已經把金色用在
+     「PB／達成」、綠色用在「進行中的焦點」，再加一個高彩度色會讓原本
+     建立好的顏色語彙失效。 */
+  .field input:focus,.field select:focus,.field textarea:focus{
+    border-color:var(--trail);
+    box-shadow:0 0 0 3px var(--focus-glow);
+    outline:none;
+  }
   .field input[type="number"],.field input[data-kind="duration"]{font-family:'IBM Plex Mono',monospace;}
   .field textarea{resize:vertical;min-height:60px;}
   .field-inline{flex-direction:row;align-items:center;gap:8px;}
@@ -1580,6 +1627,9 @@
   .create-form{max-width:420px;}
   .create-form h1{font-size:24px;margin-bottom:20px;}
   .create-actions{display:flex;gap:10px;margin-top:8px;}
+  /* 說明文字跟上面的按鈕之間要留白：貼太近會看起來像按鈕的一部分，
+     也會跟下面那顆「匯入賽事主視覺」擠在一起分不出層次。 */
+  .create-import-hint{color:var(--stone);margin:6px 0 16px;line-height:1.5;}
   .create-import-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
   .create-staged-ok{color:var(--trail);font-size:13px;}
   .create-staged-err{color:var(--flag);font-size:13px;}
@@ -2012,6 +2062,8 @@
   .sync-diag-mismatch td:first-child{font-weight:600;}
   .storage-usage-warn{color:var(--flag);font-weight:600;}
   .sync-diag-note{color:var(--stone);line-height:1.6;margin-top:4px;}
+  .gpx-keep-note{display:block;font-size:12px;color:var(--stone);margin-top:2px;}
+  .gpx-overwrite-note{display:block;font-size:12px;color:var(--flag);margin-top:2px;}
   .modal-hint{color:var(--ink-soft);font-size:15px;margin-bottom:16px;}
   .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
   .modal-actions-top{margin-top:0;margin-bottom:14px;}
@@ -2264,19 +2316,19 @@ const SECTION_BASIC=[
   {path:'location.country',label:'國家',type:'text'},
 ];
 const SECTION_ROUTE=[
-  {path:'route.distanceKm',label:'總距離',type:'number',unit:'公里'},
-  {path:'route.elevationGainM',label:'總爬升',type:'number',unit:'公尺'},
-  {path:'route.elevationLossM',label:'總下降',type:'number',unit:'公尺'},
-  {path:'route.startAltitudeM',label:'起點海拔',type:'number',unit:'公尺'},
-  {path:'route.minAltitudeM',label:'最低海拔',type:'number',unit:'公尺'},
-  {path:'route.maxAltitudeM',label:'最高海拔',type:'number',unit:'公尺'},
-  {path:'route.surface.pavedPct',label:'柏油路比例',type:'number',unit:'%'},
-  {path:'route.surface.trailPct',label:'土路比例',type:'number',unit:'%'},
-  {path:'route.surface.stairsPct',label:'階梯比例',type:'number',unit:'%'},
-  {path:'route.checkpointCount',label:'CP / 補給站數量',type:'number'},
-  {path:'route.cutoffTimeSeconds',label:'全程關門時間',type:'duration'},
-  {path:'route.itraPoints',label:'ITRA / UTMB 點數（官方公告值，非自動計算）',type:'number'},
-  {path:'route.terrainNotes',label:'賽道陡升段說明',type:'textarea',wide:true},
+  {group:'basic',path:'route.distanceKm',label:'總距離',type:'number',unit:'公里'},
+  {group:'basic',path:'route.elevationGainM',label:'總爬升',type:'number',unit:'公尺'},
+  {group:'basic',path:'route.elevationLossM',label:'總下降',type:'number',unit:'公尺'},
+  {group:'basic',path:'route.startAltitudeM',label:'起點海拔',type:'number',unit:'公尺'},
+  {group:'basic',path:'route.minAltitudeM',label:'最低海拔',type:'number',unit:'公尺'},
+  {group:'basic',path:'route.maxAltitudeM',label:'最高海拔',type:'number',unit:'公尺'},
+  {group:'surface',path:'route.surface.pavedPct',label:'柏油路比例',type:'number',unit:'%'},
+  {group:'surface',path:'route.surface.trailPct',label:'土路比例',type:'number',unit:'%'},
+  {group:'surface',path:'route.surface.stairsPct',label:'階梯比例',type:'number',unit:'%'},
+  {group:'meta',path:'route.checkpointCount',label:'CP / 補給站數量',type:'number'},
+  {group:'basic',path:'route.cutoffTimeSeconds',label:'全程關門時間',type:'duration'},
+  {group:'meta',path:'route.itraPoints',label:'ITRA / UTMB 點數',type:'number',hint:'官方公告值，非自動計算'},
+  {group:'meta',path:'route.terrainNotes',label:'賽道陡升段說明',type:'textarea',wide:true},
 ];
 const SECTION_WEATHER=[
   {path:'climateForecast.avgTempC',label:'歷年平均氣溫',type:'number',unit:'°C'},
@@ -2801,7 +2853,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.20.0';
+const APP_VERSION='v3.22.0';
 
 /* ============================================================
    多語系（i18n）
@@ -2924,6 +2976,8 @@ const JA={
   'ui.dashGel':'ジェル','ui.dashSalt':'塩タブ','ui.dashNutritionEmpty':'補給プランが未設定です',
   'ui.dashTaper':'テーパー','ui.dashWeekly':'週間走行距離','ui.dashTrainingEmpty':'トレーニング計画が未設定です',
   'ui.dashGoalsEmpty':'目標タイムが未設定です',
+  'ui.routeGroupBasic':'基本データ','ui.routeGroupSurface':'路面構成','ui.routeGroupMeta':'レース情報と補足',
+  'ui.surfacePaved':'舗装路','ui.surfaceTrail':'未舗装','ui.surfaceStairs':'階段','ui.surfaceSumWarn':'合計 {n}%',
   'ui.drawerRouteTitle':'コースデータ','ui.dashRouteEmpty':'コースデータが未入力です','ui.dashCutoff':'制限時間',
   'ui.drawerWeatherTitle':'気象データ','ui.dashWeatherEmpty':'気象データが未入力です','ui.dashHumidity':'湿度',
   'ui.hofTitle':'キャリア総括','ui.hofPressHint':'長押しでキャリア総括を表示','ui.hofNoPb':'フルマラソンの記録がまだありません',
@@ -2968,7 +3022,8 @@ const JA={
   'ui.newRaceName':'大会名','ui.newRaceNamePlaceholder':'例：2026 台北マラソン',
   'ui.newRaceSport':'主な種目','ui.newRaceStatus':'ステータス','ui.newRaceDate':'レース日',
   'ui.newRaceUrl':'大会公式サイト',
-  'ui.createImportActivity':'アクティビティファイルを読み込む','ui.createImportCover':'大会ビジュアルを読み込む',
+  'ui.createImportActivity':'完走記録ファイル／コース GPX を読み込む',
+  'ui.createImportActivityHint':'Garmin / COROS / Strava などの書き出しに対応。FIT・GPX・TCX が使えます','ui.createImportCover':'大会ビジュアルを読み込む',
   'ui.helpTitle':'使い方','ui.helpCaption':'質問はこちらへ！',
   'ui.coverAdd':'＋ カバー写真を追加','ui.coverChange':'カバー写真を変更','ui.coverRemove':'写真を削除',
   'ui.errImageLoad':'この画像を読み込めませんでした',
@@ -3151,7 +3206,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（すでに公式記録が入力されている項目は上書きしません）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.gpxKeepExisting':'既存の {n} を保持（上書きしません）','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3414,6 +3469,8 @@ const EN={
   'ui.dashGel':'Gels','ui.dashSalt':'Salt tabs','ui.dashNutritionEmpty':'No fuel plan set yet',
   'ui.dashTaper':'Taper','ui.dashWeekly':'Weekly','ui.dashTrainingEmpty':'No training plan set yet',
   'ui.dashGoalsEmpty':'No target times set yet',
+  'ui.routeGroupBasic':'Core Metrics','ui.routeGroupSurface':'Surface Mix','ui.routeGroupMeta':'Race Info & Notes',
+  'ui.surfacePaved':'Paved','ui.surfaceTrail':'Trail','ui.surfaceStairs':'Stairs','ui.surfaceSumWarn':'{n}% total',
   'ui.drawerRouteTitle':'Course Data','ui.dashRouteEmpty':'No course data yet','ui.dashCutoff':'Cutoff',
   'ui.drawerWeatherTitle':'Weather Data','ui.dashWeatherEmpty':'No weather data yet','ui.dashHumidity':'Humidity',
   'ui.hofTitle':'Career Review','ui.hofPressHint':'Press and hold to unlock','ui.hofNoPb':'No marathon record yet',
@@ -3458,7 +3515,8 @@ const EN={
   'ui.newRaceName':'Race name','ui.newRaceNamePlaceholder':'e.g. 2026 Taipei Marathon',
   'ui.newRaceSport':'Sport type','ui.newRaceStatus':'Status','ui.newRaceDate':'Race date',
   'ui.newRaceUrl':'Official Race Website',
-  'ui.createImportActivity':'Import Activity File','ui.createImportCover':'Import Race Cover Image',
+  'ui.createImportActivity':'Import Finish Record / Course GPX',
+  'ui.createImportActivityHint':'Works with Garmin / COROS / Strava exports \u2014 FIT, GPX and TCX accepted','ui.createImportCover':'Import Race Cover Image',
   'ui.helpTitle':'Help','ui.helpCaption':'Got questions? Ask me!',
   'ui.coverAdd':'+ Add Cover Photo','ui.coverChange':'Change Cover Photo','ui.coverRemove':'Remove Photo',
   'ui.errImageLoad':'Could not load this image',
@@ -3632,7 +3690,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (fields that already have official results will not be overwritten):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.gpxKeepExisting':'keeps existing {n} \u2014 not overwritten','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -6388,8 +6446,23 @@ function renderField(race,cfg,ns){
     default:
       input=`<input id="${id}" type="${cfg.type||'text'}" data-path="${cfg.path}" value="${escapeHtml(val!=null?val:'')}">`;
   }
-  return `<label class="field${cfg.wide?' wide':''}${smartFilledHighlightPaths.has(cfg.path)?' field-smart-filled':''}" for="${id}"><span>${label}${cfg.unit?`<i>(${cfg.unit})</i>`:''}</span>${input}</label>`;
+  // 單位改成貼在輸入框右緣的後綴，不再寫進標籤。標籤裡掛「(公尺)」會
+  // 讓一整欄的標題長短不一、視線沒辦法對齊，而單位其實是「這個輸入框
+  // 要填什麼格式」的提示，放在輸入框上比放在標題上更接近它的用途。
+  // hint 則放到輸入框下方：像「官方公告值，非自動計算」這種補充說明
+  // 寫在標題裡會把標題撐成兩行，擠掉真正的欄位名稱。
+  const unitHtml=cfg.unit?`<span class="field-unit" aria-hidden="true">${escapeHtml(unitSuffix(cfg.unit))}</span>`:'';
+  const hintHtml=cfg.hint?`<span class="field-hint">${escapeHtml(cfg.hint)}</span>`:'';
+  const inputWrap=cfg.unit
+    ?`<span class="field-input-wrap has-unit">${input}${unitHtml}</span>`
+    :input;
+  return `<label class="field${cfg.wide?' wide':''}${smartFilledHighlightPaths.has(cfg.path)?' field-smart-filled':''}" for="${id}"><span>${label}</span>${inputWrap}${hintHtml}</label>`;
 }
+// 中文單位換成國際符號：輸入框裡的空間有限，「公尺」佔兩個全形字、
+// 「m」只佔一個半形，而且數字欄位本來就是用等寬字顯示，配符號比配
+// 中文更整齊。日文與英文介面本來就會翻成各自的寫法，這裡只處理中文。
+const UNIT_SUFFIX_MAP={'公里':'km','公尺':'m','公斤':'kg','毫升':'ml','分鐘':'min','%':'%'};
+function unitSuffix(unit){ return UNIT_SUFFIX_MAP[unit]||unit; }
 
 const REORDER_HANDLE_SVG=`<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>`;
 const EQUIP_VIEW_KANBAN_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="16" rx="1"/><rect x="10.5" y="4" width="6" height="10" rx="1"/><rect x="18" y="4" width="3" height="7" rx="1"/></svg>`;
@@ -6699,6 +6772,51 @@ function goalsDashCardHtml(race){
     : t('ui.dashGoalsEmpty','尚未設定目標時間');
   return dashCardHtml('goals',t('ui.goalsTitle','賽前目標'),sub);
 }
+/* routeDrawerBodyHtml(race)：路線數據拆成三張卡片。
+   13 個欄位平鋪在一起時，使用者得自己在腦中分辨「這是講高度的、那是
+   講路面的」；分組之後每一塊的意義是自明的，填寫時也知道還差哪一區。
+   分組方式對應三種不同的資料性質：量得出來的地形數據、路面材質比例、
+   以及主辦單位公告的賽事資訊。 */
+const ROUTE_GROUPS=[
+  {key:'basic',title:()=>t('ui.routeGroupBasic','基礎數據')},
+  {key:'surface',title:()=>t('ui.routeGroupSurface','賽道材質')},
+  {key:'meta',title:()=>t('ui.routeGroupMeta','賽事資訊與說明')},
+];
+function routeDrawerBodyHtml(race){
+  return ROUTE_GROUPS.map(g=>{
+    const fields=SECTION_ROUTE.filter(f=>f.group===g.key);
+    if(!fields.length) return '';
+    return `<section class="field-group">
+      <h4 class="field-group-title">${g.title()}</h4>
+      <div class="section-body">${fields.map(f=>renderField(race,f,'route')).join('')}</div>
+      ${g.key==='surface'?surfaceMixBarHtml(race):''}
+    </section>`;
+  }).join('');
+}
+/* surfaceMixBarHtml(race)：柏油／土路／階梯三個比例的堆疊長條。
+   三個數字本來就該加起來接近 100，但分開填的時候很難察覺自己填成了
+   120 或 60——畫成一條就一眼看得出來。總和不是 100 時直接標示出來，
+   不自動修正使用者填的數字（那是他的資料，不是我們的）。 */
+function surfaceMixBarHtml(race){
+  const s=(race.route&&race.route.surface)||{};
+  const parts=[
+    {key:'paved',pct:s.pavedPct,label:t('ui.surfacePaved','柏油')},
+    {key:'trail',pct:s.trailPct,label:t('ui.surfaceTrail','土路')},
+    {key:'stairs',pct:s.stairsPct,label:t('ui.surfaceStairs','階梯')},
+  ].map(p=>({...p,pct:(p.pct!=null&&p.pct>0)?p.pct:0}));
+  const total=parts.reduce((a,b)=>a+b.pct,0);
+  if(!total) return '';
+  return `<div class="surface-mix">
+    <div class="surface-mix-bar">${parts.filter(p=>p.pct>0).map(p=>
+      `<span class="surface-seg surface-seg-${p.key}" style="width:${(p.pct/total*100).toFixed(1)}%" title="${p.label} ${p.pct}%"></span>`
+    ).join('')}</div>
+    <div class="surface-mix-legend">${parts.filter(p=>p.pct>0).map(p=>
+      `<span class="surface-key"><i class="surface-dot surface-seg-${p.key}"></i>${p.label} <span class="mono">${p.pct}%</span></span>`
+    ).join('')}
+    ${Math.abs(total-100)>0.5?`<span class="surface-mix-warn">${tf('ui.surfaceSumWarn','合計 {n}%',total.toFixed(0))}</span>`:''}
+    </div>
+  </div>`;
+}
 function routeDashCardHtml(race){
   const r=race.route||{};
   const parts=[];
@@ -6806,7 +6924,7 @@ const DRAWER_SECTIONS={
   },
   route:{
     title:()=>t('ui.drawerRouteTitle','路線數據'),
-    body:race=>`<div class="section-body">${SECTION_ROUTE.map(f=>renderField(race,f,'route')).join('')}</div>`,
+    body:race=>routeDrawerBodyHtml(race),
   },
   logistics:{
     title:()=>t('ui.drawerLogisticsTitle','預算與行程'),
@@ -11680,9 +11798,10 @@ function renderCreateForm(){
       <button class="btn-ghost" data-action="cancel-create">${t('ui.cancel','取消')}</button>
     </div>
     <div class="create-import-row">
-      <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.createImportActivity','匯入運動紀錄檔')}</button>
+      <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.createImportActivity','匯入完賽紀錄檔／賽道 GPX 檔')}</button>
       <span id="create-activity-line">${createActivityLineHtml()}</span>
     </div>
+    <p class="create-import-hint small">${t('ui.createImportActivityHint','支援 Garmin / COROS / Strava 等匯出的檔案，可吃 FIT、GPX、TCX')}</p>
     <div class="create-import-row">
       <button type="button" class="btn-ghost" data-action="open-cover-picker">${t('ui.createImportCover','匯入賽事主視覺')}</button>
       <span id="create-cover-line">${createCoverLineHtml()}</span>
@@ -14062,9 +14181,22 @@ function gpxSummaryHtml(summary,filename){
     <h2>${t('ui.gpxModalTitle','匯入運動紀錄檔')}</h2>
     <p class="modal-hint">${t('ui.gpxHintFull',`從 <strong>${fileEsc}</strong> 讀到以下數據，確認後套用到「${raceName}」（已有官方成績的欄位不會被覆蓋）：`).replace('{file}',fileEsc).replace('{race}',raceName)}</p>
     <ul class="gpx-summary">
-      <li>${t('ui.gpxDistance','距離')} <span class="mono">${summary.distanceKm} 公里</span></li>
+      <li>${t('ui.gpxDistance','距離')} <span class="mono">${summary.distanceKm} 公里</span>${
+        // 距離沒有「已有值就不覆蓋」的保護，會直接蓋掉。把舊值標出來，
+        // 使用者才有機會在套用前發現「這場的距離本來是別的數字」。
+        (currentRace.route.distanceKm!=null&&currentRace.route.distanceKm!==summary.distanceKm)
+          ?`<span class="gpx-overwrite-note">${tf('ui.gpxWillReplace','會取代現有的 {n} 公里',currentRace.route.distanceKm)}</span>`
+          :''
+      }</li>
       <li>${t('ui.gpxElevGain','總爬升')} <span class="mono">${summary.elevationGainM!=null?summary.elevationGainM+' 公尺':'—'}</span></li>
-      <li>${t('ui.gpxTime','時間')} <span class="mono">${summary.durationSeconds!=null?secToHMS(summary.durationSeconds):'—'}</span></li>
+      <li>${t('ui.gpxTime','時間')} <span class="mono">${summary.durationSeconds!=null?secToHMS(summary.durationSeconds):'—'}</span>${
+        // 時間是唯一「已有值就不覆蓋」的欄位，但原本只在上方用一句話概括
+        // 帶過，使用者看不出這一次到底會不會被套用。直接把現有的值寫出來，
+        // 才不會出現「匯入了 1:33:46，畫面卻還是 3:44:25」這種困惑。
+        (summary.durationSeconds!=null&&currentRace.results.chipTimeSeconds!=null)
+          ?`<span class="gpx-keep-note">${tf('ui.gpxKeepExisting','保留現有 {n}，不會被覆蓋',secToHMS(currentRace.results.chipTimeSeconds))}</span>`
+          :''
+      }</li>
       <li>${t('ui.gpxAvgHr','平均心率')} <span class="mono">${summary.avgHr!=null?summary.avgHr+' bpm':'—'}</span></li>
       <li>${t('ui.gpxMaxHr','最大心率')} <span class="mono">${summary.maxHr!=null?summary.maxHr+' bpm':'—'}</span></li>
       <li>${t('ui.gpxSplits','分段配速')} <span class="mono">${summary.splits.length}</span></li>
