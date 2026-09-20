@@ -2458,6 +2458,24 @@ function runAsyncAction(promise,label){
     showToast(t('ui.actionFailed','這個動作沒有成功，請再試一次'),'error');
   });
 }
+/* tryVibrate(pattern)：所有震動都走這裡，不要直接呼叫 navigator.vibrate。
+   兩件事必須一起處理：
+   1) iOS 上根本沒有這個 API（WebKit 從不支援），navigator.vibrate 是 undefined。
+   2) Android Chrome 有 API，但要求「黏性使用者啟用」——使用者必須先在
+      這個頁面上點過一次東西。而 Chrome 明確不把 touchstart 算成使用者
+      手勢，所以「載入後第一個動作就是長按」會被靜默擋掉，navigator.vibrate()
+      回傳 false、完全不震，主控台只留一行 Intervention 訊息。
+   兩種情況的共同結果都是「使用者感受不到震動」，所以只要偵測到失敗，
+   就把 no-haptics 掛上去，改用加強版的視覺回饋（光暈更亮、進度條），
+   讓長按的三個階段光看也分得出來——而不是讓人對著沒反應的畫面猜。 */
+function tryVibrate(pattern){
+  if(!navigator.vibrate){ document.documentElement.classList.add('no-haptics'); return false; }
+  let ok=false;
+  try{ ok=navigator.vibrate(pattern)!==false; }catch(err){ ok=false; }
+  if(!ok) document.documentElement.classList.add('no-haptics');
+  else document.documentElement.classList.remove('no-haptics');
+  return ok;
+}
 function showToast(message,kind){
   const el=document.createElement('div');
   el.className=kind==='error'?'foreground-toast sync-notice':'foreground-toast';
@@ -2525,7 +2543,9 @@ function startCadenceFeel(btn,cadenceSpm){
   const intervalMs=60000/cadenceSpm;
   const totalMs=5000;
   let elapsedMs=0;
-  navigator.vibrate(5);
+  // 這顆按鈕是用點擊觸發的（有使用者啟用），所以第一下通常震得出來；
+  // 仍然走 tryVibrate，萬一被擋下也會記錄成「這台裝置沒有觸覺回饋」。
+  tryVibrate(5);
   const timer=setInterval(()=>{
     elapsedMs+=intervalMs;
     if(elapsedMs>=totalMs){
@@ -2533,7 +2553,7 @@ function startCadenceFeel(btn,cadenceSpm){
       btn.classList.remove('feeling');
       return;
     }
-    navigator.vibrate(5);
+    tryVibrate(5);
   },intervalMs);
 }
 function getPath(obj,path){return path.split('.').reduce((o,k)=>(o==null?undefined:o[k]),obj);}
@@ -2781,7 +2801,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.17.0';
+const APP_VERSION='v3.20.0';
 
 /* ============================================================
    多語系（i18n）
@@ -5155,6 +5175,44 @@ function hrZoneBarsSvg(zoneNum,color){
   }).join('');
   return `<svg class="hr-zone-bars" viewBox="0 0 20 14" width="20" height="14" aria-hidden="true">${bars}</svg>`;
 }
+/* 跑步步頻的「每分鐘單腳」換算
+   錶在 FIT 檔裡記的 cadence 欄位，跑步時是「單腳每分鐘踏步數」（跟自行車
+   共用同一個欄位、同樣是 RPM 的語意），所以一場正常的跑步會記成 80～95，
+   而跑者實際講的步頻是雙腳合計的 160～190 spm——差剛好兩倍。
+   為什麼要加數值範圍的防呆，不是看到跑步就乘二：有些錶（或先經過 Strava
+   之類平台轉檔的檔案）已經直接寫成雙腳合計了，那種再乘二會變成 340 這種
+   明顯荒謬的數字。只有落在「單腳」合理區間（30～120）的才換算，已經是
+   雙腳合計的值原封不動。
+   這個範圍限制還有一個好處：對同一筆資料重複執行也不會再乘一次
+   （86→172，而 172 已經超出區間），所以舊資料的補正可以安全地重跑。 */
+const RUNNING_SPORT_TYPES=['road_running','trail_running','ultra_marathon','obstacle_race'];
+/* backfillRunningCadence()：這個修正之前匯入的跑步賽事，步頻存的是單腳
+   的數字。啟動時一次補正。因為換算有數值範圍限制（只換算 30～120），
+   已經正確的資料不會被動到，重複執行也不會再乘一次。 */
+function backfillRunningCadence(){
+  let changed=0;
+  state.races.forEach(r=>{
+    const cur=r.performanceData&&r.performanceData.avgCadence;
+    const fixed=normalizeRunningCadence(cur,r.sportType);
+    if(fixed!==cur){ r.performanceData.avgCadence=fixed; changed++; }
+    (r.legs||[]).forEach(leg=>{
+      if(leg.sport!=='running') return;
+      const lf=normalizeRunningCadence(leg.avgCadence,'road_running');
+      if(lf!==leg.avgCadence){ leg.avgCadence=lf; changed++; }
+    });
+  });
+  return changed>0;
+}
+function isRunningSportType(sportType){ return RUNNING_SPORT_TYPES.includes(sportType); }
+function normalizeRunningCadence(cad,sportType){
+  if(cad==null) return cad;
+  if(!isRunningSportType(sportType)) return cad;
+  // 上限取 110 而不是更寬：單腳 110 已經等於雙腳 220 spm、超過菁英選手
+  // 的水準，實際不會出現；而「總步頻 111 以上」是真實存在的數值，留在
+  // 區間外才不會被誤乘。110 以下仍有一段模糊地帶——走路很多的超馬，
+  // 雙腳合計可能就落在 100～110——這種情況無法只靠數字分辨，只能接受。
+  return (cad>=30&&cad<=110)?Math.round(cad*2):cad;
+}
 function sportToProfileCategory(sportType){
   if(sportType==='cycling') return 'cycling';
   if(sportType==='swimming') return 'swimming';
@@ -6708,8 +6766,11 @@ const DRAWER_SECTIONS={
   },
   results:{
     title:()=>t('ui.drawerResultsTitle','成績與數據'),
-    body:race=>`<div class="section-body">${SECTION_POST.filter(f=>!f.path.startsWith('review.')).map(f=>renderField(race,f,'post')).join('')}</div>
-      ${(race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}`,
+    // 鞋款選擇器移到賽後區塊的「匯入運動紀錄檔」下方（v3.20.0）：匯入
+    // 完檔案之後，接著要做的就是記下這場穿了哪雙鞋，兩件事在同一個
+    // 動線上；原本收在這個抽屜的最底下，要先點開抽屜、再滑到最後才
+    // 看得到。
+    body:race=>`<div class="section-body">${SECTION_POST.filter(f=>!f.path.startsWith('review.')).map(f=>renderField(race,f,'post')).join('')}</div>`,
   },
   basicInfo:{
     title:()=>t('ui.drawerBasicTitle','賽事基本資料'),
@@ -7017,11 +7078,7 @@ function hrZoneHtml(hr,race){
    是每 100 公尺、自行車看的是時速。轉換區沒有配速可言，只顯示時間。 */
 function legPaceLabel(leg){
   if(!leg.distanceKm||!leg.durationSeconds) return null;
-  if(leg.sport==='swimming'){
-    const secPer100=leg.durationSeconds/(leg.distanceKm*10);
-    const m=Math.floor(secPer100/60),s=Math.round(secPer100%60);
-    return `${m}'${String(s).padStart(2,'0')}"/100m`;
-  }
+  if(leg.sport==='swimming') return formatSwimPace(leg.durationSeconds/(leg.distanceKm*10));
   if(leg.sport==='cycling'){
     return (leg.distanceKm/(leg.durationSeconds/3600)).toFixed(1)+' km/h';
   }
@@ -7029,17 +7086,24 @@ function legPaceLabel(leg){
   return formatPace(leg.durationSeconds/leg.distanceKm)+'/km';
 }
 const LEG_SPORT_ICONS={swimming:'🏊',cycling:'🚴',running:'🏃',transition:'🔁',walking:'🚶',hiking:'🥾'};
-function legSportLabel(leg){
+// legSportLabel(leg, transitionNo)：轉換區帶上編號（T1、T2）。鐵人三項
+// 的兩次轉換意義完全不同——T1 是游泳上岸換自行車、T2 是下車換跑步，
+// 兩列都寫「轉換區」的話沒辦法一眼分辨在看哪一段。
+// 編號在呼叫端依照轉換區出現的順序算，不是存在資料裡：分段本身只記
+// 「這是一次轉換」，第幾次是由它在整場賽事中的位置決定的。
+function legSportLabel(leg,transitionNo){
   const key='ui.leg_'+leg.sport;
   const fallback={swimming:'游泳',cycling:'自行車',running:'跑步',transition:'轉換區',walking:'健走',hiking:'健行'}[leg.sport]||leg.sport;
-  return t(key,fallback);
+  const label=t(key,fallback);
+  return (leg.sport==='transition'&&transitionNo)?`T${transitionNo} ${label}`:label;
 }
 function renderLegBreakdown(race){
   const legs=race.legs||[];
   if(legs.length<2) return '';
   return `<div class="leg-breakdown">
     <h4 class="leg-breakdown-title">${t('ui.legBreakdownTitle','分項成績')}</h4>
-    <div class="leg-list">${legs.map(leg=>{
+    <div class="leg-list">${(()=>{ let transitionNo=0; return legs.map(leg=>{
+      if(leg.sport==='transition') transitionNo++;
       const pace=legPaceLabel(leg);
       const bits=[];
       if(leg.distanceKm) bits.push(`<span class="mono">${leg.distanceKm.toFixed(2)} km</span>`);
@@ -7048,11 +7112,11 @@ function renderLegBreakdown(race){
       if(leg.avgCadence!=null) bits.push(`<span class="mono">${leg.avgCadence} spm</span>`);
       return `<div class="leg-row leg-${escapeHtml(leg.sport)}">
         <span class="leg-icon" aria-hidden="true">${LEG_SPORT_ICONS[leg.sport]||'•'}</span>
-        <span class="leg-name">${escapeHtml(legSportLabel(leg))}</span>
+        <span class="leg-name">${escapeHtml(legSportLabel(leg,transitionNo))}</span>
         <span class="leg-time mono">${leg.durationSeconds!=null?secToHMS(leg.durationSeconds):'—'}</span>
         <span class="leg-meta">${bits.join('<span class="leg-sep">/  </span>')}</span>
       </div>`;
-    }).join('')}</div>
+    }).join(''); })()}</div>
   </div>`;
 }
 /* ============================================================
@@ -7072,8 +7136,10 @@ function computeRaceRadar(race){
   dims.push({key:'distance',label:t('ui.radarDistance','距離'),
     value:dist!=null?Math.min(dist/100,1):null,
     raw:dist!=null?dist.toFixed(1)+' km':null});
-  // 2. 爬升：3000 公尺為滿分
-  const elev=race.route.elevationGainM;
+  // 2. 爬升：3000 公尺為滿分。游泳一律當成沒有資料——開放水域的 GPS
+  //    高度跳動累加起來會得到「泳渡爬升 531 公尺」這種數字，水面是平的，
+  //    把它畫進雷達圖會讓整個形狀失真。
+  const elev=race.sportType==='swimming'?null:race.route.elevationGainM;
   dims.push({key:'elevation',label:t('ui.radarElevation','爬升'),
     value:elev!=null?Math.min(elev/3000,1):null,
     raw:elev!=null?Math.round(elev)+' m':null});
@@ -7235,19 +7301,33 @@ function renderResultsDashboard(race){
   // 2'49"/km 這種看起來像世界紀錄的配速），下面的分項成績才是真正
   // 能讀的數字。平均心率與平均步頻同理。
   const isMultisport=(race.legs||[]).length>=2;
-  const pace=(!isMultisport&&race.route.distanceKm)?formatPace(chipT/race.route.distanceKm):null;
+  // 游泳的強度單位是「每 100 公尺幾分幾秒」，不是每公里。一場 2.5 公里的
+  // 開放水域用 min/km 算出來會是 89'25"/km 這種沒有人讀得懂的數字。
+  const isSwim=race.sportType==='swimming';
   const badges=[];
-  if(pace) badges.push([t('ui.resultPace','配速'),pace+'/km',false]);
+  if(!isMultisport&&race.route.distanceKm){
+    if(isSwim){
+      badges.push([t('ui.resultPace','配速'),formatSwimPace(chipT/(race.route.distanceKm*10)),false]);
+    }else{
+      badges.push([t('ui.resultPace','配速'),formatPace(chipT/race.route.distanceKm)+'/km',false]);
+    }
+  }
   if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),race.results.overallRank+(race.results.overallParticipants?`／${race.results.overallParticipants}`:''),false]);
   if(race.results.ageGroupRank!=null) badges.push([t('field.post.results.ageGroupRank','分組名次'),race.results.ageGroupRank+(race.results.ageGroupParticipants?`／${race.results.ageGroupParticipants}`:''),false]);
   if(!isMultisport&&race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),hrZoneHtml(race.performanceData.avgHr,race),true]);
-  if(!isMultisport&&race.performanceData.avgCadence!=null){
+  // 游泳不顯示「平均步頻」：錶在游泳時記的是划頻（每分鐘划手次數），
+  // 跟跑步的步頻完全是兩回事，掛上「步頻」這個標籤只會誤導；而且這個
+  // App 的步頻欄位還附了一顆「用震動體驗節奏」的按鈕，對游泳毫無意義。
+  if(!isMultisport&&!isSwim&&race.performanceData.avgCadence!=null){
     const cad=race.performanceData.avgCadence;
     badges.push([t('ui.resultAvgCadence','平均步頻'),
       `<span class="mono">${cad} spm</span><button type="button" class="cadence-feel-btn" data-action="feel-cadence" data-cadence="${cad}" title="${t('ui.feelCadenceHint','用震動體驗這個步頻的節奏（5 秒）')}" aria-label="${t('ui.feelCadenceHint','用震動體驗這個步頻的節奏（5 秒）')}">👋</button>`,
       true]);
   }
-  if(race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺',false]);
+  // 游泳也不顯示總爬升：開放水域的 GPS 高度本來就跳得很厲害，累加起來
+  // 會得到「泳渡爬升 531 公尺」這種數字。水面是平的，這個欄位對游泳
+  // 沒有任何意義，顯示出來只會讓人以為資料壞了。
+  if(!isSwim&&race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺',false]);
   return `<div class="results-dashboard${isPb?' is-pb':''}">
     <div class="results-dashboard-main">
       <div class="results-big-time mono">${secToHMSDenoised(chipT)}</div>
@@ -7367,6 +7447,7 @@ function renderSplitsChart(race){
   // 魔王坡段即使實際配速很慢，只要體感強度夠高，長條圖還是會顯得
   // 「滿」，精準反映真實輸出，不會因為爬坡拖慢的數字被誤讀成「這段
   // 跑得很鬆」。算不出 GAP（沒有海拔資料）的分段，退回用實際配速。
+  const isSwimRace=race.sportType==='swimming';
   const gaps=splits.map(splitGapSecPerKm);
   const displayPaces=splits.map((s,i)=>gaps[i]!=null?gaps[i]:s.avgPaceSecPerKm);
   const minPace=Math.min(...displayPaces),maxPace=Math.max(...displayPaces);
@@ -7381,9 +7462,13 @@ function renderSplitsChart(race){
     // 都寫一次「(GAP)」「(實際配速)」——那兩個標籤是整張表最長的字串，
     // 也是原本每列被撐到三行、整張表高得要一直往下滑的主因。標籤改成
     // 在表頭寫一次就好。
-    const paceHtml=gaps[i]!=null
-      ?`<span class="mono splits-gap-primary">${formatPace(gaps[i])}</span><span class="splits-gap-dot">·</span><span class="mono splits-gap-secondary">${formatPace(s.avgPaceSecPerKm)}</span>`
-      :`<span class="mono splits-gap-primary">${formatPace(s.avgPaceSecPerKm)}</span>`;
+    // 游泳的分段一樣要換成每 100 公尺；而且游泳沒有「坡度校正配速」
+    // （GAP）可言——水裡沒有海拔——所以只顯示單一數字。
+    const paceHtml=isSwimRace
+      ?`<span class="mono splits-gap-primary">${formatSwimPace(s.avgPaceSecPerKm/10)}</span>`
+      :(gaps[i]!=null
+        ?`<span class="mono splits-gap-primary">${formatPace(gaps[i])}</span><span class="splits-gap-dot">·</span><span class="mono splits-gap-secondary">${formatPace(s.avgPaceSecPerKm)}</span>`
+        :`<span class="mono splits-gap-primary">${formatPace(s.avgPaceSecPerKm)}</span>`);
     // 每跨過一個 5 公里整數就標記一次，讓表格有「每 5K 一段」的節奏感，
     // 取代原本斑馬紋的視線引導功能——跑者本來就是以 5K 為單位讀配速的。
     const isMilestone=Math.floor(rangeEnd/5)>Math.floor((rangeEnd-s.distanceKm)/5);
@@ -7407,7 +7492,7 @@ function renderSplitsChart(race){
       <table class="splits-chart-table" id="splits-chart-table-${race.id}">
         <thead><tr>
           <th>${t('ui.splitsChartDistance','距離')}</th>
-          <th>${t('ui.resultPace','配速')} <span class="splits-th-hint">GAP · ${t('ui.splitsActualPace','實際')}</span></th>
+          <th>${t('ui.resultPace','配速')}${isSwimRace?'':` <span class="splits-th-hint">GAP · ${t('ui.splitsActualPace','實際')}</span>`}</th>
           <th class="num">${t('ui.resultAvgHr','心率')}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -7631,7 +7716,7 @@ function setupElevationScrubbing(race){
     const isSteep=Math.abs(gradPct)>=STEEP_GRADE_THRESHOLD_PCT;
     if(isSteep!==lastGradeWasSteep){
       lastGradeWasSteep=isSteep;
-      if(navigator.vibrate) navigator.vibrate(15);
+      tryVibrate(15);
     }
 
     cursor.style.opacity='1';
@@ -9050,7 +9135,7 @@ function fatigueNextNutritionItem(race){
   return items.find(it=>!it.consumed)||null;
 }
 function fatigueVibrate(pattern){
-  try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+  try{ tryVibrate(pattern); }catch(e){}
 }
 function fatigueSpeak(text){
   if(!text||!('speechSynthesis' in window)) return;
@@ -9390,6 +9475,14 @@ function buildRacesByDate(races){
   return map;
 }
 
+// formatSwimPace(secPer100m)：游泳慣用的「分'秒"/100m」。跟 formatPace
+// 分開而不是加參數：兩者的輸入單位不同（一個是每公里秒數、一個是每
+// 100 公尺秒數），合在一起很容易在呼叫端傳錯。
+function formatSwimPace(secPer100m){
+  if(secPer100m==null||!isFinite(secPer100m)) return '—';
+  const m=Math.floor(secPer100m/60),s=Math.round(secPer100m%60);
+  return `${m}'${String(s).padStart(2,'0')}"/100m`;
+}
 function formatPace(secPerKm){
   if(secPerKm==null||!isFinite(secPerKm)||secPerKm<=0) return null;
   const m=Math.floor(secPerKm/60),s=Math.round(secPerKm%60);
@@ -10967,7 +11060,7 @@ function openHallOfFame(){
   el.innerHTML=hallOfFameHtml();
   el.hidden=false;
   document.body.style.overflow='hidden';
-  if(navigator.vibrate) navigator.vibrate([100,50,100]);
+  tryVibrate([100,50,100]);
   logFeatureUse('open_hall_of_fame');
 }
 function closeHallOfFame(){
@@ -10995,11 +11088,11 @@ function startHofPress(card,x,y){
   hofPressStart={x,y};
   card.classList.add('pressing');
   hofPressTimers.push(setTimeout(()=>{
-    if(navigator.vibrate) navigator.vibrate(10);
+    tryVibrate(10);
     card.classList.add('charging-1');
   },500));
   hofPressTimers.push(setTimeout(()=>{
-    if(navigator.vibrate) navigator.vibrate(30);
+    tryVibrate(30);
     card.classList.remove('charging-1');
     card.classList.add('charging-2');
   },1000));
@@ -11476,6 +11569,7 @@ function renderDetail(){
         <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX / FIT）')}</button>
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
       </div>
+      ${(race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}
       ${resultsDashCardHtml(race)}
       ${reviewDashCardHtml(race)}
       ${mediaLinksDashCardHtml(race)}
@@ -11728,7 +11822,7 @@ document.addEventListener('touchend',()=>{
     s.panel.style.transform='translateY(100%)';
     // iOS Safari 完全不支援 Vibration API，這裡的判斷是必要防呆，
     // 不是可有可無的寫法，沒有這層判斷會直接拋例外、中斷關閉流程。
-    if(navigator.vibrate) navigator.vibrate(10);
+    tryVibrate(10);
     setTimeout(()=>{
       const closeBtn=s.overlay.querySelector('[data-action^="close-"]');
       if(closeBtn) closeBtn.click();
@@ -11793,7 +11887,7 @@ calendarEl.addEventListener('touchmove',e=>{
     // 環境下根本不存在），這裡加 if 判斷是必要的防呆，不是可有可無
     // 的寫法——沒有這層判斷，iOS 上呼叫會直接拋例外、中斷整個滑動
     // 手勢，其他平台（多數 Android 瀏覽器）才有這個效果。
-    if(navigator.vibrate) navigator.vibrate(10);
+    tryVibrate(10);
   }else if(!pastThreshold){
     swipeState.vibrated=false;
   }
@@ -11811,7 +11905,7 @@ calendarEl.addEventListener('touchend',()=>{
     s.card.style.transition='transform 0.2s ease,opacity 0.2s ease';
     s.card.style.transform='translateX(110%)';
     s.card.style.opacity='0';
-    if(navigator.vibrate) navigator.vibrate([15,30,15]);
+    tryVibrate([15,30,15]);
     quickSetRaceStatus(race,'completed').then(()=>{ renderCalendar(); });
     logFeatureUse('swipe_complete');
   }else if(pastThreshold&&s.direction==='left'){
@@ -11827,7 +11921,7 @@ calendarEl.addEventListener('touchend',()=>{
     s.card.style.transition='transform 0.2s ease,opacity 0.2s ease';
     s.card.style.transform='translateX(-110%)';
     s.card.style.opacity='0';
-    if(navigator.vibrate) navigator.vibrate([15,30,15]);
+    tryVibrate([15,30,15]);
     race.deletedAt=new Date().toISOString();
     race.updatedAt=new Date().toISOString();
     if(state.selectedId===s.id){ state.selectedId=null; currentRace=null; }
@@ -12591,7 +12685,7 @@ async function handleDetailChange(e){
     // 使用者自己決定，系統這裡只負責「發現了、通知你」，不越權替你
     // 做決定，真的要標記的話提示裡有一個按鈕可以直接按。
     if(path==='results.chipTimeSeconds'&&!currentRace.results.isPb&&detectSeriesPb(currentRace)){
-      if(navigator.vibrate) navigator.vibrate([100,50,100]);
+      tryVibrate([100,50,100]);
       const pbEl=document.createElement('div');
       pbEl.className='foreground-toast';
       pbEl.innerHTML=`<strong>${window.tf('ui.seriesPbDetected','🎉 這是「{n}」系列至今最快的一次！',escapeHtml(currentRace.series))}</strong>
@@ -13416,7 +13510,12 @@ function attachLegMetricsFromPoints(legs,points){
       if(p.cad!=null){ cadSum+=p.cad; cadN++; }
     });
     if(hrN){ leg.avgHr=Math.round(hrSum/hrN); leg.maxHr=hrMax; }
-    if(cadN) leg.avgCadence=Math.round(cadSum/cadN);
+    // 鐵人三項的跑步段一樣要換算；自行車段的 cadence 本來就是踏頻（RPM），
+    // 不能動；游泳段記的是划頻，也不能動。leg.sport 正好可以區分。
+    if(cadN){
+      const raw=Math.round(cadSum/cadN);
+      leg.avgCadence=leg.sport==='running'?normalizeRunningCadence(raw,'road_running'):raw;
+    }
   });
   return legs;
 }
@@ -13990,7 +14089,7 @@ function applyActivitySummaryToRace(race,s){
   if(s.durationSeconds!=null&&race.results.chipTimeSeconds==null) race.results.chipTimeSeconds=s.durationSeconds;
   if(s.avgHr!=null) race.performanceData.avgHr=s.avgHr;
   if(s.maxHr!=null) race.performanceData.maxHr=s.maxHr;
-  if(s.avgCadence!=null) race.performanceData.avgCadence=s.avgCadence;
+  if(s.avgCadence!=null) race.performanceData.avgCadence=normalizeRunningCadence(s.avgCadence,race.sportType);
   if(!race.performanceData.dataSource) race.performanceData.dataSource='運動手錶匯入 (GPX/TCX/FIT)';
   if(s.splits&&s.splits.length) race.splits=s.splits;
   if(s.legs&&s.legs.length) race.legs=s.legs;
@@ -15340,6 +15439,7 @@ async function init(){
   if(purgeOldTrash()) persist();
   syncSampleDataButtonLabel();
   backfillCoverThumbs();
+  if(backfillRunningCadence()) persist();
   checkAndRecordBadgeUnlocks();
   renderAll();
   updateTopbarHeightVar();
