@@ -689,6 +689,10 @@
 
   /* ---------- Results dashboard ---------- */
   .results-dashboard{border:1px solid var(--rule);border-radius:4px;padding:22px;margin-bottom:22px;background:var(--surface);}
+  /* 成績儀表板在 header 下方當主視覺時，跟 header 之間留一點呼吸空間，
+     但下方不要再留——緊接著就是區段導覽列 */
+  .hero-results{margin:18px 0 6px;}
+  .hero-results .results-dashboard{margin-bottom:0;}
   .results-dashboard.is-pb{border-color:var(--gold);}
   .results-dashboard-main{display:flex;align-items:baseline;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
   .results-big-time{font-size:44px;font-weight:700;letter-spacing:-0.01em;}
@@ -1382,6 +1386,7 @@
     white-space:nowrap;
   }
   .quick-nav a:hover{border-color:var(--trail);color:var(--ink);}
+  .quick-nav a.active{background:var(--ink);color:var(--surface);border-color:var(--ink);}
   .detail-header{position:relative;padding-bottom:22px;margin-bottom:6px;border-bottom:3px solid var(--ink);transition:border-color 0.2s;}
   .detail-ambient-glow{
     position:absolute;top:-70px;left:20%;right:20%;height:180px;
@@ -1524,6 +1529,9 @@
   }
   /* 補充說明：字級壓小、顏色壓淡，讓它明顯屬於「附註」而不是欄位本身 */
   .field-hint{font-size:12px;color:var(--stone);line-height:1.5;margin-top:-1px;}
+  .field-hint-live{font-size:12px;line-height:1.5;margin-top:2px;color:var(--stone);}
+  .field-hint-live.is-error{color:var(--flag);}
+  .field input[data-kind="duration"][aria-invalid="true"]{border-color:var(--flag);box-shadow:0 0 0 3px var(--stamp-bg-flag);}
   /* 對焦狀態：除了邊框變色，再加一圈很淡的光暈。原本只有邊框換色，
      在深色底上對比不夠、不容易看出焦點在哪一格。
      顏色沿用這個 App 既有的主色（--trail 綠），不另外引進霓虹橘或青藍
@@ -1793,6 +1801,16 @@
   .dash-card-title{font-weight:600;margin-bottom:3px;}
   .dash-card-sub{color:var(--stone);font-size:13px;}
   .dash-card-chevron{color:var(--stone);font-size:18px;flex-shrink:0;}
+  /* 空抽屜：淡化、虛線框、標題與「尚未填寫」收成同一行，高度約剩一半。
+     hover／focus 時回到全亮，不然找不到要點哪裡。 */
+  .dash-card.is-empty{opacity:0.58;border-style:dashed;padding:9px 16px;margin:10px 0;}
+  .dash-card.is-empty:hover,.dash-card.is-empty:focus-visible{opacity:1;}
+  .dash-card.is-empty .dash-card-main{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .dash-card.is-empty .dash-card-title{font-weight:500;font-size:14px;margin-bottom:0;}
+  .dash-card.is-empty .dash-card-sub{font-size:12px;}
+  .dash-card.is-empty .dash-card-chevron{font-size:15px;}
+  /* 填了的卡片緊接著空卡片時，不要讓兩個 margin 疊出一大段空白 */
+  .dash-card.is-empty + .dash-card.is-empty{margin-top:6px;}
   .cmdk-overlay{
     position:fixed;inset:0;z-index:600;background:rgba(10,14,12,0.55);
     display:flex;align-items:flex-start;justify-content:center;padding:12vh 20px 20px;
@@ -2068,6 +2086,36 @@
   .storage-usage-warn{color:var(--flag);font-weight:600;}
   .sync-diag-note{color:var(--stone);line-height:1.6;margin-top:4px;}
   .gpx-overwrite-note{display:block;font-size:12px;color:var(--flag);margin-top:2px;}
+  /* 分享圖設定：格式切換沿用篩選 chip 的外觀，勾選列用一般 label */
+  .share-format-row{display:flex;gap:8px;margin:4px 0 12px;}
+  /* 長按卡片的快速動作：手機上長按不要跳出系統的文字選取／連結選單 */
+  @media (pointer:coarse){
+    .cal-chip,.cal-list-item,.photo-card,.table-view-row{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;}
+  }
+  .race-context-actions{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+  /* 常駐提示條（安裝／更新／儲存空間）：跟 toast 同一個位置，但不會自己消失，
+     一定有一顆「稍後」讓人關掉。同時間最多一條，後來的蓋掉前面的。 */
+  .app-banner{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+    z-index:120;max-width:min(560px,calc(100vw - 32px));background:var(--ink);color:var(--surface);
+    border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,0.35);font-size:14px;}
+  .app-banner-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .app-banner-actions button{font:inherit;font-size:13px;border-radius:6px;padding:6px 12px;cursor:pointer;border:1px solid rgba(255,255,255,0.28);background:transparent;color:inherit;}
+  .app-banner-actions button.primary{background:var(--surface);color:var(--ink);border-color:var(--surface);}
+  .app-banner.is-warn{border-left:4px solid var(--flag);}
+  .storage-cleanup-list{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto;margin:8px 0 12px;}
+  .storage-cleanup-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);}
+  .storage-cleanup-row img{width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--rule);}
+  .storage-cleanup-main{flex:1;min-width:0;}
+  .storage-cleanup-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .storage-cleanup-meta{font-size:12px;color:var(--stone);}
+  .storage-cleanup-row .btn-ghost.is-confirming{border-color:var(--flag);color:var(--flag);}
+  .race-context-actions .action-menu-item{font-size:16px;padding:12px 10px;}
+  .share-options-row{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:12px;font-size:14px;color:var(--ink);}
+  .share-options-row label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;}
+  .share-options-row input{width:16px;height:16px;accent-color:var(--trail);}
+  .share-preview-wrap{background:var(--paper);border-radius:8px;padding:10px;display:flex;justify-content:center;margin-bottom:14px;}
+  .share-preview-wrap img{max-width:100%;max-height:52vh;border-radius:4px;display:block;}
+  .share-preview-wrap.is-story img{max-height:60vh;}
   .modal-hint{color:var(--ink-soft);font-size:15px;margin-bottom:16px;}
   .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
   .modal-actions-top{margin-top:0;margin-bottom:14px;}
@@ -2222,6 +2270,9 @@
 <input type="file" id="cover-file-input" accept="image/*" style="display:none">
 <input type="file" id="json-file-input" accept=".json,application/json" style="display:none">
 <div id="gpx-modal" class="modal-overlay" hidden></div>
+<div id="share-modal" class="modal-overlay" hidden></div>
+<div id="race-context-sheet" class="modal-overlay" hidden></div>
+<div id="storage-cleanup-modal" class="modal-overlay" hidden></div>
 <div id="paste-modal" class="modal-overlay" hidden></div>
 <div id="shoe-modal" class="modal-overlay" hidden></div>
 <div id="nutrition-dict-modal" class="modal-overlay" hidden></div>
@@ -2489,6 +2540,33 @@ function downloadBlob(blob,filename){
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+/* shareOrDownloadImage(blob, filename)：觸控裝置上優先走系統分享面板，
+   桌機或不支援時退回下載。
+   為什麼分開：手機上 <a download> 不是「存到相簿」——iOS Safari 會把
+   PNG 開成新分頁，使用者得自己長按存圖再去 IG 貼；分享面板一步就到
+   限時動態。桌機反過來，分享面板選項少又慢，下載才是大家預期的。
+   只在觸控裝置啟用（pointer: coarse），不是只看 API 存不存在——
+   桌機 Chrome 也有 navigator.share，但那不是桌機使用者想要的。
+   使用者在分享面板按取消會丟 AbortError，那不是失敗，什麼都不做。 */
+function canUseShareSheet(){
+  return !!(navigator.share&&navigator.canShare&&window.matchMedia('(pointer: coarse)').matches);
+}
+async function shareOrDownloadImage(blob,filename){
+  if(canUseShareSheet()){
+    const file=new File([blob],filename,{type:blob.type||'image/png'});
+    if(navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file],title:filename.replace(/\.png$/i,'')});
+        return 'shared';
+      }catch(err){
+        if(err&&err.name==='AbortError') return 'cancelled';
+        console.warn('分享面板失敗，退回下載',err);
+      }
+    }
+  }
+  downloadBlob(blob,filename);
+  return 'downloaded';
+}
 // showToast(message, kind)：畫面右下角跳出一則短暫提示，kind='error'
 // 用跟既有錯誤提示（例如 JSON 匯入失敗）一樣的警示樣式，其餘情況用
 // 一般樣式。跳出的訊息文字已經是翻譯好的成品字串，這裡只負責組
@@ -2646,13 +2724,32 @@ function secToHMSDenoised(sec){
   const plain=secToHMS(sec);
   return plain?plain.replace(/:/g,'<span class="time-colon">:</span>'):'';
 }
+/* hmsToSec(str)：把使用者打的時間字串換成秒數，看不懂回 null。
+   接受的寫法比以前寬：3:44:25、44:25、3.44.25、3 44 25、3h44m25s、
+   3時44分25秒、4'15"（配速）、全形冒號。使用者在手機上打冒號要切符號
+   鍵盤，打句點不用——不接受句點等於逼他多按三次。
+   但「寬」不等於「猜」：有任何一段不是數字就回 null，由呼叫端決定
+   怎麼處理，這裡不會偷偷回 0。 */
 function hmsToSec(str){
-  if(!str||!str.trim()) return null;
-  const parts=str.trim().split(':').map(Number);
-  if(parts.some(isNaN)) return null;
-  while(parts.length<3) parts.unshift(0);
-  const [h,m,s]=parts;
-  return h*3600+m*60+s;
+  if(str==null) return null;
+  let s=String(str).trim();
+  if(!s) return null;
+  s=s.replace(/[：]/g,':').replace(/[′’']/g,':').replace(/[″”"]/g,'');
+  const unitMatch=s.match(/^(?:(\d+)\s*(?:h|H|時|小时|小時))?\s*(?:(\d+)\s*(?:m|M|分))?\s*(?:(\d+(?:\.\d+)?)\s*(?:s|S|秒))?$/);
+  if(unitMatch&&(unitMatch[1]!=null||unitMatch[2]!=null||unitMatch[3]!=null)){
+    return Math.round((+unitMatch[1]||0)*3600+(+unitMatch[2]||0)*60+(+unitMatch[3]||0));
+  }
+  // 沒有冒號時，句點與空白當分隔（3.44.25／3 44 25）；有冒號時句點是秒的小數點
+  if(!s.includes(':')){
+    if(/^\d+(?:[.\s]+\d+){1,2}$/.test(s)) s=s.replace(/[.\s]+/g,':');
+    else if(!/^\d+$/.test(s)) return null;
+  }
+  const parts=s.split(':').map(x=>x.trim());
+  if(parts.length>3||parts.some(x=>x===''||!/^\d+(?:\.\d+)?$/.test(x))) return null;
+  const nums=parts.map(Number);
+  while(nums.length<3) nums.unshift(0);
+  const [h,m,sec]=nums;
+  return Math.round(h*3600+m*60+sec);
 }
 function daysDiff(dateStr){
   if(!dateStr) return null;
@@ -2856,7 +2953,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.27.0';
+const APP_VERSION='v3.31.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3108,7 +3205,7 @@ const JA={
   'ui.pacingCalc':'計算','ui.pacingDistanceCol':'距離','ui.pacingTimeCol':'通過予定タイム',
   'ui.pacingInvalid':'有効な目標タイムと距離を入力してください','ui.downloadWristband':'リストバンド画像をダウンロード',
   'ui.wristbandTitle':'ペースリストバンド',
-  'ui.shareImageSuffix':'-シェア画像.png','ui.shareShoe':'シューズ','ui.shareFuel':'補給','ui.shareFuelPlanned':'補給（予定）','ui.fuelGel':'ジェル','ui.fuelTablet':'塩タブレット','ui.fuelHydration':'ハイドレーション','ui.wristbandFilename':'ペース手帳.png',
+  'ui.shareImageSuffix':'-シェア画像.png','ui.shareStorySuffix':'-ストーリー.png','ui.shareModalTitle':'シェア画像を作成','ui.shareFormatLabel':'フォーマット','ui.shareFormatSquare':'正方形 1:1','ui.shareFormatStory':'ストーリー 9:16','ui.shareIncludeLabel':'含める：','ui.shareIncludeHr':'心拍','ui.shareIncludeShoe':'シューズ','ui.shareIncludeFuel':'補給','ui.shareIncludeTrack':'ルート','ui.shareNow':'シェア','ui.downloadNow':'ダウンロード','ui.sharePreviewAlt':'プレビュー','ui.shareShoe':'シューズ','ui.shareFuel':'補給','ui.shareFuelPlanned':'補給（予定）','ui.fuelGel':'ジェル','ui.fuelTablet':'塩タブレット','ui.fuelHydration':'ハイドレーション','ui.wristbandFilename':'ペース手帳.png',
   // ---- 補給時程 ----
   
   // ---- 鞋款管理 ----
@@ -3209,7 +3306,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3596,7 +3693,7 @@ const EN={
   'ui.pacingCalc':'Calculate','ui.pacingDistanceCol':'Distance','ui.pacingTimeCol':'Expected split time',
   'ui.pacingInvalid':'Please enter a valid target time and distance','ui.downloadWristband':'Download wristband image',
   'ui.wristbandTitle':'Pace Wristband',
-  'ui.shareImageSuffix':'-share-image.png','ui.shareShoe':'Shoes','ui.shareFuel':'Fuel','ui.shareFuelPlanned':'Fuel (planned)','ui.fuelGel':'Gel','ui.fuelTablet':'Salt tabs','ui.fuelHydration':'Hydration','ui.wristbandFilename':'pace-wristband.png',
+  'ui.shareImageSuffix':'-share-image.png','ui.shareStorySuffix':'-story.png','ui.shareModalTitle':'Generate share image','ui.shareFormatLabel':'Format','ui.shareFormatSquare':'Square 1:1','ui.shareFormatStory':'Story 9:16','ui.shareIncludeLabel':'Include:','ui.shareIncludeHr':'Heart rate','ui.shareIncludeShoe':'Shoes','ui.shareIncludeFuel':'Fuel','ui.shareIncludeTrack':'Route','ui.shareNow':'Share','ui.downloadNow':'Download','ui.sharePreviewAlt':'Preview','ui.shareShoe':'Shoes','ui.shareFuel':'Fuel','ui.shareFuelPlanned':'Fuel (planned)','ui.fuelGel':'Gel','ui.fuelTablet':'Salt tabs','ui.fuelHydration':'Hydration','ui.wristbandFilename':'pace-wristband.png',
   
   'ui.shoeManageTitle':'Shoe Manager',
   'ui.createProfile':'Create Personal Info','ui.profileTitle':'Personal Info',
@@ -3693,7 +3790,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -4398,6 +4495,7 @@ async function loadRaces(){
   }
 }
 async function persist(){
+  checkStorageHeadroom(false);
   try{
     await saveJson(STORAGE_KEY,state.races);
     hideStorageBanner();
@@ -6695,8 +6793,12 @@ function equipmentEmptyStateHtml(race){
 let drawerOpenSection=null;
 // dashCardHtml(section, title, sub)：儀表板上的摘要卡片，整張就是一個
 // 按鈕，點了打開對應的抽屜。
-function dashCardHtml(section,title,sub){
-  return `<button type="button" class="dash-card" data-action="open-drawer" data-section="${section}">
+// isEmpty：這個抽屜還沒填任何東西。空的卡片淡化、收成一行——13 張卡片
+// 裡通常有一半是空的，讓它們跟填了的一樣重，使用者掃過去分不出哪裡
+// 有內容、哪裡只是標題。判斷交給每個卡片自己（它知道什麼叫「有填」），
+// 不從 sub 文字反推，那會綁死翻譯字串。
+function dashCardHtml(section,title,sub,isEmpty){
+  return `<button type="button" class="dash-card${isEmpty?' is-empty':''}" data-action="open-drawer" data-section="${section}">
     <span class="dash-card-main">
       <span class="dash-card-title">${escapeHtml(title)}</span>
       <span class="dash-card-sub">${escapeHtml(sub)}</span>
@@ -6712,7 +6814,7 @@ function basicInfoDashCardHtml(race){
   if(loc.length) parts.push(loc.join('/  '));
   if((race.series||'').trim()) parts.push(race.series.trim());
   const sub=parts.length?parts.join('/  '):t('ui.dashBasicEmpty','尚未填寫基本資料');
-  return dashCardHtml('basicInfo',t('ui.drawerBasicTitle','賽事基本資料'),sub);
+  return dashCardHtml('basicInfo',t('ui.drawerBasicTitle','賽事基本資料'),sub,!parts.length);
 }
 function scheduleDashCardHtml(race){
   const parts=[];
@@ -6722,7 +6824,7 @@ function scheduleDashCardHtml(race){
   if(st) parts.push(st);
   if((race.bibNumber||'').trim()) parts.push(t('ui.dashBib','號碼布')+' '+race.bibNumber.trim());
   const sub=parts.length?parts.join('/  '):t('ui.dashScheduleEmpty','尚未填寫時間');
-  return dashCardHtml('schedule',t('ui.drawerScheduleTitle','時間與報名'),sub);
+  return dashCardHtml('schedule',t('ui.drawerScheduleTitle','時間與報名'),sub,!parts.length);
 }
 function weatherDashCardHtml(race){
   const cf=race.climateForecast||{},dw=race.raceDayWeather||{};
@@ -6732,7 +6834,7 @@ function weatherDashCardHtml(race){
   if(dw.condition) parts.push(labelFor(WEATHER_OPTIONS,dw.condition,'weather'));
   if(dw.humidityPct!=null) parts.push(t('ui.dashHumidity','濕度')+' '+dw.humidityPct+'%');
   const sub=parts.length?parts.join('/  '):t('ui.dashWeatherEmpty','尚未填寫氣象資料');
-  return dashCardHtml('weather',t('ui.drawerWeatherTitle','氣象資料'),sub);
+  return dashCardHtml('weather',t('ui.drawerWeatherTitle','氣象資料'),sub,!parts.length);
 }
 function checkpointsDashCardHtml(race){
   const cps=race.checkpoints||[];
@@ -6740,14 +6842,14 @@ function checkpointsDashCardHtml(race){
   const sub=cps.length
     ? tf2('ui.dashCpSummary',`${cps.length} 個/  ${withCutoff} 個有關門時間`,cps.length,withCutoff)
     : t('ui.dashCpEmpty','尚未新增 CP 站');
-  return dashCardHtml('checkpoints',t('list.checkpoints','CP / 補給站明細'),sub);
+  return dashCardHtml('checkpoints',t('list.checkpoints','CP / 補給站明細'),sub,!cps.length);
 }
 function mediaLinksDashCardHtml(race){
   const items=race.mediaLinks||[];
   const sub=items.length
     ? tf('ui.dashMediaSummary','{n} 筆連結',items.length)
     : t('ui.dashMediaEmpty','尚未新增連結');
-  return dashCardHtml('mediaLinks',t('list.mediaLinks','多媒體與連結'),sub);
+  return dashCardHtml('mediaLinks',t('list.mediaLinks','多媒體與連結'),sub,!items.length);
 }
 function nutritionPlanDashCardHtml(race){
   const n=race.nutritionPlan||{};
@@ -6756,7 +6858,7 @@ function nutritionPlanDashCardHtml(race){
   if(n.electrolyteTabletCount!=null) parts.push(t('ui.dashSalt','鹽錠')+' '+n.electrolyteTabletCount);
   if(n.hydrationCapacityMl!=null) parts.push(n.hydrationCapacityMl+' ml');
   const sub=parts.length?parts.join('/  '):t('ui.dashNutritionEmpty','尚未設定補給');
-  return dashCardHtml('nutritionPlan',t('ui.drawerNutritionTitle','補給設定'),sub);
+  return dashCardHtml('nutritionPlan',t('ui.drawerNutritionTitle','補給設定'),sub,!parts.length);
 }
 function trainingPlanDashCardHtml(race){
   const tp=race.trainingPlan||{};
@@ -6766,14 +6868,14 @@ function trainingPlanDashCardHtml(race){
   if(tp.taperStartDate) parts.push(t('ui.dashTaper','減量')+' '+tp.taperStartDate);
   if(tp.weeklyMileageTargetKm!=null) parts.push(t('ui.dashWeekly','週跑量')+' '+tp.weeklyMileageTargetKm+' km');
   const sub=parts.length?parts.join('/  '):t('ui.dashTrainingEmpty','尚未設定訓練計畫');
-  return dashCardHtml('trainingPlan',t('ui.drawerTrainingTitle','訓練計畫與減量期'),sub);
+  return dashCardHtml('trainingPlan',t('ui.drawerTrainingTitle','訓練計畫與減量期'),sub,!parts.length);
 }
 function goalsDashCardHtml(race){
   const filled=(race.goals||[]).filter(g=>g.targetTimeSeconds!=null);
   const sub=filled.length
     ? filled.map(g=>g.tier+' '+secToHMS(g.targetTimeSeconds)).join('/  ')
     : t('ui.dashGoalsEmpty','尚未設定目標時間');
-  return dashCardHtml('goals',t('ui.goalsTitle','賽前目標'),sub);
+  return dashCardHtml('goals',t('ui.goalsTitle','賽前目標'),sub,!filled.length);
 }
 /* routeDrawerBodyHtml(race)：路線數據拆成三張卡片。
    13 個欄位平鋪在一起時，使用者得自己在腦中分辨「這是講高度的、那是
@@ -6827,7 +6929,7 @@ function routeDashCardHtml(race){
   if(r.elevationGainM!=null) parts.push('+'+Math.round(r.elevationGainM)+' m');
   if(r.cutoffTimeSeconds!=null) parts.push(t('ui.dashCutoff','關門')+' '+secToHMS(r.cutoffTimeSeconds));
   const sub=parts.length?parts.join('/  '):t('ui.dashRouteEmpty','尚未填寫路線數據');
-  return dashCardHtml('route',t('ui.drawerRouteTitle','路線數據'),sub);
+  return dashCardHtml('route',t('ui.drawerRouteTitle','路線數據'),sub,!parts.length);
 }
 function logisticsDashCardHtml(race){
   const b=race.budget||{};
@@ -6843,7 +6945,7 @@ function logisticsDashCardHtml(race){
   ].filter(([n])=>n>0).map(([n,label])=>label+' '+n);
   parts.push(...counts);
   const sub=parts.length?parts.join('/  '):t('ui.dashLogisticsEmpty','尚未填寫預算與行程');
-  return dashCardHtml('logistics',t('ui.drawerLogisticsTitle','預算與行程'),sub);
+  return dashCardHtml('logistics',t('ui.drawerLogisticsTitle','預算與行程'),sub,!parts.length);
 }
 function resultsDashCardHtml(race){
   const r=race.results||{};
@@ -6854,13 +6956,13 @@ function resultsDashCardHtml(race){
   const pd=race.performanceData||{};
   if(pd.avgHr!=null) parts.push(pd.avgHr+' bpm');
   const sub=parts.length?parts.join('/  '):t('ui.dashResultsEmpty','尚未填寫成績');
-  return dashCardHtml('results',t('ui.drawerResultsTitle','成績與數據'),sub);
+  return dashCardHtml('results',t('ui.drawerResultsTitle','成績與數據'),sub,!parts.length);
 }
 function reviewDashCardHtml(race){
   const rv=race.review||{};
   const filled=['hitTheWallNotes','courseReview','pros','cons','lessonsLearned'].filter(k=>(rv[k]||'').trim()).length;
   const sub=filled?tf('ui.dashReviewFilled','已填寫 {n} 則',filled):t('ui.dashReviewEmpty','尚未填寫心得');
-  return dashCardHtml('review',t('ui.drawerReviewTitle','賽後心得'),sub);
+  return dashCardHtml('review',t('ui.drawerReviewTitle','賽後心得'),sub,!filled);
 }
 function equipmentDashCardHtml(race){
   const items=race.equipmentChecklist||[];
@@ -6868,7 +6970,7 @@ function equipmentDashCardHtml(race){
   const sub=items.length
     ? tf2('ui.dashEquipSummary',`${items.length} 項/  已打包 ${packed}`,items.length,packed)
     : t('ui.dashEquipEmpty','尚未新增任何裝備');
-  return dashCardHtml('equipment',t('list.equipmentChecklist','裝備清單'),sub);
+  return dashCardHtml('equipment',t('list.equipmentChecklist','裝備清單'),sub,!items.length);
 }
 // BASIC_INFO_PATHS：「基本資訊與時間」這 22 個欄位拆成兩個抽屜的依據。
 // 這一份是「這場賽事是什麼」——名稱、系列、運動種類、狀態、地點；
@@ -8198,7 +8300,86 @@ function canvasWrapText(ctx,text,x,y,maxWidth,lineHeight,maxLines){
 function canvasFontFamily(){
   return currentLang==='ja' ? '"Noto Sans JP",sans-serif' : '"Noto Sans TC",sans-serif';
 }
-async function buildShareCanvas(race){
+/* ------------------------------------------------------------
+   分享圖的「資料層」跟「版面層」拆開：方形與限動兩種版面吃同一份
+   badges／rows，運動別規則只寫一次，不會出現方形修好了、限動還在
+   顯示泳渡爬升的情況。
+   ------------------------------------------------------------ */
+const SHARE_SHOW_DEFAULT={hr:true,shoe:true,fuel:true,track:true};
+/* shareStatsBadges(race, show)：上排的關鍵數據。運動別規則跟詳情頁一致
+   ——分享圖是最容易被外人看到的畫面，這裡出現「泳渡配速 89'25"/km、
+   爬升 531 公尺」比在自己頁面上看到更糟，它會被截圖轉傳出去。 */
+function shareStatsBadges(race,show){
+  const isMultisport=(race.legs||[]).length>=2;
+  const isSwim=race.sportType==='swimming';
+  const chipT=race.results.chipTimeSeconds||0;
+  const badges=[];
+  if(!isMultisport&&race.route.distanceKm&&chipT){
+    badges.push([t('ui.resultPace','配速'),
+      isSwim?formatSwimPace(chipT/(race.route.distanceKm*10))
+            :formatPace(chipT/race.route.distanceKm)+'/km']);
+  }
+  if(race.route.distanceKm) badges.push([t('field.route.route.distanceKm','距離'),race.route.distanceKm+' 公里']);
+  if(!isSwim&&race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺']);
+  if(show.hr&&!isMultisport&&race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),race.performanceData.avgHr+' bpm']);
+  if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),String(race.results.overallRank)]);
+  return badges;
+}
+/* shareDetailRows(race, show)：下半部的戰靴與補給。 */
+function shareDetailRows(race,show){
+  const rows=[];
+  if(show.shoe&&isRunningSportType(race.sportType)&&race.performanceData.shoeId){
+    // 鞋款只對跑步相關賽事有意義：自行車、游泳的賽事本來就不綁鞋款，
+    // 硬是顯示只會讓人以為資料填錯。
+    const shoe=shoes.find(x=>x.id===race.performanceData.shoeId);
+    if(shoe&&shoe.name) rows.push([t('ui.shareShoe','戰靴'),shoe.name]);
+  }
+  if(show.fuel){
+    const fuel=summarizeRaceFuel(race);
+    if(fuel) rows.push([fuel.planned?t('ui.shareFuelPlanned','補給（計畫）'):t('ui.shareFuel','補給'),fuel.parts]);
+  }
+  return rows;
+}
+/* shareAvailableOptions(race)：這場有哪些可勾選的內容。沒有的東西不給
+   勾——一顆永遠沒作用的開關比沒有開關更誤導。 */
+function shareAvailableOptions(race){
+  const isMultisport=(race.legs||[]).length>=2;
+  return {
+    hr:!isMultisport&&race.performanceData.avgHr!=null,
+    shoe:isRunningSportType(race.sportType)&&!!race.performanceData.shoeId&&!!shoes.find(x=>x.id===race.performanceData.shoeId),
+    fuel:!!summarizeRaceFuel(race),
+    track:(race.route.trackPoints||[]).length>=2,
+  };
+}
+function drawShareLogo(ctx,x,y,uiFont){
+  ctx.strokeStyle='#EEF0EF';ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(x,y+95);ctx.lineTo(x+90,y+25);ctx.lineTo(x+135,y+60);ctx.lineTo(x+200,y);
+  ctx.stroke();
+  ctx.fillStyle='#B8451F';
+  ctx.beginPath();ctx.arc(x+200,y,11,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#9BA3A0';
+  ctx.font=`28px ${uiFont}`;
+  ctx.fillText(t('ui.appTitle','賽事紀錄'),x,y+155);
+}
+function drawShareRows(ctx,rows,x,top,maxW,uiFont,rowGap){
+  rows.forEach((row,i)=>{
+    const y=top+i*rowGap;
+    ctx.fillStyle='#6B7178';
+    ctx.font=`24px ${uiFont}`;
+    ctx.fillText(row[0],x,y);
+    ctx.fillStyle='#EDEEE9';
+    ctx.font=`bold 34px ${uiFont}`;
+    // 一律壓成一行：補給項目多的時候換行會疊到下一列，而被 canvasWrapText
+    // 從中間截斷的「咖啡因…」既難看也讀不出到底還有幾項。
+    const value=Array.isArray(row[1])?fitPartsToWidth(ctx,row[1],maxW):row[1];
+    canvasWrapText(ctx,value,x,y+46,maxW,44,1);
+  });
+}
+async function buildShareCanvas(race,opts){
+  opts=opts||{};
+  const show=Object.assign({},SHARE_SHOW_DEFAULT,opts.show||{});
+  if(opts.format==='story') return buildShareCanvasStory(race,show);
   try{ await document.fonts.ready; }catch(e){}
   const W=1080,H=1080;
   const canvas=document.createElement('canvas');
@@ -8209,17 +8390,7 @@ async function buildShareCanvas(race){
 
   ctx.fillStyle='#16231C';
   ctx.fillRect(0,0,W,H);
-
-  ctx.strokeStyle='#EEF0EF';ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';
-  ctx.beginPath();
-  ctx.moveTo(80,150);ctx.lineTo(170,80);ctx.lineTo(215,115);ctx.lineTo(280,55);
-  ctx.stroke();
-  ctx.fillStyle='#B8451F';
-  ctx.beginPath();ctx.arc(280,55,11,0,Math.PI*2);ctx.fill();
-
-  ctx.fillStyle='#9BA3A0';
-  ctx.font=`28px ${uiFont}`;
-  ctx.fillText(t('ui.appTitle','賽事紀錄'),80,210);
+  drawShareLogo(ctx,80,55,uiFont);
 
   ctx.fillStyle='#EDEEE9';
   ctx.font=`bold 52px ${uiFont}`;
@@ -8234,28 +8405,12 @@ async function buildShareCanvas(race){
   ctx.font='bold 128px "IBM Plex Mono",monospace';
   ctx.fillText(secToHMS(race.results.chipTimeSeconds||0),80,timeY);
   if(isPb){
-    ctx.strokeStyle='#D9B15C';ctx.fillStyle='none';ctx.lineWidth=2;
-    ctx.font=`bold 28px ${uiFont}`;
     ctx.fillStyle='#D9B15C';
+    ctx.font=`bold 28px ${uiFont}`;
     ctx.fillText(t('ui.pbBadge','個人最佳 PB'),80,timeY+50);
   }
 
-  // 運動別的數據規則跟詳情頁一致：分享圖是最容易被外人看到的畫面，
-  // 這裡出現「泳渡配速 89'25"/km、爬升 531 公尺」比在自己頁面上看到
-  // 更糟——它會被截圖轉傳出去。
-  const isMultisport=(race.legs||[]).length>=2;
-  const isSwim=race.sportType==='swimming';
-  const chipT=race.results.chipTimeSeconds||0;
-  const badges=[];
-  if(!isMultisport&&race.route.distanceKm&&chipT){
-    badges.push([t('ui.resultPace','配速'),
-      isSwim?formatSwimPace(chipT/(race.route.distanceKm*10))
-            :formatPace(chipT/race.route.distanceKm)+'/km']);
-  }
-  if(race.route.distanceKm) badges.push([t('field.route.route.distanceKm','距離'),race.route.distanceKm+' 公里']);
-  if(!isSwim&&race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺']);
-  if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),String(race.results.overallRank)]);
-
+  const badges=shareStatsBadges(race,show).slice(0,4);   // 方形只有一排的位置
   const badgeY=timeY+(isPb?110:70);
   const colW=(W-160)/Math.max(badges.length,1);
   badges.forEach((b,i)=>{
@@ -8269,35 +8424,14 @@ async function buildShareCanvas(race){
   });
 
   // ---- 下半部：戰靴／補給／軌跡 ----
-  // 原本這裡是一整片空白（約 300px），資訊量最少的地方佔了畫面三分之一。
-  const rows=[];
-  if(isRunningSportType(race.sportType)&&race.performanceData.shoeId){
-    // 鞋款只對跑步相關賽事有意義：自行車、游泳的賽事本來就不綁鞋款，
-    // 硬是顯示只會讓人以為資料填錯。
-    const shoe=shoes.find(x=>x.id===race.performanceData.shoeId);
-    if(shoe&&shoe.name) rows.push([t('ui.shareShoe','戰靴'),shoe.name]);
-  }
-  const fuel=summarizeRaceFuel(race);
-  if(fuel) rows.push([fuel.planned?t('ui.shareFuelPlanned','補給（計畫）'):t('ui.shareFuel','補給'),fuel.parts]);
-
-  const trackPoints=(race.route.trackPoints||[]);
+  const rows=shareDetailRows(race,show);
+  const trackPoints=show.track?(race.route.trackPoints||[]):[];
   const hasTrack=trackPoints.length>=2;
   const contentTop=badgeY+112;
   const contentBottom=H-130;
   // 有軌跡就讓文字退到左半邊，沒有就整行都給文字——不預留一塊永遠空著的欄位。
-  const textMaxW=hasTrack?(rows.length?430:0):(W-160);
-  rows.forEach((row,i)=>{
-    const y=contentTop+i*108;
-    ctx.fillStyle='#6B7178';
-    ctx.font=`24px ${uiFont}`;
-    ctx.fillText(row[0],80,y);
-    ctx.fillStyle='#EDEEE9';
-    ctx.font=`bold 34px ${uiFont}`;
-    // 一律壓成一行：補給項目多的時候換行會疊到下一列，而被 canvasWrapText
-    // 從中間截斷的「咖啡因…」既難看也讀不出到底還有幾項。
-    const value=Array.isArray(row[1])?fitPartsToWidth(ctx,row[1],textMaxW||(W-160)):row[1];
-    canvasWrapText(ctx,value,80,y+46,textMaxW||(W-160),44,1);
-  });
+  const textMaxW=hasTrack?430:(W-160);
+  drawShareRows(ctx,rows,80,contentTop,textMaxW,uiFont,108);
   if(hasTrack){
     const areaX=rows.length?560:80;
     const areaW=(W-80)-areaX;
@@ -8308,7 +8442,85 @@ async function buildShareCanvas(race){
   ctx.fillStyle='#4C9A72';
   ctx.font=`24px ${uiFont}`;
   ctx.fillText(sportLabel(race.sportType),80,H-70);
+  return canvas;
+}
+/* buildShareCanvasStory(race, show)：1080×1920 限時動態版。上下各留
+   250px 給 IG 的介面（頂端帳號列、底部回覆列），內容全部落在中間
+   1420px。直式的空間多一倍，軌跡不再跟文字搶左右，而是獨佔中段。 */
+async function buildShareCanvasStory(race,show){
+  try{ await document.fonts.ready; }catch(e){}
+  const W=1080,H=1920,SAFE_TOP=250,SAFE_BOTTOM=250;
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const isPb=!!race.results.isPb;
+  const uiFont=canvasFontFamily();
 
+  ctx.fillStyle='#16231C';
+  ctx.fillRect(0,0,W,H);
+  drawShareLogo(ctx,80,SAFE_TOP+40,uiFont);
+  // 運動別放右上角跟 App 名稱同一列：直式的底部要留給戰靴與補給，
+  // 塞在那裡會跟它們搶同一條基線。
+  ctx.fillStyle='#4C9A72';
+  ctx.font=`26px ${uiFont}`;
+  ctx.textAlign='right';
+  ctx.fillText(sportLabel(race.sportType),W-80,SAFE_TOP+40+155);
+  ctx.textAlign='left';
+
+  ctx.fillStyle='#EDEEE9';
+  ctx.font=`bold 60px ${uiFont}`;
+  const nameEndY=canvasWrapText(ctx,race.name||t('ui.unnamedRace','(未命名賽事)'),80,SAFE_TOP+290,W-160,74,3);
+
+  ctx.fillStyle='#9BA3A0';
+  ctx.font='32px "IBM Plex Mono",monospace';
+  ctx.fillText(race.schedule.raceDate||'',80,nameEndY+64);
+
+  const timeY=nameEndY+230;
+  ctx.fillStyle=isPb?'#D9B15C':'#EDEEE9';
+  ctx.font='bold 150px "IBM Plex Mono",monospace';
+  ctx.fillText(secToHMS(race.results.chipTimeSeconds||0),80,timeY);
+  if(isPb){
+    ctx.fillStyle='#D9B15C';
+    ctx.font=`bold 30px ${uiFont}`;
+    ctx.fillText(t('ui.pbBadge','個人最佳 PB'),80,timeY+54);
+  }
+
+  // 數據三欄排：直式有五格要放（含心率與名次），三欄兩列剛好，
+  // 而 306px 的欄寬放得下最長的「42.195 公里」。
+  const badges=shareStatsBadges(race,show);
+  const badgeTop=timeY+(isPb?120:80);
+  const cols=3, colW=(W-160)/cols, rowH=100;
+  badges.forEach((b,i)=>{
+    const bx=80+(i%cols)*colW, by=badgeTop+Math.floor(i/cols)*rowH;
+    ctx.fillStyle='#6B7178';
+    ctx.font=`24px ${uiFont}`;
+    ctx.fillText(b[0],bx,by);
+    ctx.fillStyle='#EDEEE9';
+    ctx.font='bold 36px "IBM Plex Mono",monospace';
+    ctx.fillText(b[1],bx,by+44);
+  });
+  const badgesEnd=badgeTop+Math.ceil(badges.length/cols)*rowH;
+
+  // 底部：戰靴與補給並排成一列，各佔半寬；只有一項時整行都給它。
+  // 直式最缺的是「高度」，兩項各佔一行會把中段的軌跡擠到扁掉。
+  const rows=shareDetailRows(race,show);
+  const rowsTop=H-SAFE_BOTTOM-90;
+  if(rows.length){
+    const half=(W-160-40)/2;
+    rows.forEach((row,i)=>{
+      const x=rows.length===1?80:80+i*(half+40);
+      drawShareRows(ctx,[row],x,rowsTop,rows.length===1?W-160:half,uiFont,0);
+    });
+  }
+
+  // 中段：軌跡獨佔數據與底部文字之間的整塊空間
+  const trackPoints=show.track?(race.route.trackPoints||[]):[];
+  if(trackPoints.length>=2){
+    const areaTop=badgesEnd+30;
+    const areaBottom=rows.length?rowsTop-70:H-SAFE_BOTTOM-20;
+    const areaH=areaBottom-areaTop;
+    if(areaH>180) drawGoldGlowTrack(ctx,trackPoints,W/2,areaTop+areaH/2,W-200,areaH-30);
+  }
   return canvas;
 }
 /* fitPartsToWidth(ctx, parts, maxW)：把項目塞到一行放得下為止，放不下的
@@ -8364,12 +8576,89 @@ function drawGoldGlowTrack(ctx,trackPoints,cx,cy,maxW,maxH){
   drawRouteTrackOnCanvas(ctx,trackPoints,cx,cy,maxW,maxH,'#F4E3B4',4,7);
   return true;
 }
-async function downloadShareImage(race){
-  const canvas=await buildShareCanvas(race);
-  canvas.toBlob(blob=>{
-    if(!blob) return;
-    downloadBlob(blob,safeFilename(race.name||'race')+t('ui.shareImageSuffix','-分享圖.png'));
-  },'image/png');
+/* ------------------------------------------------------------
+   分享圖設定視窗：選格式（方形／限動）、勾要放的內容、看預覽、再分享。
+   預覽直接用真正的產圖函式畫一張縮小顯示，不另外維護一套「預覽版」
+   排版——那種東西永遠會跟正式輸出對不上。
+   ------------------------------------------------------------ */
+const SHARE_PREFS_KEY='share-prefs-v1';
+let sharePrefs=Object.assign({format:'square'},SHARE_SHOW_DEFAULT);
+try{ const saved=JSON.parse(localStorage.getItem(SHARE_PREFS_KEY)||'null'); if(saved&&typeof saved==='object') sharePrefs=Object.assign(sharePrefs,saved); }catch(e){}
+function saveSharePrefs(){ try{ localStorage.setItem(SHARE_PREFS_KEY,JSON.stringify(sharePrefs)); }catch(e){} }
+const shareModalEl_getter=()=>document.getElementById('share-modal');
+let shareModalRace=null;
+function shareModalHtml(race){
+  const avail=shareAvailableOptions(race);
+  const opt=(key,label)=>avail[key]?`<label><input type="checkbox" data-share-opt="${key}"${sharePrefs[key]?' checked':''}>${label}</label>`:'';
+  const options=[opt('hr',t('ui.shareIncludeHr','心率')),opt('shoe',t('ui.shareIncludeShoe','戰靴')),
+                 opt('fuel',t('ui.shareIncludeFuel','補給')),opt('track',t('ui.shareIncludeTrack','軌跡'))].filter(Boolean);
+  const actionLabel=canUseShareSheet()?t('ui.shareNow','分享'):t('ui.downloadNow','下載');
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.shareModalTitle','產生分享圖')}</h2>
+    <div class="share-format-row" role="group" aria-label="${t('ui.shareFormatLabel','格式')}">
+      <button type="button" class="chip${sharePrefs.format==='square'?' active':''}" data-share-format="square" aria-pressed="${sharePrefs.format==='square'}">${t('ui.shareFormatSquare','方形 1:1')}</button>
+      <button type="button" class="chip${sharePrefs.format==='story'?' active':''}" data-share-format="story" aria-pressed="${sharePrefs.format==='story'}">${t('ui.shareFormatStory','限時動態 9:16')}</button>
+    </div>
+    ${options.length?`<div class="share-options-row"><span class="small" style="color:var(--stone)">${t('ui.shareIncludeLabel','放進圖裡：')}</span>${options.join('')}</div>`:''}
+    <div class="share-preview-wrap${sharePrefs.format==='story'?' is-story':''}"><img id="share-preview-img" alt="${t('ui.sharePreviewAlt','分享圖預覽')}"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" data-action="confirm-share">${actionLabel}</button>
+      <button class="btn-ghost" data-action="close-share">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+}
+let sharePreviewToken=0;
+async function renderSharePreview(){
+  if(!shareModalRace) return;
+  const token=++sharePreviewToken;
+  const canvas=await buildShareCanvas(shareModalRace,{format:sharePrefs.format,show:sharePrefs});
+  if(token!==sharePreviewToken) return;   // 使用者已經又切了一次，丟掉舊的
+  const img=document.getElementById('share-preview-img');
+  if(img) img.src=canvas.toDataURL('image/png');
+  const wrap=document.querySelector('#share-modal .share-preview-wrap');
+  if(wrap) wrap.classList.toggle('is-story',sharePrefs.format==='story');
+}
+function openShareModal(race){
+  shareModalRace=race;
+  const el=shareModalEl_getter();
+  el.innerHTML=shareModalHtml(race);
+  el.hidden=false;
+  renderSharePreview();
+}
+function closeShareModal(){
+  const el=shareModalEl_getter();
+  el.hidden=true; el.innerHTML=''; shareModalRace=null;
+}
+shareModalEl_getter().addEventListener('click',e=>{
+  const fmt=e.target.closest('[data-share-format]');
+  if(fmt){
+    sharePrefs.format=fmt.dataset.shareFormat; saveSharePrefs();
+    document.querySelectorAll('#share-modal [data-share-format]').forEach(b=>{
+      const on=b.dataset.shareFormat===sharePrefs.format;
+      b.classList.toggle('active',on); b.setAttribute('aria-pressed',String(on));
+    });
+    renderSharePreview(); return;
+  }
+  if(e.target.closest('[data-action="close-share"]')){ closeShareModal(); return; }
+  if(e.target.closest('[data-action="confirm-share"]')&&shareModalRace){
+    const race=shareModalRace;
+    runAsyncAction(downloadShareImage(race,{format:sharePrefs.format,show:sharePrefs}),'分享圖');
+    logFeatureUse(sharePrefs.format==='story'?'export_share_story':'export_share_image');
+    closeShareModal(); return;
+  }
+});
+shareModalEl_getter().addEventListener('change',e=>{
+  const opt=e.target.closest('[data-share-opt]');
+  if(!opt) return;
+  sharePrefs[opt.dataset.shareOpt]=opt.checked; saveSharePrefs();
+  renderSharePreview();
+});
+async function downloadShareImage(race,opts){
+  const canvas=await buildShareCanvas(race,opts);
+  const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
+  if(!blob) return;
+  const suffix=(opts&&opts.format==='story')?t('ui.shareStorySuffix','-限動.png'):t('ui.shareImageSuffix','-分享圖.png');
+  return shareOrDownloadImage(blob,safeFilename(race.name||'race')+suffix);
 }
 
 /* ============================================================
@@ -8988,7 +9277,7 @@ async function downloadBadgeShareImage(badgeId){
   const badge=BADGE_DEFINITIONS.find(b=>b.id===badgeId);
   canvas.toBlob(blob=>{
     if(!blob) return;
-    downloadBlob(blob,safeFilename(badge?badge.name:'badge')+t('ui.badgeShareSuffix','-徽章成就.png'));
+    shareOrDownloadImage(blob,safeFilename(badge?badge.name:'badge')+t('ui.badgeShareSuffix','-徽章成就.png'));
   },'image/png');
 }
 
@@ -9189,7 +9478,7 @@ async function downloadYearInReviewImage(year){
   if(!canvas) return;
   canvas.toBlob(blob=>{
     if(!blob) return;
-    downloadBlob(blob,year+t('ui.yearInReviewSuffix','-年度回顧.png'));
+    shareOrDownloadImage(blob,year+t('ui.yearInReviewSuffix','-年度回顧.png'));
   },'image/png');
 }
 
@@ -11724,8 +12013,13 @@ function renderDetail(){
   if(!race){destroyRouteMap();detailEl.innerHTML=emptyStateHtml();currentRace=null;applyAmbientTint(null);return;}
   currentRace=race;
   applyAmbientTint(race.coverImageAccentColor||null);
+  // 完賽的賽事，打開頁面第一眼要看到的是成績，不是「基本資訊與時間」。
+  // 儀表板從賽後區段搬到 header 正下方、區段導覽列之上——它本來就只在
+  // 已完賽且有成績時才會產生，所以未完賽的頁面這裡什麼都沒有。
+  const heroDashboard=renderResultsDashboard(race);
   detailEl.innerHTML=`
     ${detailHeaderHtml(race)}
+    ${heroDashboard?`<div class="hero-results">${heroDashboard}</div>`:''}
     ${quickNavHtml()}
     ${renderSeriesComparison(race)}
     <details class="section" id="section-basic">
@@ -11769,7 +12063,6 @@ function renderDetail(){
     </details>
     <details class="section" id="section-post">
       <summary>${t('ui.sectionPost','賽後紀錄與個人數據')}</summary>
-      ${renderResultsDashboard(race)}
       ${renderSplitAnalysis(race)}
       ${renderSplitsChart(race)}
       <div class="gpx-import-bar">
@@ -11969,7 +12262,17 @@ document.getElementById('btn-new').addEventListener('click',startCreate);
 
 let searchDebounceTimer=null;
 searchInputEl.addEventListener('input',e=>{
-  state.searchQuery=e.target.value;
+  // 搜尋框第一個字打 > 或 #，就接手變成指令面板——這是指令面板在手機上
+  // 唯一的入口（Cmd+K 沒有實體鍵盤按不出來）。打到一半的字帶過去，
+  // 使用者不用重打。
+  const v=e.target.value;
+  if(v.startsWith('>')||v.startsWith('#')){
+    e.target.value=''; state.searchQuery='';
+    cmdkOpenWith(v);
+    logFeatureUse('cmdk_from_search');
+    return;
+  }
+  state.searchQuery=v;
   clearTimeout(searchDebounceTimer);
   searchDebounceTimer=setTimeout(()=>{renderCalendar();},150);
 });
@@ -12222,6 +12525,92 @@ document.getElementById('cal-table-toggle').addEventListener('click',()=>{
   state.viewMode=state.viewMode==='table'?'calendar':'table';
   renderCalendar();
   if(state.viewMode==='table') logFeatureUse('view_table');
+});
+/* ------------------------------------------------------------
+   長按賽事卡片（行事曆格子、清單列、獎牌牆卡片、表格列）：彈出
+   複製／分享／刪除，不用先進頁面再找「更多操作」。
+   只吃 touch 的 pointer——桌機有右鍵與 hover，長按是手機的手勢。
+   長按觸發後，瀏覽器接著補送的 click 要擋掉（用捕獲階段先攔），
+   否則放開手指時會順便把詳情頁打開。
+   ------------------------------------------------------------ */
+const RACE_CARD_SELECTOR='.cal-chip,.cal-list-item,.photo-card,.table-view-row';
+const LONG_PRESS_MS=550;
+let longPress=null, longPressFiredAt=0;
+function raceIdFromCard(card){
+  if(!card) return null;
+  if(card.dataset.id) return card.dataset.id;
+  const row=card.closest('[data-id]'); return row?row.dataset.id:null;
+}
+document.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='touch'||!e.isPrimary) return;
+  const card=e.target.closest(RACE_CARD_SELECTOR);
+  const id=raceIdFromCard(card);
+  if(!id) return;
+  longPress={id,x:e.clientX,y:e.clientY,timer:setTimeout(()=>{
+    longPress=null; longPressFiredAt=Date.now();
+    tryVibrate(12);
+    openRaceContextSheet(id);
+  },LONG_PRESS_MS)};
+},{passive:true});
+function cancelLongPress(){ if(longPress){ clearTimeout(longPress.timer); longPress=null; } }
+document.addEventListener('pointermove',e=>{
+  if(!longPress) return;
+  if(Math.abs(e.clientX-longPress.x)>10||Math.abs(e.clientY-longPress.y)>10) cancelLongPress();
+},{passive:true});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>document.addEventListener(ev,cancelLongPress,{passive:true}));
+document.addEventListener('contextmenu',e=>{
+  if(window.matchMedia('(pointer: coarse)').matches&&e.target.closest(RACE_CARD_SELECTOR)) e.preventDefault();
+});
+document.addEventListener('click',e=>{
+  if(Date.now()-longPressFiredAt<700&&e.target.closest(RACE_CARD_SELECTOR)){ e.stopPropagation(); e.preventDefault(); }
+},true);
+const raceContextEl_getter=()=>document.getElementById('race-context-sheet');
+let raceContextId=null;
+function openRaceContextSheet(id){
+  const race=state.races.find(r=>r.id===id&&!r.deletedAt);
+  if(!race) return;
+  raceContextId=id;
+  const el=raceContextEl_getter();
+  el.innerHTML=`<div class="modal-panel">
+    <h2>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')}</h2>
+    <p class="modal-hint">${escapeHtml(race.schedule.raceDate||'')} ・ ${statusLabel(race.status)}</p>
+    <div class="race-context-actions">
+      <button type="button" class="action-menu-item" data-ctx="open">${t('ui.ctxOpen','開啟賽事')}</button>
+      <button type="button" class="action-menu-item" data-ctx="duplicate">${t('ui.duplicateRace','複製賽事')}</button>
+      ${race.status==='completed'?`<button type="button" class="action-menu-item" data-ctx="share">${t('ui.generateShareImage','產生分享圖')}</button>`:''}
+      <div class="action-menu-divider"></div>
+      <button type="button" class="action-menu-item danger" data-ctx="delete">${t('ui.deleteRace','刪除賽事')}</button>
+      <button type="button" class="action-menu-item" data-action="close-race-context">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+  el.hidden=false;
+}
+function closeRaceContextSheet(){ const el=raceContextEl_getter(); el.hidden=true; el.innerHTML=''; raceContextId=null; }
+raceContextEl_getter().addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-race-context"]')||e.target===raceContextEl_getter()){ closeRaceContextSheet(); return; }
+  const btn=e.target.closest('[data-ctx]'); if(!btn||!raceContextId) return;
+  const race=state.races.find(r=>r.id===raceContextId); const id=raceContextId;
+  closeRaceContextSheet();
+  if(!race) return;
+  switch(btn.dataset.ctx){
+    case 'open': selectRace(id); break;
+    case 'duplicate':{
+      const copy=duplicateRace(race);
+      state.races.push(copy); state.selectedId=copy.id;
+      persist(); renderAll(); scrollDetailIntoView();
+      logFeatureUse('race_duplicate'); break;
+    }
+    case 'share': openShareModal(race); break;
+    case 'delete':{
+      // 跟詳情頁的刪除同一條路：軟刪除＋復原 toast，垃圾桶 30 天內可救回
+      const raceName=race.name||t('ui.unnamedRace','(未命名賽事)');
+      race.deletedAt=new Date().toISOString(); race.updatedAt=new Date().toISOString();
+      if(state.selectedId===id){ state.selectedId=null; currentRace=null; }
+      persist(); renderAll();
+      showRaceDeleteUndoToast(id,raceName);
+      logFeatureUse('race_delete'); break;
+    }
+  }
 });
 document.addEventListener('click',e=>{
   const photoCard=e.target.closest('.photo-card');
@@ -12862,7 +13251,14 @@ async function handleDetailChange(e){
   const path=t.dataset.path;if(!path||!currentRace) return;
   let value;
   if(t.type==='checkbox') value=t.checked;
-  else if(t.dataset.kind==='duration') value=hmsToSec(t.value);
+  else if(t.dataset.kind==='duration'){
+    // 看不懂的字串不能變成 null 存進去——那是把使用者原本的成績清掉，
+    // 而且畫面上什麼都不說。留在欄位裡、標成錯誤，讓他修。
+    const v=validateDurationInput(t);
+    if(!v.ok) return;
+    value=v.value;
+    if(value!=null) t.value=secToHMS(value);
+  }
   else if(t.type==='number') value=(t.value===''?null:Number(t.value));
   else value=t.value;
   if(path==='status'){
@@ -13103,12 +13499,50 @@ function handleDetailClick(e){
   }
 }
 detailEl.addEventListener('change',handleDetailChange);
+/* 時間欄位的即時驗證：使用者打字時就告訴他看不看得懂，並在看得懂但
+   寫法不標準時顯示「= 0:44:25」——「44:25」到底是 44 分還是 4 時 42 分
+   這種歧義，讓他在離開欄位前就看到。
+   為什麼不在 change 才驗：change 是離開欄位才觸發，那時使用者的注意力
+   已經到下一格了，錯誤要回頭找。 */
+function durationHintEl(input,create){
+  const field=input.closest('.field');
+  if(!field) return null;
+  let el=field.querySelector('.field-hint-live');
+  if(!el&&create){ el=document.createElement('span'); el.className='field-hint-live'; field.appendChild(el); }
+  return el;
+}
+function validateDurationInput(input){
+  const raw=input.value;
+  if(!raw.trim()){ input.removeAttribute('aria-invalid'); const el=durationHintEl(input,false); if(el) el.remove(); return {ok:true,value:null}; }
+  const sec=hmsToSec(raw);
+  if(sec==null){
+    input.setAttribute('aria-invalid','true');
+    const el=durationHintEl(input,true);
+    el.className='field-hint-live is-error';
+    el.textContent=t('ui.durationInvalidHint','看不懂這個時間格式，例如 3:44:25、44:25 或 3h44m25s');
+    return {ok:false,value:null};
+  }
+  input.removeAttribute('aria-invalid');
+  const canonical=secToHMS(sec);
+  const el=durationHintEl(input,true);
+  if(raw.trim()!==canonical){ el.className='field-hint-live'; el.textContent='= '+canonical; }
+  else el.remove();
+  return {ok:true,value:sec};
+}
+function handleDurationLiveInput(e){
+  const input=e.target;
+  if(!input||input.dataset.kind!=='duration') return;
+  validateDurationInput(input);
+}
+detailEl.addEventListener('input',handleDurationLiveInput);
 detailEl.addEventListener('click',handleDetailClick);
 // 抽屜掛的是上面同一份處理函式，不是另外複製一份——裝備清單搬進
 // 抽屜之後，裡面的欄位編輯（自動儲存）、新增／刪除、套用範本這些
 // 操作走的都還是原本那套邏輯，行為跟放在詳情頁裡時完全一致。
 const drawerEl=document.getElementById('global-drawer');
 drawerEl.addEventListener('change',handleDetailChange);
+// 抽屜不在 detailEl 底下，時間欄位的即時驗證要另外掛
+drawerEl.addEventListener('input',handleDurationLiveInput);
 drawerEl.addEventListener('click',handleDetailClick);
 drawerEl.addEventListener('click',e=>{
   // 點右上角 ✕，或點面板以外的遮罩區域，都關閉抽屜。
@@ -14304,6 +14738,13 @@ function parseGpxOrTcx(text){
 }
 
 const gpxModalEl_getter=()=>document.getElementById('gpx-modal');
+/* gpxReplaceNote(incoming, existing, fmt)：「會取代現有的 X」小字。
+   規則只有一條：檔案有值、現有也有值、而且不一樣，才標。三個條件缺一
+   都不標——檔案沒有的欄位本來就不會覆蓋，標了反而讓人以為會被清空。 */
+function gpxReplaceNote(incoming,existing,fmt){
+  if(incoming==null||existing==null||incoming===existing) return '';
+  return `<span class="gpx-overwrite-note">${tf('ui.gpxWillReplaceValue','會取代現有的 {n}',fmt(existing))}</span>`;
+}
 function gpxSummaryHtml(summary,filename){
   const raceName=escapeHtml(currentRace.name||t('ui.unnamedRace','此賽事'));
   const fileEsc=escapeHtml(filename);
@@ -14318,7 +14759,9 @@ function gpxSummaryHtml(summary,filename){
           ?`<span class="gpx-overwrite-note">${tf('ui.gpxWillReplace','會取代現有的 {n} 公里',currentRace.route.distanceKm)}</span>`
           :''
       }</li>
-      <li>${t('ui.gpxElevGain','總爬升')} <span class="mono">${summary.elevationGainM!=null?summary.elevationGainM+' 公尺':'—'}</span></li>
+      <li>${t('ui.gpxElevGain','總爬升')} <span class="mono">${summary.elevationGainM!=null?summary.elevationGainM+' 公尺':'—'}</span>${
+        gpxReplaceNote(summary.elevationGainM,currentRace.route.elevationGainM,v=>v+' 公尺')
+      }</li>
       <li>${t('ui.gpxTime','時間')} <span class="mono">${summary.durationSeconds!=null?secToHMS(summary.durationSeconds):'—'}</span>${
         // 時間過去是唯一不覆蓋的欄位，現在也覆蓋了。這一行是整個對話框裡
         // 最需要看清楚的——官方晶片成績會被手錶時間蓋掉，就是在這裡發生。
@@ -14327,9 +14770,22 @@ function gpxSummaryHtml(summary,filename){
           ?`<span class="gpx-overwrite-note">${tf('ui.gpxWillReplaceValue','會取代現有的 {n}',secToHMS(currentRace.results.chipTimeSeconds))}</span>`
           :''
       }</li>
-      <li>${t('ui.gpxAvgHr','平均心率')} <span class="mono">${summary.avgHr!=null?summary.avgHr+' bpm':'—'}</span></li>
-      <li>${t('ui.gpxMaxHr','最大心率')} <span class="mono">${summary.maxHr!=null?summary.maxHr+' bpm':'—'}</span></li>
-      <li>${t('ui.gpxSplits','分段配速')} <span class="mono">${summary.splits.length}</span></li>
+      <li>${t('ui.gpxAvgHr','平均心率')} <span class="mono">${summary.avgHr!=null?summary.avgHr+' bpm':'—'}</span>${
+        gpxReplaceNote(summary.avgHr,currentRace.performanceData.avgHr,v=>v+' bpm')
+      }</li>
+      <li>${t('ui.gpxMaxHr','最大心率')} <span class="mono">${summary.maxHr!=null?summary.maxHr+' bpm':'—'}</span>${
+        gpxReplaceNote(summary.maxHr,currentRace.performanceData.maxHr,v=>v+' bpm')
+      }</li>
+      ${summary.avgCadence!=null?`<li>${t('ui.gpxCadence','步頻')} <span class="mono">${normalizeRunningCadence(summary.avgCadence,currentRace.sportType)} spm</span>${
+        // 預覽要顯示「套用後會變成的值」：FIT 記的是單腳步頻，套用時會 ×2，
+        // 預覽如果顯示 86、套用後變 172，使用者會以為程式算錯。
+        gpxReplaceNote(normalizeRunningCadence(summary.avgCadence,currentRace.sportType),currentRace.performanceData.avgCadence,v=>v+' spm')
+      }</li>`:''}
+      <li>${t('ui.gpxSplits','分段配速')} <span class="mono">${summary.splits.length}</span>${
+        // 分段是整組換掉，不是逐格覆蓋：原本有 21 段、檔案只有 10 段，套用後就是 10 段
+        (summary.splits.length&&(currentRace.splits||[]).length&&currentRace.splits.length!==summary.splits.length)
+          ?`<span class="gpx-overwrite-note">${tf('ui.gpxWillReplaceSplits','會取代現有的 {n} 段',currentRace.splits.length)}</span>`:''
+      }</li>
     </ul>
     <div class="modal-actions">
       <button class="btn-primary" data-action="confirm-gpx-import">${t('ui.gpxApply','套用到此賽事')}</button>
@@ -14874,13 +15330,77 @@ document.addEventListener('click',e=>{
   const navLink=e.target.closest('.quick-nav a');
   if(navLink){
     e.preventDefault();
-    const targetEl=document.getElementById(navLink.dataset.target);
-    if(targetEl){
-      if(targetEl.tagName==='DETAILS'&&!targetEl.open) targetEl.open=true;
-      targetEl.scrollIntoView({behavior:'smooth',block:'start'});
-    }
+    navigateToSection(navLink.dataset.target);
     return;
   }
+});
+/* navigateToSection(id)：捲到區段並把導覽列對應的 chip 標成 active，
+   點 chip 跟左右滑都走這裡。 */
+function navigateToSection(id){
+  const targetEl=document.getElementById(id);
+  if(!targetEl) return false;
+  if(targetEl.tagName==='DETAILS'&&!targetEl.open) targetEl.open=true;
+  targetEl.scrollIntoView({behavior:'smooth',block:'start'});
+  document.querySelectorAll('.quick-nav a').forEach(a=>{
+    const on=a.dataset.target===id;
+    a.classList.toggle('active',on);
+    if(on&&a.scrollIntoView) a.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+  });
+  return true;
+}
+/* currentSectionIndex()：以「頂端最接近視窗上緣（扣掉頂欄）的區段」
+   當作目前所在。不另外維護狀態——使用者用手指捲動時狀態會跟畫面脫節。 */
+function currentSectionIndex(){
+  const topbar=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-height'),10)||0;
+  let best=0,bestDist=Infinity;
+  QUICK_NAV_SECTIONS.forEach(([id],i)=>{
+    const el=document.getElementById(id); if(!el) return;
+    const d=Math.abs(el.getBoundingClientRect().top-topbar-16);
+    if(d<bestDist){ bestDist=d; best=i; }
+  });
+  return best;
+}
+/* 詳情頁左右滑：往左滑到下一區、往右滑回上一區。
+   只在觸控起點不落在「自己會橫向捲動的東西」上才生效——分段表、
+   裝備看板、地圖，這些本來就要吃橫向手勢，搶走會讓它們不能用。
+   判斷是否橫向只做一次（剛開始移動時），跟清單的滑動手勢同一套邏輯。 */
+let sectionSwipe=null;
+const SECTION_SWIPE_MIN_PX=90;
+function startsInsideHorizontalScroller(el){
+  for(let n=el;n&&n!==detailEl;n=n.parentElement){
+    if(n.matches&&n.matches('input,textarea,select,.leaflet-container,[data-no-section-swipe]')) return true;
+    const cs=getComputedStyle(n);
+    if((cs.overflowX==='auto'||cs.overflowX==='scroll')&&n.scrollWidth>n.clientWidth+2) return true;
+  }
+  return false;
+}
+detailEl.addEventListener('touchstart',e=>{
+  if(e.touches.length!==1||!currentRace||state.creating) return;
+  if(startsInsideHorizontalScroller(e.target)) return;
+  const tch=e.touches[0];
+  sectionSwipe={x:tch.clientX,y:tch.clientY,decided:false,horizontal:false};
+},{passive:true});
+detailEl.addEventListener('touchmove',e=>{
+  if(!sectionSwipe||sectionSwipe.decided) return;
+  const tch=e.touches[0];
+  const dx=tch.clientX-sectionSwipe.x, dy=tch.clientY-sectionSwipe.y;
+  if(Math.abs(dx)<12&&Math.abs(dy)<12) return;
+  sectionSwipe.decided=true;
+  sectionSwipe.horizontal=Math.abs(dx)>Math.abs(dy)*1.6;
+},{passive:true});
+detailEl.addEventListener('touchend',e=>{
+  if(!sectionSwipe) return;
+  const st=sectionSwipe; sectionSwipe=null;
+  if(!st.horizontal) return;
+  const tch=e.changedTouches[0];
+  const dx=tch.clientX-st.x;
+  if(Math.abs(dx)<SECTION_SWIPE_MIN_PX) return;
+  const idx=currentSectionIndex();
+  const next=dx<0?idx+1:idx-1;
+  if(next<0||next>=QUICK_NAV_SECTIONS.length) return;
+  navigateToSection(QUICK_NAV_SECTIONS[next][0]);
+  tryVibrate(8);
+  logFeatureUse('section_swipe');
 });
 
 /* ============================================================
@@ -15554,7 +16074,7 @@ async function downloadWristbandImage(rows,race){
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-action="open-paste-modal"]')) openPasteModal();
   if(e.target.closest('[data-action="open-gpx-picker"]')) document.getElementById('gpx-file-input').click();
-  if(e.target.closest('[data-action="generate-share-image"]')&&currentRace){ runAsyncAction(downloadShareImage(currentRace),'分享圖'); logFeatureUse('export_share_image'); }
+  if(e.target.closest('[data-action="generate-share-image"]')&&currentRace){ openShareModal(currentRace); }
   const markPbBtn=e.target.closest('[data-action="mark-pb-from-toast"]');
   if(markPbBtn){
     // 從 PB 心跳提示直接標記——找的是 data-id 對應的那場賽事，不是
@@ -15683,6 +16203,179 @@ document.addEventListener('click',e=>{
 // 動用這幾個變數之前，先 await 它，確保本機資料一定讀取完成、順序
 // 固定之後才開始合併，不會再被後面才跑完的本機讀取蓋掉。
 let localDataReady=null;
+/* ============================================================
+   常駐提示條：安裝到主畫面／有新版本／儲存空間快滿。
+   ============================================================ */
+let activeBanner=null;
+function showAppBanner({text,actions,kind}){
+  hideAppBanner();
+  const el=document.createElement('div');
+  el.className='app-banner'+(kind==='warn'?' is-warn':'');
+  el.setAttribute('role','status');
+  el.innerHTML=`<span>${escapeHtml(text)}</span><div class="app-banner-actions">${
+    actions.map((a,i)=>`<button type="button" data-banner-action="${i}"${a.primary?' class="primary"':''}>${escapeHtml(a.label)}</button>`).join('')
+  }</div>`;
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('[data-banner-action]'); if(!b) return;
+    const a=actions[Number(b.dataset.bannerAction)];
+    hideAppBanner(); if(a&&a.run) a.run();
+  });
+  document.body.appendChild(el); activeBanner=el;
+}
+function hideAppBanner(){ if(activeBanner){ activeBanner.remove(); activeBanner=null; } }
+function prefGet(key){ try{ return JSON.parse(localStorage.getItem(key)||'null'); }catch(e){ return null; } }
+function prefSet(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+
+/* ============================================================
+   離線 Service Worker（4a）
+   註冊 URL 帶 ?v=APP_VERSION：版號一變就是新的 SW，快取跟著換。
+   file:// 與非安全來源沒有 SW，直接略過——本機打開檔案測試時不該報錯。
+   ============================================================ */
+let swWaitingReg=null, swReloadRequested=false;
+function registerOfflineWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1') return;
+  navigator.serviceWorker.register('./sw.js?v='+encodeURIComponent(APP_VERSION)).then(reg=>{
+    if(reg.waiting&&navigator.serviceWorker.controller) offerWorkerUpdate(reg);
+    reg.addEventListener('updatefound',()=>{
+      const nw=reg.installing; if(!nw) return;
+      nw.addEventListener('statechange',()=>{
+        // 第一次安裝（沒有 controller）不用提示，靜靜地讓它接管就好
+        if(nw.state==='installed'&&navigator.serviceWorker.controller) offerWorkerUpdate(reg);
+      });
+    });
+  }).catch(err=>console.warn('離線快取註冊失敗',err));
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    // 只在使用者按了「更新」才重新載入。首次安裝 clients.claim() 也會觸發
+    // 這個事件，那時重新載入會把正在填的表單洗掉。
+    if(swReloadRequested){ swReloadRequested=false; location.reload(); }
+  });
+}
+function offerWorkerUpdate(reg){
+  swWaitingReg=reg;
+  showAppBanner({text:t('ui.updateAvailable','有新版本可以更新'),actions:[
+    {label:t('ui.updateNow','立即更新'),primary:true,run:()=>{
+      if(!swWaitingReg||!swWaitingReg.waiting) return;
+      swReloadRequested=true;
+      swWaitingReg.waiting.postMessage({type:'SKIP_WAITING'});
+    }},
+    {label:t('ui.later','稍後')},
+  ]});
+}
+window.addEventListener('offline',()=>showToast(t('ui.nowOffline','目前離線：資料仍會存在本機，恢復連線後再同步')));
+window.addEventListener('online',()=>showToast(t('ui.backOnline','已恢復連線')));
+
+/* ============================================================
+   加入主畫面提示（4b）：第三次開啟才問，按「稍後」30 天內不再問。
+   Android／桌機 Chrome 走 beforeinstallprompt；iOS Safari 沒有這個事件，
+   只能用文字教「分享 → 加入主畫面」。已經在主畫面裡開的（standalone）
+   完全不顯示。
+   ============================================================ */
+const OPEN_COUNT_KEY='open-count-v1', INSTALL_HINT_KEY='install-hint-v1';
+let deferredInstallPrompt=null;
+function isStandalone(){ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }
+function isIosSafari(){ return /iPhone|iPad|iPod/.test(navigator.userAgent)&&/Safari/.test(navigator.userAgent)&&!/CriOS|FxiOS/.test(navigator.userAgent); }
+function bumpOpenCount(){ const n=(prefGet(OPEN_COUNT_KEY)||0)+1; prefSet(OPEN_COUNT_KEY,n); return n; }
+function installHintEligible(){
+  if(isStandalone()) return false;
+  const st=prefGet(INSTALL_HINT_KEY)||{};
+  if(st.installed) return false;
+  if(st.snoozedUntil&&Date.now()<st.snoozedUntil) return false;
+  return (prefGet(OPEN_COUNT_KEY)||0)>=3;
+}
+function snoozeInstallHint(){ prefSet(INSTALL_HINT_KEY,{snoozedUntil:Date.now()+30*86400000}); }
+function maybeShowInstallHint(){
+  if(!installHintEligible()) return;
+  if(deferredInstallPrompt){
+    showAppBanner({text:t('ui.installHint','把賽事紀錄加到主畫面，比賽當天打開更快'),actions:[
+      {label:t('ui.installNow','安裝'),primary:true,run:async()=>{
+        const p=deferredInstallPrompt; deferredInstallPrompt=null;
+        try{ p.prompt(); const c=await p.userChoice; if(c&&c.outcome==='accepted') prefSet(INSTALL_HINT_KEY,{installed:true}); else snoozeInstallHint(); }
+        catch(e){ snoozeInstallHint(); }
+      }},
+      {label:t('ui.later','稍後'),run:snoozeInstallHint},
+    ]});
+  }else if(isIosSafari()){
+    showAppBanner({text:t('ui.installHintIos','想在主畫面直接開：點 Safari 的分享按鈕 → 「加入主畫面」'),actions:[
+      {label:t('ui.gotIt','知道了'),primary:true,run:snoozeInstallHint},
+    ]});
+  }
+}
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredInstallPrompt=e; maybeShowInstallHint(); });
+window.addEventListener('appinstalled',()=>{ prefSet(INSTALL_HINT_KEY,{installed:true}); hideAppBanner(); });
+
+/* ============================================================
+   儲存空間快滿（4c）：≥80% 主動跳提示，附「匯出備份」「清理封面」。
+   同步診斷裡的數字變紅是被動的——要使用者自己點進去看；這裡是主動的。
+   按「知道了」7 天內不再提。啟動時檢查一次，之後每次存檔最多 5 分鐘查一次。
+   ============================================================ */
+const STORAGE_WARN_KEY='storage-warn-v1', STORAGE_WARN_RATIO=0.8;
+let lastStorageCheck=0;
+async function checkStorageHeadroom(force){
+  if(!navigator.storage||!navigator.storage.estimate) return null;
+  if(!force&&Date.now()-lastStorageCheck<5*60*1000) return null;
+  lastStorageCheck=Date.now();
+  let est; try{ est=await navigator.storage.estimate(); }catch(e){ return null; }
+  if(!est||est.usage==null||!est.quota) return null;
+  const ratio=est.usage/est.quota;
+  if(ratio<STORAGE_WARN_RATIO) return ratio;
+  const st=prefGet(STORAGE_WARN_KEY)||{};
+  if(st.snoozedUntil&&Date.now()<st.snoozedUntil) return ratio;
+  showStorageWarning(ratio);
+  return ratio;
+}
+function showStorageWarning(ratio){
+  showAppBanner({kind:'warn',text:tf('ui.storageNearFull','儲存空間已用 {n}%，建議先匯出備份，或清掉不需要的封面照片',Math.round(ratio*100)),actions:[
+    {label:t('ui.exportJson','匯出 JSON'),primary:true,run:()=>{ const b=document.getElementById('btn-export'); if(b) b.click(); }},
+    {label:t('ui.cleanupCovers','清理封面'),run:openStorageCleanup},
+    {label:t('ui.gotIt','知道了'),run:()=>prefSet(STORAGE_WARN_KEY,{snoozedUntil:Date.now()+7*86400000})},
+  ]});
+}
+/* 清理封面：列出有封面的賽事、依佔用大小排序，逐張移除。
+   base64 字串長度 ×0.75 就是實際位元組，不用另外解碼。
+   移除是兩段式確認、5 秒自動解除——封面沒有垃圾桶，刪了就沒了。 */
+const storageCleanupEl_getter=()=>document.getElementById('storage-cleanup-modal');
+let cleanupConfirmTimer=null;
+function coverBytes(r){ return Math.round(((r.coverImage||'').length+(r.coverThumb||'').length)*0.75); }
+function storageCleanupHtml(){
+  const rows=state.races.filter(r=>r.coverImage&&!r.deletedAt).map(r=>({r,bytes:coverBytes(r)})).sort((a,b)=>b.bytes-a.bytes);
+  const total=rows.reduce((s,x)=>s+x.bytes,0);
+  const kb=b=>b>=1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)+' KB';
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.cleanupCoversTitle','清理封面照片')}</h2>
+    <p class="modal-hint">${rows.length?tf2('ui.cleanupCoversHint','{a} 場有封面，共佔 {b}。封面移除後無法復原，其他資料不受影響。',rows.length,kb(total)):t('ui.cleanupCoversEmpty','沒有任何賽事有封面照片')}</p>
+    <div class="storage-cleanup-list">${rows.map(({r,bytes})=>`
+      <div class="storage-cleanup-row" data-id="${r.id}">
+        <img src="${escapeHtml(coverThumbOf(r))}" alt="">
+        <div class="storage-cleanup-main">
+          <div class="storage-cleanup-name">${escapeHtml(r.name||t('ui.unnamedRace','(未命名賽事)'))}</div>
+          <div class="storage-cleanup-meta">${escapeHtml(r.schedule.raceDate||'')} ・ ${kb(bytes)}</div>
+        </div>
+        <button type="button" class="btn-ghost" data-action="cleanup-remove-cover" data-id="${r.id}">${t('ui.removeCover','移除封面')}</button>
+      </div>`).join('')}</div>
+    <div class="modal-actions"><button class="btn-ghost" data-action="close-storage-cleanup">${t('ui.close','關閉')}</button></div>
+  </div>`;
+}
+function openStorageCleanup(){ const el=storageCleanupEl_getter(); el.innerHTML=storageCleanupHtml(); el.hidden=false; }
+function closeStorageCleanup(){ const el=storageCleanupEl_getter(); el.hidden=true; el.innerHTML=''; }
+storageCleanupEl_getter().addEventListener('click',async e=>{
+  if(e.target.closest('[data-action="close-storage-cleanup"]')){ closeStorageCleanup(); return; }
+  const btn=e.target.closest('[data-action="cleanup-remove-cover"]'); if(!btn) return;
+  if(!btn.classList.contains('is-confirming')){
+    document.querySelectorAll('#storage-cleanup-modal .is-confirming').forEach(b=>{ b.classList.remove('is-confirming'); b.textContent=t('ui.removeCover','移除封面'); });
+    btn.classList.add('is-confirming'); btn.textContent=t('ui.confirmRemove','確定移除？');
+    clearTimeout(cleanupConfirmTimer);
+    cleanupConfirmTimer=setTimeout(()=>{ if(btn.isConnected){ btn.classList.remove('is-confirming'); btn.textContent=t('ui.removeCover','移除封面'); } },5000);
+    return;
+  }
+  const race=state.races.find(r=>r.id===btn.dataset.id); if(!race) return;
+  race.coverImage=''; race.coverThumb=''; race.coverImageAspect=null; race.coverImageAccentColor=null;
+  race.updatedAt=new Date().toISOString();
+  await persist(); renderCalendar(); if(currentRace&&currentRace.id===race.id) renderDetail();
+  openStorageCleanup();   // 重畫清單與總量
+  logFeatureUse('cleanup_cover');
+});
+
 async function init(){
   document.getElementById('app-version').textContent=APP_VERSION;
   // 沒有 Vibration API 的裝置（iOS 上所有瀏覽器都是，因為共用 WebKit；
@@ -15712,6 +16405,10 @@ async function init(){
   renderAll();
   updateTopbarHeightVar();
   checkAndShowFirstUseGlow();
+  registerOfflineWorker();
+  bumpOpenCount();
+  // 儲存空間警示比安裝提示優先：空間快滿是會掉資料的事，安裝只是方便。
+  checkStorageHeadroom(true).then(ratio=>{ if(ratio==null||ratio<STORAGE_WARN_RATIO) maybeShowInstallHint(); });
 }
 /* ============================================================
    清單拖曳排序（裝備清單／補給時程／分段配速）
@@ -15986,6 +16683,16 @@ function cmdkOpen(){
 }
 function cmdkClose(){
   document.getElementById('command-palette').hidden=true;
+}
+/* cmdkOpenWith(text)：帶著已經打好的字開面板，並立刻算出結果。 */
+function cmdkOpenWith(text){
+  cmdkOpen();
+  const input=document.getElementById('cmdk-input');
+  input.value=text;
+  cmdkResults=cmdkComputeResults(text);
+  cmdkRenderResults(cmdkResults);
+  // 游標放到最後，繼續打字才會接在後面
+  try{ input.setSelectionRange(text.length,text.length); }catch(err){}
 }
 function cmdkUpdateActiveRow(){
   document.querySelectorAll('#cmdk-results .cmdk-row').forEach((row,i)=>{

@@ -3,7 +3,7 @@
 一個從報名到終點的個人賽事紀錄網站。純前端、主體是單一 `index.html`（另有一個 `icons/` 圖示資料夾），部署在 GitHub Pages，不需要自架後端伺服器。
 
 - **線上網址**：https://ai-sub3.github.io/Race-Day/
-- **版本**：v3.27.0（[CHANGELOG.md](./CHANGELOG.md)）
+- **版本**：v3.31.0（[CHANGELOG.md](./CHANGELOG.md)）
 - **詳細操作說明**：[USAGE.md](./USAGE.md)
 - **功能介紹頁**：https://ai-sub3.github.io/Race-Day/about/
 - **網站地圖（給訪客看）**：https://ai-sub3.github.io/Race-Day/sitemap/
@@ -24,10 +24,10 @@
 - **資料匯入**：Excel（自己的賽事規劃表）、GPX/TCX（Garmin／COROS／Strava 運動紀錄，自動抓距離/爬升/心率/分段/海拔）、貼上 JSON 快速填入（給 AI 讀完賽事網站/簡章/證書後使用）
 - **行事曆提醒**：匯出 `.ics` 日曆檔（含倒數一個月／一週提醒），交給手機原生行事曆處理通知
 - **推播通知（選用，需額外部署）**：Firebase Cloud Messaging + Cloud Functions 排程，賽事倒數一個月／一週直接推送到手機，見 [USAGE.md](./USAGE.md#5a-推播通知選用需要額外部署)
-- **成績分享圖**：一鍵產生可下載的賽事成績卡片
+- **成績分享圖**：方形／限時動態兩種版面，可勾選心率、戰靴、補給、GPX 軌跡，手機直接進系統分享面板
 - **多語系**：繁體中文／日本語／English，右上角可切換；使用者自行輸入的資料不受影響，維持原文
 - **資料安全網**：刪除賽事進垃圾桶（30 天內可還原），多裝置同步衝突不會靜默覆蓋（舊版本可在「資料復原」找回）
-- **深色模式**、**PWA 加入主畫面**（含自訂圖示）
+- **深色模式**、**PWA 加入主畫面**（含自訂圖示，第三次開啟會提示安裝）、**離線可用**（Service Worker 快取頁面與套件，沒訊號也開得了）
 - **Firebase 雲端同步（選用）**：Google 登入後跨裝置同步，本機儲存永遠是主要資料來源，未設定完全不影響使用
 
 ## 技術架構
@@ -42,7 +42,7 @@
 
 > 這一段是作者自己的部署筆記，不是給第三方架站用的說明。
 
-1. `index.html` **與 `icons/` 資料夾**放在 repo 根目錄
+1. `index.html`、**`sw.js`**（v3.31.0 起，離線快取）**與 `icons/` 資料夾**放在 repo 根目錄——`sw.js` 必須跟 `index.html` 同一層，少了它網站照常運作但離線打不開
    - `icons/` 從 v3.14.0 起是必要的：網站圖示與「加入主畫面」用的圖片改成獨立檔案（原本以 base64 內嵌，佔了 index.html 的 12.6%），少傳這個資料夾網站仍可使用，但圖示會空白
 2. repo 設定 → Pages → Source 選 `Deploy from a branch` → Branch 選 `main` / `/(root)`
 3. 約 1 分鐘後即可在 `https://ai-sub3.github.io/Race-Day/` 存取

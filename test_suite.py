@@ -22,6 +22,7 @@
 """
 
 import os
+import re
 import sys
 from playwright.sync_api import sync_playwright
 
@@ -175,6 +176,42 @@ class Drawers(Group):
         }''')
         c['closing_drawer_restores_scroll'] = page.evaluate(
             "()=>document.body.style.overflow===''")
+        # ---- 1b：空抽屜淡化，填了的維持原樣 ----
+        c['empty_drawer_cards_muted_filled_cards_not'] = page.evaluate('''async()=>{
+            const r=emptyRace('卡片','road_running','registered','2026-11-01');
+            r.location.city='臺北市'; r.route.distanceKm=42.195;
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const cls=sec=>document.querySelector('.dash-card[data-section="'+sec+'"]').classList.contains('is-empty');
+            return cls('basicInfo')===false && cls('route')===false
+                && cls('goals')===true && cls('review')===true && cls('equipment')===true;
+        }''')
+        c['empty_card_is_shorter_than_filled_card'] = page.evaluate('''()=>{
+            const filled=document.querySelector('.dash-card[data-section="basicInfo"]').getBoundingClientRect().height;
+            const empty=document.querySelector('.dash-card[data-section="goals"]').getBoundingClientRect().height;
+            return empty<filled;
+        }''')
+        # ---- 1c：完賽賽事的成績儀表板貼在 header 下方、區段列之前，且只出現一次 ----
+        c['completed_race_hero_dashboard_above_sections'] = page.evaluate('''async()=>{
+            const r=emptyRace('完賽','road_running','completed','2026-05-01');
+            r.results.chipTimeSeconds=10771; r.route.distanceKm=42.195;
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const hero=document.querySelector('.hero-results'), nav=document.querySelector('.quick-nav');
+            const header=document.querySelector('.detail-header');
+            const order=hero&&nav&&header
+                && (header.compareDocumentPosition(hero)&Node.DOCUMENT_POSITION_FOLLOWING)
+                && (hero.compareDocumentPosition(nav)&Node.DOCUMENT_POSITION_FOLLOWING);
+            return !!order && document.querySelectorAll('.results-dashboard').length===1
+                && !document.querySelector('#section-post .results-dashboard');
+        }''')
+        c['uncompleted_race_has_no_hero_dashboard'] = page.evaluate('''async()=>{
+            const r=emptyRace('未完賽','road_running','registered','2026-12-01');
+            r.route.distanceKm=10;
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            return !document.querySelector('.hero-results') && !document.querySelector('.results-dashboard');
+        }''')
 
 
 def share_spy(setup_js):
@@ -199,7 +236,6 @@ def share_spy(setup_js):
     proto.fillText = orig;
   }
 }""" % setup_js
-
 
 class SportUnits(Group):
     """各運動別用自己的單位——這裡錯了數字就會誤導。"""
@@ -485,7 +521,103 @@ class Mobile(Group):
             return Math.abs(during.top-before.top)<1
                 && Math.abs(during.left-before.left)<1;
         }''')
-
+        # ---- 3a：搜尋框打 > 直接變指令面板 ----
+        c['search_gt_opens_command_palette_with_text'] = page.evaluate('''async()=>{
+            const s=document.getElementById('search-input');
+            s.value='>回顧'; s.dispatchEvent(new Event('input',{bubbles:true}));
+            await new Promise(r=>setTimeout(r,200));
+            const palette=document.getElementById('command-palette');
+            const ci=document.getElementById('cmdk-input');
+            const rows=[...document.querySelectorAll('.cmdk-row-label')].map(e=>e.textContent);
+            const ok=!palette.hidden && ci.value==='>回顧' && s.value==='' && rows.length>0;
+            cmdkClose(); return ok;
+        }''')
+        # ---- 3c：長按卡片彈出快速動作，放開手指不會順便開詳情頁 ----
+        c['long_press_card_opens_context_sheet'] = page.evaluate('''async()=>{
+            state.races=[]; state.selectedId=null; currentRace=null;
+            const r=emptyRace('長按我','road_running','completed','2026-03-01');
+            r.results.chipTimeSeconds=3600; r.route.distanceKm=10;
+            state.races.push(r); state.viewMode='calendar';
+            state.calendarYear=2026; state.calendarMonth=2; renderAll();
+            await new Promise(s=>setTimeout(s,300));
+            const card=document.querySelector('.cal-list-item[data-id="'+r.id+'"], .cal-chip[data-id="'+r.id+'"]');
+            if(!card) return false;
+            const rect=card.getBoundingClientRect();
+            const opts={bubbles:true,pointerType:'touch',isPrimary:true,clientX:rect.x+20,clientY:rect.y+10,pointerId:1};
+            card.dispatchEvent(new PointerEvent('pointerdown',opts));
+            await new Promise(s=>setTimeout(s,700));
+            card.dispatchEvent(new PointerEvent('pointerup',opts));
+            card.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:opts.clientX,clientY:opts.clientY}));
+            await new Promise(s=>setTimeout(s,150));
+            const sheet=document.getElementById('race-context-sheet');
+            const opened=!sheet.hidden && !!sheet.querySelector('[data-ctx="duplicate"]') && !!sheet.querySelector('[data-ctx="share"]');
+            const notNavigated=state.selectedId!==r.id;
+            return opened && notNavigated;
+        }''')
+        c['context_sheet_duplicate_and_delete_work'] = page.evaluate('''async()=>{
+            const before=state.races.filter(x=>!x.deletedAt).length;
+            document.querySelector('#race-context-sheet [data-ctx="duplicate"]').click();
+            await new Promise(s=>setTimeout(s,300));
+            const afterDup=state.races.filter(x=>!x.deletedAt).length;
+            const copy=state.races.find(x=>x.id===state.selectedId);
+            openRaceContextSheet(copy.id); await new Promise(s=>setTimeout(s,100));
+            document.querySelector('#race-context-sheet [data-ctx="delete"]').click();
+            await new Promise(s=>setTimeout(s,300));
+            const afterDel=state.races.filter(x=>!x.deletedAt).length;
+            const soft=!!state.races.find(x=>x.id===copy.id&&x.deletedAt);
+            return afterDup===before+1 && afterDel===before && soft;
+        }''')
+        # 短按（未達 550ms）不能觸發
+        c['short_tap_does_not_open_context_sheet'] = page.evaluate('''async()=>{
+            const r=state.races.find(x=>!x.deletedAt); state.selectedId=null; currentRace=null;
+            state.calendarYear=2026; state.calendarMonth=2; renderAll();
+            await new Promise(s=>setTimeout(s,200));
+            const card=document.querySelector('.cal-list-item[data-id="'+r.id+'"], .cal-chip[data-id="'+r.id+'"]');
+            if(!card) return false;
+            const rect=card.getBoundingClientRect();
+            const opts={bubbles:true,pointerType:'touch',isPrimary:true,clientX:rect.x+20,clientY:rect.y+10,pointerId:1};
+            card.dispatchEvent(new PointerEvent('pointerdown',opts));
+            await new Promise(s=>setTimeout(s,150));
+            card.dispatchEvent(new PointerEvent('pointerup',opts));
+            await new Promise(s=>setTimeout(s,600));
+            return document.getElementById('race-context-sheet').hidden;
+        }''')
+        # ---- 3b：詳情頁左右滑切換區段 ----
+        c['section_swipe_moves_to_next_section'] = page.evaluate('''async()=>{
+            const r=state.races.find(x=>!x.deletedAt);
+            selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,400));
+            navigateToSection('section-basic'); await new Promise(s=>setTimeout(s,500));
+            const before=currentSectionIndex();
+            const el=document.getElementById('detail');
+            const mk=(type,x,y)=>{
+              const touch=new Touch({identifier:1,target:el,clientX:x,clientY:y});
+              return new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==='touchend'?[]:[touch],changedTouches:[touch]});
+            };
+            const target=document.querySelector('#section-basic')||el;
+            target.dispatchEvent(mk('touchstart',300,400));
+            target.dispatchEvent(mk('touchmove',260,404));
+            target.dispatchEvent(mk('touchmove',150,410));
+            target.dispatchEvent(mk('touchend',140,412));
+            await new Promise(s=>setTimeout(s,700));
+            const active=document.querySelector('.quick-nav a.active');
+            return before===0 && !!active && active.dataset.target==='section-route';
+        }''')
+        c['section_swipe_ignores_vertical_scroll'] = page.evaluate('''async()=>{
+            navigateToSection('section-basic'); await new Promise(s=>setTimeout(s,500));
+            const el=document.getElementById('detail');
+            const mk=(type,x,y)=>{
+              const touch=new Touch({identifier:1,target:el,clientX:x,clientY:y});
+              return new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==='touchend'?[]:[touch],changedTouches:[touch]});
+            };
+            const target=document.querySelector('#section-basic')||el;
+            target.dispatchEvent(mk('touchstart',300,400));
+            target.dispatchEvent(mk('touchmove',280,470));
+            target.dispatchEvent(mk('touchmove',150,600));
+            target.dispatchEvent(mk('touchend',140,620));
+            await new Promise(s=>setTimeout(s,400));
+            const active=document.querySelector('.quick-nav a.active');
+            return !!active && active.dataset.target==='section-basic';
+        }''')
 
 class I18n(Group):
     """三語言：動態組出來的翻譯鍵不能漏出原始鍵名。"""
@@ -600,6 +732,55 @@ class Data(Group):
             r.route.distanceKm=10; r.results.chipTimeSeconds=2400;
             return r;
         }'''))['w'] == 1080
+        # ---- 5a：時間欄位驗證 ----
+        c['duration_parser_accepts_human_formats'] = page.evaluate('''()=>
+            hmsToSec('3:44:25')===13465 && hmsToSec('44:25')===2665 && hmsToSec('3.44.25')===13465
+         && hmsToSec('3 44 25')===13465 && hmsToSec('3h44m25s')===13465 && hmsToSec('3時44分25秒')===13465
+         && hmsToSec("4'15\\"")===255 && hmsToSec('３：４４：２５'.replace(/[０-９]/g,d=>String.fromCharCode(d.charCodeAt(0)-0xFEE0)))===13465
+         && hmsToSec('1:30:25.6')===5426 && hmsToSec('')===null && hmsToSec('abc')===null
+         && hmsToSec('3:xx:25')===null && hmsToSec('1:2:3:4')===null
+        ''')
+        c['invalid_duration_keeps_stored_value_and_shows_hint'] = page.evaluate('''async()=>{
+            const r=emptyRace('驗證','road_running','completed','2026-04-01');
+            r.results.chipTimeSeconds=13465; r.route.distanceKm=42.195;
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            openDrawer('results'); await new Promise(s=>setTimeout(s,300));
+            const inp=document.querySelector('input[data-path="results.chipTimeSeconds"]');
+            if(!inp) return false;
+            inp.value='三小時'; inp.dispatchEvent(new Event('input',{bubbles:true}));
+            inp.dispatchEvent(new Event('change',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,200));
+            const hint=inp.closest('.field').querySelector('.field-hint-live');
+            return r.results.chipTimeSeconds===13465 && inp.getAttribute('aria-invalid')==='true'
+                && !!hint && hint.classList.contains('is-error');
+        }''')
+        c['ambiguous_duration_shows_normalised_value'] = page.evaluate('''async()=>{
+            const inp=document.querySelector('input[data-path="results.chipTimeSeconds"]');
+            inp.value='44:25'; inp.dispatchEvent(new Event('input',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,100));
+            const hint=inp.closest('.field').querySelector('.field-hint-live');
+            const shows=!!hint && hint.textContent.includes('0:44:25') && !hint.classList.contains('is-error');
+            inp.dispatchEvent(new Event('change',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,200));
+            return shows && currentRace.results.chipTimeSeconds===2665 && inp.value==='0:44:25';
+        }''')
+        # ---- 5b：匯入預覽逐欄標示 ----
+        c['import_preview_flags_every_overwritten_field'] = page.evaluate('''()=>{
+            currentRace.route.elevationGainM=180; currentRace.performanceData.avgHr=150;
+            currentRace.performanceData.maxHr=175; currentRace.performanceData.avgCadence=170;
+            currentRace.splits=[{},{},{}];
+            const html=gpxSummaryHtml({distanceKm:42.2,elevationGainM:220,durationSeconds:10771,
+                                       avgHr:160,maxHr:182,avgCadence:88,splits:[{},{}]},'x.fit');
+            const notes=(html.match(/gpx-overwrite-note/g)||[]).length;
+            return notes>=7 && html.includes('180 公尺') && html.includes('150 bpm')
+                && html.includes('175 bpm') && html.includes('170 spm') && html.includes('3 段');
+        }''')
+        c['import_preview_silent_when_nothing_changes'] = page.evaluate('''()=>{
+            const html=gpxSummaryHtml({distanceKm:currentRace.route.distanceKm,elevationGainM:180,
+                durationSeconds:currentRace.results.chipTimeSeconds,avgHr:150,maxHr:175,avgCadence:null,splits:[]},'x.gpx');
+            return !html.includes('gpx-overwrite-note');
+        }''')
         c['undersized_thumbs_regenerate_once_only'] = page.evaluate('''async()=>{
             const mk=(px,q)=>{const c=document.createElement('canvas');
                 c.width=px;c.height=Math.round(px*0.75);
@@ -677,6 +858,246 @@ class Data(Group):
         }''')
 
 
+class Share(Group):
+    """分享圖：設定視窗、兩種版面、勾選項目、分享面板／下載的分流。"""
+
+    SEED = """()=>{
+        const pts=[]; for(let i=0;i<120;i++){ const a=i/119*Math.PI*2;
+            pts.push({lat:25.04+Math.sin(a)*0.012, lon:121.56+Math.cos(a)*0.016}); }
+        shoes.push({id:'sh-share',name:'Alphafly 3',targetKm:600,isRetired:false,trainingKm:0});
+        const r=emptyRace('分享測試','road_running','completed','2026-12-20');
+        r.route.distanceKm=42.195; r.results.chipTimeSeconds=10771;
+        r.performanceData.avgHr=162; r.performanceData.shoeId='sh-share';
+        r.nutritionSchedule=[{item:'能量膠',qty:4,consumed:true}];
+        r.route.trackPoints=pts;
+        state.races.push(r); selectRace(r.id,{scroll:false});
+        try{ localStorage.removeItem('share-prefs-v1'); }catch(e){}
+        return r.id;
+    }"""
+
+    def body(self, page):
+        c = self.checks
+        page.evaluate(self.SEED)
+        c['share_modal_opens_with_format_and_options'] = page.evaluate('''async()=>{
+            document.querySelector('[data-action="generate-share-image"]').click();
+            await new Promise(s=>setTimeout(s,900));
+            const m=document.getElementById('share-modal');
+            const opts=[...m.querySelectorAll('[data-share-opt]')].map(i=>i.dataset.shareOpt).sort().join(',');
+            const preview=m.querySelector('#share-preview-img');
+            return !m.hidden
+                && m.querySelectorAll('[data-share-format]').length===2
+                && opts==='fuel,hr,shoe,track'
+                && !!preview && preview.src.startsWith('data:image/png');
+        }''')
+        # 切到限動：預覽要重畫成直式，設定要被記住
+        c['share_story_format_switches_preview_and_persists'] = page.evaluate('''async()=>{
+            document.querySelector('[data-share-format="story"]').click();
+            await new Promise(s=>setTimeout(s,900));
+            const img=document.getElementById('share-preview-img');
+            const dims=await new Promise(res=>{const i=new Image(); i.onload=()=>res([i.width,i.height]); i.src=img.src;});
+            const saved=JSON.parse(localStorage.getItem('share-prefs-v1')||'{}');
+            return dims[0]===1080 && dims[1]===1920 && saved.format==='story';
+        }''')
+        # 關掉軌跡：下半段不能再有金色像素
+        c['share_toggle_removes_track'] = page.evaluate('''async()=>{
+            const before=await buildShareCanvas(currentRace,{format:'square',show:{track:true}});
+            const after =await buildShareCanvas(currentRace,{format:'square',show:{track:false}});
+            const gold=cv=>{const d=cv.getContext('2d').getImageData(0,cv.height*0.6,cv.width,cv.height*0.35).data;
+                let n=0; for(let i=0;i<d.length;i+=4){ if(d[i]>150&&d[i+1]>130&&d[i]-d[i+2]>40) n++; } return n;};
+            return gold(before)>500 && gold(after)<50;
+        }''')
+        # 沒資料的項目不給勾：一顆永遠沒作用的開關比沒有開關更誤導
+        c['share_options_hide_when_data_absent'] = page.evaluate('''async()=>{
+            closeShareModal();
+            const r=emptyRace('空的','cycling','completed','2026-01-01');
+            r.route.distanceKm=90; r.results.chipTimeSeconds=9000;
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            openShareModal(r); await new Promise(s=>setTimeout(s,700));
+            const n=document.querySelectorAll('#share-modal [data-share-opt]').length;
+            closeShareModal(); return n===0;
+        }''')
+        # 桌機：一律下載，不走分享面板（就算 navigator.share 存在）
+        c['share_desktop_downloads_not_share_sheet'] = page.evaluate('''async()=>{
+            let shared=0, downloaded=0;
+            const origShare=navigator.share, origCan=navigator.canShare, origDl=window.downloadBlob;
+            navigator.share=async()=>{shared++;}; navigator.canShare=()=>true;
+            window.downloadBlob=()=>{downloaded++;};
+            try{ await shareOrDownloadImage(new Blob(['x'],{type:'image/png'}),'t.png'); }
+            finally{ navigator.share=origShare; navigator.canShare=origCan; window.downloadBlob=origDl; }
+            return shared===0 && downloaded===1;
+        }''')
+
+
+class ShareTouch(Group):
+    """觸控裝置上的分享分流：優先系統分享面板，取消不算失敗，失敗退回下載。"""
+
+    def __init__(self):
+        super().__init__('share_touch', viewport=PHONE, touch=True)
+
+    STUB = '''(mode)=>{
+        window.__dl=0; window.__sh=0;
+        window.__orig={share:navigator.share,can:navigator.canShare,dl:window.downloadBlob};
+        navigator.canShare=()=>true;
+        window.downloadBlob=()=>{window.__dl++;};
+        navigator.share=async()=>{
+            if(mode==='cancel'){ const e=new Error('cancel'); e.name='AbortError'; throw e; }
+            if(mode==='fail') throw new Error('boom');
+            window.__sh++;
+        };
+    }'''
+    RESTORE = '''()=>{ navigator.share=window.__orig.share; navigator.canShare=window.__orig.can; window.downloadBlob=window.__orig.dl; }'''
+    CALL = '''async()=>shareOrDownloadImage(new Blob(['x'],{type:'image/png'}),'t.png')'''
+
+    def body(self, page):
+        c = self.checks
+        c['touch_reports_coarse_pointer'] = page.evaluate(
+            "()=>window.matchMedia('(pointer: coarse)').matches")
+        page.evaluate(self.STUB, 'ok')
+        r = page.evaluate(self.CALL)
+        c['share_touch_prefers_share_sheet'] = (r == 'shared') and page.evaluate("()=>window.__sh===1&&window.__dl===0")
+        page.evaluate(self.RESTORE)
+        page.evaluate(self.STUB, 'cancel')
+        r = page.evaluate(self.CALL)
+        c['share_touch_cancel_is_not_failure'] = (r == 'cancelled') and page.evaluate("()=>window.__dl===0")
+        page.evaluate(self.RESTORE)
+        page.evaluate(self.STUB, 'fail')
+        r = page.evaluate(self.CALL)
+        c['share_touch_error_falls_back_to_download'] = (r == 'downloaded') and page.evaluate("()=>window.__dl===1")
+        page.evaluate(self.RESTORE)
+        c['share_modal_button_says_share_on_touch'] = page.evaluate('''async()=>{
+            const o={share:navigator.share,can:navigator.canShare};
+            navigator.share=async()=>{}; navigator.canShare=()=>true;
+            const r=emptyRace('觸控','road_running','completed','2026-01-01');
+            r.route.distanceKm=10; r.results.chipTimeSeconds=2400;
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            openShareModal(r); await new Promise(s=>setTimeout(s,600));
+            const label=document.querySelector('#share-modal [data-action="confirm-share"]').textContent.trim();
+            closeShareModal(); navigator.share=o.share; navigator.canShare=o.can;
+            return label===t('ui.shareNow','分享');
+        }''')
+
+
+class Offline(Group):
+    """離線與可靠性：Service Worker 真的能讓網站離線打開；安裝提示；儲存空間警示。
+
+    SW 不能在 file:// 註冊，所以這組自己起一個本機 http 伺服器，指到
+    index.html 所在的資料夾（sw.js 必須跟它同層）。跑完關掉。
+    """
+
+    def __init__(self):
+        super().__init__('offline')
+        self.server = None
+
+    def run(self, browser):
+        import http.server, socketserver, threading, functools
+        directory = os.path.dirname(os.path.abspath(APP))
+        class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *a, **k):   # 少一張圖示的 404 不用洗到測試輸出裡
+                pass
+        handler = functools.partial(Quiet, directory=directory)
+        socketserver.TCPServer.allow_reuse_address = True
+        self.server = socketserver.TCPServer(('127.0.0.1', 0), handler)
+        port = self.server.server_address[1]
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.url = f'http://127.0.0.1:{port}/index.html'
+        ctx = browser.new_context(viewport=self.viewport, service_workers='allow')
+        page = ctx.new_page()
+        page.on('pageerror', lambda e: self.errors.append(str(e)))
+        page.goto(self.url)
+        page.wait_for_timeout(800)
+        try:
+            self.body(page, ctx)
+        except Exception as exc:                      # noqa: BLE001
+            self.checks['GROUP_CRASHED'] = False
+            self.errors.append(f'{type(exc).__name__}: {exc}')
+        ctx.close()
+        self.server.shutdown(); self.server.server_close()
+        return self.checks, self.errors
+
+    def body(self, page, ctx):
+        c = self.checks
+        # ---- 4a：sw.js 的預快取清單必須跟 index.html 的 <script src> 一字不差 ----
+        # index.html 用 SRI，快取回應內容一旦跟頁面要的版本對不上，套件整個不載入。
+        html = open(APP, encoding='utf-8').read()
+        sw_path = os.path.join(os.path.dirname(os.path.abspath(APP)), 'sw.js')
+        sw = open(sw_path, encoding='utf-8').read() if os.path.exists(sw_path) else ''
+        srcs = re.findall(r'<script src="(https://[^"]+)"', html)
+        c['sw_precaches_exact_cdn_urls'] = bool(sw) and len(srcs) == 2 and all(f"'{u}'" in sw for u in srcs)
+        c['sw_registered_with_app_version'] = "register('./sw.js?v='+encodeURIComponent(APP_VERSION))" in html
+        # 真的註冊起來、進入 active
+        c['sw_becomes_active'] = page.evaluate('''async()=>{
+            if(!('serviceWorker' in navigator)) return false;
+            const reg=await navigator.serviceWorker.ready;
+            await new Promise(r=>setTimeout(r,800));   // 等 precache 完成
+            return !!reg.active;
+        }''')
+        # ---- 離線重新載入：頁面要活著、版本號要在 ----
+        ver = page.evaluate('APP_VERSION')
+        page.reload(); page.wait_for_timeout(800)      # 讓 SW 接管這個分頁
+        ctx.set_offline(True)
+        try:
+            page.reload(); page.wait_for_timeout(1500)
+            c['page_loads_while_offline'] = page.evaluate(
+                "()=>typeof state!=='undefined' && document.getElementById('app-version').textContent") == ver
+            c['fatigue_mode_reachable_offline'] = page.evaluate("()=>typeof fatigueVibrate==='function'")
+        finally:
+            ctx.set_offline(False)
+        page.reload(); page.wait_for_timeout(800)
+        # ---- 4b：第三次開啟才問；稍後 30 天 ----
+        c['install_hint_waits_for_third_open'] = page.evaluate('''()=>{
+            localStorage.setItem('open-count-v1','2'); localStorage.removeItem('install-hint-v1');
+            hideAppBanner();
+            const ev=new Event('beforeinstallprompt'); ev.prompt=()=>{}; ev.userChoice=Promise.resolve({outcome:'dismissed'});
+            window.dispatchEvent(ev);
+            const shownAt2=!!document.querySelector('.app-banner');
+            localStorage.setItem('open-count-v1','3');
+            window.dispatchEvent(ev);
+            const shownAt3=!!document.querySelector('.app-banner');
+            return !shownAt2 && shownAt3;
+        }''')
+        c['install_hint_snooze_persists'] = page.evaluate('''()=>{
+            const later=[...document.querySelectorAll('.app-banner button')].find(b=>b.textContent.trim()===t('ui.later','稍後'));
+            later.click();
+            const st=JSON.parse(localStorage.getItem('install-hint-v1')||'{}');
+            const ev=new Event('beforeinstallprompt'); ev.prompt=()=>{}; ev.userChoice=Promise.resolve({outcome:'dismissed'});
+            window.dispatchEvent(ev);
+            return !document.querySelector('.app-banner') && st.snoozedUntil>Date.now()+29*86400000;
+        }''')
+        # ---- 4c：儲存空間 ≥80% 主動提示；清理封面兩段式；低於門檻不提示 ----
+        c['storage_warning_appears_at_80_percent'] = page.evaluate('''async()=>{
+            localStorage.removeItem('storage-warn-v1'); hideAppBanner();
+            const orig=navigator.storage.estimate;
+            navigator.storage.estimate=async()=>({usage:850,quota:1000});
+            try{ await checkStorageHeadroom(true); }finally{ navigator.storage.estimate=orig; }
+            const b=document.querySelector('.app-banner.is-warn');
+            return !!b && b.textContent.includes('85%');
+        }''')
+        c['storage_warning_silent_below_threshold'] = page.evaluate('''async()=>{
+            hideAppBanner();
+            const orig=navigator.storage.estimate;
+            navigator.storage.estimate=async()=>({usage:400,quota:1000});
+            try{ await checkStorageHeadroom(true); }finally{ navigator.storage.estimate=orig; }
+            return !document.querySelector('.app-banner');
+        }''')
+        c['cover_cleanup_lists_largest_first_and_removes_on_confirm'] = page.evaluate('''async()=>{
+            state.races=[];
+            const mk=(name,px)=>{ const r=emptyRace(name,'road_running','completed','2026-06-0'+(1+state.races.length));
+                const cv=document.createElement('canvas'); cv.width=px; cv.height=px;
+                const x=cv.getContext('2d'); for(let i=0;i<300;i++){ x.fillStyle='rgb('+(i*7%255)+','+(i*13%255)+','+(i*29%255)+')'; x.fillRect(Math.random()*px,Math.random()*px,9,9); }
+                r.coverImage=cv.toDataURL('image/jpeg',0.9); r.coverThumb=r.coverImage; state.races.push(r); return r; };
+            const small=mk('小',120), big=mk('大',600);
+            openStorageCleanup(); await new Promise(s=>setTimeout(s,150));
+            const rows=[...document.querySelectorAll('.storage-cleanup-row')].map(e=>e.dataset.id);
+            const order=rows[0]===big.id && rows[1]===small.id;
+            const btn=document.querySelector('.storage-cleanup-row[data-id="'+big.id+'"] [data-action="cleanup-remove-cover"]');
+            btn.click(); await new Promise(s=>setTimeout(s,50));
+            const stillThere=!!big.coverImage && btn.classList.contains('is-confirming');
+            btn.click(); await new Promise(s=>setTimeout(s,300));
+            const removed=!big.coverImage && !!small.coverImage;
+            closeStorageCleanup();
+            return order && stillThere && removed;
+        }''')
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -687,6 +1108,9 @@ GROUPS = {
     'mobile':     lambda: Mobile(),
     'i18n':       lambda: I18n('i18n'),
     'data':       lambda: Data('data'),
+    'share':      lambda: Share('share'),
+    'share_touch':lambda: ShareTouch(),
+    'offline':    lambda: Offline(),
 }
 
 

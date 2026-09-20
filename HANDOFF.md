@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.27.0
+> 貼到新對話開頭即可接續。最後更新：v3.31.0
 
 ---
 
@@ -17,6 +17,7 @@
 ```
 repo 根目錄/
 ├── index.html
+├── sw.js             ← v3.31.0 起，離線快取；必須跟 index.html 同層
 ├── icons/            ← v3.14.0 起必要，少傳圖示會空白
 │   ├── manifest.webmanifest
 │   ├── icon-192.png / icon-512.png
@@ -43,7 +44,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（58 項檢查，9 個群組）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（93 項檢查，12 個群組）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -55,7 +56,7 @@ python3 test_suite.py --list          # 列出群組
 APP=/path/to/index.html python3 test_suite.py
 ```
 
-群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data`
+群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）
 
 離開碼：0 通過 / 1 有失敗 / 2 參數錯誤（可直接接 CI）。
 已用「故意注入 XSS 漏洞」驗證過它真的抓得到回歸，不是只會印綠勾。
@@ -68,6 +69,7 @@ APP=/path/to/index.html python3 test_suite.py
 ## 已完成（v3.x 重點）
 
 ### 架構
+- **完賽賽事的成績儀表板在 header 正下方**（v3.30.0，從賽後區段移出）；空抽屜卡片帶 `is-empty`，由各卡片自行判斷
 - **抽屜面板化**：13 個抽屜（equipment / results / review / basicInfo / schedule / weather / checkpoints / mediaLinks / nutritionPlan / trainingPlan / goals / route / logistics），詳情頁全部變成「摘要卡片 + 點開編輯」
 - **雲端同步六種資料**：賽事、鞋款、補給品資料庫、個人資料、裝備範本、徽章解鎖。合併規則「本機優先」，不覆蓋本機已有值
 - **同步診斷**：本機 vs 雲端對照表，數字不一致標警示色，另顯示儲存空間用量（>80% 轉紅）
@@ -78,7 +80,7 @@ APP=/path/to/index.html python3 test_suite.py
 - **鐵人三項分項成績**：FIT session 解析，游泳／T1／自行車／T2／跑步各自的距離、時間、心率、配速（各用自己的單位）
 - **賽事五維雷達圖**：距離／爬升／氣溫嚴苛／高心率／穩定度，Canvas 原生繪製
 - **徽章 103 枚**，五大類
-- **動態回顧輪播（Story Mode）入口在 Cmd+K**（v3.25.0 移除導覽列按鈕）。手機上目前無入口，指令面板只能用鍵盤開
+- **動態回顧輪播（Story Mode）入口在 Cmd+K**（v3.25.0 移除導覽列按鈕）。手機在搜尋框打 `>` 即可開指令面板（v3.29.0）
 
 ### 視覺／互動
 - 獎牌牆 3D 傾斜與反光、懸浮按鈕磁性吸附、iOS 空間景深（彈窗時主畫面退後失焦）
@@ -89,7 +91,8 @@ APP=/path/to/index.html python3 test_suite.py
 - **跑步步頻 ×2**（FIT 記單腳，區間 30–110 才換算，可安全重跑）
 - **游泳用每 100m 配速**，不顯示步頻與總爬升
 - **多項運動不顯示全場平均**配速／心率／步頻
-- **分享圖同樣受上述規則管轄**（v3.27.0 補修）。詳情頁改運動別邏輯時，記得分享圖 `buildShareCanvas()` 是另一份程式碼，不會自動跟著改
+- **分享圖同樣受上述規則管轄**。v3.28.0 起數據集中在 `shareStatsBadges()`／`shareDetailRows()`，方形與限動共用；改運動別規則改那兩個函式就好
+- **社群用途的圖（分享圖、徽章、年度回顧）走 `shareOrDownloadImage()`**：觸控裝置進系統分享面板、桌機下載。列印用途（手環、作戰卡、應援指南）維持 `downloadBlob()`
 
 ---
 
@@ -106,7 +109,6 @@ APP=/path/to/index.html python3 test_suite.py
 ### 下一步候選
 - 行為追蹤型徽章（連續鍵盤操作、停留時間等）需 session 級追蹤機制，獨立一輪
 - 其他表格（賽事清單、系列比較、鞋款分析）尚未做高度處理
-- 時間欄位驗證提示（若實際遇到格式填錯）
 
 ---
 
@@ -134,6 +136,10 @@ APP=/path/to/index.html python3 test_suite.py
 - **manifest 路徑相對於 manifest 自身**，不是相對於網頁
 - **翻譯鍵有動態組合**（`'ui.leg_'+sport`），不能只靠搜尋判斷是否無用
 - **`saveJson`/`loadJson` 必須往外拋**，包 try/catch 會讓儲存警示永遠不觸發
+- **升級 CDN 套件時 `sw.js` 的預快取清單要同步改**（URL 一字不差），否則 SRI 對不上、套件不載入。測試 `sw_precaches_exact_cdn_urls` 會抓
+- **`firebase-messaging-sw.js` 註冊在 `/` 根路徑**，GitHub Pages 專案站台下這個路徑是 404（除非自訂網域）；離線 SW 註冊在 `./`，scope 更具體、會控制頁面，兩者不衝突，但推播是否真的能用要在實機確認
+- **抽屜（`drawerEl`）不在 `#detail` 底下**：掛在 `detailEl` 的事件監聽抽屜收不到，要兩邊都掛（v3.29.0 時間驗證踩到）
+- **看不懂的輸入不能存成 null**：那是把使用者的值清掉。留在欄位、標紅、不寫入
 - **CHANGELOG 版本號曾重複**，新增前先確認號碼未被使用
 - **升級 xlsx / idb-keyval 時必須同時換 `integrity` 雜湊**，只改版號會被瀏覽器擋掉。作法：`npm pack <套件>@<版本>` 解開後 `openssl dgst -sha384 -binary <檔案> | openssl base64 -A`
 
