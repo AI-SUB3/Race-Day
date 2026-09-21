@@ -826,6 +826,82 @@ class Data(Group):
                 durationSeconds:currentRace.results.chipTimeSeconds,avgHr:150,maxHr:175,avgCadence:null,splits:[]},'x.gpx');
             return !html.includes('gpx-overwrite-note');
         }''')
+        # ---- 照片縮圖依 EXIF 方向轉正 ----
+        # 做一張 40×20、左上角一塊紅的縮圖，各方向碼轉完後紅塊該在哪個角、
+        # 畫布寬高該不該對調，逐一驗。3＝倒著拍（使用者回報的那種）。
+        c['thumbnail_orientation_matrix_correct'] = page.evaluate('''async()=>{
+            const src=document.createElement('canvas'); src.width=40; src.height=20;
+            const x=src.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,40,20); x.fillStyle='#f00'; x.fillRect(0,0,8,8);
+            const blob=await new Promise(r=>src.toBlob(r,'image/png'));
+            const cornerOf=(url)=>new Promise(res=>{ const img=new Image(); img.onload=()=>{
+                const c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
+                const g=c.getContext('2d'); g.drawImage(img,0,0);
+                const red=(px,py)=>{ const d=g.getImageData(px,py,1,1).data; return d[0]>200&&d[1]<80&&d[2]<80; };
+                const W=img.width,H=img.height;
+                res({W,H,tl:red(2,2),tr:red(W-3,2),bl:red(2,H-3),br:red(W-3,H-3)}); }; img.src=url; });
+            const o1=await cornerOf(await orientThumbnail(blob,1));
+            const o3=await cornerOf(await orientThumbnail(blob,3));
+            const o6=await cornerOf(await orientThumbnail(blob,6));
+            const o8=await cornerOf(await orientThumbnail(blob,8));
+            return o1.W===40&&o1.tl
+                && o3.W===40&&o3.br&&!o3.tl            // 180°：左上 → 右下
+                && o6.W===20&&o6.H===40&&o6.tr         // 90° CW：寬高對調，左上 → 右上
+                && o8.W===20&&o8.H===40&&o8.bl;        // 270° CW：左上 → 左下
+        }''')
+        # exifr 可能給數字也可能給翻譯字串，兩種都要對
+        c['exif_orientation_string_and_number_both_parsed'] = page.evaluate('''async()=>{
+            const keep=window.exifr; window.exifr={};   // 沒有 orientation()，逼它走 tags 路徑
+            try{
+                const a=await readExifOrientation(null,{Orientation:3});
+                const b=await readExifOrientation(null,{Orientation:'Rotate 90 CW'});
+                const c2=await readExifOrientation(null,{Orientation:'Rotate 180'});
+                const d=await readExifOrientation(null,{Orientation:'Horizontal (normal)'});
+                const e=await readExifOrientation(null,{Orientation:'garbage'});
+                return a===3&&b===6&&c2===3&&d===1&&e===1;
+            } finally { window.exifr=keep; }
+        }''')
+        # ---- 照片加入失敗要說明原因，不是靜默略過 ----
+        c['photo_without_capture_time_is_reported'] = page.evaluate('''async()=>{
+            const r=emptyRace('照片','trail_running','completed','2026-05-01');
+            const t0=Date.parse('2026-05-01T08:00:00Z');
+            r.route.timedTrackPoints=Array.from({length:60},(_,i)=>({lat:25+i*0.001,lon:121+i*0.001,timeMs:t0+i*60000,elevationM:100+i,hr:150}));
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,200));
+            const keep=window.exifr;
+            window.exifr={ parse:async f=>f.name==='screenshot.png'?{}:{DateTimeOriginal:new Date(t0+600000)},
+                           thumbnail:async()=>null };
+            const mk=n=>new File([new Uint8Array([1,2,3])],n,{type:'image/png'});
+            try{ await processPhotoFiles(r,[mk('good.jpg'),mk('screenshot.png')]); }
+            finally{ window.exifr=keep; }
+            const skipped=photoSkipReport.map(x=>x.fileName+':'+x.reason).join(',');
+            return r.geoPhotos.length===1 && r.geoPhotos[0].fileName==='good.jpg'
+                && skipped==='screenshot.png:noTime';
+        }''')
+        c['skip_report_rendered_and_dismissable'] = page.evaluate('''async()=>{
+            renderDetail(); await new Promise(s=>setTimeout(s,150));
+            const box=document.querySelector('.geo-photo-skipped');
+            const shown=!!box && box.textContent.includes('screenshot.png');
+            document.querySelector('[data-action="dismiss-photo-skip"]').click();
+            await new Promise(s=>setTimeout(s,150));
+            return shown && photoSkipReport.length===0 && !document.querySelector('.geo-photo-skipped');
+        }''')
+        # 沒有內嵌縮圖時自己產生一張，而不是留空
+        c['thumbnail_falls_back_to_decoding_the_file'] = page.evaluate('''async()=>{
+            const src=document.createElement('canvas'); src.width=800; src.height=600;
+            const x=src.getContext('2d'); x.fillStyle='#4a7'; x.fillRect(0,0,800,600);
+            const blob=await new Promise(r=>src.toBlob(r,'image/png'));
+            const file=new File([blob],'nothumb.png',{type:'image/png'});
+            const url=await thumbnailFromFullImage(file);
+            if(!url||!url.startsWith('data:image/jpeg')) return false;
+            const dims=await new Promise(res=>{const i=new Image(); i.onload=()=>res([i.width,i.height]); i.src=url;});
+            return dims[0]===320 && dims[1]===240;   // 解碼階段就縮到 320 寬
+        }''')
+        # 選擇器與拖曳都要放行 HEIC
+        c['heic_accepted_by_picker_and_drop'] = page.evaluate('''()=>{
+            const input=document.getElementById('geo-photo-input');
+            const accept=input?input.getAttribute('accept'):'';
+            return /heic/i.test(accept) && /image\\/\\*/.test(accept);
+        }''')
         c['undersized_thumbs_regenerate_once_only'] = page.evaluate('''async()=>{
             const mk=(px,q)=>{const c=document.createElement('canvas');
                 c.width=px;c.height=Math.round(px*0.75);

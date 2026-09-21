@@ -2085,6 +2085,8 @@
   .storage-usage-warn{color:var(--flag);font-weight:600;}
   .sync-diag-note{color:var(--stone);line-height:1.6;margin-top:4px;}
   .gpx-overwrite-note{display:block;font-size:12px;color:var(--flag);margin-top:2px;}
+  .geo-photo-skipped{border-left:3px solid var(--flag);background:var(--paper);border-radius:6px;padding:8px 12px;margin:10px 0;display:flex;flex-direction:column;gap:3px;}
+  .geo-photo-skipped .small{color:var(--ink-soft);}
   /* 分享圖設定：格式切換沿用篩選 chip 的外觀，勾選列用一般 label */
   .share-format-row{display:flex;gap:8px;margin:4px 0 12px;}
   .climate-chart-curve{color:var(--stone);margin-top:4px;}
@@ -2956,7 +2958,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.36.0';
+const APP_VERSION='v3.38.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3309,7 +3311,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3793,7 +3795,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -8183,6 +8185,9 @@ let photoProcessingCount=0;
 // 但拍攝時間／座標對位不受影響，兩者是各自獨立、互不依賴的資訊。
 async function processPhotoFiles(race,files){
   await ensureExifrLoaded();
+  // 略過的檔案逐一記下原因。以前是靜默 continue：使用者拖 10 張進來
+  // 只出現 6 張，完全不知道另外 4 張去哪了、也不知道能怎麼補救。
+  photoSkipReport=[];
   photoProcessingCount=files.length;
   if(currentRace&&currentRace.id===race.id) renderDetail();
   for(const file of files){
@@ -8193,21 +8198,32 @@ async function processPhotoFiles(race,files){
       // 直接完整解析（順便多拿到 Make/Model 這些用不到但無害的欄位）
       // 反而是能真正動作的寫法，速度上的差異在這個量級的檔案可以忽略。
       const tags=await window.exifr.parse(file);
-      const capturedAt=tags&&tags.DateTimeOriginal;
-      if(!capturedAt){ photoProcessingCount--; continue; }
+      const capturedAt=(tags&&(tags.DateTimeOriginal||tags.CreateDate||tags.DateTimeDigitized))||null;
+      if(!capturedAt){
+        // 沒有拍攝時間就沒有對位的依據。最常見的是截圖，以及經過通訊軟體
+        // （LINE／Messenger）轉傳、或某些編輯軟體重新存檔後 EXIF 被清掉的照片。
+        photoSkipReport.push({fileName:file.name,reason:'noTime'});
+        photoProcessingCount--; continue;
+      }
       let thumbnailDataUrl=null;
       try{
         const thumbBytes=await window.exifr.thumbnail(file);
         if(thumbBytes){
           const blob=new Blob([thumbBytes],{type:'image/jpeg'});
-          thumbnailDataUrl=await new Promise((resolve,reject)=>{
-            const reader=new FileReader();
-            reader.onload=()=>resolve(reader.result);
-            reader.onerror=()=>reject(reader.error);
-            reader.readAsDataURL(blob);
-          });
+          // 內嵌縮圖存的是感光元件的原始方向，沒有帶自己的方向標籤；
+          // 直立拍的照片，縮圖躺著或倒著是常態，要用主圖的 Orientation 轉正。
+          const orientation=await readExifOrientation(file,tags);
+          thumbnailDataUrl=await orientThumbnail(blob,orientation);
         }
-      }catch(e){ /* 沒有內嵌縮圖，留 null，不影響拍攝時間對位 */ }
+      }catch(e){ /* 沒有內嵌縮圖，下面再試著自己產生 */ }
+      if(!thumbnailDataUrl){
+        // 沒有內嵌縮圖時才自己解碼原圖縮一張。這違反「不載入整張原圖」的
+        // 原則，所以只當退路：很多照片（HEIC、編輯過重存的 JPEG）根本
+        // 沒有內嵌縮圖，沒有這條退路就只能顯示通用圖示。
+        // resizeWidth 讓瀏覽器在解碼階段就縮小，不會把全尺寸點陣圖留在記憶體；
+        // imageOrientation:'from-image' 交給瀏覽器轉正，不再自己轉一次。
+        thumbnailDataUrl=await thumbnailFromFullImage(file);
+      }
       const photo={
         id:uid(),fileName:file.name,thumbnailDataUrl,
         rawCapturedAt:capturedAt.toISOString(),
@@ -8217,6 +8233,7 @@ async function processPhotoFiles(race,files){
       race.geoPhotos.push(photo);
     }catch(e){
       console.error('照片 EXIF 解析失敗',file.name,e);
+      photoSkipReport.push({fileName:file.name,reason:'parseFailed'});
     }
     photoProcessingCount--;
     if(currentRace&&currentRace.id===race.id) renderDetail();
@@ -8224,6 +8241,75 @@ async function processPhotoFiles(race,files){
   race.updatedAt=new Date().toISOString();
   persist();
   if(currentRace&&currentRace.id===race.id) renderDetail();
+}
+let photoSkipReport=[];
+/* thumbnailFromFullImage(file)：沒有內嵌縮圖時，自己解碼原圖縮一張。
+   HEIC 只有 Safari 解得開，Chrome 會丟例外——那就回 null 顯示通用圖示，
+   拍攝時間與對位都已經拿到了，不該因為縮圖失敗就整張照片不收。 */
+async function thumbnailFromFullImage(file){
+  try{
+    const bmp=await createImageBitmap(file,{resizeWidth:320,resizeQuality:'medium',imageOrientation:'from-image'});
+    const c=document.createElement('canvas');
+    c.width=bmp.width; c.height=bmp.height;
+    c.getContext('2d').drawImage(bmp,0,0);
+    if(bmp.close) bmp.close();
+    return c.toDataURL('image/jpeg',0.82);
+  }catch(e){ return null; }
+}
+/* readExifOrientation(file, tags)：回 1～8 的 EXIF 方向碼。
+   exifr 的完整版有 orientation() 直接給數字；沒有的話從 parse 結果拿，
+   而 parse 可能已經把數字翻譯成 'Rotate 90 CW' 這種字串（看 build），
+   兩種都要收。認不出來一律當 1（不轉）——轉錯比不轉更糟。 */
+async function readExifOrientation(file,tags){
+  try{
+    if(window.exifr&&typeof window.exifr.orientation==='function'){
+      const n=await window.exifr.orientation(file);
+      if(n>=1&&n<=8) return n;
+    }
+  }catch(e){}
+  const v=tags&&tags.Orientation;
+  if(typeof v==='number'&&v>=1&&v<=8) return v;
+  if(typeof v==='string'){
+    const s=v.toLowerCase();
+    const mirror=s.includes('mirror');
+    if(s.includes('180')) return mirror?4:3;
+    if(s.includes('90'))  return mirror?7:6;   // Rotate 90 CW → 6
+    if(s.includes('270')) return mirror?5:8;   // Rotate 270 CW → 8
+    if(mirror) return 2;
+  }
+  return 1;
+}
+/* orientThumbnail(blob, orientation)：把縮圖依 EXIF 方向碼轉正，回 data URL。
+   用 createImageBitmap 加 imageOrientation:'none' 解碼——萬一縮圖本身也帶
+   方向標籤，瀏覽器在 drawImage 時會自己再轉一次，兩次就轉過頭。
+   矩陣是 EXIF 標準的八種；5～8 是直式，畫布寬高要對調。 */
+async function orientThumbnail(blob,orientation){
+  const toDataUrl=b=>new Promise((resolve,reject)=>{
+    const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=()=>reject(reader.error); reader.readAsDataURL(b);
+  });
+  if(!orientation||orientation===1) return toDataUrl(blob);
+  let bmp;
+  try{ bmp=await createImageBitmap(blob,{imageOrientation:'none'}); }
+  catch(e){
+    // 舊瀏覽器沒有 createImageBitmap：退回 <img>，接受可能重複轉向的風險
+    bmp=await new Promise((resolve,reject)=>{ const img=new Image(); img.onload=()=>resolve(img); img.onerror=reject; img.src=URL.createObjectURL(blob); });
+  }
+  const w=bmp.width,h=bmp.height;
+  const swap=orientation>=5;
+  const c=document.createElement('canvas'); c.width=swap?h:w; c.height=swap?w:h;
+  const ctx=c.getContext('2d');
+  switch(orientation){
+    case 2: ctx.setTransform(-1,0,0,1,w,0); break;
+    case 3: ctx.setTransform(-1,0,0,-1,w,h); break;
+    case 4: ctx.setTransform(1,0,0,-1,0,h); break;
+    case 5: ctx.setTransform(0,1,1,0,0,0); break;
+    case 6: ctx.setTransform(0,1,-1,0,h,0); break;
+    case 7: ctx.setTransform(0,-1,-1,0,h,w); break;
+    case 8: ctx.setTransform(0,-1,1,0,0,w); break;
+  }
+  ctx.drawImage(bmp,0,0);
+  if(bmp.close) bmp.close();
+  return c.toDataURL('image/jpeg',0.85);
 }
 function formatPhotoTime(iso){
   if(!iso) return '';
@@ -8259,12 +8345,21 @@ function geoPhotoSectionHtml(race){
     </div>`).join('');
   return `<div class="subsection geo-photo-section">
     <div class="subsection-head"><h3>${t('ui.geoPhotoTitle','空間記憶迴廊（照片時空對位）')}</h3></div>
-    <p class="modal-hint small">${t('ui.geoPhotoHint','拖曳或選擇照片，會自動讀取拍攝時間，跟這場賽事的 GPS 軌跡做時空對位，顯示在下方地圖上。只讀取照片檔案的中繼資料跟內嵌縮圖，不會把整張原始照片載入網頁。')}</p>
+    <p class="modal-hint small">${t('ui.geoPhotoHint','拖曳或選擇照片（JPEG／HEIC／PNG 皆可），會自動讀取拍攝時間，跟這場賽事的 GPS 軌跡做時空對位，顯示在下方地圖上。優先只讀中繼資料與內嵌縮圖；沒有內嵌縮圖的照片才會解碼原圖縮一張。沒有拍攝時間的照片（例如截圖）無法對位，會列在下方說明原因。')}</p>
     <div class="geo-photo-drop-zone" id="geo-photo-drop-zone">
-      <input type="file" id="geo-photo-input" accept="image/jpeg,image/jpg" multiple style="display:none">
+      <input type="file" id="geo-photo-input" accept="image/*,.heic,.heif" multiple style="display:none">
       <button type="button" class="btn-ghost" data-action="trigger-geo-photo-input">${t('ui.geoPhotoAdd','＋ 加入照片')}</button>
       ${photoProcessingCount>0?`<span class="small">${tf('ui.geoPhotoProcessing','解析中… 還剩 {n} 張',photoProcessingCount)}</span>`:''}
     </div>
+    ${photoSkipReport.length?`
+    <div class="geo-photo-skipped">
+      <strong class="small">${tf('ui.geoPhotoSkippedTitle','{n} 張沒有加進來',photoSkipReport.length)}</strong>
+      ${photoSkipReport.map(x=>`<div class="small">${escapeHtml(x.fileName)} — ${
+        x.reason==='noTime'?t('ui.geoPhotoSkipNoTime','照片裡沒有拍攝時間（截圖，或經過通訊軟體轉傳／編輯後 EXIF 被清掉）')
+                           :t('ui.geoPhotoSkipParseFailed','讀取失敗，這個檔案格式可能不支援')
+      }</div>`).join('')}
+      <button type="button" class="btn-text-small" data-action="dismiss-photo-skip">${t('ui.gotIt','知道了')}</button>
+    </div>`:''}
     ${photos.length?`
     <label class="field" for="geo-photo-offset">
       <span>${t('ui.geoPhotoOffsetLabel','相機時間與 GPS 時間偏差校正')}：<span class="mono">${race.photoTimeOffsetSeconds>0?'+':''}${race.photoTimeOffsetSeconds}${t('ui.unitSeconds','秒')}</span></span>
@@ -14207,6 +14302,7 @@ document.getElementById('cover-file-input').addEventListener('change',async e=>{
   await importCoverImageFile(file);
 });
 document.addEventListener('click',e=>{
+  if(e.target.closest('[data-action="dismiss-photo-skip"]')){ photoSkipReport=[]; renderDetail(); return; }
   if(e.target.closest('[data-action="open-cover-picker"]')) document.getElementById('cover-file-input').click();
   if(e.target.closest('[data-action="remove-cover"]')&&currentRace){
     currentRace.coverImage='';
@@ -16705,7 +16801,7 @@ async function routeDroppedFiles(files){
   const extOf=name=>(name.split('.').pop()||'').toLowerCase();
   const jsonFiles=files.filter(f=>extOf(f.name)==='json');
   const activityFiles=files.filter(f=>['gpx','tcx','fit'].includes(extOf(f.name)));
-  const imageFiles=files.filter(f=>['jpg','jpeg','png'].includes(extOf(f.name)));
+  const imageFiles=files.filter(f=>['jpg','jpeg','png','heic','heif','webp','tif','tiff'].includes(extOf(f.name))||/^image\//.test(f.type||''));
   const recognizedCount=jsonFiles.length+activityFiles.length+imageFiles.length;
   const unknownCount=files.length-recognizedCount;
   if(jsonFiles.length) await importJsonFile(jsonFiles[0]);

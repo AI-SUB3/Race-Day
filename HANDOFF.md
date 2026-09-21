@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.36.0
+> 貼到新對話開頭即可接續。最後更新：v3.38.0
 
 ---
 
@@ -44,7 +44,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（105 項檢查，13 個群組）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（111 項檢查，13 個群組）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -140,6 +140,8 @@ APP=/path/to/index.html python3 test_suite.py
 - **`saveJson`/`loadJson` 必須往外拋**，包 try/catch 會讓儲存警示永遠不觸發
 - **升級 CDN 套件時 `sw.js` 的預快取清單要同步改**（URL 一字不差），否則 SRI 對不上、套件不載入。測試 `sw_precaches_exact_cdn_urls` 會抓
 - **`firebase-messaging-sw.js` 註冊在 `/` 根路徑**，GitHub Pages 專案站台下這個路徑是 404（除非自訂網域）；離線 SW 註冊在 `./`，scope 更具體、會控制頁面，兩者不衝突，但推播是否真的能用要在實機確認
+- **照片匯入有三道各自獨立的關卡**：檔案選擇器的 `accept`、全域拖曳的副檔名白名單、EXIF 有沒有拍攝時間。任何一道擋掉都是「照片加不進去」，改的時候三道都要看（v3.38.0）
+- **EXIF 內嵌縮圖沒有方向標籤**：拿來顯示前要用主圖的 Orientation 轉正（`orientThumbnail()`），解碼時 `imageOrientation:'none'` 避免瀏覽器再轉一次
 - **Canvas 不會跟著 CSS 變數換色**：新增用 canvas 畫的東西，要掛進 `redrawThemeDependentCanvases()`，否則切主題後顏色停在舊的
 - **抽屜（`drawerEl`）不在 `#detail` 底下**：掛在 `detailEl` 的事件監聽抽屜收不到，要兩邊都掛（v3.29.0 時間驗證踩到）
 - **看不懂的輸入不能存成 null**：那是把使用者的值清掉。留在欄位、標紅、不寫入
