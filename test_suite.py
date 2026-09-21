@@ -192,18 +192,56 @@ class Drawers(Group):
             return empty<filled;
         }''')
         # ---- 1c：完賽賽事的成績儀表板貼在 header 下方、區段列之前，且只出現一次 ----
-        c['completed_race_hero_dashboard_above_sections'] = page.evaluate('''async()=>{
+        c['completed_race_nav_then_hero_then_sections'] = page.evaluate('''async()=>{
             const r=emptyRace('完賽','road_running','completed','2026-05-01');
             r.results.chipTimeSeconds=10771; r.route.distanceKm=42.195;
             state.races.push(r); selectRace(r.id,{scroll:false});
             await new Promise(s=>setTimeout(s,300));
             const hero=document.querySelector('.hero-results'), nav=document.querySelector('.quick-nav');
             const header=document.querySelector('.detail-header');
-            const order=hero&&nav&&header
-                && (header.compareDocumentPosition(hero)&Node.DOCUMENT_POSITION_FOLLOWING)
-                && (hero.compareDocumentPosition(nav)&Node.DOCUMENT_POSITION_FOLLOWING);
+            // v3.34.0：順序是 header → 區段導覽列 → 儀表板 → 各區段
+            const firstSection=document.querySelector('details.section');
+            const order=hero&&nav&&header&&firstSection
+                && (header.compareDocumentPosition(nav)&Node.DOCUMENT_POSITION_FOLLOWING)
+                && (nav.compareDocumentPosition(hero)&Node.DOCUMENT_POSITION_FOLLOWING)
+                && (hero.compareDocumentPosition(firstSection)&Node.DOCUMENT_POSITION_FOLLOWING);
             return !!order && document.querySelectorAll('.results-dashboard').length===1
                 && !document.querySelector('#section-post .results-dashboard');
+        }''')
+        # 雷達圖是 canvas，切主題不會自動換色——切到深色後必須重畫成亮字
+        c['radar_redraws_with_light_text_in_dark_mode'] = page.evaluate('''async()=>{
+            document.documentElement.setAttribute('data-theme','light'); applyTheme('light');
+            const r=emptyRace('雷達','trail_running','completed','2026-05-01');
+            r.results.chipTimeSeconds=12000; r.route.distanceKm=23.9; r.route.elevationGainM=824;
+            r.performanceData.avgHr=150; r.performanceData.maxHr=180; r.raceDayWeather.feelsLikeTempC=29.2;
+            r.splits=Array.from({length:23},(_,i)=>({distanceKm:1,avgPaceSecPerKm:480+i*3,elevationGainM:30}));
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,1300));   // 等生長動畫畫完
+            const cv=document.querySelector('canvas[data-race-radar]'); if(!cv) return false;
+            const bright=()=>{
+              const ctx=cv.getContext('2d'); const d=ctx.getImageData(0,0,cv.width,Math.round(cv.height*0.14)).data;
+              let n=0; for(let i=0;i<d.length;i+=4){ if(d[i+3]>0 && (d[i]+d[i+1]+d[i+2])/3>200) n++; } return n; };
+            const lightModeBright=bright();          // 淺色模式：深字，亮像素應該很少
+            applyTheme('dark');
+            await new Promise(s=>setTimeout(s,100));
+            const darkModeBright=bright();           // 深色模式重畫後：亮字
+            applyTheme('light');
+            return darkModeBright>lightModeBright*3 && darkModeBright>50;
+        }''')
+        # 網格線在深色模式要看得見：灰階、中等亮度的像素要夠多（--rule 幾乎跟底色同色時不會過）
+        c['radar_grid_visible_in_dark_mode'] = page.evaluate('''async()=>{
+            applyTheme('dark'); await new Promise(s=>setTimeout(s,150));
+            const cv=document.querySelector('canvas[data-race-radar]'); if(!cv) return false;
+            const d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
+            let grid=0;
+            for(let i=0;i<d.length;i+=4){
+              const r=d[i],g=d[i+1],b=d[i+2],a=d[i+3];
+              if(a<40) continue;
+              const lum=(r+g+b)/3;
+              if(Math.abs(r-g)<22 && Math.abs(g-b)<28 && lum>=70 && lum<=200) grid++;
+            }
+            applyTheme('light');
+            return grid>800;
         }''')
         c['uncompleted_race_has_no_hero_dashboard'] = page.evaluate('''async()=>{
             const r=emptyRace('未完賽','road_running','registered','2026-12-01');

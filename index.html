@@ -691,8 +691,7 @@
   .results-dashboard{border:1px solid var(--rule);border-radius:4px;padding:22px;margin-bottom:22px;background:var(--surface);}
   /* 成績儀表板在 header 下方當主視覺時，跟 header 之間留一點呼吸空間，
      但下方不要再留——緊接著就是區段導覽列 */
-  .hero-results{margin:18px 0 6px;}
-  .hero-results .results-dashboard{margin-bottom:0;}
+  .hero-results{margin:4px 0 18px;}
   .results-dashboard.is-pb{border-color:var(--gold);}
   .results-dashboard-main{display:flex;align-items:baseline;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
   .results-big-time{font-size:44px;font-weight:700;letter-spacing:-0.01em;}
@@ -2957,7 +2956,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.33.0';
+const APP_VERSION='v3.36.0';
 
 /* ============================================================
    多語系（i18n）
@@ -7424,14 +7423,22 @@ function drawRaceRadar(canvas,dims,progress){
   const styles=getComputedStyle(document.documentElement);
   const gold=(styles.getPropertyValue('--gold')||'#D9B15C').trim();
   const grid=(styles.getPropertyValue('--rule')||'rgba(128,128,128,0.3)').trim();
-  const ink=(styles.getPropertyValue('--ink-soft')||'#666').trim();
+  // 軸名用主字色、數值用次字色：原本兩者都用次字色，深色模式下數值那行
+  // 淡到要瞇眼。這裡是 canvas，讀的是「畫的那一刻」的變數值，所以切換
+  // 主題後必須重畫（見 redrawThemeDependentCanvases）。
+  const ink=(styles.getPropertyValue('--ink')||'#222').trim();
+  const inkSoft=(styles.getPropertyValue('--ink-soft')||'#666').trim();
   const at=(i,r)=>{
     const a=i*step-Math.PI/2; // 減去 90 度，讓第一軸落在正上方
     return [cx+r*Math.cos(a),cy+r*Math.sin(a)];
   };
-  // 背景蜘蛛網
-  ctx.strokeStyle=grid;ctx.lineWidth=1;
+  // 背景蜘蛛網。線色不用 --rule：那是「分隔線」的顏色，深色模式下跟底色
+  // 只差一階（#2A3038 vs #1E232A），畫成網格幾乎看不見。改用次字色配透明度，
+  // 兩個主題都看得到框架，又不會壓過金色的資料多邊形。外圈畫深一點，
+  // 內圈與軸線淡一點，讀圖時先看到範圍、再看到刻度。
+  ctx.lineWidth=1;
   for(let lv=0.2;lv<=1.001;lv+=0.2){
+    ctx.strokeStyle=hexToRgba(inkSoft,lv>=0.999?0.75:0.42);
     ctx.beginPath();
     for(let i=0;i<n;i++){
       const [x,y]=at(i,radius*lv);
@@ -7440,6 +7447,7 @@ function drawRaceRadar(canvas,dims,progress){
     ctx.closePath();ctx.stroke();
   }
   // 放射軸線
+  ctx.strokeStyle=hexToRgba(inkSoft,0.36);
   for(let i=0;i<n;i++){
     const [x,y]=at(i,radius);
     ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.stroke();
@@ -7472,8 +7480,8 @@ function drawRaceRadar(canvas,dims,progress){
     const [x,y]=at(i,radius+20);
     const d=dims[i];
     ctx.fillText(d.label,x,y-6);
-    ctx.font='10px "IBM Plex Mono",monospace';
-    ctx.fillStyle=d.value==null?grid:ink;
+    ctx.font='11px "IBM Plex Mono",monospace';
+    ctx.fillStyle=d.value==null?grid:inkSoft;
     ctx.fillText(d.raw||t('ui.radarNoData','無資料'),x,y+7);
     ctx.font='12px "Noto Sans TC",sans-serif';
     ctx.fillStyle=ink;
@@ -12129,13 +12137,16 @@ function renderDetail(){
   currentRace=race;
   applyAmbientTint(race.coverImageAccentColor||null);
   // 完賽的賽事，打開頁面第一眼要看到的是成績，不是「基本資訊與時間」。
-  // 儀表板從賽後區段搬到 header 正下方、區段導覽列之上——它本來就只在
-  // 已完賽且有成績時才會產生，所以未完賽的頁面這裡什麼都沒有。
+  // 儀表板從賽後區段搬到 header 下方——它本來就只在已完賽且有成績時才
+  // 會產生，所以未完賽的頁面這裡什麼都沒有。
+  // 區段導覽列放在 header 與儀表板之間（v3.34.0）：它是 sticky 的，
+  // 要在使用者開始捲動前就先進到視野，才知道有這排可以跳；壓在儀表板
+  // 下面時，第一屏被儀表板佔滿，導覽列要捲過去才看得到。
   const heroDashboard=renderResultsDashboard(race);
   detailEl.innerHTML=`
     ${detailHeaderHtml(race)}
-    ${heroDashboard?`<div class="hero-results">${heroDashboard}</div>`:''}
     ${quickNavHtml()}
+    ${heroDashboard?`<div class="hero-results">${heroDashboard}</div>`:''}
     ${renderSeriesComparison(race)}
     <details class="section" id="section-basic">
       <summary>${t('ui.sectionBasic','基本資訊與時間')}</summary>
@@ -12754,6 +12765,16 @@ function applyTheme(theme){
   if(btn) btn.innerHTML = theme==='dark' ? SUN_ICON : MOON_ICON;
   const metaTheme=document.querySelector('meta[name="theme-color"]');
   if(metaTheme) metaTheme.setAttribute('content', theme==='dark' ? '#12161A' : '#2E6B49');
+  redrawThemeDependentCanvases();
+}
+/* Canvas 不像 SVG／CSS 會跟著變數自動換色——畫上去就是畫上去了。
+   切主題時把還在畫面上的雷達圖用新的變數值重畫一次（直接畫完成狀態，
+   不重跑生長動畫，切個主題不該像重新載入頁面）。 */
+function redrawThemeDependentCanvases(){
+  document.querySelectorAll('canvas[data-race-radar]').forEach(canvas=>{
+    const race=state.races.find(r=>r.id===canvas.dataset.raceRadar);
+    if(race) drawRaceRadar(canvas,computeRaceRadar(race),1);
+  });
 }
 applyTheme(document.documentElement.getAttribute('data-theme')||'light');
 document.getElementById('btn-theme-toggle').addEventListener('click',()=>{
