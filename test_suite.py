@@ -177,6 +177,51 @@ class Drawers(Group):
         c['closing_drawer_restores_scroll'] = page.evaluate(
             "()=>document.body.style.overflow===''")
         # ---- 1b：空抽屜淡化，填了的維持原樣 ----
+        # 區段最後一張卡片不能黏在區段下緣（左右有 20px，下面卻 0）
+        # 路線與氣象合併成一個區段，底下兩個子標題；導覽列少一格
+        # 區段順序：裝備（賽前準備）排在預算之前，導覽列順序要一致
+        c['prep_section_before_logistics_and_nav_matches'] = page.evaluate('''async()=>{
+            const r=emptyRace('順序','trail_running','registered','2026-09-06');
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const ids=[...document.querySelectorAll('details.section')].map(e=>e.id);
+            const navTargets=[...document.querySelectorAll('.quick-nav a')].map(a=>a.dataset.target);
+            return ids.join(',')==='section-basic,section-route,section-prep,section-logistics,section-post'
+                && navTargets.join(',')===ids.join(',');
+        }''')
+        c['route_and_weather_merged_into_one_section'] = page.evaluate('''async()=>{
+            const r=emptyRace('合併','trail_running','registered','2026-09-06');
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const sec=document.getElementById('section-route');
+            if(!sec) return false;
+            if(!sec.open){ sec.querySelector('summary').click(); await new Promise(s=>setTimeout(s,350)); }
+            const live=document.getElementById('section-route');
+            const heads=[...live.querySelectorAll(':scope > .subsection > .subsection-head h3')].map(e=>e.textContent.trim());
+            const navTargets=[...document.querySelectorAll('.quick-nav a')].map(a=>a.dataset.target);
+            return !document.getElementById('section-weather')
+                && heads.join(',')==='官方路線,當日氣象'
+                && !navTargets.includes('section-weather')
+                && navTargets.length===5;
+        }''')
+        c['section_last_card_has_bottom_breathing_room'] = page.evaluate('''async()=>{
+            const r=emptyRace('間距','trail_running','registered','2026-09-06');
+            r.budget.totalTwd=2500; r.checkpoints=[{name:'CP1',distanceKm:8}];
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const out=[];
+            for(const id of ['section-basic','section-logistics','section-prep','section-route']){
+              const sec=document.getElementById(id); if(!sec) continue;
+              if(!sec.open){ sec.querySelector('summary').click(); await new Promise(s=>setTimeout(s,350)); }
+              const live=document.getElementById(id);
+              const kids=[...live.children].filter(e=>e.tagName!=='SUMMARY');
+              const last=kids[kids.length-1]; if(!last) continue;
+              const sb=live.getBoundingClientRect(), lb=last.getBoundingClientRect();
+              out.push({id,bottom:sb.bottom-lb.bottom,left:lb.left-sb.left});
+            }
+            // 下緣間距要存在，而且跟左右內距同一個量級（不是 0、也不是兩倍）
+            return out.length>=3 && out.every(x=>x.bottom>=12 && x.bottom<=x.left+4);
+        }''')
         c['empty_drawer_cards_muted_filled_cards_not'] = page.evaluate('''async()=>{
             const r=emptyRace('卡片','road_running','registered','2026-11-01');
             r.location.city='臺北市'; r.route.distanceKm=42.195;

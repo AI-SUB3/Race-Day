@@ -1442,8 +1442,17 @@
   details.section{
     background:var(--surface);border-radius:8px;
     box-shadow:0 2px 8px rgba(0,0,0,0.05);
-    margin-bottom:14px;padding:0 20px;
+    margin-bottom:14px;padding:0 20px 18px;
   }
+  /* 區段原本沒有下內距，最後一張卡片的 margin-bottom 會從容器底部「穿出去」
+     （margin collapsing），卡片看起來就直接黏在區段的下緣，左右卻有 20px，
+     很不對稱。補上下內距擋住穿透，再把最後一個子元素自己的下間距歸零，
+     不然 18px 內距加 18px margin 會變成兩倍空白。 */
+  details.section>*:last-child{margin-bottom:0;}
+  details.section>.subsection:last-child{padding-bottom:0;}
+  /* 子區塊自己的最後一個元素也要歸零：它的 margin 會穿出沒有下內距的
+     .subsection，再疊到區段的下內距上，間距就變成一倍半。 */
+  details.section>.subsection:last-child>*:last-child{margin-bottom:0;}
   [data-theme="dark"] details.section{box-shadow:0 2px 10px rgba(0,0,0,0.3);}
   details.section summary{
     cursor:pointer;font-weight:600;font-size:17px;padding:16px 0;
@@ -2972,7 +2981,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.40.0';
+const APP_VERSION='v3.43.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3084,7 +3093,7 @@ const JA={
   'ui.dropzoneTitle':'ドロップしてインポート','ui.dropzoneHint':'GPX／TCX／FIT トラック、JSON バックアップ、JPG／PNG 写真に対応',
   'ui.dropzoneUnsupportedFiles':'{n} 件のファイルは対応していない形式のためスキップしました',
   'ui.saving':'保存中…','ui.saved':'保存済み',
-  'ui.navBasic':'基本','ui.navRoute':'コース','ui.navWeather':'気象','ui.navLogistics':'予算','ui.navPrep':'装備','ui.navPost':'結果',
+  'ui.navBasic':'基本','ui.navRoute':'コース気象','ui.navWeather':'気象','ui.sectionRouteWeather':'コースと気象','ui.subsectionOfficialRoute':'公式コース','ui.subsectionRaceDayWeather':'当日の気象','ui.navLogistics':'予算','ui.navPrep':'装備','ui.navPost':'結果',
   'ui.deleteRace':'大会を削除',
   'ui.undo':'元に戻す','ui.undoDeletedSingle':'削除しました：{n}','ui.undoDeletedMultiple':'{n} 件のレースを削除しました',
   'ui.dashEquipSummary':'{a} 点/  パック済み {b}','ui.dashEquipEmpty':'装備がまだ登録されていません',
@@ -3577,7 +3586,7 @@ const EN={
   'ui.dropzoneTitle':'Drop to Import','ui.dropzoneHint':'Supports GPX/TCX/FIT tracks, JSON backups, and JPG/PNG photos',
   'ui.dropzoneUnsupportedFiles':'{n} file(s) were an unsupported format and were skipped',
   'ui.saving':'Saving…','ui.saved':'Saved',
-  'ui.navBasic':'Basic','ui.navRoute':'Course','ui.navWeather':'Weather','ui.navLogistics':'Budget','ui.navPrep':'Gear','ui.navPost':'Results',
+  'ui.navBasic':'Basic','ui.navRoute':'Course & Weather','ui.navWeather':'Weather','ui.sectionRouteWeather':'Course & Weather','ui.subsectionOfficialRoute':'Official course','ui.subsectionRaceDayWeather':'Race-day weather','ui.navLogistics':'Budget','ui.navPrep':'Gear','ui.navPost':'Results',
   'ui.deleteRace':'Delete race',
   'ui.undo':'Undo','ui.undoDeletedSingle':'Deleted: {n}','ui.undoDeletedMultiple':'Deleted {n} races',
   'ui.dashEquipSummary':'{a} items/  {b} packed','ui.dashEquipEmpty':'No gear added yet',
@@ -7191,10 +7200,9 @@ function renderNutritionScheduleSection(race){
 
 const QUICK_NAV_SECTIONS=[
   ['section-basic','ui.navBasic','基本'],
-  ['section-route','ui.navRoute','路線'],
-  ['section-weather','ui.navWeather','氣象'],
-  ['section-logistics','ui.navLogistics','預算'],
+  ['section-route','ui.navRoute','路線氣象'],
   ['section-prep','ui.navPrep','裝備'],
+  ['section-logistics','ui.navLogistics','預算'],
   ['section-post','ui.navPost','賽後'],
 ];
 function quickNavHtml(){
@@ -12302,26 +12310,23 @@ function renderDetail(){
       ${scheduleDashCardHtml(race)}
     </details>
     <details class="section" id="section-route">
-      <summary>${t('ui.sectionRoute','地理與路線')}</summary>
-      ${routeDashCardHtml(race)}
-      ${elevationProfileHtml(race)}
-      ${routeMapHtml(race)}
-      ${geoPhotoSectionHtml(race)}
-      ${gpsDenoiseSectionHtml(race)}
-      ${checkpointsDashCardHtml(race)}
-    </details>
-    <details class="section" id="section-weather">
-      <summary>${t('ui.sectionWeather','氣象')}</summary>
-      <div class="section-body">
+      <summary>${t('ui.sectionRouteWeather','路線與氣象')}</summary>
+      <div class="subsection">
+        <div class="subsection-head"><h3>${t('ui.subsectionOfficialRoute','官方路線')}</h3></div>
+        ${routeDashCardHtml(race)}
+        ${elevationProfileHtml(race)}
+        ${routeMapHtml(race)}
+        ${geoPhotoSectionHtml(race)}
+        ${gpsDenoiseSectionHtml(race)}
+        ${checkpointsDashCardHtml(race)}
+      </div>
+      <div class="subsection">
+        <div class="subsection-head"><h3>${t('ui.subsectionRaceDayWeather','當日氣象')}</h3></div>
         ${race.historicalWeather?historicalWeatherCompactHtml(race.historicalWeather,race)
           :(raceIsHistorical(race)&&raceHasGpsTrack(race)?`<p class="empty-hint small">${historicalWeatherFetchingRaceId===race.id?t('ui.weatherFetching','抓取中…'):t('ui.historicalWeatherPending','正在查詢賽事當天的歷史天氣…')}</p>`:'')}
         ${marineConditionsCompactHtml(race)}
         ${weatherDashCardHtml(race)}
       </div>
-    </details>
-    <details class="section" id="section-logistics">
-      <summary>${t('ui.sectionLogistics','預算與行程規劃')}</summary>
-      ${logisticsDashCardHtml(race)}
     </details>
     <details class="section" id="section-prep">
       <summary>${t('ui.sectionPrep','裝備、補給與戰略（賽前準備）')}</summary>
@@ -12334,6 +12339,10 @@ function renderDetail(){
       </div>
       ${equipmentDashCardHtml(race)}
       ${renderNutritionScheduleSection(race)}
+    </details>
+    <details class="section" id="section-logistics">
+      <summary>${t('ui.sectionLogistics','預算與行程規劃')}</summary>
+      ${logisticsDashCardHtml(race)}
     </details>
     <details class="section" id="section-post">
       <summary>${t('ui.sectionPost','賽後紀錄與個人數據')}</summary>
