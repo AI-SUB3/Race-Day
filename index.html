@@ -282,6 +282,11 @@
   table th.num,table td.num{text-align:right;}
   .table-view td{padding:6px 10px;border-bottom:1px solid var(--rule);}
   .table-view-row{cursor:pointer;}
+  .table-year-row{cursor:pointer;background:var(--paper);}
+  .table-year-row td{padding:9px 10px;border-bottom:1px solid var(--rule);color:var(--ink);font-size:14px;}
+  .table-year-row:hover td{background:var(--surface);}
+  .table-year-chevron{display:inline-block;width:14px;color:var(--stone);}
+  .table-year-summary{color:var(--stone);font-size:12px;margin-left:10px;}
   .table-view-row:hover{background:var(--surface);}
   .table-view-row.selected{background:var(--ink);color:var(--surface);}
   .table-view-row.selected td{border-bottom-color:var(--ink-soft);}
@@ -849,8 +854,17 @@
   .geo-photo-marker img{width:100%;height:100%;object-fit:cover;}
   .geo-photo-marker-empty{font-size:18px;}
   .geo-photo-popup{text-align:center;}
-  .geo-photo-popup-img{width:100%;max-width:180px;border-radius:4px;margin-bottom:6px;}
+  /* 照片轉正之後直立照變高，原本只限寬度（180px），3:4 的直立照高度就
+     變成 240px，加上數據那幾行超出地圖的 280px，整張卡被切掉。改成
+     以高度為主要限制：地圖高度扣掉數據、popup 內距與箭頭的空間。
+     width:auto 讓橫幅照片照樣用滿寬度，不會被拉扁。 */
+  .geo-photo-popup-img{display:block;margin:0 auto 6px;width:auto;height:auto;
+    max-width:180px;max-height:150px;object-fit:contain;border-radius:4px;}
   .geo-photo-popup-stats div{margin-bottom:2px;}
+  /* Leaflet 預設內距很寬（左右各 20px 上下 13px），在 220px 寬的卡片裡
+     等於少掉五分之一可用寬度。 */
+  .route-map .leaflet-popup-content{margin:10px 12px;}
+  .route-map .leaflet-popup-content-wrapper{border-radius:8px;}
 
   /* ---------- 開放水域 GPS 降噪 ---------- */
   .gps-denoise-row{margin-top:10px;}
@@ -2958,7 +2972,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.38.0';
+const APP_VERSION='v3.40.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3311,7 +3325,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3795,7 +3809,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -12009,23 +12023,62 @@ function renderPhotoGrid(){
       </div>
     </button>`).join('')}</div></div>`;
 }
+/* 表格檢視的年份收合：生涯上百場全部攤開，找一場 2024 的比賽要捲很久。
+   依年份分組、標題列顯示該年摘要（場次／完賽／合計里程），點一下展開
+   或收合。預設只展開「今年」（沒有今年的賽事就展開最新的一年）；
+   展開狀態記在記憶體、同一次瀏覽有效——年份清單會隨資料變，存進
+   localStorage 只會累積一堆已經不存在的年份。 */
+let tableExpandedYears=null;
+function tableYearOf(r){ return (r.schedule.raceDate||'').slice(0,4)||'unknown'; }
+function ensureTableExpandedYears(races){
+  if(tableExpandedYears) return;
+  const thisYear=String(new Date().getFullYear());
+  const years=races.map(tableYearOf);
+  tableExpandedYears=new Set([years.includes(thisYear)?thisYear:(years[0]||thisYear)]);
+}
 function renderTableView(){
   const races=filteredRaces().slice().sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
   if(!races.length){
     return `<div class="table-view-wrap">${emptyStateBlock('trash',t('ui.tableViewEmpty','沒有符合篩選條件的賽事'))}</div>`;
   }
-  const rows=races.map(r=>{
-    const dist=r.route.distanceKm!=null?r.route.distanceKm.toFixed(1):'—';
-    const elev=r.route.elevationGainM!=null?String(Math.round(r.route.elevationGainM)):'—';
-    const time=r.results.chipTimeSeconds!=null?secToHMS(r.results.chipTimeSeconds):'—';
-    return `<tr class="table-view-row${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
-      <td class="mono">${r.schedule.raceDate||'—'}</td>
-      <td class="table-view-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</td>
-      <td>${statusLabel(r.status)}</td>
-      <td class="mono num">${dist}</td>
-      <td class="mono num">${elev}</td>
-      <td class="mono num">${time}${r.results.isPb?' <span class="pb-badge">PB</span>':''}</td>
+  ensureTableExpandedYears(races);
+  // 被選中的賽事所在的年份強制展開：從別的檢視切過來時，選中的列
+  // 藏在收起的年份裡會讓人以為它不見了。
+  const selected=races.find(r=>r.id===state.selectedId);
+  if(selected) tableExpandedYears.add(tableYearOf(selected));
+  const groups=[];
+  races.forEach(r=>{
+    const year=tableYearOf(r);
+    let g=groups[groups.length-1];
+    if(!g||g.year!==year){ g={year,races:[]}; groups.push(g); }
+    g.races.push(r);
+  });
+  const rows=groups.map(g=>{
+    const open=tableExpandedYears.has(g.year);
+    const done=g.races.filter(r=>r.status==='completed').length;
+    const km=g.races.reduce((s2,r)=>s2+(r.route.distanceKm||0),0);
+    const label=g.year==='unknown'?t('ui.tableYearUnknown','未填日期'):g.year;
+    const summaryParts=[tf('ui.tableYearCount','{n} 場',g.races.length)];
+    if(done) summaryParts.push(tf('ui.tableYearDone','完賽 {n}',done));
+    if(km>0) summaryParts.push(tf('ui.tableYearKm','合計 {n} km',km>=100?Math.round(km):km.toFixed(1)));
+    const header=`<tr class="table-year-row${open?' open':''}" data-action="toggle-table-year" data-year="${g.year}">
+      <td colspan="6"><span class="table-year-chevron">${open?'▾':'▸'}</span> <strong>${label}</strong>
+        <span class="table-year-summary">${summaryParts.join(' ・ ')}</span></td>
     </tr>`;
+    if(!open) return header;
+    return header+g.races.map(r=>{
+      const dist=r.route.distanceKm!=null?r.route.distanceKm.toFixed(1):'—';
+      const elev=r.route.elevationGainM!=null?String(Math.round(r.route.elevationGainM)):'—';
+      const time=r.results.chipTimeSeconds!=null?secToHMS(r.results.chipTimeSeconds):'—';
+      return `<tr class="table-view-row${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
+        <td class="mono">${r.schedule.raceDate||'—'}</td>
+        <td class="table-view-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</td>
+        <td>${statusLabel(r.status)}</td>
+        <td class="mono num">${dist}</td>
+        <td class="mono num">${elev}</td>
+        <td class="mono num">${time}${r.results.isPb?' <span class="pb-badge">PB</span>':''}</td>
+      </tr>`;
+    }).join('');
   }).join('');
   return `<div class="table-view-wrap"><table class="table-view">
     <thead><tr>
@@ -12836,6 +12889,13 @@ raceContextEl_getter().addEventListener('click',e=>{
 document.addEventListener('click',e=>{
   const photoCard=e.target.closest('.photo-card');
   if(photoCard) selectRace(photoCard.dataset.id);
+  const yearRow=e.target.closest('.table-year-row');
+  if(yearRow){
+    const y=yearRow.dataset.year;
+    if(tableExpandedYears.has(y)) tableExpandedYears.delete(y); else tableExpandedYears.add(y);
+    renderCalendar();
+    return;
+  }
   const tableRow=e.target.closest('.table-view-row');
   if(tableRow) selectRace(tableRow.dataset.id);
   const dismissBtn=e.target.closest('[data-action="dismiss-focus-panel"]');

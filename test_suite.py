@@ -902,6 +902,60 @@ class Data(Group):
             const accept=input?input.getAttribute('accept'):'';
             return /heic/i.test(accept) && /image\\/\\*/.test(accept);
         }''')
+        # ---- 表格檢視依年份收合 ----
+        c['table_groups_by_year_default_current_open'] = page.evaluate('''async()=>{
+            tableExpandedYears=null;
+            state.races=[]; state.selectedId=null; currentRace=null;
+            const mk=(name,date,st,km)=>{ const r=emptyRace(name,'road_running',st,date);
+                if(km) r.route.distanceKm=km; if(st==='completed') r.results.chipTimeSeconds=3600;
+                state.races.push(r); return r; };
+            mk('今年A','2026-03-01','completed',10); mk('今年B','2026-10-01','registered',21.1);
+            mk('去年','2025-05-01','completed',42.195); mk('明年','2027-01-31','registered',42.2);
+            state.viewMode='table'; renderCalendar();
+            await new Promise(s=>setTimeout(s,200));
+            const headers=[...document.querySelectorAll('.table-year-row')].map(e=>e.dataset.year+(e.classList.contains('open')?':open':':closed'));
+            const visibleRows=document.querySelectorAll('.table-view-row').length;
+            return headers.join(',')==='2027:closed,2026:open,2025:closed' && visibleRows===2;
+        }''')
+        c['table_year_header_shows_summary_and_toggles'] = page.evaluate('''async()=>{
+            const h2025=document.querySelector('.table-year-row[data-year="2025"]');
+            const summaryOk=h2025.textContent.includes('1 場')&&h2025.textContent.includes('完賽 1')&&h2025.textContent.includes('42.2 km');
+            h2025.click(); await new Promise(s=>setTimeout(s,200));
+            const opened=document.querySelectorAll('.table-view-row').length===3;
+            document.querySelector('.table-year-row[data-year="2026"]').click();
+            await new Promise(s=>setTimeout(s,200));
+            const closed=[...document.querySelectorAll('.table-view-row')].every(r=>r.querySelector('td').textContent.startsWith('2025'));
+            return summaryOk && opened && closed;
+        }''')
+        c['selected_race_year_forced_open'] = page.evaluate('''async()=>{
+            const r2027=state.races.find(r=>r.schedule.raceDate==='2027-01-31');
+            state.selectedId=r2027.id; renderCalendar();
+            await new Promise(s=>setTimeout(s,200));
+            const h=document.querySelector('.table-year-row[data-year="2027"]');
+            const row=document.querySelector('.table-view-row.selected');
+            return h.classList.contains('open') && !!row && row.dataset.id===r2027.id;
+        }''')
+        # 地圖照片卡片要整個放得進地圖裡（直立照最容易超出）
+        c['geo_photo_popup_fits_inside_map'] = page.evaluate('''async()=>{
+            const portrait=document.createElement('canvas'); portrait.width=600; portrait.height=800;
+            const g=portrait.getContext('2d'); g.fillStyle='#567'; g.fillRect(0,0,600,800);
+            const probe=document.createElement('div');
+            probe.className='route-map';
+            probe.style.cssText='position:absolute;left:-9999px;top:0;';
+            probe.innerHTML='<div class="leaflet-popup-content-wrapper"><div class="leaflet-popup-content">'
+              +geoPhotoPopupHtml({thumbnailDataUrl:portrait.toDataURL('image/png'),
+                  rawCapturedAt:new Date().toISOString(),elevationM:240,hr:175,paceSecPerKm:253})
+              +'</div></div>';
+            document.body.appendChild(probe);
+            const img=probe.querySelector('.geo-photo-popup-img');
+            await new Promise(res=>{ if(img.complete) res(); else img.onload=res; });
+            const cardH=probe.querySelector('.leaflet-popup-content-wrapper').getBoundingClientRect().height;
+            const imgBox=img.getBoundingClientRect();
+            const statsLines=probe.querySelectorAll('.geo-photo-popup-stats div').length;
+            probe.remove();
+            // 地圖高 280px，卡片還要留箭頭與上下邊距，抓 240px 當上限
+            return cardH<=240 && imgBox.height<=150 && imgBox.width<imgBox.height && statsLines===3;
+        }''')
         c['undersized_thumbs_regenerate_once_only'] = page.evaluate('''async()=>{
             const mk=(px,q)=>{const c=document.createElement('canvas');
                 c.width=px;c.height=Math.round(px*0.75);
