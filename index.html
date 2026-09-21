@@ -13,6 +13,77 @@
   }catch(e){}
 })();
 </script>
+<script>
+/* 離線快取的救援閘門。放在最前面、跟主程式分開的一支小腳本——如果主程式
+   因為任何原因掛掉（快取到半截的檔案、瀏覽器不支援某個 API），這支還是
+   會跑，使用者才有辦法自己脫困。
+   1) 網址加 ?nosw=1：註銷所有 Service Worker、清掉所有快取，然後回到乾淨網址。
+   2) 連續三次「開始載入但沒能啟動完成」就自動做同樣的清除，並停用這一次的
+      離線快取註冊。白畫面＋不斷重整時，使用者什麼都不用做。
+   計數在 init() 成功結束時歸零，所以正常的連續重新整理不會被誤判。 */
+(function(){
+  function wipe(reason,then){
+    // 順序很重要：先註銷、再刪快取。反過來的話，還活著的 Service Worker
+    // 會在刪完之後因為攔到請求又把快取建回來（實測會留下 race-log-*）。
+    function unregisterAll(){
+      try{
+        if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations){
+          return navigator.serviceWorker.getRegistrations().then(function(rs){
+            return Promise.all(rs.map(function(r){ return r.unregister(); }));
+          });
+        }
+      }catch(e){}
+      return Promise.resolve();
+    }
+    function dropCaches(){
+      try{
+        if(window.caches&&caches.keys){
+          return caches.keys().then(function(ks){
+            return Promise.all(ks.map(function(k){ return caches.delete(k); }));
+          });
+        }
+      }catch(e){}
+      return Promise.resolve();
+    }
+    // 還在控制這一頁的 worker 收到 HARD_RESET 會自己把快取刪掉再註銷——
+    // 單靠頁面這邊刪，它可能在刪完之後又因為攔到請求把快取建回來。
+    try{
+      if(navigator.serviceWorker&&navigator.serviceWorker.controller){
+        navigator.serviceWorker.controller.postMessage({type:'HARD_RESET'});
+      }
+    }catch(e){}
+    unregisterAll().catch(function(){}).then(dropCaches).catch(function(){}).then(function(){
+      try{ sessionStorage.setItem('sw-wiped-v1',reason); }catch(e){}
+      if(then) then();
+    });
+  }
+  // 1) 手動救援
+  if(/[?&]nosw=1/.test(location.search)){
+    window.__swDisabled=true;
+    // 這個分頁接下來都不要再註冊：使用者是為了脫困才加這個參數，
+    // 導回乾淨網址後又馬上把離線快取裝回去，等於什麼都沒解決。
+    // 只存在 sessionStorage，關掉分頁就恢復正常。
+    try{ sessionStorage.setItem('sw-off-v1','1'); }catch(e){}
+    wipe('manual',function(){ location.replace(location.pathname+location.hash); });
+    return;
+  }
+  try{ if(sessionStorage.getItem('sw-off-v1')) window.__swDisabled=true; }catch(e){}
+  // 2) 開不起來的迴圈偵測。
+  //    只數「開始載入但從來沒有成功啟動完成」的次數——正常的重新整理會
+  //    跑完 init()、把計數歸零，所以連按四次重新整理不會被誤判；只有
+  //    真的每次都白畫面／崩潰（init 跑不到）才會累積。
+  try{
+    var fails=parseInt(sessionStorage.getItem('boot-fails-v1')||'0',10)||0;
+    if(fails>=2&&!sessionStorage.getItem('sw-wiped-v1')){
+      window.__swDisabled=true;            // 這一次不要註冊，先讓頁面活下來
+      sessionStorage.setItem('boot-fails-v1','0');
+      wipe('loop');
+    }else{
+      sessionStorage.setItem('boot-fails-v1',String(fails+1));
+    }
+  }catch(e){}
+})();
+</script>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -2981,7 +3052,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.43.0';
+const APP_VERSION='v3.45.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3334,7 +3405,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3818,7 +3889,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -5507,9 +5578,26 @@ function computeNutritionTotals(race){
 // 地方（例如判斷鞋子有沒有到壽命）不用改，會自動把訓練里程也算
 // 進去；需要分開顯示兩個來源的地方（鞋款管理畫面）則另外取
 // .raceDistance／.trainingDistance。
+// 多項運動：總距離是多個項目加起來的，不能整包算進單一裝備
+const MULTISPORT_TYPES=['triathlon','duathlon'];
+/* shoeDistanceOfRace(race)：這場賽事該記到鞋子頭上的里程。
+   三鐵／多項賽事不能用 race.route.distanceKm——那是全程距離（226 公里
+   裡有 3.8 游泳、180 騎車），鞋子只有跑步段在穿。有分項資料時只取
+   sport==='running' 的段落加總；沒有分項資料的多項賽事寧可回 0，
+   也不要把游泳與騎車的距離灌進鞋子壽命：少算可以補，多算會讓人
+   以為鞋子該退役了。單項跑步賽事維持全程距離。 */
+function shoeDistanceOfRace(race){
+  const legs=race.legs||[];
+  if(legs.length>=2){
+    const runKm=legs.filter(l=>l.sport==='running').reduce((s2,l)=>s2+(l.distanceKm||0),0);
+    return runKm||0;
+  }
+  if(MULTISPORT_TYPES.includes(race.sportType)) return 0;
+  return race.route.distanceKm||0;
+}
 function computeShoeStats(shoeId){
   const races=state.races.filter(r=>r.performanceData&&r.performanceData.shoeId===shoeId&&r.status==='completed'&&!r.deletedAt);
-  const raceDistance=races.reduce((s,r)=>s+(r.route.distanceKm||0),0);
+  const raceDistance=races.reduce((s,r)=>s+shoeDistanceOfRace(r),0);
   const shoe=shoes.find(s=>s.id===shoeId);
   const trainingDistance=(shoe&&shoe.trainingKm)||0;
   return {totalRaces:races.length,raceDistance,trainingDistance,totalDistance:raceDistance+trainingDistance};
@@ -5522,8 +5610,23 @@ function computeShoePerformanceStats(shoeId){
   const races=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.performanceData&&r.performanceData.shoeId===shoeId);
   if(!races.length) return null;
   const pbCount=races.filter(r=>r.results.isPb).length;
-  const withPace=races.filter(r=>r.results.chipTimeSeconds!=null&&r.route.distanceKm);
-  const avgPaceSecPerKm=withPace.length?withPace.reduce((s,r)=>s+r.results.chipTimeSeconds/r.route.distanceKm,0)/withPace.length:null;
+  // 平均配速同樣要用跑步段：三鐵拿全程時間除以全程距離，算出來的不是
+  // 這雙鞋的配速。有分項資料就用跑步段的時間與距離，沒有就跳過那一場。
+  const paceOf=r=>{
+    const legs=r.legs||[];
+    if(legs.length>=2){
+      const run=legs.filter(l=>l.sport==='running');
+      const km=run.reduce((s2,l)=>s2+(l.distanceKm||0),0);
+      const sec=run.reduce((s2,l)=>s2+(l.durationSeconds||0),0);
+      return (km>0&&sec>0)?sec/km:null;
+    }
+    // 多項賽事沒有分項資料時跳過：拿 226 公里的總時間除以總距離，得到的
+    // 是一個比跑步慢不了多少的假配速，會把平均值整個拉歪。
+    if(MULTISPORT_TYPES.includes(r.sportType)) return null;
+    return (r.results.chipTimeSeconds!=null&&r.route.distanceKm)?r.results.chipTimeSeconds/r.route.distanceKm:null;
+  };
+  const paces=races.map(paceOf).filter(v=>v!=null);
+  const avgPaceSecPerKm=paces.length?paces.reduce((s2,v)=>s2+v,0)/paces.length:null;
   const sorted=races.slice().sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
   return {totalRaces:races.length,pbCount,avgPaceSecPerKm,races:sorted};
 }
@@ -5544,7 +5647,7 @@ function computeShoeDegradation(shoeId){
   races.forEach(r=>{
     const splitPct=computeSplitPercent(r);
     if(splitPct!=null) points.push({race:r,mileageBefore:cumKm,splitPct});
-    cumKm+=(r.route.distanceKm||0);
+    cumKm+=shoeDistanceOfRace(r);
   });
   if(!points.length) return {points:[],threshold:null,early:null,late:null};
   const threshold=(shoe.targetKm||DEFAULT_SHOE_TARGET_KM)/2;
@@ -9440,7 +9543,7 @@ function computeYearInReviewStats(year){
     if(!sid) return;
     if(!shoeAgg[sid]) shoeAgg[sid]={count:0,distance:0};
     shoeAgg[sid].count++;
-    shoeAgg[sid].distance+=(r.route.distanceKm||0);
+    shoeAgg[sid].distance+=shoeDistanceOfRace(r);
   });
   let topShoeId=null;
   Object.keys(shoeAgg).forEach(sid=>{
@@ -16534,6 +16637,7 @@ function prefSet(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }
    ============================================================ */
 let swWaitingReg=null, swReloadRequested=false;
 function registerOfflineWorker(){
+  if(window.__swDisabled) return;   // 救援閘門已判定這次不要註冊
   if(!('serviceWorker' in navigator)) return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1') return;
   navigator.serviceWorker.register('./sw.js?v='+encodeURIComponent(APP_VERSION)).then(reg=>{
@@ -16706,7 +16810,20 @@ async function init(){
   renderAll();
   updateTopbarHeightVar();
   checkAndShowFirstUseGlow();
+  // 走到這裡代表這一次真的啟動完成了，把「開不起來」的計數歸零
+  try{ sessionStorage.setItem('boot-fails-v1','0'); }catch(e){}
   registerOfflineWorker();
+  // 剛做過救援清除的話，告訴使用者發生了什麼、以及離線快取暫時關掉了
+  try{
+    const wiped=sessionStorage.getItem('sw-wiped-v1');
+    if(wiped){
+      sessionStorage.removeItem('sw-wiped-v1');
+      showAppBanner({kind:'warn',text:wiped==='loop'
+        ?t('ui.swWipedLoop','偵測到頁面不斷重新整理，已清除離線快取並暫時停用。資料都在，重新整理一次即可恢復正常。')
+        :t('ui.swWipedManual','已清除離線快取。資料都在，重新整理一次即可恢復正常。'),
+        actions:[{label:t('ui.reloadNow','重新整理'),primary:true,run:()=>location.reload()},{label:t('ui.later','稍後')}]});
+    }
+  }catch(e){}
   bumpOpenCount();
   // 儲存空間警示比安裝提示優先：空間快滿是會掉資料的事，安裝只是方便。
   checkStorageHeadroom(true).then(ratio=>{ if(ratio==null||ratio<STORAGE_WARN_RATIO) maybeShowInstallHint(); });

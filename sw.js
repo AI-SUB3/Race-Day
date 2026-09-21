@@ -55,6 +55,9 @@ self.addEventListener('activate',event=>{
 
 self.addEventListener('message',event=>{
   if(event.data&&event.data.type==='SKIP_WAITING') self.skipWaiting();
+  if(event.data&&event.data.type==='HARD_RESET'){
+    event.waitUntil(caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).then(()=>self.registration.unregister()));
+  }
 });
 
 /* 導覽請求（開網站）：先試網路、逾時或失敗才用快取。
@@ -64,15 +67,26 @@ self.addEventListener('message',event=>{
 async function handleNavigation(request){
   const cache=await caches.open(CACHE);
   try{
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),NAV_TIMEOUT_MS);
-    const res=await fetch(request,{signal:controller.signal});
-    clearTimeout(timer);
-    if(res&&res.ok){ cache.put('./index.html',res.clone()); }
+    // 逾時用 Promise.race，不用 AbortController。把 {signal} 當第二個參數
+    // 傳給一個 mode==='navigate' 的 Request，各家瀏覽器處理不一致（有的
+    // 直接丟 TypeError），一旦丟錯就每次都落到下面的 catch、永遠只吃快取，
+    // 使用者再也拿不到新版。逾時只是「別等太久」，不需要真的中止請求。
+    const res=await Promise.race([
+      fetch(request),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('nav-timeout')),NAV_TIMEOUT_MS)),
+    ]);
+    if(res&&res.ok&&res.type!=='opaqueredirect'){
+      // put 失敗（例如 partial/redirect 回應）不該讓整個導覽失敗
+      cache.put('./index.html',res.clone()).catch(()=>{});
+    }
     return res;
   }catch(err){
     const cached=await cache.match('./index.html')||await cache.match('./');
-    if(cached) return cached;
+    if(cached){
+      // 拿快取出來的同時，背景抓一份新的，下一次就會是最新版
+      fetch(request).then(res=>{ if(res&&res.ok) cache.put('./index.html',res.clone()).catch(()=>{}); }).catch(()=>{});
+      return cached;
+    }
     throw err;
   }
 }

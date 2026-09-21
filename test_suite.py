@@ -1001,6 +1001,39 @@ class Data(Group):
             // 地圖高 280px，卡片還要留箭頭與上下邊距，抓 240px 當上限
             return cardH<=240 && imgBox.height<=150 && imgBox.width<imgBox.height && statsLines===3;
         }''')
+        # ---- 三鐵只有跑步段算進鞋子里程 ----
+        c['shoe_mileage_counts_run_leg_only'] = page.evaluate('''()=>{
+            shoes.push({id:'sh-tri',name:'測試鞋',targetKm:600,isRetired:false,trainingKm:0});
+            state.races=[];
+            const tri=emptyRace('CT226','triathlon','completed','2025-04-26');
+            tri.route.distanceKm=226; tri.results.chipTimeSeconds=52710; tri.performanceData.shoeId='sh-tri';
+            tri.legs=[{order:1,sport:'swimming',distanceKm:3.8,durationSeconds:4500},
+                      {order:2,sport:'transition',distanceKm:0,durationSeconds:300},
+                      {order:3,sport:'cycling',distanceKm:180,durationSeconds:25000},
+                      {order:4,sport:'running',distanceKm:42.195,durationSeconds:22670}];
+            state.races.push(tri);
+            const run=emptyRace('台北馬','road_running','completed','2025-12-21');
+            run.route.distanceKm=42.195; run.results.chipTimeSeconds=12600; run.performanceData.shoeId='sh-tri';
+            state.races.push(run);
+            const st=computeShoeStats('sh-tri');
+            return Math.abs(shoeDistanceOfRace(tri)-42.195)<0.001
+                && Math.abs(shoeDistanceOfRace(run)-42.195)<0.001
+                && Math.abs(st.raceDistance-84.39)<0.01;
+        }''')
+        # 多項賽事沒有分項資料時寧可算 0，不要把游泳騎車灌進去
+        c['multisport_without_legs_adds_zero_shoe_km'] = page.evaluate('''()=>{
+            const tri2=emptyRace('113 無分項','triathlon','completed','2025-06-01');
+            tri2.route.distanceKm=113; tri2.results.chipTimeSeconds=21000; tri2.performanceData.shoeId='sh-tri';
+            state.races.push(tri2);
+            const st=computeShoeStats('sh-tri');
+            return shoeDistanceOfRace(tri2)===0 && Math.abs(st.raceDistance-84.39)<0.01;
+        }''')
+        # 平均配速也要用跑步段，沒有分項資料的多項賽事跳過
+        c['shoe_avg_pace_uses_run_leg'] = page.evaluate('''()=>{
+            const perf=computeShoePerformanceStats('sh-tri');
+            const expect=(22670/42.195+12600/42.195)/2;
+            return Math.abs(perf.avgPaceSecPerKm-expect)<0.5;
+        }''')
         c['undersized_thumbs_regenerate_once_only'] = page.evaluate('''async()=>{
             const mk=(px,q)=>{const c=document.createElement('canvas');
                 c.width=px;c.height=Math.round(px*0.75);
@@ -1317,6 +1350,31 @@ class Offline(Group):
             closeStorageCleanup();
             return order && stillThere && removed;
         }''')
+        # ---- 救援閘門（放最後：它會註銷 SW、清掉快取）----
+        # 正常的連續重新整理不可以被誤判（init 成功會把計數歸零）
+        c['normal_refresh_not_treated_as_loop'] = page.evaluate(
+            "()=>sessionStorage.getItem('boot-fails-v1')==='0' && !window.__swDisabled")
+        # 連續三次「載入但沒啟動完成」→ 這一次停用離線快取並清掉 worker
+        page.evaluate("()=>{sessionStorage.setItem('boot-fails-v1','2'); sessionStorage.removeItem('sw-wiped-v1');}")
+        page.goto(self.url, wait_until='domcontentloaded')
+        page.wait_for_timeout(2200)
+        c['repeated_boot_failure_disables_sw'] = page.evaluate("()=>window.__swDisabled===true")
+        c['repeated_boot_failure_unregisters_worker'] = page.evaluate(
+            "async()=>(await navigator.serviceWorker.getRegistrations()).length===0")
+        c['wipe_explains_itself_to_the_user'] = page.evaluate(
+            "()=>{const b=document.querySelector('.app-banner');"
+            "return !!b && b.textContent.indexOf('離線快取')>=0;}")
+        c['app_still_works_after_wipe'] = page.evaluate(
+            "()=>typeof state!=='undefined' && !!document.getElementById('app-version').textContent")
+        # 手動救援：?nosw=1 清乾淨、回到沒有參數的網址，且這個分頁不再註冊
+        page.goto(self.url, wait_until='domcontentloaded')
+        page.wait_for_timeout(1500)
+        page.goto(self.url + '?nosw=1', wait_until='domcontentloaded')
+        page.wait_for_timeout(2500)
+        c['nosw_param_lands_on_clean_url'] = page.evaluate("()=>location.search===''")
+        c['nosw_param_keeps_sw_off_for_this_session'] = page.evaluate(
+            "async()=>window.__swDisabled===true && sessionStorage.getItem('sw-off-v1')==='1'"
+            " && (await navigator.serviceWorker.getRegistrations()).length===0")
 
 class Climate(Group):
     """氣候與表現：個人距離曲線、溫度估計值退回、越野校正開關。"""
