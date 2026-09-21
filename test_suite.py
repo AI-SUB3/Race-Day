@@ -1098,6 +1098,95 @@ class Offline(Group):
             return order && stillThere && removed;
         }''')
 
+class Climate(Group):
+    """氣候與表現：個人距離曲線、溫度估計值退回、越野校正開關。"""
+
+    SEED = """()=>{
+        state.races=[];
+        const add=(name,sport,km,sec,feels,avg,elev,splits)=>{
+          const r=emptyRace(name,sport,'completed','2026-0'+(1+state.races.length%9)+'-1'+(state.races.length%9));
+          r.route.distanceKm=km; r.results.chipTimeSeconds=sec;
+          if(feels!=null) r.raceDayWeather.feelsLikeTempC=feels; if(avg!=null) r.climateForecast.avgTempC=avg;
+          if(elev!=null) r.route.elevationGainM=elev; if(splits) r.splits=splits; state.races.push(r); return r; };
+        add('5K','road_running',5,1230,12,null); add('10K','road_running',10,2580,15,null);
+        add('15K','road_running',15,4020,null,22); add('半馬','road_running',21.1,5700,18,null);
+        add('30K','road_running',30,8700,null,26); add('全馬','road_running',42.195,12400,20,null);
+        add('全馬熱','road_running',42.195,13300,31,null);
+        add('沒溫度','road_running',10,2700,null,null);
+        const sp=(n,base)=>Array.from({length:n},(_,i)=>({distanceKm:1,avgPaceSecPerKm:base+i*40,elevationGainM:20+i*25,elevationLossM:5}));
+        add('越野A','trail_running',25,9500,24,null,1200,sp(8,330)); add('越野B','trail_running',30,11800,28,null,1500,sp(8,360)); add('越野C','trail_running',20,7300,16,null,900,sp(8,300));
+        try{ localStorage.removeItem('climate-include-trail-v1'); }catch(e){}
+        return true;
+    }"""
+
+    def body(self, page):
+        c = self.checks
+        page.evaluate(self.SEED)
+        # 舊規則只有三個經典距離 4 場；新規則 5K/15K/30K 都進來，沒溫度的仍然排除
+        c['all_road_distances_now_count'] = page.evaluate('''()=>{
+            const old=computeClimatePerformancePoints().length;
+            const p=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true});
+            const names=p.map(x=>x.race.name);
+            return old===4 && p.length===7 && names.includes('5K') && names.includes('30K') && !names.includes('沒溫度');
+        }''')
+        # 曲線：k 從六個距離擬合、落在合理範圍；包絡讓所有效率 ≤100 且剛好一場是 100
+        c['distance_curve_fitted_and_enveloped'] = page.evaluate('''()=>{
+            const p=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true});
+            const cv=p.curve;
+            const effs=p.map(x=>x.efficiencyPct);
+            return cv.fitted && cv.k>1.0 && cv.k<1.25 && cv.distinctDistances===6
+                && effs.every(e=>e<=100.0001) && effs.filter(e=>e>99.999).length===1;
+        }''')
+        c['default_k_when_single_distance'] = page.evaluate('''()=>{
+            const keep=state.races; state.races=keep.filter(r=>r.route.distanceKm===42.195);
+            const cv=computePersonalDistanceCurve(); state.races=keep;
+            return cv && !cv.fitted && Math.abs(cv.k-RIEGEL_DEFAULT_K)<1e-9;
+        }''')
+        # 溫度退回：兩場只有氣候平均溫的被標成估計值，圖上畫成空心
+        c['estimated_temp_flagged_and_hollow'] = page.evaluate('''()=>{
+            const p=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true});
+            const est=p.filter(x=>x.tempEstimated).map(x=>x.race.name).sort().join(',');
+            renderCalendar();
+            const hollow=document.querySelectorAll('.climate-chart-svg circle[fill="none"]').length;
+            return est==='15K,30K' && hollow>=2;
+        }''')
+        # 越野：預設關；開了且爬升係數就緒才進來，畫成三角，且效率已校正（比未校正高）
+        c['trail_off_by_default_on_when_toggled'] = page.evaluate('''()=>{
+            const off=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true,includeTrail:false});
+            const on =computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true,includeTrail:true});
+            const trail=on.filter(x=>x.isTrail);
+            const raw=state.races.find(r=>r.name==='越野A');
+            const uncorrected=on.curve.predictSeconds(raw.route.distanceKm)/raw.results.chipTimeSeconds*100;
+            return off.filter(x=>x.isTrail).length===0 && trail.length===3 && trail[0].efficiencyPct>uncorrected;
+        }''')
+        c['trail_toggle_rerenders_with_triangles'] = page.evaluate('''async()=>{
+            const cb=document.querySelector('[data-action="climate-toggle-trail"]');
+            cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,300));
+            const tri=document.querySelectorAll('.climate-chart-svg path[d^="M"]').length;
+            const text=document.querySelector('.climate-chart-wrap').innerText;
+            return localStorage.getItem('climate-include-trail-v1')==='1' && tri>=3 && /10 場賽事推算/.test(text) && /3 場越野已校正/.test(text);
+        }''')
+        c['trail_excluded_when_gravity_not_ready'] = page.evaluate('''()=>{
+            state.races.forEach(r=>{ if(r.sportType==='trail_running') r.splits=[]; });
+            const on=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true,includeTrail:true});
+            renderCalendar();
+            const note=!!document.querySelector('.climate-trail-notready');
+            return on.filter(x=>x.isTrail).length===0 && note;
+        }''')
+        # 甜蜜點只看效率 ≥98，不是「每個距離的最佳」都算
+        c['sweet_spot_uses_efficiency_not_frontier'] = page.evaluate('''()=>{
+            const p=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true});
+            const band=computeSweetSpotBand(p);
+            const frontier=p.filter(x=>x.isPb).length;
+            return band && band.count<frontier && band.count===p.filter(x=>x.efficiencyPct>=98).length;
+        }''')
+        # EPP 沒有跟著放寬：不傳參數 = 舊規則
+        c['epp_still_strict'] = page.evaluate('''()=>{
+            const p=computeClimatePerformancePoints();
+            return p.length===4 && p.every(x=>!x.tempEstimated && !x.isTrail && x.category);
+        }''')
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -1111,6 +1200,7 @@ GROUPS = {
     'share':      lambda: Share('share'),
     'share_touch':lambda: ShareTouch(),
     'offline':    lambda: Offline(),
+    'climate':    lambda: Climate('climate'),
 }
 
 

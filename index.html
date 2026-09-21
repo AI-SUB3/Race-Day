@@ -2088,6 +2088,10 @@
   .gpx-overwrite-note{display:block;font-size:12px;color:var(--flag);margin-top:2px;}
   /* 分享圖設定：格式切換沿用篩選 chip 的外觀，勾選列用一般 label */
   .share-format-row{display:flex;gap:8px;margin:4px 0 12px;}
+  .climate-chart-curve{color:var(--stone);margin-top:4px;}
+  .climate-trail-toggle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--stone);margin-top:8px;cursor:pointer;}
+  .climate-trail-toggle input{accent-color:var(--trail);}
+  .climate-trail-notready{color:var(--flag);}
   /* 長按卡片的快速動作：手機上長按不要跳出系統的文字選取／連結選單 */
   @media (pointer:coarse){
     .cal-chip,.cal-list-item,.photo-card,.table-view-row{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;}
@@ -2953,7 +2957,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.31.0';
+const APP_VERSION='v3.32.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3137,7 +3141,7 @@ const JA={
   'ui.elevationTrendTitle':'四半期別累積標高（トレンド）',
   'ui.climateChartTitle':'気候とパフォーマンスの散布図','ui.climateChartSlope':'気温が1°C上がるごとに、ペースは平均で約 {n} ポイント低下します（R²={r2}、{count}件のレースから算出）',
   'ui.climateChartXAxis':'体感温度','ui.climateChartYAxis':'ペース低下（自己PB比）',
-  'ui.climateChartSweetSpotLabel':'スイートスポット','ui.climateChartLegendPb':'PB','ui.climateChartLegendOther':'その他のレース',
+  'ui.climateChartSweetSpotLabel':'スイートスポット','ui.climateChartLegendPb':'距離別ベスト','ui.climateChartLegendOther':'その他のレース',
   'ui.climateChartWeakR2':'R²が低いため、気温だけでは配速の差の大部分を説明できていません。この線はあくまで参考値で、まだ安定した傾向とは言えません——データが増えるほど信頼性が上がります。',
   'ui.climateChartSweetSpot':'最適な気温帯：{range}（高効率レース {n} 件から算出）',
   'ui.eppTitle':'環境ペナルティ予測（EPP）','ui.eppNotReadyHint':'2つの係数が揃い、このレースに距離が入力されると、ここにペナルティ・ウォーターフォール図とAI予測タイムが表示されます。',
@@ -3306,7 +3310,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3629,7 +3633,7 @@ const EN={
   'ui.elevationTrendTitle':'Cumulative Elevation by Quarter',
   'ui.climateChartTitle':'Climate vs. Performance','ui.climateChartSlope':'For every 1°C rise in temperature, pace slows by about {n} percentage points on average (R²={r2}, based on {count} races)',
   'ui.climateChartXAxis':'Feels-Like Temperature','ui.climateChartYAxis':'Pace Degradation (vs. own PB)',
-  'ui.climateChartSweetSpotLabel':'Sweet Spot','ui.climateChartLegendPb':'PB','ui.climateChartLegendOther':'Other Races',
+  'ui.climateChartSweetSpotLabel':'Sweet Spot','ui.climateChartLegendPb':'Best per distance','ui.climateChartLegendOther':'Other Races',
   'ui.climateChartWeakR2':'R\u00b2 is low, meaning temperature alone doesn\u2019t explain most of the variation in pace. This line is only a rough reference, not yet a reliable pattern \u2014 it\u2019ll get more trustworthy with more data points.',
   'ui.climateChartSweetSpot':'Sweet spot temperature range: {range} (based on {n} high-efficiency race(s))',
   'ui.eppTitle':'Environmental Pace Penalty (EPP)','ui.eppNotReadyHint':'Once both coefficients are ready and this race has a distance filled in, a penalty waterfall chart and AI predicted time will appear here.',
@@ -3790,7 +3794,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -10002,30 +10006,90 @@ function classifyClassicDistance(distanceKm){
   const match=CLASSIC_DISTANCES.find(d=>distanceKm>=d.min&&distanceKm<=d.max);
   return match?match.key:null;
 }
-// 每個「經典距離」分類各自找出自己的最快配速當 100% 效率基準，同一場
-// 賽事只會跟同樣距離分類的其他賽事比較，不會拿 10K 的配速去跟全馬比。
-function computeClimatePerformancePoints(){
-  const completed=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.sportType==='road_running'
-    &&r.route.distanceKm!=null&&r.results.chipTimeSeconds!=null&&r.raceDayWeather.feelsLikeTempC!=null);
-  const byCategory={};
-  completed.forEach(r=>{
-    const cat=classifyClassicDistance(r.route.distanceKm);
-    if(!cat) return;
-    (byCategory[cat]=byCategory[cat]||[]).push(r);
-  });
+/* ============================================================
+   個人距離曲線（Riegel）：T = exp(a) × D^k。
+   原本效率基準是「10K／半馬／全馬三個分類各自的 PB」，三個桶以外的距離
+   （5K、15K、30K、超馬路跑）沒有同伴可比，整場直接丟掉——氣候圖上
+   「依 6 場推算」多半就是這樣來的。改成一條連續曲線之後，任何距離都
+   能算出「這個距離我的理論最佳」，效率 = 理論／實際。
+   k 從你自己各距離的最佳成績擬合（log-log 迴歸），資料不夠就用一般
+   跑者的 1.06；截距取「包絡」——把曲線壓到最緊的那一場之下，讓所有
+   實際成績的效率都 ≤100%，語意跟以前的「PB 是 100%」一致。
+   ============================================================ */
+const RIEGEL_DEFAULT_K=1.06;
+function computePersonalDistanceCurve(){
+  const runs=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.sportType==='road_running'
+    &&r.route.distanceKm>0&&r.results.chipTimeSeconds>0);
+  if(!runs.length) return null;
+  // 每 0.5 km 一桶取最佳，只用前緣點擬合——不然同距離跑差的場次會把曲線往上拉
+  const buckets=new Map();
+  runs.forEach(r=>{ const key=Math.round(r.route.distanceKm*2)/2; const cur=buckets.get(key);
+    if(!cur||r.results.chipTimeSeconds<cur.results.chipTimeSeconds) buckets.set(key,r); });
+  const frontier=[...buckets.values()];
+  const distinct=new Set(frontier.map(r=>Math.round(r.route.distanceKm)));
+  let k=RIEGEL_DEFAULT_K,fitted=false,r2=null;
+  if(distinct.size>=2){
+    const reg=linearRegression(frontier.map(r=>({x:Math.log(r.route.distanceKm),y:Math.log(r.results.chipTimeSeconds)})));
+    if(reg&&Number.isFinite(reg.slope)){ k=Math.min(1.25,Math.max(1.0,reg.slope)); fitted=true; r2=reg.r2; }
+  }
+  const resid=r=>Math.log(r.results.chipTimeSeconds)-k*Math.log(r.route.distanceKm);
+  const a=Math.min(...frontier.map(resid));
+  const anchorRace=frontier.find(r=>Math.abs(resid(r)-a)<1e-9)||frontier[0];
+  const frontierIds=new Set(frontier.map(r=>r.id));
+  return {k,a,fitted,r2,frontierCount:frontier.length,distinctDistances:distinct.size,anchorRace,frontierIds,
+    predictSeconds:d=>Math.exp(a+k*Math.log(d))};
+}
+/* computeClimatePerformancePoints(opts)：氣候圖與 EPP 共用的資料層。
+   opts.allDistances   用距離曲線當基準（否則只收三個經典距離、各自 PB 當基準）
+   opts.allowEstimatedTemp 沒有體感溫度時退回歷史氣候平均溫，點會標成估計值
+   opts.includeTrail   越野跑用爬升折損係數校正回平地等價，係數沒準備好就不收
+   EPP 沿用最嚴格的那一組（三個參數全關），它的係數要拿去預測完賽時間，
+   寧可少幾場也不要混進估計值。 */
+function computeClimatePerformancePoints(opts){
+  opts=opts||{};
+  const curve=opts.allDistances?computePersonalDistanceCurve():null;
+  const gravity=opts.includeTrail?computeGravityCoefficient():null;
+  const trailOk=!!(gravity&&gravity.ready);
+  const completed=state.races.filter(r=>!r.deletedAt&&r.status==='completed'
+    &&r.route.distanceKm>0&&r.results.chipTimeSeconds>0
+    &&(r.sportType==='road_running'||(opts.includeTrail&&trailOk&&(r.sportType==='trail_running'||r.sportType==='ultra_marathon')&&r.route.elevationGainM!=null)));
+  const withTemp=completed.map(r=>{
+    const measured=r.raceDayWeather&&r.raceDayWeather.feelsLikeTempC;
+    const est=r.climateForecast&&r.climateForecast.avgTempC;
+    if(measured!=null) return {r,tempC:measured,tempEstimated:false};
+    if(opts.allowEstimatedTemp&&est!=null) return {r,tempC:est,tempEstimated:true};
+    return null;
+  }).filter(Boolean);
+  // 越野：整場平均坡度 × 爬升係數，把配速校正回平地等價。粗，但跟係數
+  // 本身的定義一致（每 1% 坡度慢幾 %）；不校正的話越野點會全部躺在最下面。
+  const effectiveSeconds=r=>{
+    if(r.sportType==='road_running'||!trailOk) return r.results.chipTimeSeconds;
+    const gradePct=r.route.elevationGainM/(r.route.distanceKm*10);
+    const factor=1+gravity.pctPerGradePoint*gradePct/100;
+    return factor>0.3?r.results.chipTimeSeconds/factor:r.results.chipTimeSeconds;
+  };
   const points=[];
+  if(curve){
+    withTemp.forEach(({r,tempC,tempEstimated})=>{
+      const secs=effectiveSeconds(r);
+      const efficiencyPct=Math.min(100,curve.predictSeconds(r.route.distanceKm)/secs*100);
+      points.push({race:r,category:classifyClassicDistance(r.route.distanceKm),tempC,tempEstimated,
+        isTrail:r.sportType!=='road_running',efficiencyPct,degradationPct:efficiencyPct-100,
+        isPb:curve.frontierIds.has(r.id)});
+    });
+    points.curve=curve; points.gravity=gravity;
+    return points;
+  }
+  const byCategory={};
+  withTemp.forEach(item=>{ const cat=classifyClassicDistance(item.r.route.distanceKm); if(!cat) return; (byCategory[cat]=byCategory[cat]||[]).push(item); });
   Object.keys(byCategory).forEach(cat=>{
-    const races=byCategory[cat];
-    const paces=races.map(r=>r.results.chipTimeSeconds/r.route.distanceKm);
+    const items=byCategory[cat];
+    const paces=items.map(({r})=>effectiveSeconds(r)/r.route.distanceKm);
     const pbPace=Math.min(...paces);
-    races.forEach((r,i)=>{
-      const pace=paces[i];
-      const efficiencyPct=(pbPace/pace)*100;
-      points.push({
-        race:r,category:cat,tempC:r.raceDayWeather.feelsLikeTempC,
-        efficiencyPct,degradationPct:efficiencyPct-100,
-        isPb:pace<=pbPace,
-      });
+    items.forEach(({r,tempC,tempEstimated},i)=>{
+      const efficiencyPct=(pbPace/paces[i])*100;
+      points.push({race:r,category:cat,tempC,tempEstimated,isTrail:r.sportType!=='road_running',
+        efficiencyPct,degradationPct:efficiencyPct-100,isPb:paces[i]<=pbPace});
     });
   });
   return points;
@@ -10057,7 +10121,11 @@ function linearRegression(pts){
 // 體感溫度的最小～最大範圍。只有一筆符合條件時，補一點寬度讓色塊看
 // 得出來，不會變成一條細線。
 function computeSweetSpotBand(points){
-  const highEff=points.filter(p=>p.isPb||p.efficiencyPct>=98);
+  // 只看效率 ≥98%：距離曲線之下「每個距離的最佳」（金點）不一定是高效率
+  // ——一個人跑過六種距離，六場都是該距離最佳，但相對曲線可能只有 96%。
+  // 甜蜜點要的是「那天狀態真的好」，不是「那個距離只跑過一次」。
+  // 舊的分類制裡 PB 本身就是 100%，所以這條規則對舊資料層等價。
+  const highEff=points.filter(p=>p.efficiencyPct>=98);
   if(!highEff.length) return null;
   const temps=highEff.map(p=>p.tempC);
   let min=Math.min(...temps),max=Math.max(...temps);
@@ -11071,9 +11139,18 @@ function computeMonthlyHeatmapData(){
 // 信心滿滿。
 const CLIMATE_CHART_MIN_POINTS=4;
 const CLIMATE_CHART_WEAK_R2=0.4;
+const CLIMATE_TRAIL_PREF_KEY='climate-include-trail-v1';
+function climateIncludeTrail(){ try{ return localStorage.getItem(CLIMATE_TRAIL_PREF_KEY)==='1'; }catch(e){ return false; } }
 function climatePerformanceChartSvg(){
-  const points=computeClimatePerformancePoints();
-  if(points.length<CLIMATE_CHART_MIN_POINTS) return '';
+  const includeTrail=climateIncludeTrail();
+  const points=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true,includeTrail});
+  const gravityReady=!!(points.gravity&&points.gravity.ready);
+  // 越野開關永遠畫出來（就算資料不足也要讓人知道有這個選項），圖本身要夠點才畫
+  const trailToggle=`<label class="climate-trail-toggle small">
+      <input type="checkbox" data-action="climate-toggle-trail"${includeTrail?' checked':''}${includeTrail&&!gravityReady?' data-not-ready="1"':''}>
+      ${t('ui.climateIncludeTrail','含越野（用爬升折損係數校正）')}${includeTrail&&!gravityReady?`<span class="climate-trail-notready">${t('ui.climateTrailNotReady','爬升係數資料還不夠，越野暫不納入')}</span>`:''}
+    </label>`;
+  if(points.length<CLIMATE_CHART_MIN_POINTS) return `<div class="climate-chart-wrap">${trailToggle}</div>`;
 
   const sweetSpot=computeSweetSpotBand(points);
   const reg=linearRegression(points.map(p=>({x:p.tempC,y:p.degradationPct})));
@@ -11115,29 +11192,59 @@ function climatePerformanceChartSvg(){
     ?`<line x1="${padL}" y1="${sy(reg.intercept+reg.slope*minTemp).toFixed(1)}" x2="${w-padR}" y2="${sy(reg.intercept+reg.slope*maxTemp).toFixed(1)}" stroke="var(--flag)" stroke-width="${regIsWeak?1:1.5}" stroke-dasharray="${regIsWeak?'3 5':'5 4'}" opacity="${regIsWeak?0.5:1}"/>`
     :'';
   const dots=points.map(p=>{
-    const cx=sx(p.tempC).toFixed(1),cy=sy(p.degradationPct).toFixed(1);
-    const degLabel=p.isPb?'PB':(p.degradationPct.toFixed(1)+'%');
-    const tipText=`${p.race.name||t('ui.unnamedRace','(未命名賽事)')}/  ${p.tempC.toFixed(1)}°C/  ${degLabel}`;
-    return `<circle cx="${cx}" cy="${cy}" r="${p.isPb?5:4}" fill="${p.isPb?'var(--gold)':'var(--contour)'}" opacity="0.82"><title>${escapeHtml(tipText)}</title></circle>`;
+    const cx=+sx(p.tempC).toFixed(1),cy=+sy(p.degradationPct).toFixed(1);
+    // 金點＝該距離最佳，但效率照樣寫出來：距離曲線之下它可能只有 97%，
+    // 標成「PB」會讓人以為那場是 100%。
+    const degLabel=p.degradationPct.toFixed(1)+'%'+(p.isPb?t('ui.climateFrontierTip','（該距離最佳）'):'');
+    const tempLabel=p.tempC.toFixed(1)+'°C'+(p.tempEstimated?t('ui.climateTempEstimatedTip','（氣候平均，估計）'):'');
+    const trailLabel=p.isTrail?t('ui.climateTrailTip','／越野・已校正'):'';
+    const tipText=`${p.race.name||t('ui.unnamedRace','(未命名賽事)')}/  ${tempLabel}/  ${degLabel}${trailLabel}`;
+    const color=p.isPb?'var(--gold)':'var(--contour)';
+    const r=p.isPb?5:4;
+    // 空心＝溫度是估計值；三角＝越野（已用爬升係數校正）。形狀與實心分開表達
+    // 兩件事，才不會出現「空心三角」讀不出來是哪一種。
+    const shape=p.isTrail
+      ?`<path d="M${cx} ${cy-r-1} L${cx+r+1} ${cy+r} L${cx-r-1} ${cy+r} Z" fill="${p.tempEstimated?'none':color}" stroke="${color}" stroke-width="1.6" opacity="0.85">`
+      :`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${p.tempEstimated?'none':color}" stroke="${color}" stroke-width="1.6" opacity="0.85">`;
+    return shape+`<title>${escapeHtml(tipText)}</title>`+(p.isTrail?'</path>':'</circle>');
   }).join('');
+  const estimatedCount=points.filter(p=>p.tempEstimated).length;
+  const trailCount=points.filter(p=>p.isTrail).length;
   const axisLabels=`
     <text x="${padL}" y="${h-padBottom+20}" text-anchor="start" class="climate-chart-axis-label mono">${minTemp.toFixed(0)}°C</text>
     <text x="${w-padR}" y="${h-padBottom+20}" text-anchor="end" class="climate-chart-axis-label mono">${maxTemp.toFixed(0)}°C</text>
     <text x="${((padL+w-padR)/2).toFixed(1)}" y="${h-padBottom+20}" text-anchor="middle" class="climate-chart-axis-label mono">${t('ui.climateChartXAxis','體感溫度')}</text>
     <text x="${padL-6}" y="${padTop+4}" text-anchor="end" class="climate-chart-axis-label mono">0%</text>
     <text x="${padL-6}" y="${(padTop+plotH).toFixed(1)}" text-anchor="end" class="climate-chart-axis-label mono">${minDeg.toFixed(0)}%</text>
-    <text x="${padL}" y="16" text-anchor="start" class="climate-chart-axis-title">${t('ui.climateChartYAxis','配速衰退（相對自己 PB）')}</text>`;
+    <text x="${padL}" y="16" text-anchor="start" class="climate-chart-axis-title">${t('ui.climateChartYAxisCurve','配速衰退（相對個人距離曲線）')}</text>`;
+  // 圖例排成兩欄兩列：標籤從「PB」改成「各距離最佳」之後變長，原本
+  // 一列橫排會疊到隔壁。
+  const lx1=w-250,lx2=w-130;
   const legend=`
     <g class="climate-chart-legend">
-      <circle cx="${w-140}" cy="16" r="4" fill="var(--gold)"/>
-      <text x="${w-131}" y="19" class="climate-chart-legend-label">${t('ui.climateChartLegendPb','PB')}</text>
-      <circle cx="${w-95}" cy="16" r="4" fill="var(--contour)"/>
-      <text x="${w-86}" y="19" class="climate-chart-legend-label">${t('ui.climateChartLegendOther','其他賽事')}</text>
+      <circle cx="${lx1}" cy="16" r="4" fill="var(--gold)"/>
+      <text x="${lx1+9}" y="19" class="climate-chart-legend-label">${t('ui.climateChartLegendPb','各距離最佳')}</text>
+      <circle cx="${lx2}" cy="16" r="4" fill="var(--contour)"/>
+      <text x="${lx2+9}" y="19" class="climate-chart-legend-label">${t('ui.climateChartLegendOther','其他賽事')}</text>
+      ${estimatedCount?`<circle cx="${lx1}" cy="30" r="4" fill="none" stroke="var(--contour)" stroke-width="1.6"/>
+      <text x="${lx1+9}" y="33" class="climate-chart-legend-label">${t('ui.climateChartLegendEstimated','氣候平均溫')}</text>`:''}
+      ${trailCount?`<path d="M${lx2} 25 L${lx2+5} 34 L${lx2-5} 34 Z" fill="var(--contour)"/>
+      <text x="${lx2+9}" y="33" class="climate-chart-legend-label">${t('ui.climateChartLegendTrail','越野')}</text>`:''}
     </g>`;
 
+  const countDetail=[
+    estimatedCount?tf('ui.climateCountEstimated','其中 {n} 場用氣候平均溫',estimatedCount):'',
+    trailCount?tf('ui.climateCountTrail','{n} 場越野已校正',trailCount):'',
+  ].filter(Boolean).join('、');
   const slopeNote=reg
     ?`<div class="climate-chart-slope small">${t('ui.climateChartSlope','氣溫每升高 1°C，配速平均衰退約 {n} 個百分點（R²={r2}，依 {count} 場賽事推算）')
-        .replace('{n}',Math.abs(reg.slope).toFixed(2)).replace('{r2}',reg.r2!=null?reg.r2.toFixed(2):'—').replace('{count}',reg.n)}</div>`
+        .replace('{n}',Math.abs(reg.slope).toFixed(2)).replace('{r2}',reg.r2!=null?reg.r2.toFixed(2):'—').replace('{count}',reg.n)}${countDetail?`（${countDetail}）`:''}</div>`
+    :'';
+  const curve=points.curve;
+  const curveNote=curve
+    ?`<div class="climate-chart-curve small">${curve.fitted
+        ?tf2('ui.climateCurveFitted','效率基準：個人距離曲線 k={a}（依 {b} 個距離的最佳成績擬合）',curve.k.toFixed(2),curve.distinctDistances)
+        :tf('ui.climateCurveDefault','效率基準：個人距離曲線 k={n}（不同距離的成績還不夠擬合，先用一般跑者的預設值）',RIEGEL_DEFAULT_K.toFixed(2))}</div>`
     :'';
   const weakR2Note=regIsWeak
     ?`<p class="climate-chart-weak-note empty-hint small">${t('ui.climateChartWeakR2','R² 偏低，代表氣溫沒辦法解釋大部分的配速差異，這條線僅供參考，不是穩定的規律——資料點再多一些，這個估計會更可信。')}</p>`
@@ -11154,8 +11261,16 @@ function climatePerformanceChartSvg(){
     ${slopeNote}
     ${weakR2Note}
     ${sweetSpotNote}
+    ${curveNote}
+    ${trailToggle}
   </div>`;
 }
+document.addEventListener('change',e=>{
+  const cb=e.target.closest('[data-action="climate-toggle-trail"]'); if(!cb) return;
+  try{ localStorage.setItem(CLIMATE_TRAIL_PREF_KEY,cb.checked?'1':'0'); }catch(err){}
+  renderCalendar();
+  logFeatureUse('climate_toggle_trail');
+});
 function heatmapHtml(){
   const data=computeMonthlyHeatmapData();
   const keys=Object.keys(data);

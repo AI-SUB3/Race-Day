@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.31.0
+> 貼到新對話開頭即可接續。最後更新：v3.32.0
 
 ---
 
@@ -44,7 +44,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（93 項檢查，12 個群組）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（102 項檢查，13 個群組）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -56,7 +56,7 @@ python3 test_suite.py --list          # 列出群組
 APP=/path/to/index.html python3 test_suite.py
 ```
 
-群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）
+群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate`
 
 離開碼：0 通過 / 1 有失敗 / 2 參數錯誤（可直接接 CI）。
 已用「故意注入 XSS 漏洞」驗證過它真的抓得到回歸，不是只會印綠勾。
@@ -123,6 +123,7 @@ APP=/path/to/index.html python3 test_suite.py
 | 分項成績用 FIT session 而非配速猜測 | 猜測遇到爬坡慢騎或轉換區小跑會判斷錯 |
 | 範例資料真刪除不進垃圾桶 | 隨時可一鍵重匯，留垃圾桶會洗掉真正要救的賽事 |
 | 徽章只做資料算得出來的 | 行為追蹤是另一套機制，需獨立驗證 |
+| 氣候圖用個人距離曲線、EPP 維持經典距離 | 圖是給人看趨勢的，多收資料值得；EPP 係數拿去預測完賽時間，不混估計值。`computeClimatePerformancePoints()` 不帶參數 = 嚴格版 |
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
 | 外部套件走 jsDelivr 的 npm 路徑並鎖死版號 | SRI 雜湊要驗得出來才敢用。jsDelivr 逐位元組轉送 npm 原檔，雜湊能從官方 tarball 算出並比對；cdnjs 自行重新打包無從驗證。浮動版號（`@6`）配 SRI 則是定時炸彈，上游一發版就整包被擋 |
 | 破壞性操作用兩段式確認 | 沿用既有模式，5 秒自動解除，狀態各自獨立 |
