@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.45.0
+> 貼到新對話開頭即可接續。最後更新：v3.46.0
 
 ---
 
@@ -44,7 +44,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（128 項檢查，13 個群組）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（129 項檢查，13 個群組）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -140,6 +140,7 @@ APP=/path/to/index.html python3 test_suite.py
 - **manifest 路徑相對於 manifest 自身**，不是相對於網頁
 - **翻譯鍵有動態組合**（`'ui.leg_'+sport`），不能只靠搜尋判斷是否無用
 - **`saveJson`/`loadJson` 必須往外拋**，包 try/catch 會讓儲存警示永遠不觸發
+- **iOS Safari 不能對大元素套 `filter`**：`filter:blur()` 會把整棵子樹點陣化成單一 GPU 圖層，`#main-content` 這種整頁的元素會直接把分頁撐爆（白畫面＋不斷重整＋「重複發生問題」）。`transform` 沒事（會分塊）。彈窗景深的模糊只給 `(hover:hover) and (pointer:fine)`（v3.46.0）
 - **SW 出問題時的脫困方式：網址加 `?nosw=1`**，會註銷 worker、清快取、這個分頁不再註冊。連續三次啟動失敗也會自動做（`boot-fails-v1`，`init()` 成功時歸零）
 - **SW 裡不要把 `{signal}` 傳給 navigate 模式的 Request**：瀏覽器處理不一致，丟錯就會永遠只吃快取。逾時用 `Promise.race`
 - **清 SW 的順序：先 unregister 再刪 caches**，否則還活著的 worker 會把快取建回來

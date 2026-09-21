@@ -564,6 +564,14 @@ class Mobile(Group):
             return !e.defaultPrevented;
         }''')
         # 桌機的 Ctrl/⌘＋滾輪是瀏覽器縮放（無障礙），不能被攔（v3.33.0 拿掉攔截）
+        # 觸控裝置上開彈窗不能對整個主內容套 filter:blur——iOS 會因為圖層太大把分頁殺掉
+        c['overlay_open_does_not_blur_main_on_touch'] = page.evaluate('''()=>{
+            document.body.classList.add('overlay-open');
+            const cs=getComputedStyle(document.getElementById('main-content'));
+            const filter=cs.filter, transform=cs.transform;
+            document.body.classList.remove('overlay-open');
+            return filter==='none' && transform!=='none';   // 縮放景深保留，模糊拿掉
+        }''')
         c['ctrl_wheel_zoom_not_blocked'] = page.evaluate('''()=>{
             const a=new WheelEvent('wheel',{cancelable:true,bubbles:true,ctrlKey:true});
             const b=new WheelEvent('wheel',{cancelable:true,bubbles:true,metaKey:true});

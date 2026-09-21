@@ -1785,8 +1785,17 @@
   }
   body.overlay-open #main-content{
     transform:scale(0.96);
-    filter:blur(4px);
     border-radius:12px;
+  }
+  /* 模糊只給桌機。filter:blur() 會把整個 #main-content 連同底下所有
+     東西（整個月曆、上百張 base64 封面、獎牌牆、圖表）一次點陣化成
+     單一 GPU 圖層再做模糊——頁面越長、照片越多，這張貼圖就越大。
+     iOS Safari 對這種超大圖層沒有分塊處理，記憶體一超過就把整個
+     分頁殺掉、自動重新載入；使用者看到的是「開一個彈窗就白畫面、
+     不斷重整、最後出現『重複發生問題』」。transform 沒有這個問題
+     （Safari 會分塊），所以縮放與變暗的景深效果手機上照樣有。 */
+  @media (hover:hover) and (pointer:fine){
+    body.overlay-open #main-content{filter:blur(4px);}
   }
   /* 減少動態效果：保留「已經退到背景」這個語意，但不做位移與模糊，
      改用單純的淡化——完全不做區別的話，使用者會失去「主畫面現在不是
@@ -3052,7 +3061,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.45.0';
+const APP_VERSION='v3.46.0';
 
 /* ============================================================
    多語系（i18n）
