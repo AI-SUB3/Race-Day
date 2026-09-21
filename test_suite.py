@@ -480,6 +480,13 @@ class Mobile(Group):
             document.dispatchEvent(e);
             return !e.defaultPrevented;
         }''')
+        # 桌機的 Ctrl/⌘＋滾輪是瀏覽器縮放（無障礙），不能被攔（v3.33.0 拿掉攔截）
+        c['ctrl_wheel_zoom_not_blocked'] = page.evaluate('''()=>{
+            const a=new WheelEvent('wheel',{cancelable:true,bubbles:true,ctrlKey:true});
+            const b=new WheelEvent('wheel',{cancelable:true,bubbles:true,metaKey:true});
+            document.dispatchEvent(a); document.dispatchEvent(b);
+            return !a.defaultPrevented && !b.defaultPrevented;
+        }''')
         c['inputs_at_least_16px'] = page.evaluate('''async()=>{
             const r=emptyRace('M','trail_running','registered','2026-12-01');
             state.races.push(r); selectRace(r.id,{scroll:false});

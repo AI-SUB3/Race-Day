@@ -2957,7 +2957,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.32.0';
+const APP_VERSION='v3.33.0';
 
 /* ============================================================
    多語系（i18n）
@@ -16952,11 +16952,9 @@ document.addEventListener('touchend',e=>{
   if(now-lastTouchEndAt<=300) e.preventDefault();
   lastTouchEndAt=now;
 },{passive:false});
-// 桌機瀏覽器的 Ctrl/⌘＋滾輪縮放：這個 App 的版面是為固定比例設計的，
-// 在桌機上也一併鎖住，行為才一致。
-document.addEventListener('wheel',e=>{
-  if(e.ctrlKey||e.metaKey) e.preventDefault();
-},{passive:false});
+// 桌機的 Ctrl/⌘＋滾輪縮放刻意不攔（v3.33.0 拿掉原本的攔截）：那是瀏覽器
+// 層級的縮放，等同無障礙功能，使用者要看大一點是他的權利。手機鎖的是
+// 「像原生 App」的觸控體驗，兩者不是同一件事，不必為了行為一致犧牲桌機。
 /* ============================================================
    空間景深：有彈出層打開時，替 body 掛上 overlay-open，讓主內容退後
    失焦（實際效果見 #main-content 那段 CSS）。
