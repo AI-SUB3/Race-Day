@@ -1547,6 +1547,31 @@ class Share(Group):
             try{ localStorage.setItem('career-share-prefs-v1',JSON.stringify(careerSharePrefs)); }catch(e){}
             return ok;
         }''')
+        # 視窗是從生涯回顧（z-index:210 的全螢幕圖層）打開的，必須疊在它上面，
+        # 而且下載按鈕要真的按得到——被蓋住或被推到捲軸外都等於「按了沒反應」
+        c['career_modal_sits_above_hall_of_fame'] = page.evaluate('''async()=>{
+            state.races=[];
+            for(let i=0;i<6;i++){ const r=emptyRace('賽事'+i,'road_running','completed','2025-0'+(1+i)+'-11');
+              r.route.distanceKm=21.1; r.results.chipTimeSeconds=7200; state.races.push(r); }
+            renderCalendar(); openHallOfFame();
+            await new Promise(s=>setTimeout(s,300));
+            document.querySelector('[data-action="open-career-share"]').click();
+            await new Promise(s=>setTimeout(s,1200));
+            const hofZ=parseInt(getComputedStyle(document.getElementById('hof-overlay')).zIndex,10);
+            const modalZ=parseInt(getComputedStyle(document.getElementById('career-share-modal')).zIndex,10);
+            const mid=document.elementFromPoint(window.innerWidth/2,window.innerHeight/2);
+            return modalZ>hofZ && !!(mid&&mid.closest('#career-share-modal'));
+        }''')
+        c['career_download_button_is_reachable'] = page.evaluate('''()=>{
+            const btn=document.querySelector('[data-action="confirm-career-share"]');
+            if(!btn) return false;
+            const b=btn.getBoundingClientRect();
+            const hit=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);
+            const ok=b.top>=0 && b.bottom<=window.innerHeight+1
+                  && !!(hit&&hit.closest('[data-action="confirm-career-share"]'));
+            closeCareerShareModal(); closeHallOfFame();
+            return ok;
+        }''')
         c['share_desktop_downloads_not_share_sheet'] = page.evaluate('''async()=>{
             let shared=0, downloaded=0;
             const origShare=navigator.share, origCan=navigator.canShare, origDl=window.downloadBlob;

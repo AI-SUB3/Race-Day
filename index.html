@@ -2046,6 +2046,16 @@
     padding:2px 7px;border-radius:8px;letter-spacing:0.04em;
   }
   .hof-download-row{display:flex;justify-content:center;margin:-4px 0 18px;}
+  /* 生涯回顧本身是 z-index:210 的全螢幕圖層，而一般 .modal-overlay 只有
+     50——這個視窗是從生涯回顧裡打開的，不拉高就會整個被蓋在底下，畫面上
+     看起來像「按了沒反應」（實際上視窗是開著的，只是看不見）。 */
+  #career-share-modal{z-index:240;}
+  /* 生涯回顧圖是直式長條（實測 2160×4560），照原比例塞進視窗會把
+     下載按鈕推到捲軸外面——視窗看得到卻按不到，跟沒反應差不多。
+     預覽限高並自己捲動，按鈕永遠留在視窗底部。 */
+  #career-share-modal .share-preview{max-height:46vh;overflow-y:auto;border-radius:8px;}
+  #career-share-modal .modal-panel{display:flex;flex-direction:column;}
+  #career-share-modal .modal-actions{margin-top:14px;}
   #career-share-modal .share-preview img{width:100%;height:auto;display:block;border-radius:8px;}
   .hof-shoe-row{
     display:flex;align-items:baseline;gap:10px;padding:11px 0;
@@ -3172,7 +3182,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.66.0';
+const APP_VERSION='v3.67.0';
 
 /* ============================================================
    多語系（i18n）
