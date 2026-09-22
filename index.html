@@ -1080,6 +1080,8 @@
   .focus-weather-row{display:flex;gap:12px;flex-wrap:wrap;font-size:15px;font-weight:600;}
   .focus-weather-live-note{color:var(--stone);margin-top:4px;}
   .weather-action-row{margin:6px 0 10px;}
+  .climate-avg-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:4px 0 10px;}
+  .climate-avg-basis{color:var(--stone);}
   .focus-weather-error{color:var(--flag);margin-top:4px;}
   .focus-weather-gps-hint{color:var(--stone);margin-top:4px;}
   .historical-weather-block{
@@ -3189,7 +3191,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.71.0';
+const APP_VERSION='v3.73.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3542,7 +3544,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.weatherNeedsGpsHistory':'GPS 軌跡がないため当日の過去天気を自動取得できません。下の項目に手動入力できます','ui.weatherTooEarly':'リアルタイム予報はレース 7 日前から取得できます','ui.logiFee':'エントリー','ui.logiDeposit':'デポジット','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'参加費が未払い','ui.logiWarnStayGap':'宿泊がレース当日をカバーしていません','ui.logiWarnLateArrival':'往路の到着がスタート時刻より後','ui.logiWarnNoTransport':'海外レースの交通が未手配','ui.hofYearsHint':'{a}－{b}、うち {c} 年に出走','ui.careerShareButton':'生涯サマリーを保存','ui.careerShareTitle':'生涯サマリーを保存','ui.careerOptHero':'フルマラソン PB','ui.careerOptTiles':'生涯データ','ui.careerMissingHero':'フルマラソンの記録がありません','ui.careerMissingTracks':'GPS 軌跡の記録がありません','ui.careerMissingShoes':'シューズを登録した完走記録がありません','ui.careerMissingFuel':'補給の記録がありません','ui.careerShareFilename':'生涯サマリー.png','ui.careerShareFailed':'画像の生成に失敗しました。もう一度お試しください','ui.shareMissingHr':'心拍データなし','ui.shareMissingShoe':'シューズ未登録','ui.shareMissingShoeSport':'この種目では表示しません','ui.shareMissingFuel':'補給の記録なし','ui.shareMissingTrack':'GPX 軌跡なし','ui.resultDistance':'距離','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.climateAvgLabel':'例年平均','ui.climateAvgBasis':'{a} 年 × 前後 {b} 日','ui.climateAvgSamples':'、計 {n} 件','ui.climateAvgYearsOnly':'{n} 年分の同日データ','ui.weatherNeedsGpsHistory':'GPS 軌跡がないため当日の過去天気を自動取得できません。下の項目に手動入力できます','ui.weatherTooEarly':'リアルタイム予報はレース 7 日前から取得できます','ui.logiFee':'エントリー','ui.logiDeposit':'デポジット','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'参加費が未払い','ui.logiWarnStayGap':'宿泊がレース当日をカバーしていません','ui.logiWarnLateArrival':'往路の到着がスタート時刻より後','ui.logiWarnNoTransport':'海外レースの交通が未手配','ui.hofYearsHint':'{a}－{b}、うち {c} 年に出走','ui.careerShareButton':'生涯サマリーを保存','ui.careerShareTitle':'生涯サマリーを保存','ui.careerOptHero':'フルマラソン PB','ui.careerOptTiles':'生涯データ','ui.careerMissingHero':'フルマラソンの記録がありません','ui.careerMissingTracks':'GPS 軌跡の記録がありません','ui.careerMissingShoes':'シューズを登録した完走記録がありません','ui.careerMissingFuel':'補給の記録がありません','ui.careerShareFilename':'生涯サマリー.png','ui.careerShareFailed':'画像の生成に失敗しました。もう一度お試しください','ui.shareMissingHr':'心拍データなし','ui.shareMissingShoe':'シューズ未登録','ui.shareMissingShoeSport':'この種目では表示しません','ui.shareMissingFuel':'補給の記録なし','ui.shareMissingTrack':'GPX 軌跡なし','ui.resultDistance':'距離','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -4026,7 +4028,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.weatherNeedsGpsHistory':'No GPS track, so race-day historical weather cannot be fetched automatically; you can fill the fields below manually','ui.weatherTooEarly':'Live forecast becomes available 7 days before the race','ui.logiFee':'Entry','ui.logiDeposit':'Deposit','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'entry fee unpaid','ui.logiWarnStayGap':'stay does not cover race day','ui.logiWarnLateArrival':'outbound trip departs after the start','ui.logiWarnNoTransport':'overseas race with no transport planned','ui.hofYearsHint':'{a}–{b}, raced in {c} of them','ui.careerShareButton':'Save career summary','ui.careerShareTitle':'Save career summary','ui.careerOptHero':'Marathon PB','ui.careerOptTiles':'Career stats','ui.careerMissingHero':'no marathon result yet','ui.careerMissingTracks':'no GPS tracks imported','ui.careerMissingShoes':'no finishes with a shoe linked','ui.careerMissingFuel':'no fuel logged as consumed','ui.careerShareFilename':'career-summary.png','ui.careerShareFailed':'Could not generate the image; please try again','ui.shareMissingHr':'no heart-rate data','ui.shareMissingShoe':'no shoe linked','ui.shareMissingShoeSport':'not shown for this sport','ui.shareMissingFuel':'nothing marked as consumed','ui.shareMissingTrack':'no GPX track','ui.resultDistance':'Distance','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.climateAvgLabel':'Climate average','ui.climateAvgBasis':'{a} years × ±{b} days','ui.climateAvgSamples':', {n} samples','ui.climateAvgYearsOnly':'{n} years, same date','ui.weatherNeedsGpsHistory':'No GPS track, so race-day historical weather cannot be fetched automatically; you can fill the fields below manually','ui.weatherTooEarly':'Live forecast becomes available 7 days before the race','ui.logiFee':'Entry','ui.logiDeposit':'Deposit','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'entry fee unpaid','ui.logiWarnStayGap':'stay does not cover race day','ui.logiWarnLateArrival':'outbound trip departs after the start','ui.logiWarnNoTransport':'overseas race with no transport planned','ui.hofYearsHint':'{a}–{b}, raced in {c} of them','ui.careerShareButton':'Save career summary','ui.careerShareTitle':'Save career summary','ui.careerOptHero':'Marathon PB','ui.careerOptTiles':'Career stats','ui.careerMissingHero':'no marathon result yet','ui.careerMissingTracks':'no GPS tracks imported','ui.careerMissingShoes':'no finishes with a shoe linked','ui.careerMissingFuel':'no fuel logged as consumed','ui.careerShareFilename':'career-summary.png','ui.careerShareFailed':'Could not generate the image; please try again','ui.shareMissingHr':'no heart-rate data','ui.shareMissingShoe':'no shoe linked','ui.shareMissingShoeSport':'not shown for this sport','ui.shareMissingFuel':'nothing marked as consumed','ui.shareMissingTrack':'no GPX track','ui.resultDistance':'Distance','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -12672,7 +12674,7 @@ async function fetchLiveWeatherForRace(raceId){
   weatherFetchError='';
   renderFocusPanel();
   try{
-    const url=`https://api.open-meteo.com/v1/forecast?latitude=${pt.lat}&longitude=${pt.lon}&hourly=temperature_2m,precipitation_probability,wind_gusts_10m&timezone=auto&start_date=${race.schedule.raceDate}&end_date=${race.schedule.raceDate}`;
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${pt.lat}&longitude=${pt.lon}&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=auto&start_date=${race.schedule.raceDate}&end_date=${race.schedule.raceDate}`;
     const res=await fetch(url);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
@@ -12683,9 +12685,14 @@ async function fetchLiveWeatherForRace(raceId){
       fetchedAt:new Date().toISOString(),
       times:data.hourly.time,
       temp:data.hourly.temperature_2m,
+      feelsLike:data.hourly.apparent_temperature,
+      humidity:data.hourly.relative_humidity_2m,
       precipProb:data.hourly.precipitation_probability,
+      windSpeed:data.hourly.wind_speed_10m,
+      windDirection:data.hourly.wind_direction_10m,
       gust:data.hourly.wind_gusts_10m,
     };
+    applyLiveForecastAutofill(race);
     await persist();
     logFeatureUse('weather_live_fetch');
   }catch(err){
@@ -12759,6 +12766,31 @@ function degreesToCompassWindLabel(deg){
   const dirs=['北','北北東','東北','東北東','東','東南東','東南','南南東','南','南南西','西南','西南西','西','西北西','西北','北北西'];
   const idx=Math.round((((deg%360)+360)%360)/22.5)%16;
   return dirs[idx]+'風';
+}
+/* applyLiveForecastAutofill(race)：即時預報只回填「預報類」的欄位。
+   刻意不碰「實際體感溫度」與「當日濕度」——那兩個是賽後才會知道的
+   實際值，由歷史天氣回填。如果讓預報先填進去，比完之後歷史天氣的
+   回填只在欄位是空的時候動作，真正的實測值就永遠補不進來了，畫面上
+   會一直停在賽前的預測，而且看不出那是預測。
+   跟其他回填一樣：只填空的欄位，不覆蓋使用者自己打的值。 */
+function applyLiveForecastAutofill(race){
+  const lf=race.liveForecast;
+  if(!lf||!lf.times||!lf.times.length) return false;
+  let changed=false;
+  const idx=findClosestHourIndex(lf.times,race.schedule.startTime);
+  if(race.climateForecast.rainProbabilityPct==null&&lf.precipProb&&lf.precipProb[idx]!=null){
+    race.climateForecast.rainProbabilityPct=Math.round(lf.precipProb[idx]);
+    changed=true;
+  }
+  if(race.climateForecast.windSpeedKmh==null&&lf.windSpeed&&lf.windSpeed[idx]!=null){
+    race.climateForecast.windSpeedKmh=Math.round(lf.windSpeed[idx]*10)/10;
+    changed=true;
+  }
+  if(!race.climateForecast.windDirection&&lf.windDirection&&lf.windDirection[idx]!=null){
+    const label=degreesToCompassWindLabel(lf.windDirection[idx]);
+    if(label){ race.climateForecast.windDirection=label; changed=true; }
+  }
+  return changed;
 }
 function applyHistoricalWeatherAutofill(race){
   const hw=race.historicalWeather;
@@ -12945,6 +12977,9 @@ function isValidCalendarDateStr(dateStr){
   const [y,m,day]=dateStr.split('-').map(Number);
   return d.getUTCFullYear()===y&&(d.getUTCMonth()+1)===m&&d.getUTCDate()===day;
 }
+// 歷年平均的取樣範圍：往前 5 年，每年取「同月同日 ±3 天」
+const CLIMATE_AVG_YEARS=5;
+const CLIMATE_AVG_WINDOW=3;
 async function fetchHistoricalAverageWeatherForRace(raceId){
   const race=state.races.find(r=>r.id===raceId);
   if(!race||!raceHasGpsTrack(race)||!race.schedule.raceDate) return;
@@ -12957,36 +12992,53 @@ async function fetchHistoricalAverageWeatherForRace(raceId){
   // 的 2/29，套用到非閏年會被 JS 自動推移成 3/1，跟原本要求的月/日對
   // 不起來，代表那個年份根本沒有這一天，直接跳過、不送出這個年份的
   // 查詢（不會拿 2/28 去湊，畢竟是不同的一天，寧可平均少算一年）。
+  /* 每一年不是只取「同月同日」那一天，而是取前後 3 天的區間。
+     同一個日期在不同年份之間的跳動很大（某年剛好寒流就會把平均拉走），
+     5 個樣本根本不夠。±3 天 → 5 年 × 7 天 = 35 筆，穩定得多，而且
+     Open-Meteo 本來就支援日期區間，查詢次數完全沒有增加。 */
+  const shiftDays=(dateStr,delta)=>{
+    const d=new Date(dateStr+'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate()+delta);
+    return d.toISOString().slice(0,10);
+  };
   const years=[];
-  for(let i=1;i<=5;i++){
+  for(let i=1;i<=CLIMATE_AVG_YEARS;i++){
     const y=raceYear-i;
     const dateStr=`${y}-${monthStr}-${dayStr}`;
-    if(isValidCalendarDateStr(dateStr)) years.push({year:y,dateStr});
+    // 2/29 這種只有閏年才有的日子，非閏年直接跳過整年——不拿 2/28 來湊
+    if(!isValidCalendarDateStr(dateStr)) continue;
+    years.push({year:y,dateStr,
+      from:shiftDays(dateStr,-CLIMATE_AVG_WINDOW),
+      to:shiftDays(dateStr,CLIMATE_AVG_WINDOW)});
   }
   if(!years.length){ historicalAverageFetchingRaceId=null; return; }
   historicalAverageFetchingRaceId=raceId;
   if(currentRace&&currentRace.id===raceId) renderDetail();
   try{
-    const results=await Promise.allSettled(years.map(async ({year:y,dateStr})=>{
-      const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${pt.lat}&longitude=${pt.lon}&daily=temperature_2m_mean,relative_humidity_2m_mean&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`;
+    const results=await Promise.allSettled(years.map(async ({year:y,from,to})=>{
+      const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${pt.lat}&longitude=${pt.lon}&daily=temperature_2m_mean,relative_humidity_2m_mean&timezone=auto&start_date=${from}&end_date=${to}`;
       const res=await fetch(url);
       if(!res.ok) throw new Error('HTTP '+res.status);
       const data=await res.json();
       if(!data.daily||!data.daily.time||!data.daily.time.length) throw new Error('no data for '+y);
-      return {
-        year:y,
-        temp:data.daily.temperature_2m_mean[0],
-        humidity:data.daily.relative_humidity_2m_mean[0],
-      };
+      // 區間內每一天都是一筆樣本，null 的日子（未來日期、資料缺漏）丟掉
+      const temps=(data.daily.temperature_2m_mean||[]).filter(v=>v!=null);
+      const hums=(data.daily.relative_humidity_2m_mean||[]).filter(v=>v!=null);
+      return {year:y,temps,hums};
     }));
     const succeeded=results.filter(r=>r.status==='fulfilled').map(r=>r.value)
-      .filter(v=>v.temp!=null||v.humidity!=null);
-    if(!succeeded.length) throw new Error('五個年份都沒有查到資料');
-    const temps=succeeded.map(v=>v.temp).filter(v=>v!=null);
-    const humidities=succeeded.map(v=>v.humidity).filter(v=>v!=null);
+      .filter(v=>v.temps.length||v.hums.length);
+    if(!succeeded.length) throw new Error('所有年份都沒有查到資料');
+    const temps=succeeded.flatMap(v=>v.temps);
+    const humidities=succeeded.flatMap(v=>v.hums);
     race.historicalAverageWeather={
       fetchedAt:new Date().toISOString(),
       years:succeeded.map(v=>v.year),
+      // 樣本數要存下來：某幾年查詢失敗時（未來賽事的「去年」還沒到，
+      // 尤其容易）實際只用了兩三年，畫面上得看得出來，不然使用者會
+      // 以為那是完整的多年平均。
+      windowDays:CLIMATE_AVG_WINDOW,
+      sampleCount:Math.max(temps.length,humidities.length),
       avgTempC:temps.length?Math.round((temps.reduce((a,b)=>a+b,0)/temps.length)*10)/10:null,
       avgHumidityPct:humidities.length?Math.round(humidities.reduce((a,b)=>a+b,0)/humidities.length):null,
     };
@@ -14026,6 +14078,20 @@ function raceDayWeatherBlockHtml(race){
   }
   // 2) 未來賽事的即時預報
   if(race.liveForecast) parts.push(liveForecastCompactHtml(race.liveForecast,race));
+  /* 3) 歷年平均：一定要標示這是幾年、幾筆資料算出來的。
+     某幾年查不到時（未來賽事的「去年」可能還沒發生）樣本會靜靜地變少，
+     不寫出來的話，兩年平均跟五年平均在畫面上長得一模一樣。 */
+  const ha=race.historicalAverageWeather;
+  if(ha&&(ha.avgTempC!=null||ha.avgHumidityPct!=null)){
+    const vals=[ha.avgTempC!=null?ha.avgTempC+'°C':'',
+                ha.avgHumidityPct!=null?ha.avgHumidityPct+'%':''].filter(Boolean).join('　');
+    const basis=ha.sampleCount
+      ? tf2('ui.climateAvgBasis','依 {a} 年 × 前後 {b} 天',ha.years.length,ha.windowDays)
+          .replace('{c}',ha.sampleCount)+tf('ui.climateAvgSamples','，共 {n} 筆',ha.sampleCount)
+      : tf('ui.climateAvgYearsOnly','依 {n} 年同日資料',ha.years.length);
+    parts.push(`<p class="climate-avg-row"><span class="mono">${escapeHtml(vals)}</span>
+      <span class="small climate-avg-basis">${t('ui.climateAvgLabel','歷年平均')}・${escapeHtml(basis)}</span></p>`);
+  }
   // 3) 入口與說明：為什麼沒有自動抓，以及現在能做什麼
   if(inWindow&&hasTrack){
     parts.push(`<p class="weather-action-row"><button type="button" class="btn-text-small" data-action="fetch-live-weather" data-id="${race.id}"${weatherFetchingRaceId===race.id?' disabled':''}>${
@@ -14702,8 +14768,16 @@ function renderDetail(){
   }
   // 歷年平均氣溫濕度是獨立的另一個背景查詢（跟上面單日實際天氣分開
   // 觸發、分開快取），兩者各自判斷各自的條件，不互相依賴。
-  if(!race.historicalAverageWeather&&historicalAverageFetchingRaceId!==race.id&&raceIsHistorical(race)&&raceHasGpsTrack(race)){
+  // 歷年平均是「這個地點、這個日期、過去幾十年的平均」，跟比賽有沒有
+  // 結束完全無關——賽前想知道「這個時節大概幾度」才是最需要它的時候。
+  // 原本綁了 raceIsHistorical()，導致未來賽事這兩個欄位永遠是空的。
+  if(!race.historicalAverageWeather&&historicalAverageFetchingRaceId!==race.id&&raceHasGpsTrack(race)&&race.schedule.raceDate){
     fetchHistoricalAverageWeatherForRace(race.id);
+  }
+  // 已經抓到預報、但還沒回填過（例如舊版抓的快取）時補一次
+  if(race.liveForecast&&applyLiveForecastAutofill(race)){
+    persist();
+    renderDetail();
   }
 }
 // 分段配速表、系列賽事比較表、媒體縮圖列這幾個區塊原本不管內容

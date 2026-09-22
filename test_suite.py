@@ -395,6 +395,111 @@ class Drawers(Group):
             const sub=[...document.querySelectorAll('#section-route .subsection')].pop();
             return sub.textContent.includes('無法自動查詢');
         }''')
+        # ---- 即時預報要回填「預報類」欄位 ----
+        c['live_forecast_autofills_forecast_fields'] = page.evaluate('''()=>{
+            const r=emptyRace('近期賽事','road_running','registered','2026-10-01');
+            r.schedule.startTime='06:30';
+            r.liveForecast={fetchedAt:new Date().toISOString(),
+              times:['2026-10-01T05:00','2026-10-01T06:00','2026-10-01T07:00'],
+              temp:[20,21,22],feelsLike:[19,20,21],humidity:[80,78,75],
+              precipProb:[40,51,60],windSpeed:[12.3,14.8,16.1],
+              windDirection:[90,135,180],gust:[25,28.8,30]};
+            const changed=applyLiveForecastAutofill(r);
+            return changed===true
+                && r.climateForecast.rainProbabilityPct===51
+                && r.climateForecast.windSpeedKmh===14.8
+                && r.climateForecast.windDirection==='東南風';
+        }''')
+        # 「實際體感溫度／當日濕度」是賽後才知道的值，預報不可以先佔位——
+        # 佔了之後歷史天氣的回填（只填空欄位）就再也補不進真正的實測值
+        c['live_forecast_leaves_actual_fields_for_history'] = page.evaluate('''()=>{
+            const r=emptyRace('近期賽事','road_running','registered','2026-10-01');
+            r.schedule.startTime='06:30';
+            r.liveForecast={times:['2026-10-01T06:00'],temp:[21],feelsLike:[20],
+              humidity:[78],precipProb:[51],windSpeed:[14.8],windDirection:[135],gust:[28.8]};
+            applyLiveForecastAutofill(r);
+            const stillEmpty=r.raceDayWeather.feelsLikeTempC==null&&r.raceDayWeather.humidityPct==null;
+            // 賽後歷史天氣要補得進去
+            r.historicalWeather={times:['2026-10-01T06:00'],feelsLike:[26.4],humidity:[88],
+              windSpeed:[9.2],windDirection:[45],precip:[0]};
+            applyHistoricalWeatherAutofill(r);
+            return stillEmpty && r.raceDayWeather.feelsLikeTempC===26.4
+                && r.raceDayWeather.humidityPct===88;
+        }''')
+        # 不覆蓋使用者自己填的值、重複執行不會重複改
+        c['live_forecast_autofill_is_safe'] = page.evaluate('''()=>{
+            const lf={times:['2026-10-01T06:00'],precipProb:[51],windSpeed:[14.8],windDirection:[135]};
+            const manual=emptyRace('手動','road_running','registered','2026-10-01');
+            manual.schedule.startTime='06:30';
+            manual.climateForecast.rainProbabilityPct=10;
+            manual.liveForecast=lf;
+            applyLiveForecastAutofill(manual);
+            const kept=manual.climateForecast.rainProbabilityPct===10;
+            const second=applyLiveForecastAutofill(manual);
+            // 舊版快取沒有風速風向欄位也不能爆
+            const old=emptyRace('舊快取','road_running','registered','2026-10-01');
+            old.schedule.startTime='06:30';
+            old.liveForecast={times:['2026-10-01T06:00'],temp:[21],precipProb:[51],gust:[28.8]};
+            applyLiveForecastAutofill(old);
+            return kept && second===false && old.climateForecast.rainProbabilityPct===51
+                && old.climateForecast.windSpeedKmh==null;
+        }''')
+        # 歷年平均對未來賽事也要抓（原本綁 raceIsHistorical，未來賽事永遠空）
+        c['climate_average_fetch_not_gated_to_past'] = page.evaluate('''()=>{
+            const src=String(renderDetail);
+            // 只看實際的 if 條件那一行——註解裡本來就會提到 raceIsHistorical
+            // （說明為什麼拿掉），用前後文字擷取會連註解一起算進去
+            const line=src.split(String.fromCharCode(10)).find(l=>
+              l.indexOf('historicalAverageFetchingRaceId')>=0 && l.trim().indexOf('if(')===0);
+            return !!line && !/raceIsHistorical/.test(line) && /raceHasGpsTrack/.test(line);
+        }''')
+        # ---- 歷年平均：±3 天區間取樣、並標示樣本數 ----
+        c['climate_average_uses_day_window'] = page.evaluate('''async()=>{
+            const urls=[];
+            const realFetch=window.fetch;
+            window.fetch=async(u)=>{ urls.push(String(u)); throw new Error('blocked'); };
+            state.races=[];
+            const r=emptyRace('跨年測試','road_running','registered','2027-01-02');
+            r.route.trackPoints=[{lat:25,lon:121.5}];
+            state.races.push(r);
+            if(historicalAverageAttempted.clear) historicalAverageAttempted.clear();
+            await fetchHistoricalAverageWeatherForRace(r.id);
+            window.fetch=realFetch;
+            const ranges=urls.map(u=>{ const m=u.match(/start_date=([0-9-]+)&end_date=([0-9-]+)/);
+              return m?m[1]+'~'+m[2]:''; });
+            // 五年各一次查詢，每次都是前後 3 天；跨年要正確進位
+            return urls.length===5
+                && ranges[0]==='2025-12-30~2026-01-05'
+                && ranges[4]==='2021-12-30~2022-01-05';
+        }''')
+        # 樣本數與年數要被記下來（某幾年查不到時畫面上看得出來）
+        c['climate_average_shows_sample_basis'] = page.evaluate('''()=>{
+            const mk=ha=>{ const r=emptyRace('x','road_running','registered','2026-12-20');
+              r.route.trackPoints=[{lat:25,lon:121.5}]; r.historicalAverageWeather=ha; return r; };
+            const txt=r=>{ const d=document.createElement('div');
+              d.innerHTML=raceDayWeatherBlockHtml(r); return d.textContent.replace(/\\s+/g,' '); };
+            const full=txt(mk({years:[2025,2024,2023,2022,2021],windowDays:3,sampleCount:35,avgTempC:22.4,avgHumidityPct:78}));
+            const partial=txt(mk({years:[2024,2023],windowDays:3,sampleCount:14,avgTempC:21.9,avgHumidityPct:80}));
+            const legacy=txt(mk({years:[2025,2024,2023],avgTempC:20.1,avgHumidityPct:75}));
+            return full.includes('5 年') && full.includes('35 筆') && full.includes('22.4°C')
+                && partial.includes('2 年') && partial.includes('14 筆')
+                && legacy.includes('3 年');   // 舊快取沒有樣本數也要能顯示
+        }''')
+        # 2/29：非閏年整年跳過，不拿 2/28 來湊
+        c['climate_average_skips_invalid_leap_day'] = page.evaluate('''async()=>{
+            const urls=[];
+            const realFetch=window.fetch;
+            window.fetch=async(u)=>{ urls.push(String(u)); throw new Error('blocked'); };
+            state.races=[];
+            const r=emptyRace('閏日','road_running','registered','2028-02-29');
+            r.route.trackPoints=[{lat:25,lon:121.5}];
+            state.races.push(r);
+            if(historicalAverageAttempted.clear) historicalAverageAttempted.clear();
+            await fetchHistoricalAverageWeatherForRace(r.id);
+            window.fetch=realFetch;
+            // 2027~2023 只有 2024 是閏年，所以只該送出一次查詢
+            return urls.length===1 && urls[0].includes('2024-02-26') && urls[0].includes('2024-03-03');
+        }''')
         c['empty_drawer_cards_muted_filled_cards_not'] = page.evaluate('''async()=>{
             const r=emptyRace('卡片','road_running','registered','2026-11-01');
             r.location.city='臺北市'; r.route.distanceKm=42.195;
