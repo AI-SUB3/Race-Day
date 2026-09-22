@@ -2476,6 +2476,43 @@ class PasteReport(Group):
             const long=matchRaceByPastedName('2024 Panasonic 台北城市路跑賽 01:12:11');
             return short===null && !!long && long.name==='Panasonic 台北城市路跑賽';
         }''')
+        # ---- 「已存在的賽事」否決不可以擋掉：新增表單上的貼上、以及不同屆 ----
+        c['paste_fills_open_create_form_even_if_name_exists'] = page.evaluate('''async()=>{
+            state.races=[]; state.creating=false;
+            state.races.push(emptyRace('臺北馬拉松','road_running','completed','2025-12-21'));
+            startCreate();
+            await new Promise(s=>setTimeout(s,350));
+            const dt=new DataTransfer(); dt.setData('text','2026 臺北馬拉松\\n2026-12-20');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,400));
+            return document.getElementById('new-name').value==='2026 臺北馬拉松'
+                && document.getElementById('new-date').value==='2026-12-20';
+        }''')
+        # 同系列的不同屆要能新增（名稱比對是子字串，去年那場會誤中）
+        c['different_edition_still_counts_as_new_race'] = page.evaluate('''async()=>{
+            state.races=[]; state.creating=false;
+            state.races.push(emptyRace('臺北馬拉松','road_running','completed','2025-12-21'));
+            renderAll(); await new Promise(s=>setTimeout(s,250));
+            const dt=new DataTransfer(); dt.setData('text','2026 臺北馬拉松\\n2026-12-20');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,400));
+            const ok=state.creating===true && document.getElementById('new-name').value==='2026 臺北馬拉松';
+            state.creating=false; renderAll();
+            return ok;
+        }''')
+        # 但「同名又同一天」仍然不可以跳新增表單（那才是真的重複）
+        c['same_name_same_date_does_not_offer_new_race'] = page.evaluate('''async()=>{
+            state.races=[]; state.creating=false;
+            const r=emptyRace('臺北馬拉松','road_running','completed','2025-12-21');
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,250));
+            const dt=new DataTransfer(); dt.setData('text','臺北馬拉松\\n2025-12-21');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,400));
+            const ok=state.creating!==true;
+            closePasteNoteModal();
+            return ok;
+        }''')
         # ---- 號碼布編號 ----
         c['bib_extracted_from_standalone_digits'] = page.evaluate('''()=>{
             const a=extractRaceResults('劉恩龍\\n003150\\n半馬挑戰組\\n大會成績\\n01:51:53\\n總排名\\n287/3000');

@@ -3182,7 +3182,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.67.0';
+const APP_VERSION='v3.68.0';
 
 /* ============================================================
    多語系（i18n）
@@ -9318,10 +9318,18 @@ function classifyNewRaceText(text){
   const info=extractNewRaceInfo(text);
   if(!info) return {isNewRace:false,score:0,info:null};
   const body=String(text||'');
-  // 這場已經在清單裡了就不是「新增」。沒有這道檢查的話，貼上一份
-  // 已存在賽事的資料（名稱＋日期）會跳出新增表單，變成鼓勵你建立
-  // 一場重複的賽事。
-  if(matchRaceByPastedName(body)) return {isNewRace:false,score:0,info:null};
+  /* 「這場已經在清單裡」就不是新增——但這道否決有兩個必須放行的情況，
+     兩個都是實際用起來才發現的：
+     1) 使用者已經自己打開新增表單了。他明確表達要建立一場新賽事，
+        這時候還擋著、什麼都不填，就是單純的沒反應。
+     2) 同一系列的不同屆。名稱比對是子字串比對，清單裡有「臺北馬拉松」
+        就會讓「2026 臺北馬拉松」中；但那是明年那一屆，不是同一場。
+        只有在**日期也一樣**的時候才算真的重複。 */
+  const existing=matchRaceByPastedName(body);
+  if(existing&&!state.creating){
+    const sameDate=!info.raceDate||(existing.schedule&&existing.schedule.raceDate)===info.raceDate;
+    if(sameDate) return {isNewRace:false,score:0,info:null};
+  }
   let score=2;   // 同時有名稱與日期，基本分
   if(/馬拉松|路跑|越野|鐵人|賽|盃|杯|錦標|marathon|race|trail|run|ironman/i.test(info.name)) score+=2;
   if(info.distanceKm!=null) score+=1;
