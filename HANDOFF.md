@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.52.0
+> 貼到新對話開頭即可接續。最後更新：v3.53.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（173 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（180 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -129,6 +129,8 @@ APP=/path/to/index.html python3 test_suite.py
 | 徽章只做資料算得出來的 | 行為追蹤是另一套機制，需獨立驗證 |
 | 氣候圖用個人距離曲線、EPP 維持經典距離 | 圖是給人看趨勢的，多收資料值得；EPP 係數拿去預測完賽時間，不混估計值。`computeClimatePerformancePoints()` 不帶參數 = 嚴格版 |
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
+| 貼上網址只存網址，不抓網頁 | 跨網域抓網頁會被 CORS 擋、要後端。OG 解析對住宿只給得到飯店名，給不到日期與金額，增益小於現有的貼文字方案 |
+| 翻譯佔位符只有 `{n}`（`tf`）與 `{a}`/`{b}`（`tf2`） | 寫成 `{s}` 不會被置換、會原樣顯示。守門測試 `paste_modals_leave_no_placeholder` |
 | 貼上住宿／交通要扛得住「網頁選字複製」的雜訊 | 麵包屑、星等評論、按鈕字樣、「平均每晚」參考價都是真實會遇到的雜訊。找名稱／費用前先過濾雜訊行；費用優先找「總金額」標籤，不用第一個看起來像錢的數字；「酒店」等常見命名要在關鍵字清單裡，不是只有「飯店」 |
 | 貼上票券：方向與工具是猜的，視窗裡可直接改 | 去程／回程標記切段、無標記依賽事日期猜方向；「車次」高鐵台鐵共用要看抬頭；訂位代號先抽掉再找班次 |
 | 貼上住宿一律新增不覆蓋 | 判斷錯只是多一筆可刪的紀錄；欄位預設全勾（訂房信是結構化的），但只有日期時時間留空不猜 |

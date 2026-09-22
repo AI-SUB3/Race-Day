@@ -2254,6 +2254,8 @@
   .paste-transport-grid label{display:flex;flex-direction:column;gap:3px;}
   .paste-transport-grid input,.paste-transport-grid select{font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);min-width:0;}
   .paste-transport-wide{grid-column:1/-1;}
+  .paste-url-preview{word-break:break-all;max-height:none;}
+  .paste-url-dup{color:var(--flag);}
   @media (max-width:600px){ .paste-transport-grid{grid-template-columns:1fr;} }
   .race-context-actions .action-menu-item{font-size:16px;padding:12px 10px;}
   .share-options-row{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:12px;font-size:14px;color:var(--ink);}
@@ -3109,7 +3111,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.52.0';
+const APP_VERSION='v3.53.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3462,7 +3464,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3946,7 +3948,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -8884,6 +8886,44 @@ function extractRaceFacts(text){
   const seen=new Set();
   return facts.filter(f=>{ if(seen.has(f.key)) return false; seen.add(f.key); return true; });
 }
+/* ---- 貼上純網址：存成這場的媒體連結 ----
+   在這之前，貼上一個網址是完全沒反應的（分類器判成 url 就直接放行），
+   但「複製賽事官網／自己的 IG 貼文／Strava 紀錄，想收進這場賽事」是
+   很常見的動作。這裡刻意不去抓網頁內容（跨網域會被 CORS 擋，而且
+   需要後端），只做能誠實做到的部分：認出網址、依網域猜一個類型、
+   讓使用者確認後存起來。 */
+const URL_SOURCE_RULES=[
+  {re:/(?:^|\.)instagram\.com$/i,       type:'photo_album',  label:'Instagram'},
+  {re:/(?:^|\.)strava\.com$/i,          type:'gpx_track',    label:'Strava'},
+  {re:/(?:^|\.)garmin(?:\.\w+)*\.com$/i,type:'gpx_track',    label:'Garmin Connect'},
+  {re:/(?:^|\.)facebook\.com$/i,        type:'photo_album',  label:'Facebook'},
+  {re:/(?:^|\.)threads\.(?:net|com)$/i, type:'photo_album',  label:'Threads'},
+  {re:/(?:^|\.)youtube\.com$|(?:^|\.)youtu\.be$/i,type:'other',label:'YouTube'},
+  {re:/(?:^|\.)flickr\.com$|(?:^|\.)photos\.google\.com$|(?:^|\.)google\.com$/i,type:'photo_album',label:'相簿'},
+  {re:/(?:^|\.)marathon\.|(?:^|\.)running|(?:^|\.)runner|(?:^|\.)sportsplus|(?:^|\.)bravelog|(?:^|\.)taipeimarathon/i,
+   type:'official_site',label:'賽事官網'},
+];
+/* classifyPastedUrl(text)：整段文字就是一個網址時才算。
+   夾在句子裡的網址不算——那通常是心得或別人的分享，攔下來會很吵。 */
+function classifyPastedUrl(text){
+  const body=String(text||'').trim();
+  if(!body||/\s/.test(body)) return null;      // 有空白就不是「單純一個網址」
+  if(!/^https?:\/\//i.test(body)) return null; // 只收 http(s)，safeUrl 也是這個標準
+  if(safeUrl(body)!==body) return null;
+  let host='';
+  try{ host=new URL(body).hostname; }catch(e){ return null; }
+  if(!host) return null;
+  const hit=URL_SOURCE_RULES.find(r=>r.re.test(host));
+  // PDF 直接看副檔名，比猜網域準
+  const isPdf=/\.pdf(?:[?#]|$)/i.test(body);
+  return {
+    url:body, host,
+    // 認不出來的網域一律給「官方網站」：貼賽事網址是最常見的情境，
+    // 而且類型在確認視窗裡本來就可以改，猜錯的代價只是多點一下。
+    type:isPdf?'brochure_pdf':(hit?hit.type:'official_site'),
+    sourceLabel:isPdf?'PDF':(hit?hit.label:host.replace(/^www\./,'')),
+  };
+}
 /* ---- 住宿資訊：訂房確認信、訂房網頁的複製內容 ----
    跟心得不同，這種文字是結構化的（有「入住」「退房」「訂房編號」這種
    標籤），所以判斷可以要求更具體的證據，抽出來的欄位也預設勾選——
@@ -9185,6 +9225,32 @@ function pasteAccomModalHtml(){
     </div>
   </div>`;
 }
+function pasteUrlModalHtml(){
+  const st=pasteNoteState;
+  const races=pasteNoteCandidates().slice(0,40);
+  const race=races.find(r=>r.id===st.raceId)||races[0];
+  const fieldLabel=path=>t('field.mediaLinks.'+path,(MEDIA_FIELDS.find(f=>f.path===path)||{}).label||path);
+  const existing=race?(race.mediaLinks||[]).some(m=>m.url===st.url):false;
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.pasteUrlTitle','偵測到連結')}</h2>
+    <p class="modal-hint">${tf('ui.pasteUrlHint','要把這個 {n} 連結存到這場賽事的「多媒體與連結」嗎？只會存網址本身，不會去讀取網頁內容。',st.sourceLabel)}</p>
+    <div class="paste-note-preview small paste-url-preview">${escapeHtml(st.url)}</div>
+    <label class="field"><span>${t('ui.pasteNoteRace','填入賽事')}</span>
+      <select data-paste-field="raceId">${races.map(r=>`<option value="${r.id}"${race&&r.id===race.id?' selected':''}>${escapeHtml(r.schedule.raceDate||'')} ${escapeHtml(r.name||t('ui.unnamedRace','(未命名賽事)'))}</option>`).join('')}</select>
+    </label>
+    <div class="paste-transport-grid">
+      <label><span class="small">${fieldLabel('type')}</span>
+        <select data-paste-url-field="type">${MEDIA_TYPE_OPTIONS.map(o=>`<option value="${o.value}"${st.type===o.value?' selected':''}>${escapeHtml(t('opt.mediatype.'+o.value,o.label))}</option>`).join('')}</select></label>
+      <label><span class="small">${fieldLabel('notes')}</span>
+        <input type="text" data-paste-url-field="notes" value="${escapeHtml(st.notes)}" placeholder="${escapeHtml(t('ui.pasteUrlNotesHint','例如：官方成績查詢'))}"></label>
+    </div>
+    ${existing?`<p class="small paste-note-facts-hint paste-url-dup">${t('ui.pasteUrlDuplicate','這場已經有一模一樣的連結了，再存一次會變成兩筆。')}</p>`:''}
+    <div class="modal-actions">
+      <button class="btn-primary" data-action="confirm-paste-url">${t('ui.pasteUrlApply','存成連結')}</button>
+      <button class="btn-ghost" data-action="close-paste-note">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+}
 function pasteTransportModalHtml(){
   const st=pasteNoteState;
   const races=pasteNoteCandidates().slice(0,40);
@@ -9279,6 +9345,13 @@ function openPasteNoteModal(text){
   const el=document.getElementById('paste-note-modal');
   el.innerHTML=pasteNoteModalHtml(); el.hidden=false;
 }
+function openPasteUrlModal(info){
+  const first=pasteNoteCandidates()[0];
+  pasteNoteState={kind:'url',text:info.url,url:info.url,sourceLabel:info.sourceLabel,
+                  type:info.type,notes:'',raceId:first?first.id:null};
+  const el=document.getElementById('paste-note-modal');
+  el.innerHTML=pasteUrlModalHtml(); el.hidden=false;
+}
 function openPasteTransportModal(text){
   const first=pasteNoteCandidates()[0];
   const entries=extractTransport(text,first?first.schedule.raceDate:'');
@@ -9305,7 +9378,8 @@ function redrawPasteNoteModal(){
   const el=document.getElementById('paste-note-modal');
   if(el.hidden||!pasteNoteState) return;
   el.innerHTML=pasteNoteState.kind==='accommodation'?pasteAccomModalHtml()
-    :pasteNoteState.kind==='transport'?pasteTransportModalHtml():pasteNoteModalHtml();
+    :pasteNoteState.kind==='transport'?pasteTransportModalHtml()
+    :pasteNoteState.kind==='url'?pasteUrlModalHtml():pasteNoteModalHtml();
 }
 document.getElementById('paste-note-modal').addEventListener('change',e=>{
   if(!pasteNoteState) return;
@@ -9327,6 +9401,8 @@ document.getElementById('paste-note-modal').addEventListener('change',e=>{
   }
   const trip=e.target.closest('[data-paste-trip]');
   if(trip){ pasteNoteState.tripsOn[Number(trip.dataset.pasteTrip)]=trip.checked; return; }
+  const urlField=e.target.closest('[data-paste-url-field]');
+  if(urlField){ pasteNoteState[urlField.dataset.pasteUrlField]=urlField.value; return; }
   const fact=e.target.closest('[data-paste-fact]');
   if(fact){ pasteNoteState.factsOn[Number(fact.dataset.pasteFact)]=fact.checked; return; }
   const accom=e.target.closest('[data-paste-accom]');
@@ -9334,6 +9410,24 @@ document.getElementById('paste-note-modal').addEventListener('change',e=>{
 });
 document.getElementById('paste-note-modal').addEventListener('click',e=>{
   if(e.target.closest('[data-action="close-paste-note"]')){ closePasteNoteModal(); return; }
+  if(e.target.closest('[data-action="confirm-paste-url"]')&&pasteNoteState){
+    const st=pasteNoteState;
+    const race=state.races.find(r=>r.id===st.raceId);
+    if(!race){ closePasteNoteModal(); return; }
+    const entry=LIST_META.mediaLinks.factory();
+    entry.type=st.type; entry.url=st.url; entry.notes=st.notes||'';
+    race.mediaLinks=(race.mediaLinks||[]).concat([entry]);
+    race.updatedAt=new Date().toISOString();
+    persist().then(()=>{
+      renderCalendar();
+      if(currentRace&&currentRace.id===race.id) renderDetail();
+      else selectRace(race.id,{scroll:false});
+    });
+    closePasteNoteModal();
+    showToast(t('ui.pasteUrlDone','已存成這場的連結'));
+    logFeatureUse('paste_url_link');
+    return;
+  }
   if(e.target.closest('[data-action="confirm-paste-transport"]')&&pasteNoteState){
     const st=pasteNoteState;
     const race=state.races.find(r=>r.id===st.raceId);
@@ -18341,6 +18435,15 @@ document.addEventListener('paste',async e=>{
     // 不是 JSON：看看像不像賽後心得。像的話攔下來開預覽視窗；
     // 不像就完全不干涉，讓瀏覽器的貼上照常發生。
     if(!state.races.some(r=>!r.deletedAt)) return;
+    // 純網址最先判：條件最嚴（整段就是一個 http(s) 網址、中間不能有空白），
+    // 不會跟住宿／交通／心得搶——那三種都是整段文字，不可能只有一個網址。
+    const urlInfo=classifyPastedUrl(text);
+    if(urlInfo){
+      e.preventDefault();
+      openPasteUrlModal(urlInfo);
+      logFeatureUse('global_paste_url');
+      return;
+    }
     // 住宿先判：它的證據具體得多（同時出現入住與退房、訂房編號），
     // 而訂房確認信也常常夠長、夠像散文，先判心得會被心得那條先吃掉。
     const accom=classifyAccommodationText(text);

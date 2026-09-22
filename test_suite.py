@@ -1884,6 +1884,92 @@ class PasteReport(Group):
             const legs=extractTransport(txt,'2026-12-20');
             return legs.every(l=>!/更多|查看|訂票|比價/.test(l.pickupLocation));
         }''', THSR_NOISY)
+        # ---- 貼上純網址 → 存成媒體連結 ----
+        c['url_classifier_recognises_sources'] = page.evaluate('''()=>{
+            const got=k=>{const r=classifyPastedUrl(k);return r?r.type:null;};
+            return got('https://www.instagram.com/p/Cxyz123/')==='photo_album'
+                && got('https://www.strava.com/activities/123456')==='gpx_track'
+                && got('https://connect.garmin.com/modern/activity/999')==='gpx_track'
+                && got('https://example.org/files/a.pdf')==='brochure_pdf'
+                && got('https://example.org/race/2026')==='official_site';  // 認不出來給官網
+        }''')
+        # 只收「整段就是一個 http(s) 網址」——夾在句子裡的、危險 scheme 的都不攔
+        c['url_classifier_rejects_non_bare_and_unsafe'] = page.evaluate('''()=>{
+            return classifyPastedUrl('看看這個 https://example.org/x')===null
+                && classifyPastedUrl('javascript:alert(1)')===null
+                && classifyPastedUrl('data:text/html,<script>1</script>')===null
+                && classifyPastedUrl('今天天氣很好')===null
+                && classifyPastedUrl('')===null;
+        }''')
+        # 貼上網址 → 開確認視窗（不是心得那個視窗），預設選中目前賽事
+        c['url_paste_opens_link_modal'] = page.evaluate('''async()=>{
+            const r=state.races.find(x=>x.name==='2026 臺北馬拉松');
+            selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,200));
+            const dt=new DataTransfer(); dt.setData('text','https://www.strava.com/activities/123456');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,300));
+            const el=document.getElementById('paste-note-modal');
+            return !el.hidden && pasteNoteState.kind==='url'
+                && el.querySelector('[data-paste-field="raceId"]').value===r.id
+                && el.querySelector('[data-paste-url-field="type"]').value==='gpx_track';
+        }''')
+        # 改類型與備註後儲存，進 mediaLinks，既有連結不動
+        c['url_paste_saves_media_link'] = page.evaluate('''async()=>{
+            const r=state.races.find(x=>x.name==='2026 臺北馬拉松');
+            r.mediaLinks=[{type:'official_site',url:'https://old.example.org/',notes:'原本的'}];
+            const el=document.getElementById('paste-note-modal');
+            const sel=el.querySelector('[data-paste-url-field="type"]');
+            sel.value='photo_album'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+            const notes=el.querySelector('[data-paste-url-field="notes"]');
+            notes.value='賽後紀錄'; notes.dispatchEvent(new Event('change',{bubbles:true}));
+            el.querySelector('[data-action="confirm-paste-url"]').click();
+            await new Promise(s=>setTimeout(s,400));
+            const list=state.races.find(x=>x.name==='2026 臺北馬拉松').mediaLinks;
+            return list.length===2 && list[0].notes==='原本的'
+                && list[1].url==='https://www.strava.com/activities/123456'
+                && list[1].type==='photo_album' && list[1].notes==='賽後紀錄'
+                && document.getElementById('paste-note-modal').hidden;
+        }''')
+        # 已經有一模一樣的連結時要出現提醒（但仍允許存）
+        c['url_paste_warns_on_duplicate'] = page.evaluate('''async()=>{
+            const dt=new DataTransfer(); dt.setData('text','https://www.strava.com/activities/123456');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,300));
+            const el=document.getElementById('paste-note-modal');
+            const warned=!!el.querySelector('.paste-url-dup');
+            el.querySelector('[data-action="close-paste-note"]').click();
+            return warned;
+        }''')
+        # 網址不可以把心得／住宿／交通那三條路搶走（它們都是整段文字）
+        c['url_route_does_not_steal_other_kinds'] = page.evaluate('''()=>{
+            const report='今天配速控制得不錯，補給站都有停，最後衝線 2:59:31。我覺得這場表現很好。';
+            const booking='訂房確認通知\\n飯店名稱：礁溪老爺酒店\\n入住：2026-12-19 15:00\\n退房：2026-12-21 11:00';
+            return classifyPastedUrl(report)===null && classifyPastedUrl(booking)===null;
+        }''')
+        # 佔位符要真的被置換掉——tf() 只認 {n}，寫成 {s} 會原樣顯示在畫面上
+        c['paste_modals_leave_no_placeholder'] = page.evaluate('''async()=>{
+            const seen=[];
+            const fire=txt=>{ const dt=new DataTransfer(); dt.setData('text',txt);
+              document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); };
+            const samples=['https://www.strava.com/activities/123456',
+              '訂房確認通知\\n飯店名稱：礁溪老爺酒店\\n入住：2026-12-19 15:00\\n退房：2026-12-21 11:00',
+              '台灣高鐵 訂位代號 12345678\\n去程 車次 0613 2026-12-19 08:31 台北 → 左營 5車 12E\\n回程 車次 0842 2026-12-21 16:10 左營 → 台北 7車 3A',
+              '今天配速控制得不錯，補給站都有停，最後衝線 2:59:31。我覺得這場表現很好。'];
+            for(const sample of samples){
+              fire(sample);
+              await new Promise(s=>setTimeout(s,250));
+              const el=document.getElementById('paste-note-modal');
+              if(!el.hidden){
+                // 只看介面文字，不看使用者貼進來的原文預覽
+                const chrome=[...el.querySelectorAll('h2,.modal-hint,.paste-note-facts-hint')]
+                  .map(n=>n.textContent).join(' ');
+                seen.push(/\\{[a-z]\\}/.test(chrome));
+                el.querySelector('[data-action="close-paste-note"]').click();
+                await new Promise(s=>setTimeout(s,150));
+              }
+            }
+            return seen.length>=3 && seen.every(bad=>bad===false);
+        }''')
         # 里程碑不是賽事距離：「30 公里之後撞牆」不能被當成 distanceKm
         c['distance_needs_explicit_marker'] = page.evaluate('''()=>{
             const milestone=extractRaceFacts('最後衝線 2:59:31。30 公里之後開始撞牆。').map(f=>f.key);
