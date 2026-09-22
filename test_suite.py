@@ -1474,6 +1474,79 @@ class Share(Group):
             closeShareModal();
             return txt.includes('這個運動種類不顯示戰靴') && !txt.includes('這場沒綁定鞋款');
         }''')
+        # ---- 生涯回顧下載圖 ----
+        CAREER_SEED = '''()=>{
+            shoes.push({id:'s1',name:'Nike Alphafly 3',targetKm:600,isRetired:false,trainingKm:120});
+            nutritionDictionary.push({id:'n1',name:'GU 能量膠',carbG:22,sodiumMg:60,caffeineMg:20});
+            state.races=[];
+            const pts=[]; for(let i=0;i<160;i++){const a=i/159*Math.PI*2;
+              pts.push({lat:25+Math.sin(a)*0.01,lon:121.5+Math.cos(a)*0.014});}
+            const mk=(name,date,km,sec,pb,track)=>{ const r=emptyRace(name,'road_running','completed',date);
+              r.route.distanceKm=km; r.results.chipTimeSeconds=sec; r.route.elevationGainM=100;
+              if(pb) r.results.isPb=true; if(track) r.route.trackPoints=pts;
+              r.performanceData.shoeId='s1';
+              r.nutritionSchedule=[{item:'GU 能量膠',qty:4,consumed:true,nutritionId:'n1'}];
+              state.races.push(r); };
+            mk('大阪馬拉松','2025-02-24',42.195,10774,true,true);
+            for(let i=0;i<6;i++) mk('賽事'+i,'202'+(1+i%5)+'-05-11',21.1,7200,false,i<2);
+            renderCalendar(); return true;
+        }'''
+        page.evaluate(CAREER_SEED)
+        # 高畫質：輸出寬度是版面寬度的兩倍（2160），不是螢幕解析度
+        c['career_canvas_is_high_resolution'] = page.evaluate('''async()=>{
+            const c2=await buildCareerCanvas({show:{hero:true,tiles:true,tracks:true,shoes:true,fuel:true,qr:true}});
+            return c2.width===2160 && c2.height>1000;
+        }''')
+        # 每個勾選都要真的改變輸出（高度會變）
+        c['career_sections_change_output'] = page.evaluate('''async()=>{
+            const h=async show=>(await buildCareerCanvas({show})).height;
+            const all=await h({hero:true,tiles:true,tracks:true,shoes:true,fuel:true,qr:true});
+            const noTracks=await h({hero:true,tiles:true,tracks:false,shoes:true,fuel:true,qr:true});
+            const noHero=await h({hero:false,tiles:true,tracks:true,shoes:true,fuel:true,qr:true});
+            const tilesOnly=await h({hero:false,tiles:true,tracks:false,shoes:false,fuel:false,qr:false});
+            return noTracks<all && noHero<all && tilesOnly<noTracks && tilesOnly>400;
+        }''')
+        # PB 時間不可以把 HTML 標籤畫到圖上（secToHMSDenoised 回傳的是 HTML）
+        c['career_pb_time_is_plain_text'] = page.evaluate('''async()=>{
+            const spy=[];
+            const proto=CanvasRenderingContext2D.prototype;
+            const orig=proto.fillText;
+            proto.fillText=function(txt,...rest){ spy.push(String(txt)); return orig.call(this,txt,...rest); };
+            try{ await buildCareerCanvas({show:{hero:true,tiles:true,tracks:false,shoes:false,fuel:false,qr:false}}); }
+            finally{ proto.fillText=orig; }
+            return spy.includes('2:59:34') && spy.every(x=>!/[<>]/.test(x));
+        }''')
+        # 資料不足的區塊要灰掉並說明原因，不是整個消失
+        c['career_unavailable_sections_show_reason'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('只有成績','road_running','completed','2025-05-01');
+            r.route.distanceKm=10; r.results.chipTimeSeconds=2400;
+            state.races.push(r); renderCalendar();
+            openCareerShareModal();
+            await new Promise(s=>setTimeout(s,400));
+            const el=document.getElementById('career-share-modal');
+            const greyed=[...el.querySelectorAll('.share-opt-unavailable')].map(l=>l.textContent);
+            const enabled=[...el.querySelectorAll('[data-career-opt]')].map(i=>i.dataset.careerOpt).sort().join(',');
+            closeCareerShareModal();
+            return greyed.length>=3 && enabled==='qr,tiles'
+                && greyed.join(' ').includes('沒有匯入過 GPS 軌跡');
+        }''')
+        # 勾選狀態要記住（下一次打開沿用）
+        c['career_prefs_persist'] = page.evaluate('''async()=>{
+            page_dummy=null;
+            careerSharePrefs.tracks=true;
+            openCareerShareModal();
+            await new Promise(s=>setTimeout(s,300));
+            const box=document.querySelector('[data-career-opt="qr"]');
+            box.checked=false; box.dispatchEvent(new Event('change',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,200));
+            closeCareerShareModal();
+            const saved=JSON.parse(localStorage.getItem('career-share-prefs-v1')||'{}');
+            const ok=saved.qr===false && careerSharePrefs.qr===false;
+            careerSharePrefs.qr=true;
+            try{ localStorage.setItem('career-share-prefs-v1',JSON.stringify(careerSharePrefs)); }catch(e){}
+            return ok;
+        }''')
         c['share_desktop_downloads_not_share_sheet'] = page.evaluate('''async()=>{
             let shared=0, downloaded=0;
             const origShare=navigator.share, origCan=navigator.canShare, origDl=window.downloadBlob;
