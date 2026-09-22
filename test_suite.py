@@ -278,6 +278,81 @@ class Drawers(Group):
             const last=chips[chips.length-1].getBoundingClientRect();
             return chips.length>=1 && last.bottom<=cb.bottom+1;
         }''')
+        # ---- 預算與行程摘要卡 ----
+        LOGI_FIXTURE = '''()=>{
+            state.races=[];
+            for(let i=0;i<4;i++){ const r=emptyRace('國內賽'+i,'road_running','completed','202'+(1+i)+'-05-01');
+              r.location.country='臺灣'; state.races.push(r); }
+            const jp=emptyRace('若狹路越野賽','trail_running','registered','2026-09-27');
+            jp.schedule.startTime='07:30'; jp.location.country='日本'; jp.location.city='福井県';
+            jp.budget={registrationFee:10500,currency:'JPY',paymentStatus:'paid',chipDeposit:2000};
+            jp.accommodations=[{hotelName:'福井パレスホテル',checkIn:'2026-09-26T15:00',checkOut:'2026-09-28T10:00',cost:18000},
+                               {hotelName:'大阪前一晚',checkIn:'2026-09-25T15:00',checkOut:'2026-09-26T10:00',cost:9000}];
+            jp.transportation=[{direction:'outbound',mode:'flight',departureTime:'2026-09-25T09:20',pickupLocation:'桃園機場',cost:14000},
+                               {direction:'return',mode:'flight',departureTime:'2026-09-28T18:00',pickupLocation:'關西機場',cost:0}];
+            jp.companions=[{name:'米奇',role:'partner'},{name:'Jenny',role:'friend'},{name:'阿龍',role:'friend'}];
+            state.races.push(jp);
+            window.__logiRace=jp;
+            return true;
+        }'''
+        page.evaluate(LOGI_FIXTURE)
+        # 金額要加總（報名＋住宿＋交通），押金另計不進總額
+        c['logistics_card_totals_all_costs'] = page.evaluate('''()=>{
+            const tt=logisticsTotals(window.__logiRace);
+            const d=document.createElement('div'); d.innerHTML=logisticsDashCardHtml(window.__logiRace);
+            const sub=d.querySelector('.dash-card-sub').textContent;
+            return tt.total===51500 && tt.deposit===2000
+                && sub.includes('JPY 51,500') && sub.includes('報名 10,500')
+                && sub.includes('住宿 27,000') && sub.includes('交通 14,000')
+                && sub.includes('已繳清') && sub.includes('押金');
+        }''')
+        # 第二行要講內容（飯店名、班次時間、同行者），不是數量
+        c['logistics_card_second_line_shows_content'] = page.evaluate('''()=>{
+            const d=document.createElement('div'); d.innerHTML=logisticsDashCardHtml(window.__logiRace);
+            const sub2=d.querySelector('.dash-card-sub2').textContent;
+            return sub2.includes('福井パレスホテル') && sub2.includes('09-26')
+                && sub2.includes('飛機') && sub2.includes('09:20') && sub2.includes('桃園機場')
+                && sub2.includes('米奇') && !/住宿 2|交通 2/.test(sub2);
+        }''')
+        # 四種警示各自成立，而且只有警示那一段是警示色
+        c['logistics_card_warnings'] = page.evaluate('''()=>{
+            const clone=()=>JSON.parse(JSON.stringify(window.__logiRace));
+            const warn=r=>logisticsWarnings(r).join('|');
+            const ok=logisticsWarnings(window.__logiRace).length===0;
+            const unpaid=clone(); unpaid.budget.paymentStatus='unpaid';
+            const gap=clone(); gap.accommodations=[{hotelName:'只住前一晚',checkIn:'2026-09-25T15:00',checkOut:'2026-09-26T10:00'}];
+            const late=clone(); late.transportation=[{direction:'outbound',mode:'flight',departureTime:'2026-09-27T09:20'}];
+            const none=clone(); none.transportation=[];
+            return ok && warn(unpaid).includes('報名費未付')
+                && warn(gap).includes('住宿沒有涵蓋比賽當天')
+                && warn(late).includes('去程交通晚於起跑時間')
+                && warn(none).includes('海外賽事尚未安排交通');
+        }''')
+        c['logistics_warning_is_styled_separately'] = page.evaluate('''()=>{
+            const r=JSON.parse(JSON.stringify(window.__logiRace));
+            r.budget.paymentStatus='unpaid';
+            const d=document.createElement('div'); d.innerHTML=logisticsDashCardHtml(r);
+            const warn=d.querySelector('.dash-card-warn');
+            const sub2=d.querySelector('.dash-card-sub2');
+            // 行程內容不可以被包在警示色裡，否則整行看起來都像出問題
+            return !!warn && warn.textContent.includes('報名費未付')
+                && !warn.textContent.includes('福井パレスホテル')
+                && sub2.textContent.includes('福井パレスホテル');
+        }''')
+        # 資料不全時不要亂報警示（寧可不報）
+        c['logistics_warnings_stay_quiet_without_data'] = page.evaluate('''()=>{
+            const bare=emptyRace('空','road_running','considering','2026-01-01');
+            const d=document.createElement('div'); d.innerHTML=logisticsDashCardHtml(bare);
+            return logisticsWarnings(bare).length===0
+                && d.querySelector('.dash-card-sub').textContent.includes('尚未填寫')
+                && !d.querySelector('.dash-card-warn');
+        }''')
+        # 交通多了 cost 欄位（3c 的前提）
+        c['transportation_has_cost_field'] = page.evaluate('''()=>{
+            const hasField=TRANSPORT_FIELDS.some(f=>f.path==='cost');
+            const fresh=LIST_META.transportation.factory();
+            return hasField && ('cost' in fresh) && fresh.cost===null;
+        }''')
         c['empty_drawer_cards_muted_filled_cards_not'] = page.evaluate('''async()=>{
             const r=emptyRace('卡片','road_running','registered','2026-11-01');
             r.location.city='臺北市'; r.route.distanceKm=42.195;
