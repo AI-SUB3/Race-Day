@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.70.0
+> 貼到新對話開頭即可接續。最後更新：v3.71.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（251 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（254 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -129,7 +129,8 @@ APP=/path/to/index.html python3 test_suite.py
 | 徽章只做資料算得出來的 | 行為追蹤是另一套機制，需獨立驗證 |
 | 氣候圖用個人距離曲線、EPP 維持經典距離 | 圖是給人看趨勢的，多收資料值得；EPP 係數拿去預測完賽時間，不混估計值。`computeClimatePerformancePoints()` 不帶參數 = 嚴格版 |
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
-| 功能因缺資料而不出現時，要說原因 | 「選項消失」跟「功能壞掉」在畫面上一樣。分享選項改成灰掉＋標原因；照片略過清單（v3.38）同理 |
+| 功能因缺資料而不出現時，要說原因 | 「選項消失」跟「功能壞掉」在畫面上一樣。分享選項灰掉＋標原因（v3.61）、照片略過清單（v3.38）、氣象沒軌跡的說明（v3.71）都是同一條 |
+| 天氣自動查詢的前提是有 GPS 軌跡 | 需要座標。沒軌跡就查不了，但一定要在畫面上講出來，並保留手動填寫的路 |
 | 從全螢幕圖層開的彈窗要拉 z-index | 生涯回顧是 210，一般 `.modal-overlay` 只有 50，不拉就被蓋住＝「按了沒反應」。驗收要測「看得到」「按得到」，不是只測「有沒有打開」 |
 | 警示只染警示那一段 | 整行轉警示色會讓正常內容也看起來像出問題。`dashCardHtml` 的 `warnText` 獨立成一個 span |
 | 摘要卡講內容不講數量 | 「住宿 4」對使用者沒有資訊量，他要的是哪一間、幾點。列最近一筆＋「+N」 |

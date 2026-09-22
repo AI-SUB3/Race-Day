@@ -353,6 +353,48 @@ class Drawers(Group):
             const fresh=LIST_META.transportation.factory();
             return hasField && ('cost' in fresh) && fresh.cost===null;
         }''')
+        # ---- 當日氣象：四種狀態都要說清楚，不可以靜默空白 ----
+        c['weather_block_explains_every_state'] = page.evaluate('''()=>{
+            const pts=[]; for(let i=0;i<50;i++) pts.push({lat:25+i*0.001,lon:121.5+i*0.001});
+            const today=todayISO();
+            const plus=d=>{ const x=new Date(today+'T00:00:00'); x.setDate(x.getDate()+d);
+              return x.toISOString().slice(0,10); };
+            const mk=(date,track)=>{ const r=emptyRace('x','road_running',
+              date<today?'completed':'registered',date);
+              if(track) r.route.trackPoints=pts; return r; };
+            const txt=r=>{ const d=document.createElement('div'); d.innerHTML=raceDayWeatherBlockHtml(r);
+              return d.textContent.replace(/\\s+/g,' ').trim(); };
+            return txt(mk(plus(3),true)).includes('抓取即時預報')
+                && txt(mk(plus(3),false)).includes('匯入 GPX/FIT')
+                && txt(mk(plus(60),true)).includes('7 天')
+                && txt(mk(plus(-30),true)).includes('歷史天氣')
+                && txt(mk(plus(-30),false)).includes('無法自動查詢');
+        }''')
+        # 詳情頁裡要真的有「抓取即時預報」的入口（原本只在備戰釘選面板裡）
+        c['weather_fetch_button_exists_in_detail'] = page.evaluate('''async()=>{
+            const pts=[]; for(let i=0;i<50;i++) pts.push({lat:25+i*0.001,lon:121.5+i*0.001});
+            const x=new Date(todayISO()+'T00:00:00'); x.setDate(x.getDate()+3);
+            state.races=[];
+            const r=emptyRace('近期賽事','road_running','registered',x.toISOString().slice(0,10));
+            r.route.trackPoints=pts;
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const sec=document.getElementById('section-route');
+            if(sec&&!sec.open){ sec.querySelector('summary').click(); await new Promise(s=>setTimeout(s,450)); }
+            const btn=document.querySelector('#section-route [data-action="fetch-live-weather"]');
+            return !!btn && btn.dataset.id===r.id;
+        }''')
+        # 沒有軌跡的歷史賽事不可以什麼都不說
+        c['weather_no_track_is_not_silent'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('舊賽事','road_running','completed','2022-03-20');
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const sec=document.getElementById('section-route');
+            if(sec&&!sec.open){ sec.querySelector('summary').click(); await new Promise(s=>setTimeout(s,450)); }
+            const sub=[...document.querySelectorAll('#section-route .subsection')].pop();
+            return sub.textContent.includes('無法自動查詢');
+        }''')
         c['empty_drawer_cards_muted_filled_cards_not'] = page.evaluate('''async()=>{
             const r=emptyRace('卡片','road_running','registered','2026-11-01');
             r.location.city='臺北市'; r.route.distanceKm=42.195;
