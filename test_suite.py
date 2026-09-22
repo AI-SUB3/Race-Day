@@ -344,6 +344,45 @@ class Drawers(Group):
             applyTheme('light');
             return grid>800;
         }''')
+        # ---- 成績儀表板顯示距離 ----
+        c['results_dashboard_shows_distance_first'] = page.evaluate('''()=>{
+            const r=emptyRace('半馬','road_running','completed','2026-05-01');
+            r.route.distanceKm=21.0975; r.results.chipTimeSeconds=5185; r.results.overallRank=65;
+            const d=document.createElement('div'); d.innerHTML=renderResultsDashboard(r);
+            const rows=[...d.querySelectorAll('.results-badge')].map(b=>
+              b.querySelector('.results-badge-label').textContent+'='+b.querySelector('.results-badge-value').textContent.trim());
+            return rows[0]==='距離=21.0975 公里' && rows.some(x=>x.startsWith('配速='));
+        }''')
+        # 距離不能被四捨五入掉，整數也不要拖尾零
+        c['results_distance_formats_precisely'] = page.evaluate('''()=>{
+            const val=km=>{ const r=emptyRace('x','road_running','completed','2026-05-01');
+              r.route.distanceKm=km; r.results.chipTimeSeconds=5185;
+              const d=document.createElement('div'); d.innerHTML=renderResultsDashboard(r);
+              return d.querySelector('.results-badge-value').textContent.trim(); };
+            return val(21.0975)==='21.0975 公里' && val(42.195)==='42.195 公里'
+                && val(10)==='10 公里' && val(23.400000000000002)==='23.4 公里';
+        }''')
+        # 多項運動與游泳不顯示配速，但距離照樣要有
+        c['results_distance_shown_for_multisport_and_swim'] = page.evaluate('''()=>{
+            const tri=emptyRace('三鐵','triathlon','completed','2026-05-01');
+            tri.route.distanceKm=113; tri.results.chipTimeSeconds=19000;
+            tri.legs=[{order:1,sport:'swimming',distanceKm:1.9,durationSeconds:2000},
+                      {order:2,sport:'cycling',distanceKm:90,durationSeconds:11000}];
+            const swim=emptyRace('泳渡','swimming','completed','2026-05-01');
+            swim.route.distanceKm=2.5; swim.results.chipTimeSeconds=4200;
+            const rows=r=>{ const d=document.createElement('div'); d.innerHTML=renderResultsDashboard(r);
+              return [...d.querySelectorAll('.results-badge')].map(b=>b.querySelector('.results-badge-label').textContent); };
+            const triRows=rows(tri), swimRows=rows(swim);
+            return triRows[0]==='距離' && !triRows.includes('配速')
+                && swimRows[0]==='距離' && swimRows.includes('配速');
+        }''')
+        # 沒填距離就不要出現這一格
+        c['results_distance_absent_when_unset'] = page.evaluate('''()=>{
+            const r=emptyRace('沒距離','road_running','completed','2026-05-01');
+            r.results.chipTimeSeconds=5185;
+            const d=document.createElement('div'); d.innerHTML=renderResultsDashboard(r);
+            return [...d.querySelectorAll('.results-badge-label')].every(x=>x.textContent!=='距離');
+        }''')
         c['uncompleted_race_has_no_hero_dashboard'] = page.evaluate('''async()=>{
             const r=emptyRace('未完賽','road_running','registered','2026-12-01');
             r.route.distanceKm=10;
