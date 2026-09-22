@@ -1,1 +1,16 @@
-{"name":"賽事紀錄","short_name":"賽事紀錄","start_url":".","display":"standalone","background_color":"#EEF0EF","theme_color":"#2E6B49","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"maskable"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}]}
+{
+  "id": "/Race-Day/",
+  "name": "賽事紀錄",
+  "short_name": "賽事紀錄",
+  "start_url": "/Race-Day/",
+  "scope": "/Race-Day/",
+  "display": "standalone",
+  "background_color": "#EEF0EF",
+  "theme_color": "#2E6B49",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
