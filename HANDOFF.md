@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.46.0
+> 貼到新對話開頭即可接續。最後更新：v3.51.0
 
 ---
 
@@ -24,6 +24,7 @@ repo 根目錄/
 │   ├── apple-touch-icon.png
 │   └── help-avatar.png
 ├── about/ · sitemap/ · glossary/ · functions/
+├── functions-share/  ← v3.48.0，公開連結 OG 預覽（部署見其 README-DEPLOY.md；node_modules 不要進 repo）
 ├── README.md · USAGE.md · CHANGELOG.md · CHANGELOG-archive.md · LICENSE
 ├── test_suite.py     ← 回歸測試（不需部署，但請保存）
 └── firestore.rules · robots.txt · sitemap.xml
@@ -44,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（129 項檢查，13 個群組）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（166 項檢查，16 個群組）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -128,6 +129,11 @@ APP=/path/to/index.html python3 test_suite.py
 | 徽章只做資料算得出來的 | 行為追蹤是另一套機制，需獨立驗證 |
 | 氣候圖用個人距離曲線、EPP 維持經典距離 | 圖是給人看趨勢的，多收資料值得；EPP 係數拿去預測完賽時間，不混估計值。`computeClimatePerformancePoints()` 不帶參數 = 嚴格版 |
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
+| 貼上票券：方向與工具是猜的，視窗裡可直接改 | 去程／回程標記切段、無標記依賽事日期猜方向；「車次」高鐵台鐵共用要看抬頭；訂位代號先抽掉再找班次 |
+| 貼上住宿一律新增不覆蓋 | 判斷錯只是多一筆可刪的紀錄；欄位預設全勾（訂房信是結構化的），但只有日期時時間留空不猜 |
+| 貼上心得只判斷、不直接寫 | 全域貼上是很吵的路徑，誤判＝把別人的剪貼簿塞進資料。計分制 ≥5 分才攔，數字一律預設不勾並附原文片段 |
+| 公開快照白名單制 | `buildPublicSnapshot()` 只放明列欄位；`/public/{id}` 一包 JSON 字串；撤銷＝刪文件。改 firestore.rules 見 functions-share/README-DEPLOY.md |
+| QR 自己產不用套件 | 單檔＋離線＋SRI 的成本高於一個 200 行的編碼器。正確性用 OpenCV 編碼器逐格比對、解碼器實掃驗證 |
 | 外部套件走 jsDelivr 的 npm 路徑並鎖死版號 | SRI 雜湊要驗得出來才敢用。jsDelivr 逐位元組轉送 npm 原檔，雜湊能從官方 tarball 算出並比對；cdnjs 自行重新打包無從驗證。浮動版號（`@6`）配 SRI 則是定時炸彈，上游一發版就整包被擋 |
 | 破壞性操作用兩段式確認 | 沿用既有模式，5 秒自動解除，狀態各自獨立 |
 

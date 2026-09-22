@@ -22,6 +22,9 @@
 """
 
 import os
+import base64
+import cv2
+import numpy as np
 import re
 import sys
 from playwright.sync_api import sync_playwright
@@ -1147,7 +1150,7 @@ class Share(Group):
             const preview=m.querySelector('#share-preview-img');
             return !m.hidden
                 && m.querySelectorAll('[data-share-format]').length===2
-                && opts==='fuel,hr,shoe,track'
+                && opts==='fuel,hr,qr,shoe,track'   // QR 不依賴賽事資料，永遠在
                 && !!preview && preview.src.startsWith('data:image/png');
         }''')
         # 切到限動：預覽要重畫成直式，設定要被記住
@@ -1174,10 +1177,53 @@ class Share(Group):
             r.route.distanceKm=90; r.results.chipTimeSeconds=9000;
             state.races.push(r); selectRace(r.id,{scroll:false});
             openShareModal(r); await new Promise(s=>setTimeout(s,700));
-            const n=document.querySelectorAll('#share-modal [data-share-opt]').length;
-            closeShareModal(); return n===0;
+            const keys=[...document.querySelectorAll('#share-modal [data-share-opt]')].map(i=>i.dataset.shareOpt);
+            closeShareModal();
+            return keys.join(',')==='qr';   // 這場什麼都沒有，只剩不挑資料的 QR
         }''')
         # 桌機：一律下載，不走分享面板（就算 navigator.share 存在）
+        # ---- 分享圖上的 QR：要真的掃得出來 ----
+        c['share_qr_encodes_site_url'] = page.evaluate('''()=>{
+            const m=qrMatrix(shareSiteUrl());
+            return !!m && m.length>=21 && m.length%4===1;   // 版本 n 的邊長是 17+4n
+        }''')
+        for fmt in ('square', 'story'):
+            data_url = page.evaluate(
+                "async(f)=>{const c=await buildShareCanvas(currentRace,{format:f,show:{qr:true}});"
+                "return c.toDataURL('image/png');}", fmt)
+            raw = base64.b64decode(data_url.split(',')[1])
+            img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_GRAYSCALE)
+            decoded, _, _ = cv2.QRCodeDetector().detectAndDecode(img)
+            c[f'share_qr_scannable_{fmt}'] = decoded.startswith('http')
+            # IG 實際送出的解析度大約 640–1080，縮到 640 還要掃得到
+            small = cv2.resize(img, (640, int(img.shape[0] * 640 / img.shape[1])),
+                               interpolation=cv2.INTER_AREA)
+            decoded_small, _, _ = cv2.QRCodeDetector().detectAndDecode(small)
+            c[f'share_qr_survives_downscale_{fmt}'] = decoded_small == decoded
+        # 關掉 QR 就不該出現任何 QR
+        no_qr = page.evaluate(
+            "async()=>{const c=await buildShareCanvas(currentRace,{format:'square',show:{qr:false}});"
+            "return c.toDataURL('image/png');}")
+        img = cv2.imdecode(np.frombuffer(base64.b64decode(no_qr.split(',')[1]), np.uint8),
+                           cv2.IMREAD_GRAYSCALE)
+        decoded, _, _ = cv2.QRCodeDetector().detectAndDecode(img)
+        c['share_qr_toggle_removes_it'] = decoded == ''
+        # ---- 文案 ----
+        c['share_caption_has_name_time_tags_and_url'] = page.evaluate('''()=>{
+            const txt=shareCaptionText(currentRace);
+            return txt.includes(currentRace.name)
+                && txt.includes(secToHMS(currentRace.results.chipTimeSeconds))
+                && /#/.test(txt) && txt.includes(shareSiteUrl())
+                && txt.split('\\n').filter(Boolean).length<=6;   // 不要長到被 IG 收起來
+        }''')
+        c['share_caption_copies_to_clipboard'] = page.evaluate('''async()=>{
+            let copied=null;
+            const orig=document.execCommand;
+            document.execCommand=function(cmd){ if(cmd==='copy'){ copied=document.activeElement&&document.activeElement.value; return true; } return false; };
+            const ok=await copyTextToClipboard('測試文案 ABC');
+            document.execCommand=orig;
+            return ok===true && (copied==='測試文案 ABC' || copied===null);
+        }''')
         c['share_desktop_downloads_not_share_sheet'] = page.evaluate('''async()=>{
             let shared=0, downloaded=0;
             const origShare=navigator.share, origCan=navigator.canShare, origDl=window.downloadBlob;
@@ -1473,6 +1519,343 @@ class Climate(Group):
             return p.length===4 && p.every(x=>!x.tempEstimated && !x.isTrail && x.category);
         }''')
 
+class PublicLink(Group):
+    """公開連結：快照白名單、發佈／撤銷、唯讀頁、XSS。"""
+
+    def body(self, page):
+        c = self.checks
+        SEED='''async()=>{
+            state.user={uid:'u1'};
+            window.__published={};
+            window.__cloud={enabled:true,
+              publishSnapshot:async(uid,id,json)=>{ window.__published[id]={uid,json}; },
+              deleteSnapshot:async(id)=>{ delete window.__published[id]; },
+            };
+            shoes.push({id:'s1',name:'Alphafly 3',targetKm:600,isRetired:false,trainingKm:0});
+            const pts=[]; for(let i=0;i<3000;i++){ const a=i/2999*Math.PI*2; pts.push({lat:25+Math.sin(a)*0.01,lon:121.5+Math.cos(a)*0.014,elevationM:50}); }
+            const r=emptyRace('公開<b>測試</b>','road_running','completed','2026-12-20');
+            r.results.chipTimeSeconds=10771; r.results.isPb=true; r.route.distanceKm=42.195; r.route.elevationGainM=180;
+            r.performanceData.avgHr=162; r.performanceData.shoeId='s1';
+            r.route.trackPoints=pts;
+            r.budget={totalTwd:9999,notes:'秘密預算'}; r.notes='私人筆記';
+            r.nutritionSchedule=[{item:'能量膠',qty:4,consumed:true},{item:'BCAA',qty:2,consumed:false}];
+            const cv=document.createElement('canvas'); cv.width=200; cv.height=150;
+            cv.getContext('2d').fillStyle='#345'; cv.getContext('2d').fillRect(0,0,200,150);
+            const thumb=cv.toDataURL('image/jpeg',0.8);
+            r.coverThumb=thumb;
+            r.geoPhotos=Array.from({length:6},(_,i)=>({thumbnailDataUrl:thumb,rawCapturedAt:'2026-12-20T0'+i+':00:00Z',lat:25.01,lon:121.51,aligned:true}));
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            return true;
+        }'''
+        page.evaluate(SEED); page.wait_for_timeout(300)
+        # 白名單：該有的有、不該有的整包 JSON 裡連字串都找不到
+        c['snapshot_is_whitelist_only'] = page.evaluate('''async()=>{
+            const snap=await buildPublicSnapshot(currentRace);
+            // og 與縮圖是 base64，任何數字串都可能剛好出現在裡面——檢查
+            // 「不該外洩的字樣」要先把影像欄位拿掉再比對
+            const json=JSON.stringify(Object.assign({},snap,{og:null,coverThumb:null,photos:[]}));
+            return snap.name.includes('公開') && snap.results.chipTimeSeconds===10771
+                && snap.shoeName==='Alphafly 3'
+                && snap.fuel.length===1 && snap.fuel[0].item==='能量膠'   // 只有已補給的
+                && snap.photos.length===6 && snap.route.track.length<=401 && snap.route.track.length>=200
+                // 數字別拿來當洩漏標記：軌跡座標取五位小數，'9999' 這種
+                // 數字串隨時會出現在 25.00999 裡。結構檢查＋文字標記才可靠。
+                && snap.budget===undefined && snap.notes===undefined
+                && !json.includes('秘密預算') && !json.includes('私人筆記')
+                && !json.includes('BCAA') && !json.includes('shoeId') && !json.includes('"budget"');
+        }''')
+        c['snapshot_respects_byte_budget'] = page.evaluate('''async()=>{
+            const big=document.createElement('canvas'); big.width=900; big.height=900;
+            const g=big.getContext('2d');
+            for(let i=0;i<3000;i++){ g.fillStyle='rgb('+(i*7%255)+','+(i*13%255)+','+(i*31%255)+')'; g.fillRect(Math.random()*900,Math.random()*900,14,14); }
+            const noisy=big.toDataURL('image/jpeg',0.95);
+            currentRace.geoPhotos=Array.from({length:40},()=>({thumbnailDataUrl:noisy,rawCapturedAt:'2026-12-20T05:00:00Z',lat:25.01,lon:121.51,aligned:true}));
+            const snap=await buildPublicSnapshot(currentRace);
+            return JSON.stringify(snap).length<=900000 && snap.photos.length<40;
+        }''')
+        c['publish_writes_doc_and_revoke_deletes'] = page.evaluate('''async()=>{
+            currentRace.geoPhotos=currentRace.geoPhotos.slice(0,2);
+            const id=await publishRaceLink(currentRace);
+            const stored=window.__published[id];
+            const okPublish=currentRace.publicShareId===id && stored && stored.uid==='u1'
+                && JSON.parse(stored.json).name===currentRace.name;
+            await revokeRaceLink(currentRace);
+            return okPublish && !currentRace.publicShareId && !window.__published[id];
+        }''')
+        c['caption_uses_public_link_when_present'] = page.evaluate('''async()=>{
+            const id=await publishRaceLink(currentRace);
+            const withLink=shareCaptionText(currentRace).includes('?s='+id);
+            await revokeRaceLink(currentRace);
+            const without=!shareCaptionText(currentRace).includes('?s=');
+            return withLink && without;
+        }''')
+
+class PublicView(Group):
+    """?s= 唯讀頁：獨立群組，因為要用 ?s= 參數重新載入頁面。"""
+
+    def run(self, browser):
+        ctx=browser.new_context(viewport=self.viewport)
+        page=ctx.new_page()
+        page.on('pageerror', lambda e: self.errors.append(str(e)))
+        snap_js='''{
+          v:1,name:'惡意<img src=x onerror="window.__xss=1">名稱',raceDate:'2026-12-20',startTime:'06:30',
+          sportType:'road_running',city:'臺北',country:'臺灣',
+          results:{chipTimeSeconds:10771,isPb:true,overallRank:128,ageGroupRank:12},
+          route:{distanceKm:42.195,elevationGainM:180,track:Array.from({length:120},(_,i)=>{const a=i/119*Math.PI*2;return [25+Math.sin(a)*0.01,121.5+Math.cos(a)*0.014];})},
+          performance:{avgHr:162},shoeName:'Alphafly 3',fuel:[{item:'能量膠',qty:4}],
+          coverThumb:null,photos:[],og:null
+        }'''
+        page.add_init_script(f"window.__cloudOverride={{fetchPublicSnapshot:async()=>({snap_js})}};")
+        page.goto(APP_URL+'?s=testid123')
+        page.wait_for_timeout(1500)
+        c=self.checks
+        try:
+            c['public_view_renders_readonly'] = page.evaluate('''()=>{
+                const hasTime=document.querySelector('.pubview-time')&&document.querySelector('.pubview-time').textContent.includes('2:59:31');
+                const noApp=!document.getElementById('main-content')||!document.getElementById('main-content').isConnected;
+                const noInputsToEdit=document.querySelectorAll('input:not([readonly]),textarea,select').length===0;
+                return !!hasTime && noApp && noInputsToEdit;
+            }''')
+            c['public_view_escapes_hostile_name'] = page.evaluate(
+                "()=>window.__xss!==1 && document.querySelector('.pubview h1').textContent.includes('惡意')")
+            c['public_view_draws_track_svg'] = page.evaluate(
+                "()=>{const p=document.querySelector('.pubview-track polyline');return !!p && p.getAttribute('points').split(' ').length>=100;}")
+            c['public_view_local_data_untouched'] = page.evaluate(
+                "()=>typeof state==='undefined' || !state.races || state.races.length===0")
+        except Exception as exc:                      # noqa: BLE001
+            self.checks['GROUP_CRASHED']=False; self.errors.append(str(exc))
+        # 失效連結
+        page2=ctx.new_page()
+        page2.add_init_script("window.__cloudOverride={fetchPublicSnapshot:async()=>null};")
+        page2.goto(APP_URL+'?s=deadlink')
+        page2.wait_for_timeout(1200)
+        c['public_view_dead_link_message'] = page2.evaluate(
+            "()=>document.body.textContent.includes('已失效')")
+        ctx.close()
+        return self.checks, self.errors
+
+class PasteReport(Group):
+    """貼上完賽心得：分類器、預覽視窗、填入行為。"""
+
+    REPORT = ('今天的臺北馬拉松跑得比預期好。前半段配速控制在 4:20，補給站每站都有喝水。'
+              '30 公里之後開始有點撞牆，但靠著鹽錠撐過去了。最後衝線 2:59:31，總算破 3 小時，'
+              '是個人最佳，總排名 128 名。')
+
+    def body(self, page):
+        c = self.checks
+        page.evaluate('''()=>{
+            state.races=[];
+            const a=emptyRace('2026 臺北馬拉松','road_running','completed','2026-12-20');
+            const b=emptyRace('2026 萬金石','road_running','completed','2026-03-15');
+            b.review.lessonsLearned='舊的檢討內容';
+            state.races.push(a,b); selectRace(a.id,{scroll:false});
+        }''')
+        page.wait_for_timeout(300)
+        # 分類器：心得要中、雜訊不能中
+        c['classifier_accepts_report_rejects_noise'] = page.evaluate('''(report)=>{
+            const ok=classifyPastedText(report).isReport===true;
+            const noise=['今天很累','https://example.com/x',
+                         'const x=1;\\nfunction go(){ return x+1; }',
+                         'name,date,km\\nA,2026-01-01,10\\nB,2026-02-02,21',
+                         '<?xml version="1.0"?><gpx><trk></trk></gpx>'];
+            return ok && noise.every(n=>classifyPastedText(n).isReport===false);
+        }''', self.REPORT)
+        # 焦點防護：在輸入框裡貼上不可以被攔截
+        c['paste_in_input_is_not_hijacked'] = page.evaluate('''(report)=>{
+            const input=document.createElement('textarea');
+            document.body.appendChild(input); input.focus();
+            const dt=new DataTransfer(); dt.setData('text', report);
+            const ev=new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true});
+            input.dispatchEvent(ev);
+            const hijacked=ev.defaultPrevented||!document.getElementById('paste-note-modal').hidden;
+            input.remove();
+            return !hijacked;
+        }''', self.REPORT)
+        # 空白處貼上 → 開預覽視窗，預設是目前開啟的賽事、數字預設不勾
+        c['paste_on_blank_opens_preview'] = page.evaluate('''async(report)=>{
+            const dt=new DataTransfer(); dt.setData('text', report);
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,250));
+            const el=document.getElementById('paste-note-modal');
+            const sel=el.querySelector('[data-paste-field="raceId"]');
+            const boxes=[...el.querySelectorAll('[data-paste-fact]')];
+            return !el.hidden && sel.value===currentRace.id
+                && boxes.length>=2 && boxes.every(b=>!b.checked);
+        }''', self.REPORT)
+        c['extracted_facts_include_time_and_rank'] = page.evaluate('''(report)=>{
+            const keys=extractRaceFacts(report).map(f=>f.key);
+            const facts=extractRaceFacts(report);
+            const time=facts.find(f=>f.key==='results.chipTimeSeconds');
+            return keys.includes('results.chipTimeSeconds') && keys.includes('results.overallRank')
+                && time.value===10771 && !!time.snippet;
+        }''', self.REPORT)
+        # 確認填入：文字進檢討筆記，未勾的數字不動
+        c['confirm_fills_text_only_by_default'] = page.evaluate('''async()=>{
+            document.querySelector('#paste-note-modal [data-action="confirm-paste-note"]').click();
+            await new Promise(s=>setTimeout(s,400));
+            const r=state.races.find(x=>x.name==='2026 臺北馬拉松');
+            return r.review.lessonsLearned.includes('撞牆')
+                && r.results.chipTimeSeconds==null && r.results.overallRank==null
+                && document.getElementById('paste-note-modal').hidden;
+        }''')
+        # 勾選數字才會填，且已有內容的欄位預設是「接在後面」
+        c['checked_facts_fill_and_append_preserves_existing'] = page.evaluate('''async(report)=>{
+            const other=state.races.find(x=>x.name==='2026 萬金石');
+            const dt=new DataTransfer(); dt.setData('text', report);
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,250));
+            const el=document.getElementById('paste-note-modal');
+            const sel=el.querySelector('[data-paste-field="raceId"]');
+            sel.value=other.id; sel.dispatchEvent(new Event('change',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,200));
+            const mode=el.querySelector('[data-paste-field="mode"]');
+            const defaultAppend=mode && mode.value==='append';
+            const box=el.querySelector('[data-paste-fact="0"]');
+            box.checked=true; box.dispatchEvent(new Event('change',{bubbles:true}));
+            el.querySelector('[data-action="confirm-paste-note"]').click();
+            await new Promise(s=>setTimeout(s,400));
+            const r=state.races.find(x=>x.name==='2026 萬金石');
+            return defaultAppend && r.review.lessonsLearned.startsWith('舊的檢討內容')
+                && r.review.lessonsLearned.includes('撞牆')
+                && r.results.chipTimeSeconds===10771;
+        }''', self.REPORT)
+        # ---- 住宿資訊 ----
+        ZH = ('訂房確認通知\n飯店名稱：礁溪老爺酒店\n地址：宜蘭縣礁溪鄉大忠路58號\n'
+              '入住：2026-12-19 15:00\n退房：2026-12-21 11:00\n訂房編號：AB123456\n'
+              '總金額：NT$8,400\n狀態：已付款')
+        EN = ('Booking confirmation\nHotel: Hotel Metropolitan Tokyo\nAddress: 1-1-1 Shibuya, Tokyo\n'
+              'Check-in: 2027/01/30 15:00\nCheck-out: 2027/02/01 10:00\nTotal: JPY 32,000\nBooking confirmed')
+        c['accommodation_extracts_zh_booking'] = page.evaluate('''(txt)=>{
+            const f=extractAccommodation(txt);
+            return f.hotelName==='礁溪老爺酒店' && f.checkIn==='2026-12-19T15:00'
+                && f.checkOut==='2026-12-21T11:00' && f.cost===8400
+                && f.bookingStatus==='paid' && f.address.includes('大忠路');
+        }''', ZH)
+        c['accommodation_extracts_en_booking'] = page.evaluate('''(txt)=>{
+            const f=extractAccommodation(txt);
+            return f.hotelName==='Hotel Metropolitan Tokyo' && f.checkIn==='2027-01-30T15:00'
+                && f.checkOut==='2027-02-01T10:00' && f.cost===32000 && f.bookingStatus==='booked';
+        }''', EN)
+        # 標題行不能被當成飯店名
+        c['accommodation_skips_header_line_as_name'] = page.evaluate('''()=>{
+            const f=extractAccommodation('民宿訂房\\n山中民宿\\n2026-09-05 ~ 2026-09-06\\n已預訂');
+            return f.hotelName==='山中民宿' && f.checkIn==='2026-09-05' && f.checkOut==='2026-09-06';
+        }''')
+        # 只有日期沒有時間 → 時間留空，不要猜一個 00:00
+        c['accommodation_leaves_time_blank_when_absent'] = page.evaluate('''()=>{
+            const f=extractAccommodation('山中民宿\\n入住 2026-09-05\\n退房 2026-09-06\\n訂房編號 X1');
+            return f.checkIn==='2026-09-05' && !f.checkIn.includes('T');
+        }''')
+        # 分流：訂房信走住宿、心得走心得、提到飯店的心得不能被搶走
+        c['accommodation_and_report_routing'] = page.evaluate('''(args)=>{
+            const [zh]=args;
+            const report='今天配速控制得不錯，補給站都有停，最後衝線 2:59:31。我覺得這場表現很好。';
+            const reportWithHotel='2026-12-20 這場賽前一晚住在市區的飯店，睡得還不錯。今天跑得比預期好，最後 2:59:31 完賽，是個人最佳，我很滿意。';
+            return classifyAccommodationText(zh).isAccommodation===true
+                && classifyAccommodationText(report).isAccommodation===false
+                && classifyAccommodationText(reportWithHotel).isAccommodation===false
+                && classifyPastedText(reportWithHotel).isReport===true;
+        }''', [ZH])
+        # 貼上 → 視窗 → 新增一筆，既有住宿不動
+        c['accommodation_paste_adds_new_entry'] = page.evaluate('''async(txt)=>{
+            const r=state.races.find(x=>x.name==='2026 臺北馬拉松');
+            selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,200));
+            r.accommodations=[{hotelName:'原本就有的飯店',address:'',checkIn:'',checkOut:'',
+                               distanceToStartKm:null,bookingStatus:'booked',cost:null,notes:''}];
+            const dt=new DataTransfer(); dt.setData('text', txt);
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,300));
+            const el=document.getElementById('paste-note-modal');
+            const opened=!el.hidden && el.textContent.includes('礁溪老爺酒店');
+            const allChecked=[...el.querySelectorAll('[data-paste-accom]')].every(b=>b.checked);
+            el.querySelector('[data-action="confirm-paste-accom"]').click();
+            await new Promise(s=>setTimeout(s,400));
+            const list=state.races.find(x=>x.name==='2026 臺北馬拉松').accommodations;
+            return opened && allChecked && list.length===2
+                && list[0].hotelName==='原本就有的飯店'
+                && list[1].hotelName==='礁溪老爺酒店' && list[1].cost===8400;
+        }''', ZH)
+        # ---- 交通票券 ----
+        FLIGHT = ('長榮航空 電子機票\n訂位代號：ABC123\n航班 BR189\n台北(TPE) → 東京成田(NRT)\n'
+                  '2027/01/29 09:20 起飛\n13:35 抵達\n座位 32A')
+        HSR_RT = ('台灣高鐵 訂位代號 12345678\n去程 車次 0613 2026-12-19 08:31 台北 → 左營 5車 12E\n'
+                  '回程 車次 0842 2026-12-21 16:10 左營 → 台北 7車 3A')
+        c['transport_classifier_covers_all_modes'] = page.evaluate('''(args)=>{
+            const [flight,hsr]=args;
+            const samples=[flight,hsr,
+              '台鐵 自強號 123 車次\\n2026-09-05 07:10 台北 → 宜蘭',
+              '國光客運 1815\\n台北轉運站 → 金山\\n2026-11-07 06:30 發車',
+              '臺馬之星 船班\\n2026-11-06 22:00 基隆港 → 南竿\\n訂票代號 MZ2211',
+              'のぞみ 15号 東京 → 新大阪\\n2027/01/30 08:00発 10:30着\\n予約番号 XY889',
+              '捷運 淡水信義線 台北車站 → 淡水\\n2026-10-11 05:40 出發'];
+            const modes=samples.map(s=>extractTransport(s,'2026-12-20')[0].mode);
+            return samples.every(s=>classifyTransportText(s).isTransport)
+                && modes.join(',')==='flight,hsr,train,bus,ferry,hsr,metro';
+        }''', [FLIGHT, HSR_RT])
+        c['transport_flight_fields_and_notes'] = page.evaluate('''(txt)=>{
+            const e=extractTransport(txt,'2027-01-31')[0];
+            return e.direction==='outbound' && e.mode==='flight' && e.departureTime==='2027-01-29T09:20'
+                && e.pickupLocation==='台北(TPE)'
+                && e.notes.split(' ・ ')[1]==='BR189'   // 班機號要是 BR189，不是訂位代號裡的 BC123
+                && e.notes.includes('32A') && e.notes.includes('13:35') && e.notes.includes('#ABC123');
+        }''', FLIGHT)
+        c['transport_round_trip_splits_into_two_legs'] = page.evaluate('''(txt)=>{
+            const legs=extractTransport(txt,'2026-12-20');
+            return legs.length===2 && legs[0].direction==='outbound' && legs[1].direction==='return'
+                && legs.every(l=>l.mode==='hsr')   // 抬頭寫高鐵，段落裡的「車次」不能把它判成火車
+                && legs[0].departureTime==='2026-12-19T08:31' && legs[1].departureTime==='2026-12-21T16:10'
+                && legs[0].notes.includes('0613') && legs[1].notes.includes('7車 3A');
+        }''', HSR_RT)
+        # 方向沒有標記時依賽事日期猜：比賽前去程、之後回程
+        c['transport_direction_inferred_from_race_date'] = page.evaluate('''()=>{
+            const txt='台鐵 自強號 123 車次\\n2026-09-07 07:10 宜蘭 → 台北';
+            return extractTransport(txt,'2026-09-06')[0].direction==='return'
+                && extractTransport(txt,'2026-09-08')[0].direction==='outbound';
+        }''')
+        # 分流：訂房信裡的「機場接送」不能變成交通票；機票不能變成住宿
+        c['transport_vs_accommodation_routing'] = page.evaluate('''(flight)=>{
+            const booking='訂房確認通知\\n飯店名稱：礁溪老爺酒店\\n入住：2026-12-19 15:00\\n退房：2026-12-21 11:00\\n機場接送：有';
+            return classifyTransportText(booking).isTransport===false
+                && classifyAccommodationText(booking).isAccommodation===true
+                && classifyTransportText(flight).isTransport===true
+                && classifyAccommodationText(flight).isAccommodation===false;
+        }''', FLIGHT)
+        # 貼上 → 視窗兩段 → 改第二段的工具 → 確認 → 兩筆進 transportation，既有的不動
+        c['transport_paste_adds_legs_with_edits'] = page.evaluate('''async(txt)=>{
+            const r=state.races.find(x=>x.name==='2026 臺北馬拉松');
+            selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,200));
+            r.transportation=[{direction:'outbound',mode:'self_drive',departureTime:'',pickupLocation:'原本的',notes:''}];
+            const dt=new DataTransfer(); dt.setData('text', txt);
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,300));
+            const el=document.getElementById('paste-note-modal');
+            const legs=el.querySelectorAll('.paste-transport-entry').length;
+            const sel=el.querySelector('[data-paste-trip-field="1:mode"]');
+            sel.value='train'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+            el.querySelector('[data-action="confirm-paste-transport"]').click();
+            await new Promise(s=>setTimeout(s,400));
+            const list=state.races.find(x=>x.name==='2026 臺北馬拉松').transportation;
+            return legs===2 && list.length===3 && list[0].pickupLocation==='原本的'
+                && list[1].mode==='hsr' && list[2].mode==='train' && list[2].direction==='return'
+                && list[1].departureTime==='2026-12-19T08:31';
+        }''', HSR_RT)
+        # 里程碑不是賽事距離：「30 公里之後撞牆」不能被當成 distanceKm
+        c['distance_needs_explicit_marker'] = page.evaluate('''()=>{
+            const milestone=extractRaceFacts('最後衝線 2:59:31。30 公里之後開始撞牆。').map(f=>f.key);
+            const explicit=extractRaceFacts('全程 42.195 公里，3:15:20 完賽。').find(f=>f.key==='route.distanceKm');
+            return !milestone.includes('route.distanceKm') && explicit && explicit.value===42.195;
+        }''')
+        c['fact_labels_resolve_across_sections'] = page.evaluate('''async()=>{
+            const dt=new DataTransfer(); dt.setData('text','全程 42.195 公里的賽事，最後 2:59:31 完賽，總排名 128 名。整體配速穩定，補給站都有停，我自己覺得表現不錯。');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,250));
+            const el=document.getElementById('paste-note-modal');
+            const txt=el.textContent;
+            el.querySelector('[data-action="close-paste-note"]').click();
+            return !txt.includes('route.distanceKm') && !txt.includes('results.chipTimeSeconds');
+        }''')
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -1487,6 +1870,9 @@ GROUPS = {
     'share_touch':lambda: ShareTouch(),
     'offline':    lambda: Offline(),
     'climate':    lambda: Climate('climate'),
+    'publink':    lambda: PublicLink('publink'),
+    'pubview':    lambda: PublicView('pubview'),
+    'paste':      lambda: PasteReport('paste'),
 }
 
 

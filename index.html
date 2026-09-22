@@ -2193,6 +2193,29 @@
   /* 分享圖設定：格式切換沿用篩選 chip 的外觀，勾選列用一般 label */
   .share-format-row{display:flex;gap:8px;margin:4px 0 12px;}
   .climate-chart-curve{color:var(--stone);margin-top:4px;}
+  .share-public-block{border-top:1px solid var(--rule);margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:8px;}
+  .share-public-row{display:flex;gap:8px;}
+  .share-public-url{flex:1;min-width:0;font-size:13px;padding:8px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);}
+  .share-public-hint{color:var(--stone);margin:0;}
+  /* 公開唯讀頁：獨立的一頁，不依賴 App 版面 */
+  .pubview{max-width:720px;margin:0 auto;padding:36px 20px 60px;display:flex;flex-direction:column;gap:18px;}
+  .pubview-brand{color:var(--trail);font-size:14px;letter-spacing:0.08em;margin-bottom:10px;}
+  .pubview h1{margin:0 0 6px;font-size:30px;line-height:1.25;}
+  .pubview-meta{color:var(--stone);font-size:13px;}
+  .pubview-time{font-size:64px;font-weight:700;color:var(--gold);letter-spacing:0.02em;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
+  .pubview-pb{font-size:15px;color:var(--gold);border:1.5px solid var(--gold);border-radius:6px;padding:3px 10px;}
+  .pubview-stats{display:flex;flex-wrap:wrap;gap:18px 28px;}
+  .pubview-stats div{display:flex;flex-direction:column;gap:2px;}
+  .pubview-stats .small{color:var(--stone);}
+  .pubview-stats strong{font-size:19px;}
+  .pubview-cover{width:100%;border-radius:10px;display:block;}
+  .pubview-track{width:100%;height:auto;background:var(--surface);border:1px solid var(--rule);border-radius:10px;}
+  .pubview-gear{color:var(--ink-soft);}
+  .pubview-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;}
+  .pubview-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;}
+  .pubview-foot{margin-top:24px;border-top:1px solid var(--rule);padding-top:14px;}
+  .pubview-foot a{color:var(--trail);}
+  .pubview-loading{color:var(--stone);}
   .climate-trail-toggle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--stone);margin-top:8px;cursor:pointer;}
   .climate-trail-toggle input{accent-color:var(--trail);}
   .climate-trail-notready{color:var(--flag);}
@@ -2217,6 +2240,21 @@
   .storage-cleanup-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .storage-cleanup-meta{font-size:12px;color:var(--stone);}
   .storage-cleanup-row .btn-ghost.is-confirming{border-color:var(--flag);color:var(--flag);}
+  .paste-note-preview{white-space:pre-wrap;max-height:160px;overflow:auto;background:var(--paper);
+    border:1px solid var(--rule);border-radius:8px;padding:10px 12px;margin:8px 0 14px;line-height:1.6;}
+  .paste-note-existing{color:var(--stone);border-left:3px solid var(--rule);padding-left:10px;margin:-4px 0 12px;}
+  .paste-note-facts{border-top:1px solid var(--rule);margin-top:12px;padding-top:12px;display:flex;flex-direction:column;gap:8px;}
+  .paste-note-facts-hint{color:var(--stone);margin:0;}
+  .paste-note-fact{display:flex;gap:10px;align-items:flex-start;}
+  .paste-note-fact span{display:flex;flex-direction:column;gap:2px;}
+  .paste-note-snippet{color:var(--stone);}
+  .paste-note-overwrite{color:var(--flag);font-style:normal;font-size:12px;}
+  .paste-transport-entry{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .paste-transport-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;}
+  .paste-transport-grid label{display:flex;flex-direction:column;gap:3px;}
+  .paste-transport-grid input,.paste-transport-grid select{font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);min-width:0;}
+  .paste-transport-wide{grid-column:1/-1;}
+  @media (max-width:600px){ .paste-transport-grid{grid-template-columns:1fr;} }
   .race-context-actions .action-menu-item{font-size:16px;padding:12px 10px;}
   .share-options-row{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:12px;font-size:14px;color:var(--ink);}
   .share-options-row label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;}
@@ -2381,6 +2419,7 @@
 <div id="share-modal" class="modal-overlay" hidden></div>
 <div id="race-context-sheet" class="modal-overlay" hidden></div>
 <div id="storage-cleanup-modal" class="modal-overlay" hidden></div>
+<div id="paste-note-modal" class="modal-overlay" hidden></div>
 <div id="paste-modal" class="modal-overlay" hidden></div>
 <div id="shoe-modal" class="modal-overlay" hidden></div>
 <div id="nutrition-dict-modal" class="modal-overlay" hidden></div>
@@ -2450,7 +2489,14 @@ const WEATHER_OPTIONS=[{value:'sunny',label:'晴'},{value:'cloudy',label:'陰'},
 const ROLE_OPTIONS=[{value:'partner',label:'同行夥伴'},{value:'cheer_squad',label:'加油團'},{value:'emergency_contact',label:'緊急聯絡人'},{value:'pacer',label:'配速員'},{value:'other',label:'其他'}];
 const EQUIP_CATEGORY_OPTIONS=[{value:'shoes',label:'跑鞋/戰靴'},{value:'apparel',label:'服裝'},{value:'vest',label:'背心'},{value:'headlamp',label:'頭燈'},{value:'nutrition',label:'補給品'},{value:'mandatory_gear',label:'強制裝備'},{value:'other',label:'其他'}];
 const MEDIA_TYPE_OPTIONS=[{value:'official_site',label:'官方網站'},{value:'brochure_pdf',label:'賽事簡章 PDF'},{value:'gpx_track',label:'GPX 軌跡'},{value:'photo_album',label:'個人相簿'},{value:'certificate',label:'證書照片'},{value:'medal_photo',label:'獎牌照片'},{value:'other',label:'其他'}];
-const TRANSPORT_MODE_OPTIONS=[{value:'hsr',label:'高鐵'},{value:'shuttle',label:'接駁車'},{value:'self_drive',label:'自駕'},{value:'flight',label:'飛機'},{value:'other',label:'其他'}];
+// 交通工具（v3.51.0 補齊）：原本只有高鐵／接駁／自駕／飛機，火車、客運、
+// 捷運、船、計程車都得選「其他」。貼上票券自動判別需要對到明確的種類。
+const TRANSPORT_MODE_OPTIONS=[
+  {value:'flight',label:'飛機'},{value:'hsr',label:'高鐵'},{value:'train',label:'火車 / 鐵路'},
+  {value:'metro',label:'捷運 / 地鐵'},{value:'bus',label:'客運 / 巴士'},{value:'shuttle',label:'接駁車'},
+  {value:'ferry',label:'船 / 渡輪'},{value:'taxi',label:'計程車 / 叫車'},
+  {value:'self_drive',label:'自駕'},{value:'other',label:'其他'},
+];
 const DIRECTION_OPTIONS=[{value:'outbound',label:'去程'},{value:'return',label:'回程'}];
 
 const SECTION_BASIC=[
@@ -2659,12 +2705,14 @@ function downloadBlob(blob,filename){
 function canUseShareSheet(){
   return !!(navigator.share&&navigator.canShare&&window.matchMedia('(pointer: coarse)').matches);
 }
-async function shareOrDownloadImage(blob,filename){
+async function shareOrDownloadImage(blob,filename,text){
   if(canUseShareSheet()){
     const file=new File([blob],filename,{type:blob.type||'image/png'});
     if(navigator.canShare({files:[file]})){
       try{
-        await navigator.share({files:[file],title:filename.replace(/\.png$/i,'')});
+        const payload={files:[file],title:filename.replace(/\.png$/i,'')};
+        if(text) payload.text=text;
+        await navigator.share(payload);
         return 'shared';
       }catch(err){
         if(err&&err.name==='AbortError') return 'cancelled';
@@ -3061,7 +3109,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.46.0';
+const APP_VERSION='v3.51.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3414,7 +3462,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3530,7 +3578,7 @@ const JA={
   'opt.mediatype.official_site':'公式サイト','opt.mediatype.brochure_pdf':'要項PDF','opt.mediatype.gpx_track':'GPXトラック',
   'opt.mediatype.photo_album':'アルバム','opt.mediatype.certificate':'完走証','opt.mediatype.medal_photo':'メダル写真','opt.mediatype.other':'その他',
   'opt.transportmode.hsr':'新幹線／高鉄','opt.transportmode.shuttle':'シャトルバス','opt.transportmode.self_drive':'自家用車',
-  'opt.transportmode.flight':'飛行機','opt.transportmode.other':'その他',
+  'opt.transportmode.flight':'飛行機','opt.transportmode.other':'その他','opt.transportmode.train':'鉄道／在来線','opt.transportmode.metro':'地下鉄／メトロ','opt.transportmode.bus':'高速バス／バス','opt.transportmode.ferry':'フェリー／船','opt.transportmode.taxi':'タクシー／配車',
   'opt.direction.outbound':'往路','opt.direction.return':'復路',
 
   // ---- 賽事詳情欄位（依區塊分命名空間，避免同名欄位衝突） ----
@@ -3898,7 +3946,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -4010,7 +4058,7 @@ const EN={
   'opt.equipcat.nutrition':'Nutrition','opt.equipcat.mandatory_gear':'Mandatory Gear','opt.equipcat.other':'Other',
   'opt.mediatype.official_site':'Official Site','opt.mediatype.brochure_pdf':'Race Brochure PDF','opt.mediatype.gpx_track':'GPX Track',
   'opt.mediatype.photo_album':'Photo Album','opt.mediatype.certificate':'Certificate','opt.mediatype.medal_photo':'Medal Photo','opt.mediatype.other':'Other',
-  'opt.transportmode.hsr':'High-speed Rail','opt.transportmode.shuttle':'Shuttle','opt.transportmode.self_drive':'Self-drive',
+  'opt.transportmode.hsr':'High-speed Rail','opt.transportmode.shuttle':'Shuttle','opt.transportmode.self_drive':'Self-drive','opt.transportmode.train':'Train / Rail','opt.transportmode.metro':'Metro / Subway','opt.transportmode.bus':'Bus / Coach','opt.transportmode.ferry':'Ferry','opt.transportmode.taxi':'Taxi / Ride-hail',
   'opt.transportmode.flight':'Flight','opt.transportmode.other':'Other',
   'opt.direction.outbound':'Outbound','opt.direction.return':'Return',
 
@@ -8546,7 +8594,972 @@ function canvasFontFamily(){
    badges／rows，運動別規則只寫一次，不會出現方形修好了、限動還在
    顯示泳渡爬升的情況。
    ------------------------------------------------------------ */
-const SHARE_SHOW_DEFAULT={hr:true,shoe:true,fuel:true,track:true};
+/* ============================================================
+   QR 產生器（位元組模式、EC level M、版本 1–6）。用途只有一個：
+   分享圖右下角那個掃得到的方塊。IG 的圖片不能點連結，看到照片的人
+   除非掃 QR，否則沒有任何方式找到這個網站。
+   ============================================================ */
+/* 最小 QR 產生器：位元組模式、EC level M、版本 1–6（v7 以上才需要版本資訊區，
+   用不到就不做）。容量：v6-M 可放 106 bytes，網址綽綽有餘。 */
+const QR_SPECS=[
+  null,
+  {ec:10,blocks:[[1,16]]},            // v1-M
+  {ec:16,blocks:[[1,28]]},            // v2-M
+  {ec:26,blocks:[[1,44]]},            // v3-M
+  {ec:18,blocks:[[2,32]]},            // v4-M
+  {ec:24,blocks:[[2,43]]},            // v5-M
+  {ec:16,blocks:[[4,27]]},            // v6-M
+];
+const QR_ALIGN=[null,[],[6,18],[6,22],[6,26],[6,30],[6,34]];
+
+let GF_EXP=new Uint8Array(512),GF_LOG=new Uint8Array(256);
+(function(){let x=1;for(let i=0;i<255;i++){GF_EXP[i]=x;GF_LOG[x]=i;x<<=1;if(x&0x100)x^=0x11D;}
+ for(let i=255;i<512;i++)GF_EXP[i]=GF_EXP[i-255];})();
+function gfMul(a,b){ return (a&&b)?GF_EXP[GF_LOG[a]+GF_LOG[b]]:0; }
+function rsGenerator(n){
+  let poly=[1];
+  for(let i=0;i<n;i++){
+    const next=new Array(poly.length+1).fill(0);
+    for(let j=0;j<poly.length;j++){
+      next[j]^=gfMul(poly[j],1);
+      next[j+1]^=gfMul(poly[j],GF_EXP[i]);
+    }
+    poly=next;
+  }
+  return poly;
+}
+function rsEncode(data,ecLen){
+  const gen=rsGenerator(ecLen);
+  const res=new Array(ecLen).fill(0);
+  for(const byte of data){
+    const factor=byte^res[0];
+    res.shift(); res.push(0);
+    for(let i=0;i<gen.length-1;i++) res[i]^=gfMul(gen[i+1],factor);
+  }
+  return res;
+}
+function qrBuildData(text,version){
+  const spec=QR_SPECS[version];
+  const dataCap=spec.blocks.reduce((s,[n,len])=>s+n*len,0);
+  const bytes=Array.from(new TextEncoder().encode(text));
+  const bits=[];
+  const push=(val,len)=>{ for(let i=len-1;i>=0;i--) bits.push((val>>i)&1); };
+  push(0b0100,4); push(bytes.length,8);
+  bytes.forEach(b=>push(b,8));
+  for(let i=0;i<4&&bits.length<dataCap*8;i++) bits.push(0);
+  while(bits.length%8) bits.push(0);
+  const words=[];
+  for(let i=0;i<bits.length;i+=8) words.push(parseInt(bits.slice(i,i+8).join(''),2));
+  const pads=[0xEC,0x11];
+  for(let i=0;words.length<dataCap;i++) words.push(pads[i%2]);
+  // 分塊、各自算 EC，再交錯
+  const dataBlocks=[],ecBlocks=[];
+  let pos=0;
+  spec.blocks.forEach(([count,len])=>{
+    for(let i=0;i<count;i++){
+      const blk=words.slice(pos,pos+len); pos+=len;
+      dataBlocks.push(blk); ecBlocks.push(rsEncode(blk,spec.ec));
+    }
+  });
+  const out=[];
+  const maxData=Math.max(...dataBlocks.map(b=>b.length));
+  for(let i=0;i<maxData;i++) dataBlocks.forEach(b=>{ if(i<b.length) out.push(b[i]); });
+  for(let i=0;i<spec.ec;i++) ecBlocks.forEach(b=>out.push(b[i]));
+  return out;
+}
+function qrPickVersion(text){
+  const len=new TextEncoder().encode(text).length;
+  for(let v=1;v<QR_SPECS.length;v++){
+    const cap=QR_SPECS[v].blocks.reduce((s,[n,l])=>s+n*l,0);
+    // +4 而不是剛好塞滿：留一點餘裕，避免資料剛好頂到容量上限時
+    // 有些讀取器讀不出來（實測 OpenCV 的解碼器在滿載時會失敗）。
+    if(len+4<=cap) return v;
+  }
+  return null;
+}
+function qrMatrix(text){
+  const version=qrPickVersion(text);
+  if(!version) return null;
+  const size=17+version*4;
+  const m=Array.from({length:size},()=>new Array(size).fill(null)); // null=尚未填
+  const setFinder=(r,c)=>{
+    for(let i=-1;i<=7;i++) for(let j=-1;j<=7;j++){
+      const rr=r+i,cc=c+j;
+      if(rr<0||cc<0||rr>=size||cc>=size) continue;
+      const inRing=(i>=0&&i<=6&&(j===0||j===6))||(j>=0&&j<=6&&(i===0||i===6));
+      const inCore=i>=2&&i<=4&&j>=2&&j<=4;
+      m[rr][cc]=(inRing||inCore)?1:0;
+    }
+  };
+  setFinder(0,0); setFinder(0,size-7); setFinder(size-7,0);
+  for(let i=8;i<size-8;i++){ const v=(i%2===0)?1:0; m[6][i]=v; m[i][6]=v; }
+  const aligns=QR_ALIGN[version];
+  aligns.forEach(r=>aligns.forEach(c=>{
+    if((r<=8&&c<=8)||(r<=8&&c>=size-9)||(r>=size-9&&c<=8)) return;
+    for(let i=-2;i<=2;i++) for(let j=-2;j<=2;j++){
+      m[r+i][c+j]=(Math.max(Math.abs(i),Math.abs(j))!==1)?1:0;
+    }
+  }));
+  m[size-8][8]=1;   // 固定的暗模組
+  // 預留格式資訊區
+  const reserved=[];
+  for(let i=0;i<9;i++){ if(m[8][i]===null){ m[8][i]=0; reserved.push([8,i]); }
+                        if(m[i][8]===null){ m[i][8]=0; reserved.push([i,8]); } }
+  for(let i=size-8;i<size;i++){ if(m[8][i]===null){ m[8][i]=0; reserved.push([8,i]); }
+                                if(m[i][8]===null){ m[i][8]=0; reserved.push([i,8]); } }
+  const isReserved=(r,c)=>reserved.some(([rr,cc])=>rr===r&&cc===c);
+  // 放資料（由右下往上蛇行）
+  const bytes=qrBuildData(text,version);
+  const bits=[];
+  bytes.forEach(b=>{ for(let i=7;i>=0;i--) bits.push((b>>i)&1); });
+  let bi=0,up=true;
+  for(let col=size-1;col>0;col-=2){
+    if(col===6) col--;                       // 跳過縱向時序線
+    for(let k=0;k<size;k++){
+      const row=up?size-1-k:k;
+      for(const c of [col,col-1]){
+        if(m[row][c]!==null) continue;
+        m[row][c]=bi<bits.length?bits[bi++]:0;
+      }
+    }
+    up=!up;
+  }
+  const maskFns=[
+    (r,c)=>(r+c)%2===0, (r,c)=>r%2===0, (r,c)=>c%3===0, (r,c)=>(r+c)%3===0,
+    (r,c)=>(Math.floor(r/2)+Math.floor(c/3))%2===0, (r,c)=>((r*c)%2+(r*c)%3)===0,
+    (r,c)=>(((r*c)%2+(r*c)%3)%2)===0, (r,c)=>(((r+c)%2+(r*c)%3)%2)===0,
+  ];
+  const isFunction=(r,c)=>{
+    if(r===6||c===6) return true;
+    if(r<9&&c<9) return true;
+    if(r<9&&c>=size-8) return true;
+    if(r>=size-8&&c<9) return true;
+    for(const ar of aligns) for(const ac of aligns){
+      if((ar<=8&&ac<=8)||(ar<=8&&ac>=size-9)||(ar>=size-9&&ac<=8)) continue;
+      if(Math.abs(r-ar)<=2&&Math.abs(c-ac)<=2) return true;
+    }
+    return false;
+  };
+  function penalty(g){
+    let p=0;
+    for(let r=0;r<size;r++){
+      let run=1;
+      for(let c=1;c<size;c++){
+        if(g[r][c]===g[r][c-1]) run++; else { if(run>=5) p+=3+(run-5); run=1; }
+      }
+      if(run>=5) p+=3+(run-5);
+    }
+    for(let c=0;c<size;c++){
+      let run=1;
+      for(let r=1;r<size;r++){
+        if(g[r][c]===g[r-1][c]) run++; else { if(run>=5) p+=3+(run-5); run=1; }
+      }
+      if(run>=5) p+=3+(run-5);
+    }
+    for(let r=0;r<size-1;r++) for(let c=0;c<size-1;c++){
+      const v=g[r][c];
+      if(v===g[r][c+1]&&v===g[r+1][c]&&v===g[r+1][c+1]) p+=3;
+    }
+    const pat=[1,0,1,1,1,0,1,0,0,0,0];
+    const match=(arr,i)=>pat.every((v,k)=>arr[i+k]===v);
+    for(let r=0;r<size;r++){
+      const row=g[r];
+      for(let c=0;c+11<=size;c++) if(match(row,c)) p+=40;
+    }
+    for(let c=0;c<size;c++){
+      const col=[]; for(let r=0;r<size;r++) col.push(g[r][c]);
+      for(let r=0;r+11<=size;r++) if(match(col,r)) p+=40;
+    }
+    let dark=0; g.forEach(row=>row.forEach(v=>{ if(v) dark++; }));
+    const pct=dark*100/(size*size);
+    p+=Math.floor(Math.abs(pct-50)/5)*10;
+    return p;
+  }
+  function formatBits(mask){
+    // EC level M = 0b00
+    let data=(0b00<<3)|mask;
+    let rem=data<<10;
+    const g=0b10100110111;
+    for(let i=14;i>=10;i--) if(rem&(1<<i)) rem^=g<<(i-10);
+    return ((data<<10)|rem)^0b101010000010010;
+  }
+  function withFormat(g,mask){
+    const bits2=formatBits(mask);
+    const get=i=>(bits2>>(14-i))&1;   // 首個放置的是最高位
+    for(let i=0;i<=5;i++) g[8][i]=get(i);
+    g[8][7]=get(6); g[8][8]=get(7); g[7][8]=get(8);
+    for(let i=9;i<=14;i++) g[14-i][8]=get(i);
+    for(let i=0;i<=7;i++) g[size-1-i][8]=get(i);
+    for(let i=8;i<=14;i++) g[8][size-15+i]=get(i);
+    g[size-8][8]=1;
+    return g;
+  }
+  let best=null,bestScore=Infinity;
+  for(let mask=0;mask<8;mask++){
+    const g=m.map(row=>row.slice());
+    for(let r=0;r<size;r++) for(let c=0;c<size;c++){
+      if(!isFunction(r,c)&&!isReserved(r,c)&&maskFns[mask](r,c)) g[r][c]^=1;
+    }
+    withFormat(g,mask);
+    const score=penalty(g);
+    if(score<bestScore){ bestScore=score; best=g; }
+  }
+  return best;
+}
+/* drawShareQr(ctx,x,y,size,text)：把 QR 畫在淺色圓角底板上。
+   分享圖是深色底，但 QR 必須「深色模組配淺色底」才掃得出來——反白的
+   QR 只有部分手機認得。所以底板一定要是淺色，不能直接畫在深色背景上。
+   四周留 4 個模組的靜默區，這是規格要求，少了掃不到。 */
+/* ============================================================
+   貼上完賽心得：在空白處貼一段文字，自動判斷是不是賽後心得，
+   是的話開預覽視窗讓你挑要填進哪一場、哪個欄位。
+   為什麼要先判斷、不直接填：全域貼上是一條很吵的路徑，使用者可能
+   只是複製了一個網址、一段程式碼、一串數字。判斷失準就等於把別人
+   的剪貼簿內容塞進資料裡，所以寧可漏判也不要誤判。
+   ============================================================ */
+const RACE_REPORT_WORDS=[
+  '完賽','起跑','終點','賽道','補給','撞牆','配速','爬升','關門','拉傷','抽筋','補給站',
+  '馬拉松','越野','三鐵','半馬','全馬','分組','名次','破 P','PB','蔘','訓練','賽前','賽後',
+  'finish','pace','aid station','course','cramp','split','marathon','trail','race',
+];
+/* classifyPastedText(text)：回 {isReport, score, reasons}。
+   採計分制而不是單一條件：任何一條規則單獨用都會誤判（光看長度會把
+   程式碼當心得，光看關鍵字會把賽事官網簡介當心得）。分數要夠、而且
+   沒有「明顯不是」的特徵才算數。 */
+function classifyPastedText(text){
+  const raw=String(text||'');
+  const body=raw.trim();
+  const reasons=[];
+  // 明顯不是散文的東西先擋掉：XML／GPX、CSV、程式碼、純網址
+  if(/^<\?xml|<gpx|<TrainingCenterDatabase/i.test(body)) return {isReport:false,score:0,reasons:['xml']};
+  if(/^https?:\/\/\S+$/.test(body)) return {isReport:false,score:0,reasons:['url']};
+  if(/[{};]\s*$/.test(body)&&/(function|const |let |=>|<\/)/.test(body)) return {isReport:false,score:0,reasons:['code']};
+  const lines=body.split(/\r?\n/).filter(Boolean);
+  const commaSeparated=lines.length>2&&lines.every(l=>l.split(/[,\t]/).length>=3);
+  if(commaSeparated) return {isReport:false,score:0,reasons:['table']};
+  let score=0;
+  if(body.length>=60) { score+=2; reasons.push('length'); }
+  if(body.length>=200) score+=1;
+  const hits=RACE_REPORT_WORDS.filter(w=>body.includes(w));
+  if(hits.length) { score+=Math.min(3,hits.length); reasons.push('words:'+hits.slice(0,3).join('/')); }
+  // 句子感：中文句號逗號或英文句點 + 空白
+  const sentences=(body.match(/[。！？；]|\.\s/g)||[]).length;
+  if(sentences>=2) { score+=2; reasons.push('sentences'); }
+  // 第一人稱
+  if(/我|自己|這次|這場|I |my |we /.test(body)) { score+=1; reasons.push('firstPerson'); }
+  return {isReport:score>=5&&body.length>=40, score, reasons};
+}
+/* extractRaceFacts(text)：從心得裡撈出可能的成績數字。
+   刻意全部預設不勾——心得裡出現的數字經常是別人的、去年的、或目標值
+   （「想破 3:30」「去年 3:45」）。把原文片段一起顯示出來，由使用者
+   自己判斷這個數字是不是這場的成績。 */
+function extractRaceFacts(text){
+  const facts=[];
+  const snippet=(idx,len)=>{
+    const from=Math.max(0,idx-14), to=Math.min(text.length,idx+len+14);
+    return (from>0?'…':'')+text.slice(from,to).replace(/\s+/g,' ')+(to<text.length?'…':'');
+  };
+  const timeRe=/(\d{1,2}[:：]\d{2}[:：]\d{2})|(\d{1,2}\s*(?:小時|時|h)\s*\d{1,2}\s*(?:分|m)(?:\s*\d{1,2}\s*(?:秒|s))?)/g;
+  let m;
+  while((m=timeRe.exec(text))){
+    const sec=hmsToSec(m[0].replace(/：/g,':'));
+    if(sec!=null&&sec>=600&&sec<=24*3600) facts.push({key:'results.chipTimeSeconds',raw:m[0],value:sec,display:secToHMS(sec),snippet:snippet(m.index,m[0].length)});
+    if(facts.length>=6) break;
+  }
+  const rankRe=/(?:總排|總名次|名次|排名|overall)\D{0,4}(\d{1,5})|第\s*(\d{1,5})\s*名/g;
+  while((m=rankRe.exec(text))){
+    const n=parseInt(m[1]||m[2],10);
+    if(n>0&&n<200000) facts.push({key:'results.overallRank',raw:m[0],value:n,display:String(n),snippet:snippet(m.index,m[0].length)});
+    if(facts.length>=10) break;
+  }
+  // 距離一定要有「全程／總長／距離」這類標記才算。心得裡的公里數八成是
+  // 里程碑（「30 公里之後開始撞牆」），不是賽事距離——沒有標記就不要猜。
+  const distRe=/(?:全程|總長|總距離|距離|全長)\D{0,3}(\d{1,3}(?:\.\d{1,3})?)\s*(?:公里|km)|(\d{1,3}(?:\.\d{1,3})?)\s*(?:公里|km)\s*(?:的)?(?:賽事|賽道|全程)/gi;
+  while((m=distRe.exec(text))){
+    const km=parseFloat(m[1]||m[2]);
+    if(km>=1&&km<=300) facts.push({key:'route.distanceKm',raw:m[0],value:km,display:km+' km',snippet:snippet(m.index,m[0].length)});
+    if(facts.length>=14) break;
+  }
+  // 同一個欄位只留第一個候選，避免一次列出十個時間讓人無從選起
+  const seen=new Set();
+  return facts.filter(f=>{ if(seen.has(f.key)) return false; seen.add(f.key); return true; });
+}
+/* ---- 住宿資訊：訂房確認信、訂房網頁的複製內容 ----
+   跟心得不同，這種文字是結構化的（有「入住」「退房」「訂房編號」這種
+   標籤），所以判斷可以要求更具體的證據，抽出來的欄位也預設勾選——
+   訂房確認信裡的日期就是這次的日期，不像心得裡的數字那樣曖昧。 */
+const ACCOM_WORDS=['入住','退房','訂房','住宿','飯店','旅館','民宿','旅店','訂單編號','訂房編號',
+  'check-in','check in','checkout','check-out','hotel','booking','reservation','confirmation',
+  'チェックイン','チェックアウト','予約'];
+function classifyAccommodationText(text){
+  const body=String(text||'').trim();
+  if(!body) return {isAccommodation:false,score:0};
+  const hits=ACCOM_WORDS.filter(w=>body.toLowerCase().includes(w.toLowerCase()));
+  let score=hits.length;
+  // 「入住／退房」這組是最強的證據：一般文章不會同時出現這兩個詞
+  const hasInOut=/入住|check[-\s]?in|チェックイン/i.test(body)&&/退房|check[-\s]?out|チェックアウト/i.test(body);
+  if(hasInOut) score+=3;
+  if(/訂[房單]編號|confirmation\s*(?:number|code|#)|reservation\s*(?:number|id)/i.test(body)) score+=2;
+  const hasLodging=/(飯店|旅館|民宿|旅店|hotel|inn|hostel|resort)/i.test(body);
+  if(hasLodging) score+=1;
+  // 住宿詞 + 日期（或日期區間）：像「山中民宿 / 2026-09-05 ~ 09-06 / 已預訂」
+  // 這種極簡的訂房筆記，靠關鍵字數量湊不到門檻，但它確實是訂房資料。
+  if(hasLodging&&/\d{4}\s*[-/年.]\s*\d{1,2}\s*[-/月.]\s*\d{1,2}/.test(body)) score+=1;
+  return {isAccommodation:score>=4,score,hits};
+}
+/* 把各種寫法的日期時間收斂成 datetime-local 需要的 YYYY-MM-DDTHH:MM。
+   沒有寫時間就給空字串，讓使用者自己補——猜一個 00:00 會變成
+   「凌晨入住」這種看起來像真的、其實是編的資料。 */
+function parseAccomDateTime(dateStr,timeStr){
+  if(!dateStr) return '';
+  let y,mo,d;
+  let m=dateStr.match(/(\d{4})\s*[-/年.]\s*(\d{1,2})\s*[-/月.]\s*(\d{1,2})/);
+  if(m){ [,y,mo,d]=m; }
+  else{
+    m=dateStr.match(/(\d{1,2})\s*[-/月.]\s*(\d{1,2})/);
+    if(!m) return '';
+    y=String(new Date().getFullYear()); [,mo,d]=m;
+  }
+  const pad=v=>String(v).padStart(2,'0');
+  let hh='',mm='';
+  if(timeStr){
+    const tm=timeStr.match(/(\d{1,2})\s*[:：時點]\s*(\d{2})?/);
+    if(tm){
+      hh=parseInt(tm[1],10); mm=tm[2]||'00';
+      if(/下午|pm|PM/.test(timeStr)&&hh<12) hh+=12;
+      if(/上午|am|AM/.test(timeStr)&&hh===12) hh=0;
+      hh=pad(hh);
+    }
+  }
+  const date=`${y}-${pad(mo)}-${pad(d)}`;
+  return hh?`${date}T${hh}:${mm}`:date;
+}
+function extractAccommodation(text){
+  const lines=String(text||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const body=lines.join('\n');
+  const out={};
+  const pickLine=re=>lines.find(l=>re.test(l))||'';
+  // 飯店名稱：先找標籤（飯店名稱：xxx），沒有就找含「飯店/旅館/hotel」
+  // 的那一行；再沒有就用第一行——訂房信的第一行通常就是飯店名。
+  let hotel=(body.match(/(?:飯店名稱|旅館名稱|住宿名稱|hotel(?:\s*name)?|宿泊先)\s*[:：]\s*(.+)/i)||[])[1];
+  if(!hotel){
+    // 含住宿字眼的行可能不只一行，「民宿訂房」這種標題也會中。先把
+    // 看起來像標題／標籤的行排掉（訂房、確認、通知、booking…），
+    // 剩下的第一行才是真正的名字。
+    const cands=lines.filter(l=>/(飯店|旅館|民宿|旅店|hotel|inn|hostel|resort)/i.test(l)&&l.length<=60);
+    const isLabel=l=>/(訂房|預訂|預約|確認|通知|booking|reservation|confirmation)/i.test(l);
+    const line=cands.find(l=>!isLabel(l))||cands[0]||'';
+    if(line) hotel=line.replace(/^[-・*\s]+/,'');
+  }
+  if(!hotel&&lines.length) hotel=lines[0];
+  if(hotel){
+    hotel=hotel.replace(/\s*[（(]\s*(?:訂房編號|confirmation)[^)）]*[)）]\s*/i,'').trim();
+    if(hotel.length<=80) out.hotelName=hotel;
+  }
+  const dateLike='(\\d{4}\\s*[-/年.]\\s*\\d{1,2}\\s*[-/月.]\\s*\\d{1,2}|\\d{1,2}\\s*[-/月.]\\s*\\d{1,2})';
+  const timeLike='((?:上午|下午|AM|PM|am|pm)?\\s*\\d{1,2}\\s*[:：時點]\\s*\\d{2}(?:\\s*(?:AM|PM|am|pm))?)';
+  const grab=(labelRe)=>{
+    const re=new RegExp(labelRe+'[^\\n]{0,12}?'+dateLike+'(?:[^\\n]{0,12}?'+timeLike+')?','i');
+    const m=body.match(re);
+    return m?parseAccomDateTime(m[1],m[2]):'';
+  };
+  const ci=grab('(?:入住|check[-\\s]?in|チェックイン)');
+  const co=grab('(?:退房|check[-\\s]?out|チェックアウト)');
+  if(ci) out.checkIn=ci;
+  if(co) out.checkOut=co;
+  // 只有一組日期區間（2026-12-19 ~ 2026-12-21）時，前後各當入住與退房
+  if(!ci&&!co){
+    const range=body.match(new RegExp(dateLike+'\\s*(?:~|～|-|—|到|至|to)\\s*'+dateLike,'i'));
+    if(range){ out.checkIn=parseAccomDateTime(range[1],''); out.checkOut=parseAccomDateTime(range[2],''); }
+  }
+  const addr=(body.match(/(?:地址|住所|address)\s*[:：]\s*(.+)/i)||[])[1]
+    ||pickLine(/(?:[縣市].{0,12}[區鄉鎮市].{0,20}[路街道])|\d+\s+\w+\s+(?:St|Street|Rd|Road|Ave)/i);
+  if(addr&&addr.length<=100) out.address=addr.trim();
+  const cost=body.match(/(?:NT\$|TWD|JPY|USD|\$|¥|總金額|總價|金額|費用|total)\s*[:：]?\s*([\d,]+)|([\d,]+)\s*元/i);
+  if(cost){
+    const n=parseInt(String(cost[1]||cost[2]).replace(/,/g,''),10);
+    if(n>0&&n<10000000) out.cost=n;
+  }
+  if(/已付款|已付清|paid/i.test(body)) out.bookingStatus='paid';
+  else if(/已(?:確認|預訂|訂房)|confirmed|booking\s*confirmed/i.test(body)) out.bookingStatus='booked';
+  return out;
+}
+/* ---- 交通票券：機票、高鐵、台鐵、客運、船票、捷運路線 ----
+   一張確認信常常同時有去程與回程，所以這裡抽出來的是「一到多筆」。
+   工具種類對到既有的 TRANSPORT_MODE_OPTIONS，不另開新值。 */
+const TRANSPORT_MODE_RULES=[
+  {mode:'flight', re:/航班|班機|登機|起飛|航空|航廈|登機門|flight|boarding|airline|terminal|gate\s*[A-Z]?\d/i},
+  {mode:'hsr',    re:/高鐵|THSR|新幹線|shinkansen|のぞみ|ひかり|こだま|KTX|TGV/i},
+  {mode:'train',  re:/台鐵|臺鐵|火車|鐵路|自強|莒光|區間|普悠瑪|太魯閣|列車|車次|JR\b|特急|急行|普通車|railway|rail\b|train\b|amtrak/i},
+  {mode:'metro',  re:/捷運|地鐵|MRT|metro|subway|地下鉄/i},
+  {mode:'ferry',  re:/渡輪|船班|船票|客輪|郵輪|ferry|フェリー|港\b|碼頭|pier|之星/i},
+  {mode:'shuttle',re:/接駁|shuttle/i},
+  {mode:'bus',    re:/客運|巴士|國光|統聯|葛瑪蘭|和欣|阿羅哈|首都|coach|bus\b|高速バス/i},
+  {mode:'taxi',   re:/計程車|叫車|uber|taxi|多元計程車/i},
+  {mode:'self_drive', re:/自駕|租車|rental\s*car|開車/i},
+];
+function classifyTransportText(text){
+  const body=String(text||'').trim();
+  if(!body) return {isTransport:false,score:0};
+  let score=0;
+  const modes=TRANSPORT_MODE_RULES.filter(r=>r.re.test(body)).map(r=>r.mode);
+  if(modes.length) score+=2;
+  // 票券特徵：訂位代號、座位、車廂、出發／抵達、班次號
+  if(/訂位代號|訂票代號|訂單編號|PNR|booking\s*(?:ref|reference|code)|confirmation\s*(?:number|code)|e-?ticket|電子票/i.test(body)) score+=2;
+  if(/座位|車廂|seat|carriage|car\s*\d|\d{1,2}[A-F]\b/i.test(body)) score+=1;
+  if(/出發|發車|起飛|抵達|到達|departure|depart|arrival|arrive|出発|到着/i.test(body)) score+=1;
+  if(/[A-Z]{2}\s?\d{2,4}\b|車次\s*\d{2,4}|\b\d{3,4}\s*次|\d+号/i.test(body)) score+=1;
+  if(/→|->|➜|⇒|至|到|—|\bto\b/i.test(body)&&/\d{4}\s*[-/年.]\s*\d{1,2}\s*[-/月.]\s*\d{1,2}/.test(body)) score+=1;
+  // 住宿信裡的「機場接送」不能把它變成交通票：有入住／退房就扣回去
+  if(/入住|退房|check[-\s]?in|check[-\s]?out/i.test(body)) score-=3;
+  return {isTransport:score>=4,score,modes};
+}
+function transportModeOf(segment){
+  const hit=TRANSPORT_MODE_RULES.find(r=>r.re.test(segment));
+  return hit?hit.mode:'other';
+}
+function extractTransport(text,raceDate){
+  const body=String(text||'').replace(/\r/g,'');
+  const dateLike='(\\d{4}\\s*[-/年.]\\s*\\d{1,2}\\s*[-/月.]\\s*\\d{1,2}|\\d{1,2}\\s*[-/月.]\\s*\\d{1,2}(?:日)?)';
+  const timeLike='((?:上午|下午|AM|PM|am|pm)?\\s*\\d{1,2}\\s*[:：時]\\s*\\d{2}(?:\\s*(?:AM|PM|am|pm|発|發))?)';
+  // 切段：明確標了「去程／回程／Outbound／Return／往路／復路」的地方切開，
+  // 一段一筆。沒有標記就整段當一筆。
+  const markerRe=/(去程|回程|返程|outbound|return|inbound|往路|復路|departing|returning)/gi;
+  const marks=[]; let mm;
+  while((mm=markerRe.exec(body))) marks.push({idx:mm.index,label:mm[1].toLowerCase()});
+  const segments=[];
+  if(marks.length>=2){
+    marks.forEach((mk,i)=>{
+      const end=i+1<marks.length?marks[i+1].idx:body.length;
+      segments.push({text:body.slice(mk.idx,end),marker:mk.label});
+    });
+    // 第一個標記之前的內容（共用的抬頭、訂位代號）併進每一段的判斷用
+    const head=body.slice(0,marks[0].idx);
+    segments.forEach(sg=>{ sg.head=head; });
+  }else{
+    segments.push({text:body,marker:marks.length?marks[0].label:null,head:''});
+  }
+  const isReturnMarker=l=>/回程|返程|return|inbound|復路|returning/.test(l||'');
+  const entries=[];
+  segments.forEach(sg=>{
+    const seg=sg.text, full=(sg.head||'')+'\n'+seg;
+    let mode=transportModeOf(seg)!=='other'?transportModeOf(seg):transportModeOf(full);
+    // 「車次」高鐵跟台鐵都在用：段落裡只看到車次會判成火車，抬頭寫著
+    // 高鐵／新幹線就該是高鐵。只針對這一組模糊做修正，不整包用抬頭判。
+    if(mode==='train'&&/高鐵|THSR|新幹線|shinkansen/i.test(full)) mode='hsr';
+    // 出發時間：先找標籤，再退回段落裡第一個日期＋緊接的時間
+    let dep='';
+    const depRe=new RegExp('(?:出發|發車|起飛|departure|depart|出発)[^\\n]{0,10}?'+dateLike+'(?:[^\\n]{0,10}?'+timeLike+')?','i');
+    let m=seg.match(depRe);
+    if(m) dep=parseAccomDateTime(m[1],m[2]);
+    if(!dep){
+      m=seg.match(new RegExp(dateLike+'[^\\n]{0,16}?'+timeLike,'i'));
+      if(m) dep=parseAccomDateTime(m[1],m[2]);
+      else { m=seg.match(new RegExp(dateLike)); if(m) dep=parseAccomDateTime(m[1],''); }
+    }
+    // 起訖：X → Y 或「X 到 Y」；沒有箭頭就找含「機場／站／港」的第一個地名
+    let from='',to='';
+    m=seg.match(/([^\s→\->—至到]{2,20})\s*(?:→|->|➜|⇒|—|至|到|-\s)\s*([^\s→\->—\n]{2,20})/);
+    if(m){ from=m[1].trim(); to=m[2].trim(); }
+    if(!from){ m=seg.match(/([^\s、，,]{1,16}(?:機場|車站|火車站|高鐵站|港|碼頭|轉運站|Airport|Station|Terminal))/i); if(m) from=m[1]; }
+    // 班次／座位／代號放備註，之後對票用。
+    // 先把訂位代號抽掉再找班次：ABC123 這種代號會被「兩個字母＋數字」的
+    // 班機號規則吃掉（BC123）。
+    const refRe=/(?:訂位代號|訂票代號|予約番号|PNR|booking\s*(?:ref|reference|code)|confirmation\s*(?:number|code))\s*[:：]?\s*([A-Z0-9]{4,12})/i;
+    const ref=full.match(refRe);
+    const segNoRef=seg.replace(refRe,'');
+    const bits=[];
+    const num=segNoRef.match(/\b([A-Z]{2}\s?\d{2,4})\b/)
+      ||segNoRef.match(/車次[ \t]*(\d{2,4})|(\d{2,4})[ \t]*車次|(\d{3,4})[ \t]*次|(\S+[ \t]*\d+号)/);
+    if(num) bits.push((num[1]||num[2]||num[3]||num[4]).trim());
+    const seat=seg.match(/(?:座位|seat)\s*[:：]?\s*([0-9]{1,2}[A-F]|[0-9]{1,2}\s*車\s*[0-9]{1,2}[A-F]?)/i)||seg.match(/(\d{1,2}\s*車\s*\d{1,2}[A-F]?)/);
+    if(seat) bits.push(seat[1].trim());
+    // 抵達時間：標籤在前（抵達 13:35）或在後（13:35 抵達／10:30着）都收
+    const arr=seg.match(new RegExp('(?:抵達|到達|arrival|arrive|到着)[^\\n]{0,8}?'+timeLike,'i'))
+      ||seg.match(new RegExp(timeLike+'[ \\t]*(?:抵達|到達|着|arrival|arrive)','i'));
+    if(arr) bits.push(t('ui.transportArrive','抵達')+' '+arr[1].trim());
+    if(ref) bits.push('#'+ref[1]);
+    if(to) bits.unshift(from+' → '+to);
+    // 方向：有標記照標記；沒有就用日期跟賽事日比——比賽前是去程，之後是回程
+    let direction='outbound';
+    if(sg.marker) direction=isReturnMarker(sg.marker)?'return':'outbound';
+    else if(dep&&raceDate){ direction=dep.slice(0,10)>raceDate?'return':'outbound'; }
+    entries.push({direction,mode,departureTime:dep,pickupLocation:from,notes:bits.join(' ・ ')});
+  });
+  return entries;
+}
+const PASTE_REVIEW_FIELDS=['review.lessonsLearned','review.courseReview','review.hitTheWallNotes','review.pros','review.cons'];
+let pasteNoteState=null;
+function pasteNoteCandidates(){
+  // 開著的賽事優先，其次是已完賽、日期新的在前
+  const list=state.races.filter(r=>!r.deletedAt);
+  const sorted=list.slice().sort((a,b)=>{
+    const ac=a.status==='completed'?0:1, bc=b.status==='completed'?0:1;
+    if(ac!==bc) return ac-bc;
+    return (b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||'');
+  });
+  if(currentRace) return [currentRace].concat(sorted.filter(r=>r.id!==currentRace.id));
+  return sorted;
+}
+function pasteAccomModalHtml(){
+  const st=pasteNoteState;
+  const races=pasteNoteCandidates().slice(0,40);
+  const race=races.find(r=>r.id===st.raceId)||races[0];
+  const labelOf=path=>t('field.accommodations.'+path,(ACCOM_FIELDS.find(f=>f.path===path)||{}).label||path);
+  const displayOf=(path,value)=>{
+    if(path==='bookingStatus'){
+      const o=BOOKING_OPTIONS.find(x=>x.value===value);
+      return o?t('opt.booking.'+o.value,o.label):value;
+    }
+    if(path==='checkIn'||path==='checkOut') return String(value).replace('T',' ');
+    return String(value);
+  };
+  const keys=Object.keys(st.fields);
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.pasteAccomTitle','偵測到住宿資訊')}</h2>
+    <p class="modal-hint">${t('ui.pasteAccomHint','看起來像訂房資料。確認無誤後會在這場賽事新增一筆住宿，不會動到已經有的住宿紀錄。')}</p>
+    <div class="paste-note-preview small">${escapeHtml(st.text.slice(0,300))}${st.text.length>300?'…':''}</div>
+    <label class="field"><span>${t('ui.pasteNoteRace','填入賽事')}</span>
+      <select data-paste-field="raceId">${races.map(r=>`<option value="${r.id}"${race&&r.id===race.id?' selected':''}>${escapeHtml(r.schedule.raceDate||'')} ${escapeHtml(r.name||t('ui.unnamedRace','(未命名賽事)'))}</option>`).join('')}</select>
+    </label>
+    ${keys.length?`<div class="paste-note-facts">
+      <strong class="small">${t('ui.pasteAccomFields','抓到這些欄位')}</strong>
+      ${keys.map(k=>`<label class="paste-note-fact">
+        <input type="checkbox" data-paste-accom="${k}"${st.fieldsOn[k]?' checked':''}>
+        <span><strong>${escapeHtml(labelOf(k))}</strong> → ${escapeHtml(displayOf(k,st.fields[k]))}</span>
+      </label>`).join('')}
+    </div>`:`<p class="small paste-note-facts-hint">${t('ui.pasteAccomNothing','沒有抓到可以填的欄位，還是可以新增一筆空白住宿再自己填。')}</p>`}
+    ${(st.fields.checkIn&&!/T/.test(st.fields.checkIn))||(st.fields.checkOut&&!/T/.test(st.fields.checkOut))
+      ?`<p class="small paste-note-facts-hint">${t('ui.pasteAccomNoTime','文字裡只有日期沒有時間，時間欄位留空給你自己補——猜一個時間會變成看起來像真的、其實是編的資料。')}</p>`:''}
+    <div class="modal-actions">
+      <button class="btn-primary" data-action="confirm-paste-accom">${t('ui.pasteAccomApply','新增住宿')}</button>
+      <button class="btn-ghost" data-action="close-paste-note">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+}
+function pasteTransportModalHtml(){
+  const st=pasteNoteState;
+  const races=pasteNoteCandidates().slice(0,40);
+  const race=races.find(r=>r.id===st.raceId)||races[0];
+  const fieldLabel=path=>t('field.transportation.'+path,(TRANSPORT_FIELDS.find(f=>f.path===path)||{}).label||path);
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.pasteTransportTitle','偵測到交通票券')}</h2>
+    <p class="modal-hint">${tf('ui.pasteTransportHint','看起來像車票／機票資料，抓到 {n} 段行程。方向與交通工具是猜的，請確認；確認後會新增到這場賽事，不會動到已經有的交通紀錄。',st.entries.length)}</p>
+    <div class="paste-note-preview small">${escapeHtml(st.text.slice(0,300))}${st.text.length>300?'…':''}</div>
+    <label class="field"><span>${t('ui.pasteNoteRace','填入賽事')}</span>
+      <select data-paste-field="raceId">${races.map(r=>`<option value="${r.id}"${race&&r.id===race.id?' selected':''}>${escapeHtml(r.schedule.raceDate||'')} ${escapeHtml(r.name||t('ui.unnamedRace','(未命名賽事)'))}</option>`).join('')}</select>
+    </label>
+    ${st.entries.map((en,i)=>`<div class="paste-transport-entry">
+      <label class="paste-note-fact"><input type="checkbox" data-paste-trip="${i}"${st.tripsOn[i]?' checked':''}>
+        <strong>${tf('ui.pasteTransportLeg','第 {n} 段',i+1)}</strong></label>
+      <div class="paste-transport-grid">
+        <label><span class="small">${fieldLabel('direction')}</span>
+          <select data-paste-trip-field="${i}:direction">${DIRECTION_OPTIONS.map(o=>`<option value="${o.value}"${en.direction===o.value?' selected':''}>${escapeHtml(t('opt.direction.'+o.value,o.label))}</option>`).join('')}</select></label>
+        <label><span class="small">${fieldLabel('mode')}</span>
+          <select data-paste-trip-field="${i}:mode">${TRANSPORT_MODE_OPTIONS.map(o=>`<option value="${o.value}"${en.mode===o.value?' selected':''}>${escapeHtml(t('opt.transportmode.'+o.value,o.label))}</option>`).join('')}</select></label>
+        <label><span class="small">${fieldLabel('departureTime')}</span>
+          <input type="datetime-local" data-paste-trip-field="${i}:departureTime" value="${escapeHtml(/T/.test(en.departureTime)?en.departureTime:'')}"></label>
+        <label><span class="small">${fieldLabel('pickupLocation')}</span>
+          <input type="text" data-paste-trip-field="${i}:pickupLocation" value="${escapeHtml(en.pickupLocation)}"></label>
+        <label class="paste-transport-wide"><span class="small">${fieldLabel('notes')}</span>
+          <input type="text" data-paste-trip-field="${i}:notes" value="${escapeHtml(en.notes)}"></label>
+      </div>
+      ${en.departureTime&&!/T/.test(en.departureTime)?`<p class="small paste-note-facts-hint">${tf('ui.pasteTransportDateOnly','只找到日期 {d}，沒有時間——出發時間留空給你自己補。',en.departureTime)}</p>`:''}
+    </div>`).join('')}
+    <div class="modal-actions">
+      <button class="btn-primary" data-action="confirm-paste-transport">${t('ui.pasteTransportApply','新增交通')}</button>
+      <button class="btn-ghost" data-action="close-paste-note">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+}
+function pasteNoteModalHtml(){
+  const st=pasteNoteState;
+  const races=pasteNoteCandidates().slice(0,40);
+  const race=races.find(r=>r.id===st.raceId)||races[0];
+  const existing=race?(getPath(race,st.field)||''):'';
+  // 欄位標籤要跨區段找：抽出來的數字不一定屬於賽後區段（距離在路線區段）
+  const fieldLabelOf=path=>{
+    const groups=[['post',SECTION_POST],['basic',SECTION_BASIC],['route',SECTION_ROUTE],
+                  ['weather',SECTION_WEATHER],['logistics',SECTION_LOGISTICS],['prep',SECTION_PREP]];
+    for(const [key,arr] of groups){
+      const f=arr.find(x=>x.path===path);
+      if(f) return t('field.'+key+'.'+path,f.label);
+    }
+    return path;
+  };
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.pasteNoteTitle','偵測到完賽心得')}</h2>
+    <p class="modal-hint">${tf('ui.pasteNoteHint','剪貼簿裡有一段 {n} 字的文字，看起來像賽後心得。要填進哪一場？',st.text.length)}</p>
+    <div class="paste-note-preview small">${escapeHtml(st.text.slice(0,400))}${st.text.length>400?'…':''}</div>
+    <label class="field"><span>${t('ui.pasteNoteRace','填入賽事')}</span>
+      <select data-paste-field="raceId">${races.map(r=>`<option value="${r.id}"${race&&r.id===race.id?' selected':''}>${escapeHtml(r.schedule.raceDate||'')} ${escapeHtml(r.name||t('ui.unnamedRace','(未命名賽事)'))}</option>`).join('')}</select>
+    </label>
+    <label class="field"><span>${t('ui.pasteNoteField','填入欄位')}</span>
+      <select data-paste-field="field">${PASTE_REVIEW_FIELDS.map(f=>`<option value="${f}"${f===st.field?' selected':''}>${escapeHtml(fieldLabelOf(f))}</option>`).join('')}</select>
+    </label>
+    ${existing?`<label class="field"><span>${t('ui.pasteNoteMode','這個欄位已經有內容')}</span>
+      <select data-paste-field="mode">
+        <option value="append"${st.mode==='append'?' selected':''}>${t('ui.pasteNoteAppend','接在後面')}</option>
+        <option value="replace"${st.mode==='replace'?' selected':''}>${t('ui.pasteNoteReplace','覆蓋掉')}</option>
+      </select></label>
+      <div class="paste-note-existing small">${escapeHtml(existing.slice(0,120))}${existing.length>120?'…':''}</div>`:''}
+    ${st.facts.length?`
+      <div class="paste-note-facts">
+        <strong class="small">${t('ui.pasteNoteFacts','文字裡也找到這些數字，要一起填嗎？')}</strong>
+        <p class="small paste-note-facts-hint">${t('ui.pasteNoteFactsHint','預設不勾：心得裡的數字常常是去年的、別人的，或只是目標值。')}</p>
+        ${st.facts.map((f,i)=>{
+          const cur=race?getPath(race,f.key):null;
+          return `<label class="paste-note-fact">
+            <input type="checkbox" data-paste-fact="${i}"${st.factsOn[i]?' checked':''}>
+            <span><strong>${escapeHtml(fieldLabelOf(f.key)||f.key)}</strong> → ${escapeHtml(f.display)}
+            ${cur!=null&&cur!==''?`<em class="paste-note-overwrite">${tf('ui.pasteNoteWillOverwrite','會覆蓋現有的 {n}',f.key==='results.chipTimeSeconds'?secToHMS(cur):cur)}</em>`:''}
+            <span class="paste-note-snippet small">${escapeHtml(f.snippet)}</span></span>
+          </label>`;
+        }).join('')}
+      </div>`:''}
+    <div class="modal-actions">
+      <button class="btn-primary" data-action="confirm-paste-note">${t('ui.pasteNoteApply','填入')}</button>
+      <button class="btn-ghost" data-action="close-paste-note">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+}
+function openPasteNoteModal(text){
+  const facts=extractRaceFacts(text);
+  const first=pasteNoteCandidates()[0];
+  pasteNoteState={kind:'report',text:text.trim(),raceId:first?first.id:null,field:'review.lessonsLearned',
+                  mode:'append',facts,factsOn:facts.map(()=>false)};
+  const el=document.getElementById('paste-note-modal');
+  el.innerHTML=pasteNoteModalHtml(); el.hidden=false;
+}
+function openPasteTransportModal(text){
+  const first=pasteNoteCandidates()[0];
+  const entries=extractTransport(text,first?first.schedule.raceDate:'');
+  pasteNoteState={kind:'transport',text:text.trim(),raceId:first?first.id:null,entries,tripsOn:entries.map(()=>true)};
+  const el=document.getElementById('paste-note-modal');
+  el.innerHTML=pasteTransportModalHtml(); el.hidden=false;
+}
+function openPasteAccomModal(text){
+  const fields=extractAccommodation(text);
+  const first=pasteNoteCandidates()[0];
+  const fieldsOn={};
+  // 這裡預設全勾：訂房確認信是結構化的，抓到的日期就是這次的日期，
+  // 不像心得裡的數字那樣可能是去年的、別人的。
+  Object.keys(fields).forEach(k=>{ fieldsOn[k]=true; });
+  pasteNoteState={kind:'accommodation',text:text.trim(),raceId:first?first.id:null,fields,fieldsOn};
+  const el=document.getElementById('paste-note-modal');
+  el.innerHTML=pasteAccomModalHtml(); el.hidden=false;
+}
+function closePasteNoteModal(){
+  const el=document.getElementById('paste-note-modal');
+  el.hidden=true; el.innerHTML=''; pasteNoteState=null;
+}
+function redrawPasteNoteModal(){
+  const el=document.getElementById('paste-note-modal');
+  if(el.hidden||!pasteNoteState) return;
+  el.innerHTML=pasteNoteState.kind==='accommodation'?pasteAccomModalHtml()
+    :pasteNoteState.kind==='transport'?pasteTransportModalHtml():pasteNoteModalHtml();
+}
+document.getElementById('paste-note-modal').addEventListener('change',e=>{
+  if(!pasteNoteState) return;
+  const sel=e.target.closest('[data-paste-field]');
+  if(sel){
+    pasteNoteState[sel.dataset.pasteField]=sel.value;
+    // 交通：換賽事時方向要用新賽事的日期重新猜（比賽前＝去程、之後＝回程）
+    if(pasteNoteState.kind==='transport'&&sel.dataset.pasteField==='raceId'){
+      const r=state.races.find(x=>x.id===sel.value);
+      pasteNoteState.entries=extractTransport(pasteNoteState.text,r?r.schedule.raceDate:'');
+      pasteNoteState.tripsOn=pasteNoteState.entries.map(()=>true);
+    }
+    redrawPasteNoteModal(); return;
+  }
+  const tripField=e.target.closest('[data-paste-trip-field]');
+  if(tripField){
+    const [i,key]=tripField.dataset.pasteTripField.split(':');
+    pasteNoteState.entries[Number(i)][key]=tripField.value; return;
+  }
+  const trip=e.target.closest('[data-paste-trip]');
+  if(trip){ pasteNoteState.tripsOn[Number(trip.dataset.pasteTrip)]=trip.checked; return; }
+  const fact=e.target.closest('[data-paste-fact]');
+  if(fact){ pasteNoteState.factsOn[Number(fact.dataset.pasteFact)]=fact.checked; return; }
+  const accom=e.target.closest('[data-paste-accom]');
+  if(accom){ pasteNoteState.fieldsOn[accom.dataset.pasteAccom]=accom.checked; }
+});
+document.getElementById('paste-note-modal').addEventListener('click',e=>{
+  if(e.target.closest('[data-action="close-paste-note"]')){ closePasteNoteModal(); return; }
+  if(e.target.closest('[data-action="confirm-paste-transport"]')&&pasteNoteState){
+    const st=pasteNoteState;
+    const race=state.races.find(r=>r.id===st.raceId);
+    if(!race){ closePasteNoteModal(); return; }
+    const added=[];
+    st.entries.forEach((en,i)=>{
+      if(!st.tripsOn[i]) return;
+      const entry=LIST_META.transportation.factory();
+      entry.direction=en.direction; entry.mode=en.mode;
+      entry.departureTime=/T/.test(en.departureTime)?en.departureTime:'';
+      entry.pickupLocation=en.pickupLocation||''; entry.notes=en.notes||'';
+      added.push(entry);
+    });
+    race.transportation=(race.transportation||[]).concat(added);
+    race.updatedAt=new Date().toISOString();
+    persist().then(()=>{
+      renderCalendar();
+      if(currentRace&&currentRace.id===race.id) renderDetail();
+      else selectRace(race.id,{scroll:false});
+    });
+    closePasteNoteModal();
+    showToast(tf('ui.pasteTransportDone','已新增 {n} 段交通',added.length));
+    logFeatureUse('paste_transport');
+    return;
+  }
+  if(e.target.closest('[data-action="confirm-paste-accom"]')&&pasteNoteState){
+    const st=pasteNoteState;
+    const race=state.races.find(r=>r.id===st.raceId);
+    if(!race){ closePasteNoteModal(); return; }
+    // 一律新增一筆，不改既有的住宿——判斷錯了最多是多一筆可以刪掉的紀錄，
+    // 不會把已經填好的訂房資料蓋掉。
+    const entry=LIST_META.accommodations.factory();
+    Object.keys(st.fields).forEach(k=>{ if(st.fieldsOn[k]) entry[k]=st.fields[k]; });
+    race.accommodations=(race.accommodations||[]).concat([entry]);
+    race.updatedAt=new Date().toISOString();
+    persist().then(()=>{
+      renderCalendar();
+      if(currentRace&&currentRace.id===race.id) renderDetail();
+      else selectRace(race.id,{scroll:false});
+    });
+    closePasteNoteModal();
+    showToast(t('ui.pasteAccomDone','已新增一筆住宿'));
+    logFeatureUse('paste_accommodation');
+    return;
+  }
+  if(!e.target.closest('[data-action="confirm-paste-note"]')||!pasteNoteState) return;
+  const st=pasteNoteState;
+  const race=state.races.find(r=>r.id===st.raceId);
+  if(!race){ closePasteNoteModal(); return; }
+  const existing=getPath(race,st.field)||'';
+  const merged=(existing&&st.mode==='append')?(existing.trimEnd()+'\n\n'+st.text):st.text;
+  setPath(race,st.field,merged);
+  const applied=[];
+  st.facts.forEach((f,i)=>{ if(st.factsOn[i]){ setPath(race,f.key,f.value); applied.push(f.key); } });
+  race.updatedAt=new Date().toISOString();
+  persist().then(()=>{
+    renderCalendar();
+    if(currentRace&&currentRace.id===race.id) renderDetail();
+    else selectRace(race.id,{scroll:false});
+  });
+  closePasteNoteModal();
+  showToast(applied.length
+    ? tf('ui.pasteNoteDoneWithFacts','心得已填入，另外更新了 {n} 個欄位',applied.length)
+    : t('ui.pasteNoteDone','心得已填入'));
+  logFeatureUse('paste_race_report');
+});
+/* ============================================================
+   公開連結（每場賽事一個唯讀網頁）。
+   原則：白名單，不是黑名單。快照只放下面明列的欄位——成績、照片、
+   GPS 軌跡、基本資訊；預算、筆記、裝備清單、訓練計畫、聯絡資訊這些
+   「沒列出來的」自動不會進去，之後新增任何欄位也一樣。公開是使用者
+   一場一場主動按的，撤銷就把 /public/{id} 刪掉、連結立即失效。
+   ============================================================ */
+const OG_SHARE_BASE='';   // 部署 functions 之後把服務網址填進來（見 functions-share/README-DEPLOY.md）；留空則用 ?s= 直連
+const PUBLIC_SNAPSHOT_BUDGET=900000;   // Firestore 單一文件上限 1MB，留餘裕
+function publicShareLink(id){
+  return OG_SHARE_BASE?`${OG_SHARE_BASE.replace(/\/$/,'')}/s/${id}`:`${shareSiteUrl()}?s=${id}`;
+}
+async function buildPublicSnapshot(race){
+  const round5=v=>Math.round(v*1e5)/1e5;
+  // 軌跡降採樣到 400 點：畫在網頁上綽綽有餘，又不會吃掉照片的空間
+  const rawTrack=race.route.trackPoints||[];
+  const step=Math.max(1,Math.ceil(rawTrack.length/400));
+  const track=rawTrack.filter((_,i)=>i%step===0||i===rawTrack.length-1).map(pt=>[round5(pt.lat),round5(pt.lon)]);
+  const shoe=shoes.find(sh=>sh.id===(race.performanceData&&race.performanceData.shoeId));
+  const consumed=(race.nutritionSchedule||[]).filter(x=>x.consumed).map(x=>({item:x.item,qty:x.qty}));
+  const photos=(race.geoPhotos||[]).filter(ph=>ph.thumbnailDataUrl&&ph.aligned!==false)
+    .map(ph=>({thumb:ph.thumbnailDataUrl,at:ph.rawCapturedAt||null,
+               lat:ph.lat!=null?round5(ph.lat):null,lon:ph.lon!=null?round5(ph.lon):null}));
+  // OG 縮圖直接用方形分享圖（社群預覽就該長那個樣子），存 JPEG 壓小
+  let og=null;
+  try{
+    const canvas=await buildShareCanvas(race,{format:'square'});
+    og=canvas.toDataURL('image/jpeg',0.72);
+  }catch(e){ og=null; }
+  const snap={
+    v:1, appVersion:APP_VERSION, publishedAt:new Date().toISOString(),
+    name:race.name||'', raceDate:race.schedule.raceDate||'', startTime:race.schedule.startTime||'',
+    sportType:race.sportType, city:race.location.city||'', country:race.location.country||'',
+    results:{
+      chipTimeSeconds:race.results.chipTimeSeconds, isPb:!!race.results.isPb,
+      overallRank:race.results.overallRank??null, ageGroupRank:race.results.ageGroupRank??null,
+    },
+    route:{distanceKm:race.route.distanceKm??null, elevationGainM:race.route.elevationGainM??null, track},
+    performance:{avgHr:(race.performanceData&&race.performanceData.avgHr)??null},
+    shoeName:shoe?shoe.name:null,
+    fuel:consumed,
+    coverThumb:race.coverThumb||null,
+    photos, og,
+  };
+  // 超過預算就先砍照片（從最後一張開始）、再砍 og、最後砍軌跡——
+  // 順序反映「少了誰最可惜」：軌跡是這頁的主視覺，最後才動它。
+  const size=()=>JSON.stringify(snap).length;
+  while(size()>PUBLIC_SNAPSHOT_BUDGET&&snap.photos.length) snap.photos.pop();
+  if(size()>PUBLIC_SNAPSHOT_BUDGET) snap.og=null;
+  if(size()>PUBLIC_SNAPSHOT_BUDGET) snap.route.track=snap.route.track.filter((_,i)=>i%2===0);
+  return snap;
+}
+async function publishRaceLink(race){
+  if(!state.user||!cloudEnabled()) throw new Error(t('ui.publicNeedLogin','要先登入才能建立公開連結'));
+  const id=race.publicShareId||(Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,6));
+  const snap=await buildPublicSnapshot(race);
+  await window.__cloud.publishSnapshot(state.user.uid,id,JSON.stringify(snap));
+  race.publicShareId=id;
+  race.updatedAt=new Date().toISOString();
+  await persist();
+  logFeatureUse('public_link_publish');
+  return id;
+}
+async function revokeRaceLink(race){
+  if(!race.publicShareId) return;
+  await window.__cloud.deleteSnapshot(race.publicShareId);
+  race.publicShareId=null;
+  race.updatedAt=new Date().toISOString();
+  await persist();
+  logFeatureUse('public_link_revoke');
+}
+/* ---- 唯讀公開頁：?s=<id> ----
+   這個檢視完全獨立於 App 的 state——不讀本機資料、不初始化月曆，
+   看的人不需要帳號。所有文字都經過 escapeHtml，快照是別人寫的資料，
+   要當成不可信輸入。 */
+async function fetchPublicSnapshotAnyway(id){
+  if(window.__cloudOverride&&window.__cloudOverride.fetchPublicSnapshot) return window.__cloudOverride.fetchPublicSnapshot(id);
+  // 等 firebase module 就緒（最多 6 秒），拿不到再走 REST——REST 不需要
+  // SDK，只要規則開放讀取就抓得到，這一頁不能被「SDK 載入失敗」擋死
+  const waitCloud=new Promise(res=>{
+    if(window.__cloud) return res(window.__cloud);
+    const timer=setTimeout(()=>res(null),6000);
+    window.addEventListener('cloud-ready',()=>{ clearTimeout(timer); res(window.__cloud); },{once:true});
+  });
+  const cloud=await waitCloud;
+  if(cloud&&cloud.enabled){
+    try{ return await cloud.fetchPublicSnapshot(id); }catch(e){ console.warn('SDK 讀取失敗，改走 REST',e); }
+  }
+  const url=`https://firestore.googleapis.com/v1/projects/race-day-6da0b/databases/(default)/documents/public/${encodeURIComponent(id)}?key=AIzaSyC_CdVap0VrzuEeE5KPmOkendsHcaVSj2w`;
+  const res=await fetch(url);
+  if(!res.ok) return null;
+  const data=await res.json();
+  const payload=data&&data.fields&&data.fields.payload&&data.fields.payload.stringValue;
+  return payload?JSON.parse(payload):null;
+}
+function publicTrackSvg(track){
+  if(!track||track.length<2) return '';
+  const lats=track.map(p=>p[0]),lons=track.map(p=>p[1]);
+  const minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons);
+  const W=640,H=360,pad=24;
+  const spanLon=(maxLon-minLon)||1e-6, spanLat=(maxLat-minLat)||1e-6;
+  const scale=Math.min((W-pad*2)/spanLon,(H-pad*2)/spanLat);
+  const ox=(W-spanLon*scale)/2, oy=(H-spanLat*scale)/2;
+  const pts=track.map(([lat,lon])=>`${(ox+(lon-minLon)*scale).toFixed(1)},${(oy+(maxLat-lat)*scale).toFixed(1)}`).join(' ');
+  return `<svg class="pubview-track" viewBox="0 0 ${W} ${H}" role="img" aria-label="route">
+    <polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+  </svg>`;
+}
+function renderPublicShareView(snap){
+  document.title=(snap.name||'')+' | '+t('ui.appTitle','賽事紀錄');
+  const time=snap.results.chipTimeSeconds!=null?secToHMS(snap.results.chipTimeSeconds):null;
+  const stats=[];
+  if(snap.route.distanceKm!=null&&snap.results.chipTimeSeconds&&isRunningSportType(snap.sportType))
+    stats.push([t('ui.statPace','配速'),formatPace(snap.results.chipTimeSeconds/snap.route.distanceKm)]);
+  if(snap.route.distanceKm!=null) stats.push([t('ui.statDistance','距離'),snap.route.distanceKm+' '+t('ui.unitKm','公里')]);
+  if(snap.route.elevationGainM!=null) stats.push([t('ui.statElev','總爬升'),Math.round(snap.route.elevationGainM)+' '+t('ui.unitM','公尺')]);
+  if(snap.performance.avgHr!=null) stats.push([t('ui.statAvgHr','平均心率'),snap.performance.avgHr+' bpm']);
+  if(snap.results.overallRank!=null) stats.push([t('ui.statOverallRank','總排名次'),snap.results.overallRank]);
+  document.body.innerHTML=`<div class="pubview">
+    <header class="pubview-head">
+      <div class="pubview-brand">${t('ui.appTitle','賽事紀錄')}</div>
+      <h1>${escapeHtml(snap.name)||t('ui.unnamedRace','(未命名賽事)')}</h1>
+      <div class="pubview-meta mono">${escapeHtml(snap.raceDate)}${snap.startTime?' '+escapeHtml(snap.startTime):''} ・ ${escapeHtml([snap.city,snap.country].filter(Boolean).join(', '))} ・ ${escapeHtml(sportLabel(snap.sportType))}</div>
+    </header>
+    ${time?`<div class="pubview-time mono">${time}${snap.results.isPb?`<span class="pubview-pb">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}</div>`:''}
+    ${stats.length?`<div class="pubview-stats">${stats.map(([l,v])=>`<div><span class="small">${escapeHtml(String(l))}</span><strong class="mono">${escapeHtml(String(v))}</strong></div>`).join('')}</div>`:''}
+    ${snap.coverThumb?`<img class="pubview-cover" src="${escapeHtml(snap.coverThumb)}" alt="">`:''}
+    ${publicTrackSvg(snap.route.track)}
+    ${snap.shoeName||snap.fuel.length?`<div class="pubview-gear small">${[
+      snap.shoeName?`${t('ui.shareShoeLabel','戰靴')}：${escapeHtml(snap.shoeName)}`:'',
+      snap.fuel.length?`${t('ui.shareFuelLabel','補給')}：${escapeHtml(snap.fuel.map(f=>`${f.item} ×${f.qty}`).join('・'))}`:'',
+    ].filter(Boolean).join('　')}</div>`:''}
+    ${snap.photos.length?`<div class="pubview-photos">${snap.photos.map(ph=>`<img src="${escapeHtml(ph.thumb)}" alt="" loading="lazy">`).join('')}</div>`:''}
+    <footer class="pubview-foot small">
+      <a href="${escapeHtml(shareSiteUrl())}">${t('ui.publicMadeWith','用「賽事紀錄」記下你的每一場比賽')}</a>
+    </footer>
+  </div>`;
+}
+async function bootPublicShareView(id){
+  document.body.innerHTML=`<div class="pubview"><p class="small pubview-loading">${t('ui.publicLoading','載入公開紀錄中…')}</p></div>`;
+  let snap=null,err=null;
+  try{ snap=await fetchPublicSnapshotAnyway(id); }catch(e){ err=e; }
+  if(!snap){
+    document.body.innerHTML=`<div class="pubview"><h1>${t('ui.publicGone','這個連結已失效')}</h1>
+      <p class="small">${t('ui.publicGoneHint','紀錄的主人可能已撤銷分享，或連結有誤。')}</p>
+      <p class="small"><a href="${escapeHtml(shareSiteUrl())}">${t('ui.appTitle','賽事紀錄')}</a></p></div>`;
+    if(err) console.warn('公開紀錄載入失敗',err);
+    return;
+  }
+  renderPublicShareView(snap);
+}
+/* copyTextToClipboard(text)：navigator.clipboard 需要安全來源（https），
+   file:// 或舊瀏覽器退回 textarea + execCommand。回傳成功與否，呼叫端
+   才能告訴使用者「複製好了」還是「請手動選取」。 */
+async function copyTextToClipboard(text){
+  try{
+    if(navigator.clipboard&&window.isSecureContext){ await navigator.clipboard.writeText(text); return true; }
+  }catch(e){}
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text; ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:-1000px;opacity:0;';
+    document.body.appendChild(ta); ta.select();
+    const ok=document.execCommand('copy');
+    ta.remove(); return ok;
+  }catch(e){ return false; }
+}
+function drawShareQr(ctx,x,y,size,text){
+  const m=qrMatrix(text);
+  if(!m) return;
+  const n=m.length, quiet=4;
+  const unit=size/(n+quiet*2);
+  const r=14;
+  ctx.fillStyle='#EEF0EF';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x,y,size,size,r);
+  else ctx.rect(x,y,size,size);
+  ctx.fill();
+  ctx.fillStyle='#16231C';
+  for(let row=0;row<n;row++) for(let col=0;col<n;col++){
+    if(!m[row][col]) continue;
+    // 每格多畫 0.5px，避免縮放後模組之間出現細白縫、掃描器判讀失敗
+    ctx.fillRect(x+(col+quiet)*unit,y+(row+quiet)*unit,unit+0.5,unit+0.5);
+  }
+}
+/* shareSiteUrl()：分享圖上 QR 指向的網址。部署在 https 時直接用當下的
+   網址（換網域不用改程式），本機用 file:// 開的時候退回正式站台。 */
+const SHARE_FALLBACK_URL='https://ai-sub3.github.io/Race-Day/';
+function shareSiteUrl(){
+  if(location.protocol==='https:') return location.origin+location.pathname;
+  return SHARE_FALLBACK_URL;
+}
+/* shareCaptionText(race)：給 IG 說明欄用的文案。成績、距離、配速各一行，
+   後面接 hashtag 與網址。IG 的說明欄不能點連結，網址放著是給人手動複製、
+   或直接掃圖上的 QR；貼到 Threads、LINE 時連結才會變成可點的。 */
+function shareCaptionText(race){
+  const lines=[race.name||t('ui.unnamedRace','(未命名賽事)')];
+  // 只取前三項：IG 說明欄前兩行以外會被「...更多」收起來，把五項全塞進去
+  // 等於後面幾項沒人看得到。
+  const stats=shareStatsBadges(race,SHARE_SHOW_DEFAULT).slice(0,3).map(([label,value])=>`${label} ${value}`);
+  if(race.results.chipTimeSeconds) lines.push(secToHMS(race.results.chipTimeSeconds)+(race.results.isPb?` ${t('ui.pbBadge','個人最佳 PB')}`:''));
+  if(stats.length) lines.push(stats.join(' ・ '));
+  const tags=['#'+t('ui.appTitle','賽事紀錄').replace(/\s/g,''),'#'+sportLabel(race.sportType).replace(/\s/g,'')];
+  if(race.results.isPb) tags.push('#PB');
+  lines.push('',tags.join(' '),race.publicShareId?publicShareLink(race.publicShareId):shareSiteUrl());
+  return lines.join('\n');
+}
+const SHARE_SHOW_DEFAULT={hr:true,shoe:true,fuel:true,track:true,qr:true};
 /* shareStatsBadges(race, show)：上排的關鍵數據。運動別規則跟詳情頁一致
    ——分享圖是最容易被外人看到的畫面，這裡出現「泳渡配速 89'25"/km、
    爬升 531 公尺」比在自己頁面上看到更糟，它會被截圖轉傳出去。 */
@@ -8632,6 +9645,10 @@ async function buildShareCanvas(race,opts){
   ctx.fillStyle='#16231C';
   ctx.fillRect(0,0,W,H);
   drawShareLogo(ctx,80,55,uiFont);
+  // QR 放右上角：那一塊本來就是空的，而且不用跟軌跡、補給文字搶位置。
+  // 240px 是「掃得到」的下限——1080 的圖在手機上顯示成約 390pt 寬，
+  // 240px 的 QR 只剩 87pt，再小就得把手機湊到螢幕前面才掃得出來。
+  if(show.qr) drawShareQr(ctx,W-80-240,55,240,shareSiteUrl());
 
   ctx.fillStyle='#EDEEE9';
   ctx.font=`bold 52px ${uiFont}`;
@@ -8747,13 +9764,17 @@ async function buildShareCanvasStory(race,show){
   const rows=shareDetailRows(race,show);
   const rowsTop=H-SAFE_BOTTOM-90;
   if(rows.length){
-    const half=(W-160-40)/2;
+    // QR 佔住右下角 160px，底部那一列的可用寬度要跟著縮，否則補給的
+    // 文字會直接壓在 QR 上面。
+    const usable=(W-160)-(show.qr?280:0);
+    const half=(usable-40)/2;
     rows.forEach((row,i)=>{
       const x=rows.length===1?80:80+i*(half+40);
-      drawShareRows(ctx,[row],x,rowsTop,rows.length===1?W-160:half,uiFont,0);
+      drawShareRows(ctx,[row],x,rowsTop,rows.length===1?usable:half,uiFont,0);
     });
   }
 
+  if(show.qr) drawShareQr(ctx,W-80-250,H-SAFE_BOTTOM-250,250,shareSiteUrl());
   // 中段：軌跡獨佔數據與底部文字之間的整塊空間
   const trackPoints=show.track?(race.route.trackPoints||[]):[];
   if(trackPoints.length>=2){
@@ -8832,7 +9853,9 @@ function shareModalHtml(race){
   const avail=shareAvailableOptions(race);
   const opt=(key,label)=>avail[key]?`<label><input type="checkbox" data-share-opt="${key}"${sharePrefs[key]?' checked':''}>${label}</label>`:'';
   const options=[opt('hr',t('ui.shareIncludeHr','心率')),opt('shoe',t('ui.shareIncludeShoe','戰靴')),
-                 opt('fuel',t('ui.shareIncludeFuel','補給')),opt('track',t('ui.shareIncludeTrack','軌跡'))].filter(Boolean);
+                 opt('fuel',t('ui.shareIncludeFuel','補給')),opt('track',t('ui.shareIncludeTrack','軌跡')),
+                 // QR 不依賴這場賽事有沒有資料，永遠列出來
+                 `<label><input type="checkbox" data-share-opt="qr"${sharePrefs.qr?' checked':''}>${t('ui.shareIncludeQr','QR code')}</label>`].filter(Boolean);
   const actionLabel=canUseShareSheet()?t('ui.shareNow','分享'):t('ui.downloadNow','下載');
   return `<div class="modal-panel modal-panel-wide">
     <h2>${t('ui.shareModalTitle','產生分享圖')}</h2>
@@ -8842,8 +9865,23 @@ function shareModalHtml(race){
     </div>
     ${options.length?`<div class="share-options-row"><span class="small" style="color:var(--stone)">${t('ui.shareIncludeLabel','放進圖裡：')}</span>${options.join('')}</div>`:''}
     <div class="share-preview-wrap${sharePrefs.format==='story'?' is-story':''}"><img id="share-preview-img" alt="${t('ui.sharePreviewAlt','分享圖預覽')}"></div>
+    <div class="share-public-block">
+      <strong class="small">${t('ui.publicLinkTitle','公開連結')}</strong>
+      ${race.publicShareId?`
+        <div class="share-public-row">
+          <input type="text" class="mono share-public-url" readonly value="${escapeHtml(publicShareLink(race.publicShareId))}">
+          <button type="button" class="btn-ghost" data-action="copy-public-link">${t('ui.copy','複製')}</button>
+          <button type="button" class="btn-ghost" data-action="revoke-public-link">${t('ui.publicRevoke','撤銷')}</button>
+        </div>
+        <p class="small share-public-hint">${t('ui.publicLiveHint','任何拿到這個連結的人都看得到這場的成績、照片與路線。撤銷後連結立即失效。')}</p>`
+      :`
+        <p class="small share-public-hint">${t('ui.publicScopeHint','會公開：成績、路線軌跡、照片、戰靴與補給。不會公開：預算、筆記、裝備清單、訓練計畫。')}</p>
+        <button type="button" class="btn-ghost" data-action="create-public-link"${(!state.user||!cloudEnabled())?' disabled':''}>${t('ui.publicCreate','建立公開連結')}</button>
+        ${(!state.user||!cloudEnabled())?`<p class="small share-public-hint">${t('ui.publicNeedLogin','要先登入才能建立公開連結')}</p>`:''}`}
+    </div>
     <div class="modal-actions">
       <button class="btn-primary" data-action="confirm-share">${actionLabel}</button>
+      <button class="btn-ghost" data-action="copy-share-caption">${t('ui.copyCaption','複製文案')}</button>
       <button class="btn-ghost" data-action="close-share">${t('ui.cancel','取消')}</button>
     </div>
   </div>`;
@@ -8880,6 +9918,32 @@ shareModalEl_getter().addEventListener('click',e=>{
     });
     renderSharePreview(); return;
   }
+  if(e.target.closest('[data-action="create-public-link"]')&&shareModalRace){
+    runAsyncAction(async()=>{
+      await publishRaceLink(shareModalRace);
+      openShareModal(shareModalRace);   // 重畫成「已建立」狀態
+      showToast(t('ui.publicCreated','公開連結已建立'));
+    },t('ui.publicCreate','建立公開連結'));
+    return;
+  }
+  if(e.target.closest('[data-action="copy-public-link"]')&&shareModalRace&&shareModalRace.publicShareId){
+    copyTextToClipboard(publicShareLink(shareModalRace.publicShareId))
+      .then(ok=>showToast(ok?t('ui.linkCopied','連結已複製'):t('ui.copyFailed','複製失敗，請手動選取')));
+    return;
+  }
+  if(e.target.closest('[data-action="revoke-public-link"]')&&shareModalRace){
+    runAsyncAction(async()=>{
+      await revokeRaceLink(shareModalRace);
+      openShareModal(shareModalRace);
+      showToast(t('ui.publicRevoked','已撤銷，連結立即失效'));
+    },t('ui.publicRevoke','撤銷'));
+    return;
+  }
+  if(e.target.closest('[data-action="copy-share-caption"]')&&shareModalRace){
+    copyTextToClipboard(shareCaptionText(shareModalRace))
+      .then(ok=>showToast(ok?t('ui.captionCopied','文案已複製，貼到 IG 說明欄即可'):t('ui.copyFailed','複製失敗，請手動選取')));
+    return;
+  }
   if(e.target.closest('[data-action="close-share"]')){ closeShareModal(); return; }
   if(e.target.closest('[data-action="confirm-share"]')&&shareModalRace){
     const race=shareModalRace;
@@ -8899,7 +9963,9 @@ async function downloadShareImage(race,opts){
   const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
   if(!blob) return;
   const suffix=(opts&&opts.format==='story')?t('ui.shareStorySuffix','-限動.png'):t('ui.shareImageSuffix','-分享圖.png');
-  return shareOrDownloadImage(blob,safeFilename(race.name||'race')+suffix);
+  // 文案一起交給系統分享面板：IG 會忽略（它只吃圖），但 LINE、Threads、
+  // Messenger 會把文字一起帶過去，連結在那些地方是可以點的。
+  return shareOrDownloadImage(blob,safeFilename(race.name||'race')+suffix,shareCaptionText(race));
 }
 
 /* ============================================================
@@ -16791,6 +17857,10 @@ storageCleanupEl_getter().addEventListener('click',async e=>{
 });
 
 async function init(){
+  // 公開唯讀頁：整個 App 都不啟動，只渲染快照。放在 init 第一行，
+  // 連本機資料都不讀——看的人跟這台裝置的資料無關。
+  const shareId=new URLSearchParams(location.search).get('s');
+  if(shareId){ await bootPublicShareView(shareId); return; }
   document.getElementById('app-version').textContent=APP_VERSION;
   // 沒有 Vibration API 的裝置（iOS 上所有瀏覽器都是，因為共用 WebKit；
   // 大部分桌機也沒有馬達）掛一個 class，讓長按蓄力的視覺回饋可以加強
@@ -17220,7 +18290,34 @@ document.addEventListener('paste',async e=>{
   try{
     parsed=JSON.parse(text);
   }catch(err){
-    return; // 不是 JSON，代表只是一般文字，不攔截，讓貼上照常發生
+    // 不是 JSON：看看像不像賽後心得。像的話攔下來開預覽視窗；
+    // 不像就完全不干涉，讓瀏覽器的貼上照常發生。
+    if(!state.races.some(r=>!r.deletedAt)) return;
+    // 住宿先判：它的證據具體得多（同時出現入住與退房、訂房編號），
+    // 而訂房確認信也常常夠長、夠像散文，先判心得會被心得那條先吃掉。
+    const accom=classifyAccommodationText(text);
+    const trans=classifyTransportText(text);
+    // 兩個都像的時候取分數高的：住宿信裡的「機場接送」、機票裡的
+    // 「飯店」都會讓另一邊沾到一點分數，比高低比只看有沒有過門檻穩。
+    if(trans.isTransport&&trans.score>=(accom.isAccommodation?accom.score:0)){
+      e.preventDefault();
+      openPasteTransportModal(text);
+      logFeatureUse('global_paste_transport');
+      return;
+    }
+    if(accom.isAccommodation){
+      e.preventDefault();
+      openPasteAccomModal(text);
+      logFeatureUse('global_paste_accommodation');
+      return;
+    }
+    const verdict=classifyPastedText(text);
+    if(verdict.isReport){
+      e.preventDefault();
+      openPasteNoteModal(text);
+      logFeatureUse('global_paste_report');
+    }
+    return;
   }
   if(typeof parsed!=='object'||parsed===null) return;
 
@@ -17381,6 +18478,22 @@ init();
     // 用 increment() 讓 Firestore 在伺服器端做原子加總，不管多少個訪客
     // 同時點擊都不會互相覆蓋掉彼此的計數。不需要登入也能呼叫（規則裡
     // 這個文件的寫入是開放的），這樣才能統計到所有訪客，不只是登入的人。
+    // 公開快照：/public/{id}。內容是一整包 JSON 字串（payload），不拆欄位——
+    // 讀取端（App 的 ?s= 頁與 functions 的 OG 產生器）只要拿一個字串來
+    // JSON.parse，不用逐欄位解 Firestore 的型別包裝。owner 留在外層給
+    // 安全性規則驗證用。
+    async publishSnapshot(uid,id,payloadJson){
+      await setDoc(doc(db,'public',id),{owner:uid,payload:payloadJson,updatedAt:new Date().toISOString()});
+    },
+    async deleteSnapshot(id){
+      await deleteDoc(doc(db,'public',id));
+    },
+    async fetchPublicSnapshot(id){
+      const snap=await getDoc(doc(db,'public',id));
+      if(!snap.exists()) return null;
+      const data=snap.data();
+      return data&&data.payload?JSON.parse(data.payload):null;
+    },
     async logFeatureUse(counts){
       const updates={};
       Object.keys(counts).forEach(k=>{ updates[k]=increment(counts[k]); });
