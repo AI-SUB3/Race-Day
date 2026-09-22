@@ -1474,6 +1474,42 @@ class Share(Group):
             closeShareModal();
             return txt.includes('這個運動種類不顯示戰靴') && !txt.includes('這場沒綁定鞋款');
         }''')
+        # ---- 征戰年數＝跨幾年，不是「有比賽的年份數」 ----
+        c['career_years_is_span_not_active_count'] = page.evaluate('''()=>{
+            const mk=y=>{ const r=emptyRace('賽事'+y,'road_running','completed',y+'-06-01');
+              r.route.distanceKm=10; r.results.chipTimeSeconds=2400; state.races.push(r); };
+            state.races=[];
+            // 2012 跑第一場，中間空 2013–2016，2025 還在跑
+            [2012,2017,2018,2019,2020,2021,2022,2023,2024,2025].forEach(mk);
+            const d=computeHallOfFameData();
+            return d.yearCount===14 && d.activeYearCount===10
+                && d.firstRaceYear==='2012' && d.lastRaceYear==='2025';
+        }''')
+        # 只有一年、以及完全沒有完賽紀錄時不可以算錯
+        c['career_years_edge_cases'] = page.evaluate('''()=>{
+            state.races=[];
+            const r=emptyRace('單場','road_running','completed','2024-06-01');
+            r.route.distanceKm=10; r.results.chipTimeSeconds=2400; state.races.push(r);
+            const one=computeHallOfFameData();
+            state.races=[];
+            const none=computeHallOfFameData();
+            return one.yearCount===1 && one.activeYearCount===1 && none.yearCount===0;
+        }''')
+        # 畫面上要附區間說明，不然只看到 14 還是會想問為什麼
+        c['career_years_tile_has_span_tooltip'] = page.evaluate('''async()=>{
+            const mk=y=>{ const r=emptyRace('賽事'+y,'road_running','completed',y+'-06-01');
+              r.route.distanceKm=10; r.results.chipTimeSeconds=2400; state.races.push(r); };
+            state.races=[]; [2012,2020,2025].forEach(mk);
+            renderCalendar(); openHallOfFame();
+            await new Promise(s=>setTimeout(s,400));
+            const tile=[...document.querySelectorAll('.hof-tile')].find(t=>
+              t.querySelector('.hof-tile-label').textContent==='征戰年數');
+            const ok=!!tile && tile.querySelector('.hof-tile-value').textContent==='14'
+                  && tile.title.includes('2012') && tile.title.includes('2025')
+                  && tile.title.includes('3');
+            closeHallOfFame();
+            return ok;
+        }''')
         # ---- 生涯回顧下載圖 ----
         CAREER_SEED = '''()=>{
             shoes.push({id:'s1',name:'Nike Alphafly 3',targetKm:600,isRetired:false,trainingKm:120});
