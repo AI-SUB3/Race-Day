@@ -468,6 +468,51 @@ class Sync(Group):
             return badgeUnlocks.a.unlockedAt==='2023-05-05T00:00:00Z'
                 && badgeUnlocks.a.seen===true;   // 已讀狀態保留
         }''')
+        # ---- Firestore 分批同步（原本全部塞一個 batch，超過 11MB 整批失敗）----
+        c['sync_chunks_by_byte_budget'] = page.evaluate('''()=>{
+            // 每場約 900KB（在單一文件上限之內），8 場共 7.2MB > 單批 5MB 預算
+            const big='x'.repeat(900000);
+            const races=Array.from({length:8},(_,i)=>({id:'r'+i,name:'賽事'+i,coverImage:big}));
+            const {chunks,oversized}=chunkRacesForSync(races);
+            const total=chunks.reduce((s,c2)=>s+c2.length,0);
+            const sizes=chunks.map(c2=>c2.reduce((s,r)=>s+JSON.stringify(r).length,0));
+            return chunks.length>=2 && total===8 && oversized.length===0
+                && sizes.every(v=>v<=FS_BATCH_BYTES+950000);   // 每批都在預算附近，不會整包擠在一批
+        }''')
+        c['sync_chunks_by_operation_count'] = page.evaluate('''()=>{
+            const races=Array.from({length:1000},(_,i)=>({id:'r'+i,name:'x'}));
+            const {chunks}=chunkRacesForSync(races);
+            return chunks.length>=3 && chunks.every(c2=>c2.length<=FS_BATCH_OPS)
+                && chunks.reduce((s,c2)=>s+c2.length,0)===1000;
+        }''')
+        # 單一場超過文件上限 → 跳過它，其餘照常同步（不能因為一場壞掉全部不上去）
+        c['sync_skips_oversized_race_but_keeps_rest'] = page.evaluate('''()=>{
+            const huge={id:'huge',name:'爆量賽事',coverImage:'y'.repeat(1200000)};
+            const ok1={id:'a',name:'正常一'}, ok2={id:'b',name:'正常二'};
+            const {chunks,oversized}=chunkRacesForSync([ok1,huge,ok2]);
+            const ids=chunks.flat().map(r=>r.id);
+            return oversized.length===1 && oversized[0].race.id==='huge'
+                && ids.join(',')==='a,b';
+        }''')
+        c['sync_empty_input_is_safe'] = page.evaluate('''()=>{
+            const a=chunkRacesForSync([]), b=chunkRacesForSync(null);
+            return a.chunks.length===0 && a.oversized.length===0
+                && b.chunks.length===0 && b.oversized.length===0;
+        }''')
+        # replaceAll 要真的送出多個 batch，而不是一個
+        # 有賽事被跳過時，呼叫端一定要跳出提示——不能默默少同步幾場
+        c['sync_reports_skipped_races_to_user'] = page.evaluate('''async()=>{
+            const realCloud=window.__cloud, realUser=state.user;
+            state.user={uid:'u1'};
+            window.__cloud={enabled:true,
+              replaceAll:async()=>({batches:1,oversized:[{race:{name:'爆量賽事'},size:2000000}]}),
+              syncGlobalLists:async()=>{}, logFeatureUse:async()=>{}};
+            document.querySelectorAll('.foreground-toast').forEach(n=>n.remove());
+            try{ await cloudSyncAllRaces(); }finally{ window.__cloud=realCloud; state.user=realUser; }
+            await new Promise(s=>setTimeout(s,200));
+            const txt=[...document.querySelectorAll('.foreground-toast')].map(n=>n.textContent).join(' ');
+            return txt.includes('爆量賽事') && txt.includes('1');
+        }''')
         c['malformed_cloud_payload_safe'] = page.evaluate('''()=>{
             try{
                 mergeGlobalListsIntoState(null);
@@ -1044,6 +1089,72 @@ class Data(Group):
             const perf=computeShoePerformanceStats('sh-tri');
             const expect=(22670/42.195+12600/42.195)/2;
             return Math.abs(perf.avgPaceSecPerKm-expect)<0.5;
+        }''')
+        # ---- 依縣市／行政區自動判別國家 ----
+        c['country_guess_taiwan_and_japan'] = page.evaluate('''()=>{
+            state.races=[];
+            const tw=['宜蘭縣','宜蘭縣礁溪鄉','桃園市','臺北市','台北','新北市板橋區','花蓮縣秀林鄉','金門縣'];
+            const jp=['福井県','東京都','北海道','神戸市','沖縄県那覇市','軽井沢町','大阪府大阪市中央区'];
+            return tw.every(x=>guessCountryFromCity(x)==='臺灣')
+                && jp.every(x=>guessCountryFromCity(x)==='日本');
+        }''')
+        # 用臺灣字寫的日本地名要判成日本（地名清單優先於後綴規則）
+        c['country_name_list_beats_suffix_rule'] = page.evaluate('''()=>{
+            state.races=[];
+            return guessCountryFromCity('福井縣若狹')==='日本'
+                && guessCountryFromCity('宜蘭縣')==='臺灣';
+        }''')
+        c['country_guess_international'] = page.evaluate('''()=>{
+            state.races=[];
+            const pairs=[['首爾','韓國'],['서울','韓國'],['香港','香港'],['新加坡','新加坡'],
+                         ['Chamonix','法國'],['Boston','美國'],['Sydney','澳洲'],['Tokyo','日本'],
+                         ['Kuala Lumpur','馬來西亞'],['北京市','中國'],['廣東省','中國']];
+            return pairs.every(([city,want])=>guessCountryFromCity(city)===want);
+        }''')
+        c['country_guess_returns_null_when_unknown'] = page.evaluate('''()=>{
+            state.races=[];
+            return guessCountryFromCity('')===null && guessCountryFromCity('未知地名XYZ')===null
+                && guessCountryFromCity(null)===null;
+        }''')
+        # 沿用使用者自己的寫法：他寫「台灣」就不要塞「臺灣」進去
+        c['country_reuses_user_spelling'] = page.evaluate('''()=>{
+            state.races=[{id:'x',location:{city:'台北市',country:'台灣'},schedule:{}}];
+            const a=guessCountryFromCity('桃園市');
+            state.races=[{id:'x',location:{city:'Tokyo',country:'Japan'},schedule:{}}];
+            const b=guessCountryFromCity('大阪府');
+            state.races=[];
+            return a==='台灣' && b==='Japan' && guessCountryFromCity('桃園市')==='臺灣';
+        }''')
+        # 只在國家欄位空著時填，且只由縣市欄位觸發
+        c['country_fills_only_when_empty_and_on_city_change'] = page.evaluate('''()=>{
+            state.races=[];
+            const filled=emptyRace('a','road_running','registered','2026-01-01');
+            filled.location.city='福井県'; filled.location.country='日本國';
+            const f1=applySmartDefaults(filled,'location.city');
+            const empty=emptyRace('b','road_running','registered','2026-01-01');
+            empty.location.city='宜蘭縣礁溪鄉';
+            const f2=applySmartDefaults(empty,'location.city');
+            const other=emptyRace('c','road_running','registered','2026-01-01');
+            other.location.city='東京都';
+            const f3=applySmartDefaults(other,'name');
+            return filled.location.country==='日本國' && !f1.includes('location.country')
+                && empty.location.country==='臺灣' && f2.includes('location.country')
+                && !(other.location.country||'') && !f3.includes('location.country');
+        }''')
+        # 實際在表單輸入縣市，國家欄位要跟著出現
+        c['country_autofills_through_the_form'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('若狹路越野賽','trail_running','registered','2026-09-27');
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            openDrawer('basicInfo');
+            await new Promise(s=>setTimeout(s,500));
+            const input=document.querySelector('[data-path="location.city"]');
+            input.value='福井県';
+            input.dispatchEvent(new Event('change',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,800));
+            const country=document.querySelector('[data-path="location.country"]');
+            return currentRace.location.country==='日本' && country && country.value==='日本';
         }''')
         c['undersized_thumbs_regenerate_once_only'] = page.evaluate('''async()=>{
             const mk=(px,q)=>{const c=document.createElement('canvas');
@@ -1984,6 +2095,81 @@ class PasteReport(Group):
             const txt=el.textContent;
             el.querySelector('[data-action="close-paste-note"]').click();
             return !txt.includes('route.distanceKm') && !txt.includes('results.chipTimeSeconds');
+        }''')
+        # ---- 貼上「賽事名稱＋日期」→ 開新增表單並帶入 ----
+        c['new_race_extracts_name_date_distance'] = page.evaluate('''()=>{
+            const r=classifyNewRaceText('2026 臺北馬拉松\\n比賽日期：2026-12-20\\n距離：42.195 公里\\nhttps://www.taipeimarathon.org.tw/');
+            return r.isNewRace && r.info.name==='2026 臺北馬拉松' && r.info.raceDate==='2026-12-20'
+                && r.info.distanceKm===42.195 && r.info.officialUrl.includes('taipeimarathon');
+        }''')
+        # 有標籤的比賽日期要贏過排在前面的報名日期
+        c['new_race_prefers_labelled_race_date'] = page.evaluate('''()=>{
+            const r=classifyNewRaceText('賽事名稱：2027 田中馬拉松\\n報名日期：2026-08-01\\n比賽日期：2027-11-14\\n全程馬拉松');
+            return r.isNewRace && r.info.raceDate==='2027-11-14' && r.info.name==='2027 田中馬拉松';
+        }''')
+        # 名稱尾巴的距離／組別要切掉，但不能把名稱本體的「馬拉松」吃掉
+        c['new_race_name_strips_trailing_noise'] = page.evaluate('''()=>{
+            const a=classifyNewRaceText('萬金石馬拉松 2026/03/15 半程馬拉松');
+            const b=classifyNewRaceText('2025 渣打公益馬拉松 2025-02-09 10 公里');
+            return a.info.name==='萬金石馬拉松' && a.info.distanceKm===21.0975
+                && b.info.name==='2025 渣打公益馬拉松' && b.info.distanceKm===10;
+        }''')
+        c['new_race_needs_both_name_and_date'] = page.evaluate('''()=>{
+            return classifyNewRaceText('2026-12-20').isNewRace===false
+                && classifyNewRaceText('臺北馬拉松').isNewRace===false
+                && classifyNewRaceText('').isNewRace===false;
+        }''')
+        # 不可以搶走訂房、車票、心得
+        c['new_race_yields_to_other_paste_kinds'] = page.evaluate('''()=>{
+            const booking='訂房確認通知\\n飯店名稱：礁溪老爺酒店\\n入住：2026-12-19 15:00\\n退房：2026-12-21 11:00';
+            const ticket='台灣高鐵 訂位代號 12345678\\n去程 車次 0613 2026-12-19 08:31 台北 → 左營 5車 12E\\n回程 車次 0842 2026-12-21 16:10 左營 → 台北 7車 3A';
+            const report='今天配速控制得不錯，補給站都有停，最後衝線 2:59:31。我覺得這場表現很好。';
+            return [booking,ticket,report].every(x=>classifyNewRaceText(x).isNewRace===false);
+        }''')
+        # 清單是空的時候也要能用——這正是最可能貼賽事資訊的時機
+        c['new_race_paste_works_with_no_existing_races'] = page.evaluate('''async()=>{
+            state.races=[]; state.creating=false;
+            const dt=new DataTransfer();
+            dt.setData('text','2025 渣打公益馬拉松\\n比賽日期：2025-02-09\\n距離：10 公里');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,500));
+            return state.creating===true
+                && document.getElementById('new-name').value==='2025 渣打公益馬拉松'
+                && document.getElementById('new-date').value==='2025-02-09'
+                && document.getElementById('new-distance').value==='10';
+        }''')
+        # 日期早於今天 → 狀態自動帶「已完賽」，按下建立後真的存成 completed
+        c['past_date_becomes_completed_on_create'] = page.evaluate('''async()=>{
+            const statusPrefilled=document.getElementById('new-status').value==='completed';
+            document.querySelector('[data-action="confirm-create"]').click();
+            await new Promise(s=>setTimeout(s,600));
+            const r=state.races[state.races.length-1];
+            return statusPrefilled && r.status==='completed'
+                && r.schedule.raceDate==='2025-02-09' && r.route.distanceKm===10;
+        }''')
+        # 未來日期不可以被改成已完賽
+        c['future_date_keeps_default_status'] = page.evaluate('''async()=>{
+            state.races=[]; state.creating=false;
+            const dt=new DataTransfer();
+            dt.setData('text','2030 未來馬拉松\\n比賽日期：2030-05-01\\n距離：21.0975 公里');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,500));
+            const prefilled=document.getElementById('new-status').value;
+            document.querySelector('[data-action="confirm-create"]').click();
+            await new Promise(s=>setTimeout(s,600));
+            const r=state.races[state.races.length-1];
+            return prefilled==='considering' && r.status==='considering';
+        }''')
+        # 新增表單要有距離欄位與常見距離的快捷清單
+        c['create_form_has_distance_with_presets'] = page.evaluate('''async()=>{
+            state.races=[]; startCreate();
+            await new Promise(s=>setTimeout(s,400));
+            const input=document.getElementById('new-distance');
+            const list=document.getElementById('distance-presets');
+            const vals=list?[...list.options].map(o=>o.value):[];
+            const grid=document.querySelector('.create-grid');
+            return !!input && !!grid && vals.includes('21.0975') && vals.includes('42.195')
+                && vals.includes('5') && vals.includes('10') && vals.includes('30');
         }''')
 
 GROUPS = {

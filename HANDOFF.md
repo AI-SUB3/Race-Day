@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.53.0
+> 貼到新對話開頭即可接續。最後更新：v3.56.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（180 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（201 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -129,6 +129,11 @@ APP=/path/to/index.html python3 test_suite.py
 | 徽章只做資料算得出來的 | 行為追蹤是另一套機制，需獨立驗證 |
 | 氣候圖用個人距離曲線、EPP 維持經典距離 | 圖是給人看趨勢的，多收資料值得；EPP 係數拿去預測完賽時間，不混估計值。`computeClimatePerformancePoints()` 不帶參數 = 嚴格版 |
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
+| 距離是距離，不是運動種類 | 不把半馬／全馬做成 `sportType` 子項：`road_running` 被鞋子里程、氣候曲線、EPP、徽章大量依賴，拆開要全部跟著改，而距離本來就存在 `route.distanceKm`。改用距離快捷清單 |
+| 貼上新增賽事不受「已有賽事」守門限制 | 清單空的時候正是最可能貼賽事資訊的時機；其他幾種貼上要填進某一場才需要那道守門 |
+| 國家推論：地名清單優先於後綴規則 | 「福井縣若狹」是臺灣字寫的日本地名，只靠後綴會判錯。日文「区」≠ 中文「區」是可靠的判別依據。填入時沿用使用者既有的臺／台寫法，避免資料分叉 |
+| Firestore 寫入一定要分批 | 單次請求 ≤11MB、單 batch ≤500 操作、單一文件 ≤1MB。全部塞一批會在封面照變多後整批失敗（全有全無）。走 `chunkRacesForSync()`；單場超標要跳過並回報，不要拖垮整批 |
+| IG 貼文內文拿不到 | oEmbed 已無 token 需求、也沒被 CORS 擋，但回傳 HTML 不含 caption（只有 `View this post on Instagram`），`thumbnail_url` 也已移除。這條路實測過，不要再試 |
 | 貼上網址只存網址，不抓網頁 | 跨網域抓網頁會被 CORS 擋、要後端。OG 解析對住宿只給得到飯店名，給不到日期與金額，增益小於現有的貼文字方案 |
 | 翻譯佔位符只有 `{n}`（`tf`）與 `{a}`/`{b}`（`tf2`） | 寫成 `{s}` 不會被置換、會原樣顯示。守門測試 `paste_modals_leave_no_placeholder` |
 | 貼上住宿／交通要扛得住「網頁選字複製」的雜訊 | 麵包屑、星等評論、按鈕字樣、「平均每晚」參考價都是真實會遇到的雜訊。找名稱／費用前先過濾雜訊行；費用優先找「總金額」標籤，不用第一個看起來像錢的數字；「酒店」等常見命名要在關鍵字清單裡，不是只有「飯店」 |
