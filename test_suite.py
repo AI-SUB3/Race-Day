@@ -225,6 +225,59 @@ class Drawers(Group):
             // 下緣間距要存在，而且跟左右內距同一個量級（不是 0、也不是兩倍）
             return out.length>=3 && out.every(x=>x.bottom>=12 && x.bottom<=x.left+4);
         }''')
+        # ---- 行事曆：運動別底圖與放大的名稱 ----
+        c['calendar_chip_tint_per_sport'] = page.evaluate('''async()=>{
+            state.races=[];
+            const add=(name,sport,day)=>state.races.push(emptyRace(name,sport,'registered','2026-12-'+String(day).padStart(2,'0')));
+            add('路跑','road_running',3); add('越野','trail_running',5); add('超馬','ultra_marathon',7);
+            add('二鐵','duathlon',9); add('三鐵','triathlon',11); add('自行車','cycling',13);
+            add('游泳','swimming',15); add('障礙','obstacle_race',17);
+            state.calendarYear=2026; state.calendarMonth=11; renderCalendar();
+            await new Promise(s=>setTimeout(s,300));
+            const chips=[...document.querySelectorAll('.cal-chip')];
+            if(chips.length<8) return false;
+            // 每一種運動別都要帶到自己的底圖變數，而且實際算出來的背景色互不相同
+            const tints=chips.map(ch=>ch.style.getPropertyValue('--chip-tint'));
+            const resolved=chips.map(ch=>getComputedStyle(ch).backgroundColor);
+            const uniqueResolved=new Set(resolved);
+            return tints.every(t=>/--sport-bg-/.test(t))
+                && tints.some(t=>t.includes('road_running')) && tints.some(t=>t.includes('triathlon'))
+                && uniqueResolved.size>=7
+                && resolved.every(v=>v!=='rgba(0, 0, 0, 0)');
+        }''')
+        c['calendar_chip_text_is_larger_and_wraps'] = page.evaluate('''()=>{
+            const chip=document.querySelector('.cal-chip');
+            const text=chip.querySelector('.cal-chip-text');
+            const size=parseFloat(getComputedStyle(chip).fontSize);
+            const cs=getComputedStyle(text);
+            return size>=15 && cs.webkitLineClamp==='2' && cs.overflow==='hidden';
+        }''')
+        # 選取狀態的底色要蓋過運動別底圖（行內變數很容易贏過 class）
+        c['calendar_selected_chip_overrides_tint'] = page.evaluate('''async()=>{
+            const first=state.races[0];
+            selectRace(first.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const sel=document.querySelector('.cal-chip.selected');
+            if(!sel) return false;
+            const bg=getComputedStyle(sel).backgroundColor;
+            const ink=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim();
+            // --ink 是 hex，換算成 rgb 來比
+            const toRgb=h=>{const v=parseInt(h.slice(1),16);return `rgb(${(v>>16)&255}, ${(v>>8)&255}, ${v&255})`;};
+            return bg===toRgb(ink);
+        }''')
+        # 同一天多場賽事不可以撐出格子
+        c['calendar_multiple_chips_stay_in_cell'] = page.evaluate('''async()=>{
+            state.races=[];
+            ['road_running','trail_running','swimming'].forEach((sp,i)=>
+              state.races.push(emptyRace('賽事'+i,sp,'registered','2026-12-19')));
+            state.calendarYear=2026; state.calendarMonth=11; renderCalendar();
+            await new Promise(s=>setTimeout(s,300));
+            const cell=[...document.querySelectorAll('.cal-cell,.cal-day')].find(c2=>c2.querySelector('.cal-chip'));
+            const chips=cell.querySelectorAll('.cal-chip');
+            const cb=cell.getBoundingClientRect();
+            const last=chips[chips.length-1].getBoundingClientRect();
+            return chips.length>=1 && last.bottom<=cb.bottom+1;
+        }''')
         c['empty_drawer_cards_muted_filled_cards_not'] = page.evaluate('''async()=>{
             const r=emptyRace('卡片','road_running','registered','2026-11-01');
             r.location.city='臺北市'; r.route.distanceKm=42.195;
@@ -2095,6 +2148,52 @@ class PasteReport(Group):
             const txt=el.textContent;
             el.querySelector('[data-action="close-paste-note"]').click();
             return !txt.includes('route.distanceKm') && !txt.includes('results.chipTimeSeconds');
+        }''')
+        # ---- 成績查詢頁 ----
+        RESULT = ('財政部113年統一發票盃路跑活動\n2024-09-22 (日)\n劉恩龍\n010685\n'
+                  '半馬組(21km) 男丁組 男\n大會成績\nOfficial Time\n01:51:53\n'
+                  '個人成績\nNet Time\n01:51:36\n總排名\nOverall Ranking\n287/3000\n'
+                  '性別排名\nGender Ranking\n259/2251\n分組排名\nDiv Ranking\n57/368')
+        c['result_extracts_times_and_ranks'] = page.evaluate('''(txt)=>{
+            const f=extractRaceResults(txt);
+            return f['results.gunTimeSeconds']===6713 && f['results.chipTimeSeconds']===6696
+                && f['results.overallRank']===287 && f['results.overallParticipants']===3000
+                && f['results.ageGroupRank']===57 && f['results.ageGroupParticipants']===368;
+        }''', RESULT)
+        # 標籤與數值被排版拆到不同行也要對得上（這正是原本失效的原因）
+        c['result_labels_match_across_lines'] = page.evaluate('''(txt)=>{
+            const c2=classifyResultText(txt);
+            return c2.isResult===true && c2.score>=5;
+        }''', RESULT)
+        # 成績頁通常也有賽事名稱與日期，不可以被「新增賽事」那條先吃掉
+        c['result_beats_new_race_when_race_exists'] = page.evaluate('''async(txt)=>{
+            state.races=[];
+            const r=emptyRace('財政部統一發票盃路跑','road_running','completed','2024-09-22');
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,250));
+            const dt=new DataTransfer(); dt.setData('text',txt);
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,400));
+            return pasteNoteState && pasteNoteState.kind==='result' && state.creating!==true;
+        }''', RESULT)
+        c['result_fills_all_six_fields'] = page.evaluate('''async()=>{
+            document.querySelector('[data-action="confirm-paste-result"]').click();
+            await new Promise(s=>setTimeout(s,500));
+            const r=state.races[0];
+            return r.results.gunTimeSeconds===6713 && r.results.chipTimeSeconds===6696
+                && r.results.overallRank===287 && r.results.overallParticipants===3000
+                && r.results.ageGroupRank===57 && r.results.ageGroupParticipants===368;
+        }''')
+        # 沒有成績時間就不算成績頁
+        c['result_needs_a_finish_time'] = page.evaluate('''()=>{
+            return classifyResultText('總排名 287/3000\\n分組排名 57/368').isResult===false
+                && classifyResultText('').isResult===false;
+        }''')
+        # 只有名稱＋日期（沒有成績）時，仍然走「新增賽事」
+        c['new_race_still_wins_without_results'] = page.evaluate('''()=>{
+            const txt='2026 臺北馬拉松\\n比賽日期：2026-12-20\\n距離：42.195 公里';
+            return classifyResultText(txt).isResult===false
+                && classifyNewRaceText(txt).isNewRace===true;
         }''')
         # ---- 貼上「賽事名稱＋日期」→ 開新增表單並帶入 ----
         c['new_race_extracts_name_date_distance'] = page.evaluate('''()=>{

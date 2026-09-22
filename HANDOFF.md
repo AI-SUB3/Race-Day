@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.56.0
+> 貼到新對話開頭即可接續。最後更新：v3.58.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（201 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（211 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -129,6 +129,10 @@ APP=/path/to/index.html python3 test_suite.py
 | 徽章只做資料算得出來的 | 行為追蹤是另一套機制，需獨立驗證 |
 | 氣候圖用個人距離曲線、EPP 維持經典距離 | 圖是給人看趨勢的，多收資料值得；EPP 係數拿去預測完賽時間，不混估計值。`computeClimatePerformancePoints()` 不帶參數 = 嚴格版 |
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
+| 成績頁是表格不是散文 | 心得的計分制（長度／句子／第一人稱）對成績表永遠差一點分數，會變成「完全沒反應」。表格類內容要自己的判斷規則，不要調鬆心得的門檻 |
+| 貼上分流順序：成績 → 新增賽事 | 成績頁通常也有賽事名稱與日期，順序反了會變成「已經有這場卻跳新增表單」 |
+| 運動別顏色有兩組變數 | `--sport-*` 是實色（色條、圓點），`--sport-bg-*` 是行事曆底圖（低透明度）。不用 `color-mix()`：Safari 16.2 以下不支援 |
+| 行事曆名稱折兩行而不是加大字級了事 | 字放大會讓單行塞更少字、截斷更嚴重，跟「看清楚名稱」相反。`-webkit-line-clamp:2` |
 | 距離是距離，不是運動種類 | 不把半馬／全馬做成 `sportType` 子項：`road_running` 被鞋子里程、氣候曲線、EPP、徽章大量依賴，拆開要全部跟著改，而距離本來就存在 `route.distanceKm`。改用距離快捷清單 |
 | 貼上新增賽事不受「已有賽事」守門限制 | 清單空的時候正是最可能貼賽事資訊的時機；其他幾種貼上要填進某一場才需要那道守門 |
 | 國家推論：地名清單優先於後綴規則 | 「福井縣若狹」是臺灣字寫的日本地名，只靠後綴會判錯。日文「区」≠ 中文「區」是可靠的判別依據。填入時沿用使用者既有的臺／台寫法，避免資料分叉 |

@@ -119,15 +119,27 @@
     --stone:#8B8D82;
     --gold:#B08D2E;
     --gold-rgb:176,141,46;
-    --sport-road_running:#9C4A5C;
+    /* 運動別色系。--sport-* 是線條／圓點用的實色，--sport-bg-* 是行事曆
+       格子的底圖色（同色相、低透明度）。底圖刻意做得很淡：格子裡還有
+       日期數字與賽事名稱要讀，底色一濃就全部都不好看也不好讀。 */
+    --sport-road_running:#B8912F;
     --sport-trail_running:#2E6B49;
-    --sport-ultra_marathon:#5B4A7A;
-    --sport-duathlon:#8A6B35;
-    --sport-triathlon:#2A7A8A;
-    --sport-cycling:#5C6670;
-    --sport-swimming:#1E7FA8;
-    --sport-obstacle_race:#6B6339;
+    --sport-ultra_marathon:#7C8489;
+    --sport-duathlon:#C2708C;
+    --sport-triathlon:#6A4A8F;
+    --sport-cycling:#8E2F3F;
+    --sport-swimming:#2E9BC4;
+    --sport-obstacle_race:#5A6169;
     --sport-other:#8B8D82;
+    --sport-bg-road_running:rgba(184,145,47,0.16);
+    --sport-bg-trail_running:rgba(46,107,73,0.15);
+    --sport-bg-ultra_marathon:rgba(124,132,137,0.18);
+    --sport-bg-duathlon:rgba(194,112,140,0.16);
+    --sport-bg-triathlon:rgba(106,74,143,0.16);
+    --sport-bg-cycling:rgba(142,47,63,0.15);
+    --sport-bg-swimming:rgba(46,155,196,0.16);
+    --sport-bg-obstacle_race:rgba(90,97,105,0.18);
+    --sport-bg-other:rgba(139,141,130,0.14);
     --focus-glow:rgba(46,107,73,0.28);
     --stamp-bg-trail:rgba(46,107,73,0.12);
     --stamp-bg-contour:rgba(58,90,140,0.1);
@@ -150,15 +162,25 @@
     --stone:#6B7178;
     --gold:#D9B15C;
     --gold-rgb:217,177,92;
-    --sport-road_running:#D4788A;
+    --sport-road_running:#D9B15C;
     --sport-trail_running:#4C9A72;
-    --sport-ultra_marathon:#9B87C4;
-    --sport-duathlon:#C9A363;
-    --sport-triathlon:#5CB8C4;
-    --sport-cycling:#9AA5B0;
+    --sport-ultra_marathon:#B9C2C8;
+    --sport-duathlon:#E79AB6;
+    --sport-triathlon:#A98BD8;
+    --sport-cycling:#C75C6E;
     --sport-swimming:#5FBEDB;
-    --sport-obstacle_race:#A89F5C;
+    --sport-obstacle_race:#98A2AC;
     --sport-other:#9BA3A0;
+    /* 深色底的透明度要拉高一點，同樣的 alpha 疊在深色上幾乎看不出來 */
+    --sport-bg-road_running:rgba(217,177,92,0.20);
+    --sport-bg-trail_running:rgba(76,154,114,0.20);
+    --sport-bg-ultra_marathon:rgba(185,194,200,0.16);
+    --sport-bg-duathlon:rgba(231,154,182,0.18);
+    --sport-bg-triathlon:rgba(169,139,216,0.22);
+    --sport-bg-cycling:rgba(199,92,110,0.20);
+    --sport-bg-swimming:rgba(95,190,219,0.20);
+    --sport-bg-obstacle_race:rgba(152,162,172,0.18);
+    --sport-bg-other:rgba(155,163,160,0.16);
     --focus-glow:rgba(76,154,114,0.35);
     --stamp-bg-trail:rgba(76,154,114,0.18);
     --stamp-bg-contour:rgba(123,159,209,0.16);
@@ -510,21 +532,29 @@
     align-self:flex-start;
   }
   .cal-chip{
-    display:flex;align-items:center;gap:4px;width:100%;text-align:left;border:none;border-left:3px solid currentColor;
-    background:rgba(22,35,28,0.05);border-radius:2px;padding:2px 5px;font:inherit;
-    font-size:13px;color:var(--ink);cursor:pointer;
+    display:flex;align-items:flex-start;gap:5px;width:100%;text-align:left;border:none;border-left:3px solid currentColor;
+    /* 底圖走 --chip-tint（由 markup 依運動別帶入），沒帶的話退回原本的淡灰 */
+    background:var(--chip-tint,rgba(22,35,28,0.05));border-radius:3px;padding:3px 6px;font:inherit;
+    font-size:15px;font-weight:500;line-height:1.35;color:var(--ink);cursor:pointer;
     transition:transform 0.12s ease,box-shadow 0.12s ease;
   }
   .cal-chip:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.14);}
   .cal-chip:active{transform:scale(0.97);}
-  .cal-chip-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-  .cal-chip-thumb{width:14px;height:14px;border-radius:2px;object-fit:cover;flex-shrink:0;}
-  .cal-chip-sport-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  /* 名稱折到兩行再截斷。字放大之後單行能塞的字反而變少，「陽明山越野賽」
+     會變成「陽明山越…」——那跟「想一眼看清楚賽事名稱」的目的相反。
+     格子高度夠放兩行，折行比單純放大字級更能讀到完整名稱。 */
+  .cal-chip-text{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;min-width:0;word-break:break-word;}
+  .cal-chip-thumb{width:16px;height:16px;border-radius:3px;object-fit:cover;flex-shrink:0;margin-top:2px;}
+  .cal-chip-sport-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:5px;}
   .cal-chip.status-registered,.cal-chip.status-completed{color:var(--trail);}
   .cal-chip.status-considering,.cal-chip.status-lottery_pending{color:var(--contour);}
   .cal-chip.status-dns,.cal-chip.status-dnf{color:var(--flag);}
-  .cal-chip.selected{background:var(--ink);color:var(--surface)!important;border-left-color:var(--surface);}
+  /* 選取狀態要贏過運動別底圖：--chip-tint 是行內樣式帶進來的變數，
+     這裡用 !important 蓋掉 background 才壓得住。 */
+  .cal-chip.selected{background:var(--ink)!important;color:var(--surface)!important;border-left-color:var(--surface);}
   .cal-more{font-size:13px;color:var(--stone);padding:1px 5px;}
+  .cal-chip+.cal-chip{margin-top:2px;}
 
   /* ---------- Calendar: mobile list view ---------- */
   .cal-list{display:none;}
@@ -1757,7 +1787,7 @@
     #topbar.topbar-compact .topbar-row1{gap:6px;}
     .cal-cell{min-height:64px;padding:4px 4px 3px;}
     .cal-weekdays span{font-size:12px;}
-    .cal-chip{font-size:12px;padding:2px 4px;}
+    .cal-chip{font-size:13px;padding:2px 5px;}
     .detail-header.has-cover{padding:16px 16px 20px;}
   }
   @media (max-width:640px){
@@ -3063,6 +3093,12 @@ function sportIconKey(sportType){
 function sportColorVar(sportType){
   return `var(--sport-${sportType||'other'},var(--trail))`;
 }
+// 行事曆格子的運動別底圖色。跟 sportColorVar() 分開兩個變數，而不是
+// 在 CSS 裡用 color-mix() 從實色算出來——color-mix 在 Safari 16.2
+// 之後才支援，這個 App 要在 iPhone 上跑，不值得為了少寫幾行冒這個險。
+function sportBgVar(sportType){
+  return `var(--sport-bg-${sportType||'other'},transparent)`;
+}
 function focalPointStyle(race){
   const fp=race.coverImageFocalPoint||{x:50,y:50};
   return `object-position:${fp.x}% ${fp.y}%`;
@@ -3126,7 +3162,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.56.0';
+const APP_VERSION='v3.58.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3479,7 +3515,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -3963,7 +3999,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -9051,6 +9087,67 @@ function chunkRacesForSync(races){
   if(current.length) chunks.push(current);
   return {chunks,oversized};
 }
+/* ---- 成績查詢頁：大會成績／個人成績／各項排名 ----
+   這種內容是「表格」不是「散文」：短行、大量數字、幾乎沒有句子，
+   所以心得那條計分制永遠差一點分數（實測 4 分，門檻 5 分），
+   結果就是貼上去完全沒反應。它需要自己的判斷規則。
+   對應的欄位剛好全部都有：gunTime／chipTime／總排名與人數／分組名次
+   與人數，連「287/3000」這種「名次/總人數」的寫法都能一次拆成兩欄。 */
+function extractRaceResults(text){
+  const body=String(text||'').replace(/\r/g,'');
+  const out={};
+  const toSec=str=>{
+    const m=String(str).match(/(\d{1,2})[:：](\d{2})[:：](\d{2})/);
+    if(m) return (+m[1])*3600+(+m[2])*60+(+m[3]);
+    const mm=String(str).match(/^(\d{1,3})[:：](\d{2})$/);   // 只有 mm:ss 的短距離成績
+    return mm?(+mm[1])*60+(+mm[2]):null;
+  };
+  /* 標籤與數值常常被排版拆成不同行（標籤一行、英文一行、數字再一行），
+     所以比對允許跨行，但限制中間只能隔少量字元，避免抓到下一個區塊的數字。 */
+  const near=(labels,valueRe,span)=>{
+    const re=new RegExp('(?:'+labels+')[\\s\\S]{0,'+(span||40)+'}?'+valueRe,'i');
+    return body.match(re);
+  };
+  const gun=near('大會成績|大會時間|gun\\s*time|official\\s*time|總時間','(\\d{1,2}[:：]\\d{2}[:：]\\d{2})');
+  if(gun) out['results.gunTimeSeconds']=toSec(gun[1]);
+  const chip=near('個人成績|晶片(?:成績|時間)|chip\\s*time|net\\s*time','(\\d{1,2}[:：]\\d{2}[:：]\\d{2})');
+  if(chip) out['results.chipTimeSeconds']=toSec(chip[1]);
+  // 兩個都抓不到時，退一步用文字裡第一個 hh:mm:ss 當晶片時間
+  if(out['results.chipTimeSeconds']==null&&out['results.gunTimeSeconds']==null){
+    const any=body.match(/(\d{1,2}[:：]\d{2}[:：]\d{2})/);
+    if(any) out['results.chipTimeSeconds']=toSec(any[1]);
+  }
+  // 「287/3000」＝名次／總人數，一次拆成兩個欄位
+  const rankPair=(labels,rankKey,totalKey)=>{
+    const m=near(labels,'(\\d{1,6})\\s*/\\s*(\\d{1,7})',60);
+    if(m){ out[rankKey]=parseInt(m[1],10); out[totalKey]=parseInt(m[2],10); return; }
+    const solo=near(labels,'(\\d{1,6})\\s*(?:名|th|st|nd|rd)?\\s*$',40);
+    if(solo) out[rankKey]=parseInt(solo[1],10);
+  };
+  rankPair('總排名|總名次|overall\\s*ranking|overall\\s*rank','results.overallRank','results.overallParticipants');
+  rankPair('分組排名|分組名次|組別排名|div(?:ision)?\\s*ranking|age\\s*group','results.ageGroupRank','results.ageGroupParticipants');
+  Object.keys(out).forEach(k=>{ if(out[k]==null||Number.isNaN(out[k])) delete out[k]; });
+  return out;
+}
+/* classifyResultText(text)：要有「成績時間」加上「排名或成績標籤」才算。
+   門檻訂得比心得高一點：這種貼上會直接改動成績欄位，誤判的代價比
+   填一段文字大。 */
+function classifyResultText(text){
+  const body=String(text||'').trim();
+  if(!body||body.length>1200) return {isResult:false,score:0,fields:{}};
+  const fields=extractRaceResults(body);
+  const hasTime=fields['results.chipTimeSeconds']!=null||fields['results.gunTimeSeconds']!=null;
+  if(!hasTime) return {isResult:false,score:0,fields:{}};
+  let score=2;
+  if(/大會成績|個人成績|gun\s*time|net\s*time|official\s*time|晶片/i.test(body)) score+=2;
+  if(/總排名|分組排名|性別排名|overall\s*ranking|div(?:ision)?\s*ranking|gender\s*ranking/i.test(body)) score+=2;
+  if(/\d{1,6}\s*\/\s*\d{1,7}/.test(body)) score+=1;
+  if(fields['results.overallRank']!=null||fields['results.ageGroupRank']!=null) score+=1;
+  // 已經是別種東西的讓給別人
+  if(classifyAccommodationText(body).isAccommodation) return {isResult:false,score:0,fields:{}};
+  if(classifyTransportText(body).isTransport) return {isResult:false,score:0,fields:{}};
+  return {isResult:score>=5,score,fields};
+}
 /* ---- 貼上「賽事名稱＋日期」→ 直接開新增賽事表單並預先填好 ----
    跟心得／住宿／交通不同，這一種是「還沒有這場賽事」的情境，所以
    目的地不是某一場的欄位，而是新增表單本身。判斷條件要求同時抓得到
@@ -9464,6 +9561,40 @@ function pasteAccomModalHtml(){
     </div>
   </div>`;
 }
+function pasteResultModalHtml(){
+  const st=pasteNoteState;
+  const races=pasteNoteCandidates().slice(0,40);
+  const race=races.find(r=>r.id===st.raceId)||races[0];
+  const labelOf=path=>{
+    const f=SECTION_POST.find(x=>x.path===path);
+    return f?t('field.post.'+path,f.label):path;
+  };
+  const showVal=(path,v)=>/Seconds$/.test(path)?secToHMS(v):String(v);
+  const keys=Object.keys(st.fields);
+  return `<div class="modal-panel modal-panel-wide">
+    <h2>${t('ui.pasteResultTitle','偵測到成績資訊')}</h2>
+    <p class="modal-hint">${t('ui.pasteResultHint','看起來像成績查詢頁。確認後會填進這場賽事的成績欄位。')}</p>
+    <div class="paste-note-preview small">${escapeHtml(st.text.slice(0,300))}${st.text.length>300?'…':''}</div>
+    <label class="field"><span>${t('ui.pasteNoteRace','填入賽事')}</span>
+      <select data-paste-field="raceId">${races.map(r=>`<option value="${r.id}"${race&&r.id===race.id?' selected':''}>${escapeHtml(r.schedule.raceDate||'')} ${escapeHtml(r.name||t('ui.unnamedRace','(未命名賽事)'))}</option>`).join('')}</select>
+    </label>
+    <div class="paste-note-facts">
+      <strong class="small">${t('ui.pasteResultFields','抓到這些成績')}</strong>
+      ${keys.map(k=>{
+        const cur=race?getPath(race,k):null;
+        return `<label class="paste-note-fact">
+          <input type="checkbox" data-paste-result="${escapeHtml(k)}"${st.fieldsOn[k]?' checked':''}>
+          <span><strong>${escapeHtml(labelOf(k))}</strong> → ${escapeHtml(showVal(k,st.fields[k]))}
+          ${cur!=null&&cur!==''?`<em class="paste-note-overwrite">${tf('ui.pasteNoteWillOverwrite','會覆蓋現有的 {n}',showVal(k,cur))}</em>`:''}</span>
+        </label>`;
+      }).join('')}
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" data-action="confirm-paste-result">${t('ui.pasteResultApply','填入成績')}</button>
+      <button class="btn-ghost" data-action="close-paste-note">${t('ui.cancel','取消')}</button>
+    </div>
+  </div>`;
+}
 function pasteUrlModalHtml(){
   const st=pasteNoteState;
   const races=pasteNoteCandidates().slice(0,40);
@@ -9584,6 +9715,16 @@ function openPasteNoteModal(text){
   const el=document.getElementById('paste-note-modal');
   el.innerHTML=pasteNoteModalHtml(); el.hidden=false;
 }
+function openPasteResultModal(text,fields){
+  const first=pasteNoteCandidates()[0];
+  const fieldsOn={};
+  // 成績頁是結構化的，抓到的數字就是這場的成績，預設全勾（跟住宿同理，
+  // 跟心得相反——心得裡的數字常常是別人的或去年的）。
+  Object.keys(fields).forEach(k=>{ fieldsOn[k]=true; });
+  pasteNoteState={kind:'result',text:String(text).trim(),raceId:first?first.id:null,fields,fieldsOn};
+  const el=document.getElementById('paste-note-modal');
+  el.innerHTML=pasteResultModalHtml(); el.hidden=false;
+}
 function openPasteUrlModal(info){
   const first=pasteNoteCandidates()[0];
   pasteNoteState={kind:'url',text:info.url,url:info.url,sourceLabel:info.sourceLabel,
@@ -9618,7 +9759,8 @@ function redrawPasteNoteModal(){
   if(el.hidden||!pasteNoteState) return;
   el.innerHTML=pasteNoteState.kind==='accommodation'?pasteAccomModalHtml()
     :pasteNoteState.kind==='transport'?pasteTransportModalHtml()
-    :pasteNoteState.kind==='url'?pasteUrlModalHtml():pasteNoteModalHtml();
+    :pasteNoteState.kind==='url'?pasteUrlModalHtml()
+    :pasteNoteState.kind==='result'?pasteResultModalHtml():pasteNoteModalHtml();
 }
 document.getElementById('paste-note-modal').addEventListener('change',e=>{
   if(!pasteNoteState) return;
@@ -9642,6 +9784,8 @@ document.getElementById('paste-note-modal').addEventListener('change',e=>{
   if(trip){ pasteNoteState.tripsOn[Number(trip.dataset.pasteTrip)]=trip.checked; return; }
   const urlField=e.target.closest('[data-paste-url-field]');
   if(urlField){ pasteNoteState[urlField.dataset.pasteUrlField]=urlField.value; return; }
+  const resultBox=e.target.closest('[data-paste-result]');
+  if(resultBox){ pasteNoteState.fieldsOn[resultBox.dataset.pasteResult]=resultBox.checked; return; }
   const fact=e.target.closest('[data-paste-fact]');
   if(fact){ pasteNoteState.factsOn[Number(fact.dataset.pasteFact)]=fact.checked; return; }
   const accom=e.target.closest('[data-paste-accom]');
@@ -9649,6 +9793,23 @@ document.getElementById('paste-note-modal').addEventListener('change',e=>{
 });
 document.getElementById('paste-note-modal').addEventListener('click',e=>{
   if(e.target.closest('[data-action="close-paste-note"]')){ closePasteNoteModal(); return; }
+  if(e.target.closest('[data-action="confirm-paste-result"]')&&pasteNoteState){
+    const st=pasteNoteState;
+    const race=state.races.find(r=>r.id===st.raceId);
+    if(!race){ closePasteNoteModal(); return; }
+    let n=0;
+    Object.keys(st.fields).forEach(k=>{ if(st.fieldsOn[k]){ setPath(race,k,st.fields[k]); n++; } });
+    race.updatedAt=new Date().toISOString();
+    persist().then(()=>{
+      renderCalendar();
+      if(currentRace&&currentRace.id===race.id) renderDetail();
+      else selectRace(race.id,{scroll:false});
+    });
+    closePasteNoteModal();
+    showToast(tf('ui.pasteResultDone','已填入 {n} 個成績欄位',n));
+    logFeatureUse('paste_result');
+    return;
+  }
   if(e.target.closest('[data-action="confirm-paste-url"]')&&pasteNoteState){
     const st=pasteNoteState;
     const race=state.races.find(r=>r.id===st.raceId);
@@ -13702,7 +13863,7 @@ function renderCalendar(){
     const extra=dayRaces.length-shown.length;
     cells.push(`<div class="cal-cell${muted?' muted':''}${isToday?' today':''}${isWeekend?' weekend':''}">
       <span class="cal-daynum">${cellD}</span>
-      ${shown.map(r=>`<button type="button" class="cal-chip status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" title="${escapeHtml(r.name)}">${r.coverImage?`<img class="cal-chip-thumb" src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" style="${focalPointStyle(r)}">`:`<span class="cal-chip-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}<span class="cal-chip-text">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span></button>`).join('')}
+      ${shown.map(r=>`<button type="button" class="cal-chip status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" style="--chip-tint:${sportBgVar(r.sportType)}" title="${escapeHtml(r.name)}">${r.coverImage?`<img class="cal-chip-thumb" src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" style="${focalPointStyle(r)}">`:`<span class="cal-chip-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}<span class="cal-chip-text">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span></button>`).join('')}
       ${extra>0?`<span class="cal-more">+${extra}</span>`:''}
     </div>`);
     // 手機清單檢視只列本月、有賽事的日期，避免小螢幕上格子太擠、觸控熱區太小
@@ -18718,6 +18879,19 @@ document.addEventListener('paste',async e=>{
     // 新增賽事最先判，而且**不受「必須已經有賽事」的限制**——第一次
     // 用這個 App、清單還是空的時候，正是最可能貼一段賽事資訊進來的
     // 時機，其他幾種（填進某一場的欄位）才需要先有賽事可以填。
+    // 成績頁排在新增賽事之前：成績查詢頁通常也有賽事名稱與日期，會被
+    // 新增賽事那條先吃掉，變成「已經有這場了卻跳出新增表單」。有成績
+    // 時間與排名這種更具體的證據時，它就不是一場新賽事而是一份成績。
+    // 需要有賽事可以填，所以清單空的時候讓給新增賽事。
+    if(state.races.some(r=>!r.deletedAt)){
+      const result=classifyResultText(text);
+      if(result.isResult){
+        e.preventDefault();
+        openPasteResultModal(text,result.fields);
+        logFeatureUse('global_paste_result');
+        return;
+      }
+    }
     const newRace=classifyNewRaceText(text);
     if(newRace.isNewRace){
       e.preventDefault();
