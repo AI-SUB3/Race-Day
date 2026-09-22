@@ -1427,6 +1427,53 @@ class Share(Group):
             document.execCommand=orig;
             return ok===true && (copied==='測試文案 ABC' || copied===null);
         }''')
+        # ---- 資料不足的分享選項要灰掉並說明原因，不是整個消失 ----
+        c['share_unavailable_options_show_reason'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('只有成績','road_running','completed','2022-03-20');
+            r.route.distanceKm=42.195; r.results.chipTimeSeconds=12317;
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,250));
+            openShareModal(r); await new Promise(s=>setTimeout(s,700));
+            const el=document.getElementById('share-modal');
+            const greyed=[...el.querySelectorAll('.share-opt-unavailable')];
+            const txt=el.innerText;
+            const enabled=[...el.querySelectorAll('[data-share-opt]')].map(i=>i.dataset.shareOpt);
+            closeShareModal();
+            return greyed.length===4                      // 心率／戰靴／補給／軌跡都還在畫面上
+                && greyed.every(l=>l.querySelector('input').disabled)
+                && txt.includes('這場沒綁定鞋款') && txt.includes('沒有 GPX 軌跡')
+                && enabled.join(',')==='qr';              // 只有 QR 可以勾
+        }''')
+        # 資料齊全時四個選項都是可勾的，不會出現「原因」字樣
+        c['share_available_options_have_no_reason_text'] = page.evaluate('''async()=>{
+            shoes.push({id:'s-opt',name:'測試鞋',targetKm:600,isRetired:false,trainingKm:0});
+            const pts=[]; for(let i=0;i<50;i++) pts.push({lat:25+i*0.001,lon:121+i*0.001});
+            const r=emptyRace('齊全','road_running','completed','2026-03-20');
+            r.route.distanceKm=42.195; r.results.chipTimeSeconds=12317;
+            r.performanceData.avgHr=162; r.performanceData.shoeId='s-opt';
+            r.route.trackPoints=pts;
+            r.nutritionSchedule=[{item:'能量膠',qty:4,consumed:true}];
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,250));
+            openShareModal(r); await new Promise(s=>setTimeout(s,700));
+            const el=document.getElementById('share-modal');
+            const greyed=el.querySelectorAll('.share-opt-unavailable').length;
+            const opts=[...el.querySelectorAll('[data-share-opt]')].map(i=>i.dataset.shareOpt).sort().join(',');
+            closeShareModal();
+            return greyed===0 && opts==='fuel,hr,qr,shoe,track';
+        }''')
+        # 多項運動的戰靴要說「這個運動種類不顯示」，不是「沒綁鞋款」
+        c['share_shoe_reason_differs_for_non_running'] = page.evaluate('''async()=>{
+            const tri=emptyRace('三鐵','triathlon','completed','2026-05-01');
+            tri.route.distanceKm=113; tri.results.chipTimeSeconds=19000;
+            state.races.push(tri); selectRace(tri.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,250));
+            openShareModal(tri); await new Promise(s=>setTimeout(s,700));
+            const txt=document.getElementById('share-modal').innerText;
+            closeShareModal();
+            return txt.includes('這個運動種類不顯示戰靴') && !txt.includes('這場沒綁定鞋款');
+        }''')
         c['share_desktop_downloads_not_share_sheet'] = page.evaluate('''async()=>{
             let shared=0, downloaded=0;
             const origShare=navigator.share, origCan=navigator.canShare, origDl=window.downloadBlob;
@@ -2233,6 +2280,144 @@ class PasteReport(Group):
             const txt='2026 臺北馬拉松\\n比賽日期：2026-12-20\\n距離：42.195 公里';
             return classifyResultText(txt).isResult===false
                 && classifyNewRaceText(txt).isNewRace===true;
+        }''')
+        # 沒有排名區塊的成績頁也要抓得到（兩個獨立的完賽時間就是夠強的訊號）
+        c['result_without_ranking_is_detected'] = page.evaluate('''()=>{
+            const txt='2024 Panasonic 台北城市路跑賽\\n2024-09-08 (日)\\n劉恩龍\\n004514\\n'
+                    + '12.5KM 男子組 TW 男\\n大會成績\\nOfficial Time\\n01:13:30\\n個人成績\\nNet Time\\n01:12:11';
+            const c2=classifyResultText(txt);
+            return c2.isResult===true
+                && c2.fields['results.gunTimeSeconds']===4410
+                && c2.fields['results.chipTimeSeconds']===4331
+                && c2.fields['bibNumber']==='004514'
+                && c2.fields['results.overallRank']==null;   // 沒有排名就不要亂填
+        }''')
+        # 放寬之後不可以把心得搶走
+        c['result_loosening_does_not_steal_reports'] = page.evaluate('''()=>{
+            const withTime='今天配速控制得不錯，補給站都有停，大會成績 3:25:17。我覺得這場表現很好。';
+            const plain='今天配速控制得不錯，補給站都有停，最後衝線 2:59:31。我覺得這場表現很好。';
+            return classifyResultText(withTime).isResult===false && classifyPastedText(withTime).isReport===true
+                && classifyResultText(plain).isResult===false && classifyPastedText(plain).isReport===true
+                && classifyResultText('晶片時間 03:25:17').isResult===false;  // 單一時間還是不夠
+        }''')
+        # ---- 標籤同義詞擴大 ----
+        c['result_synonyms_zh_en_ja'] = page.evaluate('''()=>{
+            const f=t=>extractRaceResults(t);
+            const zh=f('大會紀錄 03:25:17\\n淨時間 03:24:50\\n綜合排名 120/2000');
+            const en=f('Gross Time 03:25:17\\nNet Time 03:24:50\\nOverall Place 120/2000\\nGender Rank 45/900\\nDivision Rank 12/150');
+            const ja=f('グロスタイム 03:25:17\\nネットタイム 03:24:50\\n総合順位 120/2000\\n男女別順位 45/900\\n種目別順位 12/150');
+            return zh['results.gunTimeSeconds']===12317 && zh['results.chipTimeSeconds']===12290
+                && zh['results.overallRank']===120
+                && en['results.genderRank']===45 && en['results.ageGroupRank']===12
+                && ja['results.genderRank']===45 && ja['results.ageGroupRank']===12
+                && ja['results.gunTimeSeconds']===12317;
+        }''')
+        # 性別排名與分組名次是兩個欄位，不可以互相覆蓋
+        c['gender_rank_kept_separate_from_age_group'] = page.evaluate('''()=>{
+            const f=extractRaceResults('大會時間 01:51:53\\n個人時間 01:51:36\\n'
+              +'總名次 287/3000\\n性別排名 259/2251\\n分組名次 57/368');
+            return f['results.overallRank']===287 && f['results.overallParticipants']===3000
+                && f['results.genderRank']===259 && f['results.genderParticipants']===2251
+                && f['results.ageGroupRank']===57 && f['results.ageGroupParticipants']===368;
+        }''')
+        # 總排名不可以把分組／性別的數字吃走（裸的「排名」兩個字會誤中）
+        c['overall_rank_does_not_swallow_subgroup_ranks'] = page.evaluate('''()=>{
+            const a=extractRaceResults('晶片時間 03:25:17\\n分組排名 12/150');
+            const b=extractRaceResults('晶片時間 03:25:17\\n性別排名 45/900');
+            const c2=extractRaceResults('晶片時間 03:25:17\\n分組排名 12/150\\n總排名 120/2000');
+            return a['results.overallRank']==null && a['results.ageGroupRank']===12
+                && b['results.overallRank']==null && b['results.genderRank']===45
+                && c2['results.overallRank']===120 && c2['results.ageGroupRank']===12;
+        }''')
+        # 前後半程與號碼布同義詞
+        c['result_half_splits_and_bib_synonyms'] = page.evaluate('''()=>{
+            const h=extractRaceResults('晶片時間 03:25:17\\n前半 1:40:00\\n後半 1:45:17\\n總排名 120/2000');
+            const b=extractRaceResults('參賽編號 A1234\\n晶片成績 03:25:17\\n全場排名 88/900');
+            return h['results.firstHalfSeconds']===6000 && h['results.secondHalfSeconds']===6317
+                && b['bibNumber']==='A1234' && b['results.overallRank']===88;
+        }''')
+        # 性別排名要出現在成績儀表板上
+        c['gender_rank_shows_in_dashboard'] = page.evaluate('''()=>{
+            const r=emptyRace('x','road_running','completed','2026-05-01');
+            r.route.distanceKm=21.0975; r.results.chipTimeSeconds=5185;
+            r.results.genderRank=259; r.results.genderParticipants=2251;
+            const d=document.createElement('div'); d.innerHTML=renderResultsDashboard(r);
+            return [...d.querySelectorAll('.results-badge')].some(b=>
+              b.querySelector('.results-badge-label').textContent==='性別排名'
+              && b.querySelector('.results-badge-value').textContent.includes('259'));
+        }''')
+        # ---- 貼上的文字提到清單裡已存在的賽事時，該怎麼分流 ----
+        c['paste_routing_matrix_with_existing_race'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('Panasonic 台北城市路跑賽','road_running','completed','2024-09-08');
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,200));
+            const route=txt=>{
+              if(classifyResultText(txt).isResult) return '成績';
+              if(classifyNewRaceText(txt).isNewRace) return '新增賽事';
+              if(classifyPastedText(txt).isReport) return '心得';
+              return '無';
+            };
+            const cases=[
+              ['Panasonic 台北城市路跑賽\\n01:12:11','成績'],                          // 最精簡：名稱＋時間
+              ['2024 Panasonic 台北城市路跑賽\\n01:12:11','成績'],                     // 名稱多一個年份也要對得上
+              ['Panasonic 台北城市路跑賽\\n2024-09-08\\n01:12:11','成績'],             // 已存在 → 不可以跳新增表單
+              ['2027 田中馬拉松\\n比賽日期：2027-11-14\\n全程馬拉松','新增賽事'],        // 沒見過的才是新增
+              ['今天的 Panasonic 台北城市路跑賽 跑得比預期好。前半段配速控制得不錯，補給站都有停，最後 1:12:11 完賽，我覺得這場表現很好，下次要更早開始補鹽。','心得'],
+              ['01:12:11','無'],                                                      // 只有時間太曖昧
+              ['某個沒建立過的賽事\\n01:12:11','無'],
+            ];
+            return cases.every(([txt,want])=>route(txt)===want);
+        }''')
+        # 名稱比對本身：太短的名稱不比對，避免泛稱亂中
+        c['race_name_match_ignores_short_names'] = page.evaluate('''()=>{
+            state.races=[];
+            state.races.push(emptyRace('路跑','road_running','completed','2024-09-08'));
+            const short=matchRaceByPastedName('今天去路跑 01:12:11');
+            state.races.push(emptyRace('Panasonic 台北城市路跑賽','road_running','completed','2024-09-08'));
+            const long=matchRaceByPastedName('2024 Panasonic 台北城市路跑賽 01:12:11');
+            return short===null && !!long && long.name==='Panasonic 台北城市路跑賽';
+        }''')
+        # ---- 號碼布編號 ----
+        c['bib_extracted_from_standalone_digits'] = page.evaluate('''()=>{
+            const a=extractRaceResults('劉恩龍\\n003150\\n半馬挑戰組\\n大會成績\\n01:51:53\\n總排名\\n287/3000');
+            const b=extractRaceResults('活動\\n2024-09-22\\n劉恩龍\\n010685\\n大會成績\\n01:51:53\\n總排名\\n287/3000\\n分組排名\\n57/368');
+            return a['bibNumber']==='003150' && b['bibNumber']==='010685';
+        }''')
+        # 有標籤時要吃得下帶字母／連字號的號碼布
+        c['bib_labelled_accepts_alphanumeric'] = page.evaluate('''()=>{
+            const f=t=>extractRaceResults(t)['bibNumber'];
+            return f('號碼布：A1234\\n晶片時間 03:25:17')==='A1234'
+                && f('Bib No. R-045\\nChip Time 03:25:17')==='R-045'
+                && f('ゼッケン 7821\\nネットタイム 03:25:17')==='7821';
+        }''')
+        # 不可以把人數、年份、三位數誤認成號碼布
+        c['bib_ignores_participants_year_and_short_numbers'] = page.evaluate('''()=>{
+            const f=t=>extractRaceResults(t)['bibNumber'];
+            return f('晶片時間 03:25:17\\n總排名\\n287/3000\\n分組排名\\n57/3680')==null
+                && f('2024\\n晶片時間 03:25:17\\n總排名 287/3000')==null
+                && f('123\\n晶片時間 03:25:17')==null;
+        }''')
+        # 前導零不受年份規則限制（02024 不可能是年份）
+        c['bib_leading_zero_beats_year_rule'] = page.evaluate('''()=>{
+            return extractRaceResults('02024\\n晶片時間 03:25:17')['bibNumber']==='02024';
+        }''')
+        # 視窗標籤要跨區段解析（號碼布在基本資訊，不在賽後）
+        c['bib_label_resolves_across_sections'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('統一發票盃','road_running','completed','2024-09-22');
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,250));
+            const dt=new DataTransfer();
+            dt.setData('text','劉恩龍\\n003150\\n大會成績\\n01:51:53\\n總排名\\n287/3000');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await new Promise(s=>setTimeout(s,400));
+            const el=document.getElementById('paste-note-modal');
+            const txt=el.innerText;
+            el.querySelector('[data-action="confirm-paste-result"]').click();
+            await new Promise(s=>setTimeout(s,500));
+            return txt.includes('號碼布編號') && !txt.includes('bibNumber')
+                && state.races[0].bibNumber==='003150';
         }''')
         # ---- 貼上「賽事名稱＋日期」→ 開新增表單並帶入 ----
         c['new_race_extracts_name_date_distance'] = page.evaluate('''()=>{
