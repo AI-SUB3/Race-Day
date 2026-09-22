@@ -1840,6 +1840,50 @@ class PasteReport(Group):
                 && list[1].mode==='hsr' && list[2].mode==='train' && list[2].direction==='return'
                 && list[1].departureTime==='2026-12-19T08:31';
         }''', HSR_RT)
+        # ---- 訂房／訂票「網頁選字複製」的雜訊（麵包屑、評論、參考價、按鈕字樣） ----
+        AGODA_NOISY = ('首頁 › 台灣 › 宜蘭 › 礁溪\n礁溪老爺酒店\n4.6 分 (2,341 則評論)\n'
+                       '免費取消・訂今付訂金\n立即預訂\n熱門房型剩 3 間\n平均每晚 NT$3,200 起\n'
+                       '入住：2026-12-19\n退房：2026-12-21\n訂房保證最優惠價格\n總金額：NT$8,400\n'
+                       '查看地圖　分享　收藏')
+        THSR_NOISY = ('台灣高鐵 訂票系統\n首頁 › 訂票 › 查詢結果\n熱門優惠　立即比價\n'
+                      '去程　2026-12-19（六）\n車次 0613　太魚快　08:31　台北 → 09:56　左營\n'
+                      '剩餘座位：42\n標準車廂　5車 12E\n回程　2026-12-21（一）\n'
+                      '車次 0842　08:31　左營 → 16:10　台北\n7車 3A\n訂位代號 12345678\n'
+                      '更多班次　查看座位表')
+        # 麵包屑不能變成飯店名，「酒店」這種常見命名要抓得到（原本規則只有「飯店」）
+        c['accommodation_skips_breadcrumb_and_recognizes_jiudian'] = page.evaluate('''(txt)=>{
+            const f=extractAccommodation(txt);
+            return f.hotelName==='礁溪老爺酒店' && !f.hotelName.includes('首頁');
+        }''', AGODA_NOISY)
+        # 費用要抓「總金額」不是「平均每晚」的搜尋結果參考價
+        c['accommodation_cost_prefers_total_over_teaser_price'] = page.evaluate('''(txt)=>{
+            return extractAccommodation(txt).cost===8400;
+        }''', AGODA_NOISY)
+        # 星等評論、按鈕字樣不能污染分類或抽取（維持一定能判斷成住宿）
+        c['accommodation_classify_robust_to_ui_noise'] = page.evaluate('''(txt)=>{
+            return classifyAccommodationText(txt).isAccommodation===true;
+        }''', AGODA_NOISY)
+        # 日期與時刻分兩行（網頁常見排版）也要抓得到出發時間，不是只抓到日期
+        c['transport_time_crosses_linebreak'] = page.evaluate('''(txt)=>{
+            const legs=extractTransport(txt,'2026-12-20');
+            return legs[0].departureTime==='2026-12-19T08:31' && legs[1].departureTime==='2026-12-21T08:31';
+        }''', THSR_NOISY)
+        # 「08:31 台北 → 09:56 左營」時間夾在站名中間，不能把時間當成站名
+        c['transport_route_ignores_embedded_time'] = page.evaluate('''(txt)=>{
+            const legs=extractTransport(txt,'2026-12-20');
+            return legs[0].pickupLocation==='台北' && legs[0].notes.startsWith('台北 → 左營')
+                && legs[1].pickupLocation==='左營' && legs[1].notes.startsWith('左營 → 台北');
+        }''', THSR_NOISY)
+        # 訂位代號只出現一次（在最後），但兩段行程都要對得上
+        c['transport_shared_confirmation_applies_to_both_legs'] = page.evaluate('''(txt)=>{
+            const legs=extractTransport(txt,'2026-12-20');
+            return legs[0].notes.includes('#12345678') && legs[1].notes.includes('#12345678');
+        }''', THSR_NOISY)
+        # 「更多班次」「查看座位表」這類介面字樣不能被判成一個地名
+        c['transport_ui_phrases_not_mistaken_for_location'] = page.evaluate('''(txt)=>{
+            const legs=extractTransport(txt,'2026-12-20');
+            return legs.every(l=>!/更多|查看|訂票|比價/.test(l.pickupLocation));
+        }''', THSR_NOISY)
         # 里程碑不是賽事距離：「30 公里之後撞牆」不能被當成 distanceKm
         c['distance_needs_explicit_marker'] = page.evaluate('''()=>{
             const milestone=extractRaceFacts('最後衝線 2:59:31。30 公里之後開始撞牆。').map(f=>f.key);

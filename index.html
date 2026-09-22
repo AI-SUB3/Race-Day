@@ -3109,7 +3109,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.51.0';
+const APP_VERSION='v3.52.0';
 
 /* ============================================================
    多語系（i18n）
@@ -8888,9 +8888,28 @@ function extractRaceFacts(text){
    跟心得不同，這種文字是結構化的（有「入住」「退房」「訂房編號」這種
    標籤），所以判斷可以要求更具體的證據，抽出來的欄位也預設勾選——
    訂房確認信裡的日期就是這次的日期，不像心得裡的數字那樣曖昧。 */
-const ACCOM_WORDS=['入住','退房','訂房','住宿','飯店','旅館','民宿','旅店','訂單編號','訂房編號',
+const ACCOM_WORDS=['入住','退房','訂房','住宿','飯店','旅館','民宿','旅店','酒店','渡假村','度假村','會館','山莊',
+  '訂單編號','訂房編號',
   'check-in','check in','checkout','check-out','hotel','booking','reservation','confirmation',
   'チェックイン','チェックアウト','予約'];
+// 「飯店名稱」的判斷用這組關鍵字掃行——酒店是很常見的命名（中國、港澳、
+// 不少台灣精品旅宿都用「酒店」不用「飯店」），漏掉會導致抓不到名稱、
+// 退回抓到麵包屑或雜訊行。分類與抽取共用同一組，兩邊才不會判斷不一致。
+const ACCOM_LODGING_RE=/(飯店|旅館|民宿|旅店|酒店|渡假村|度假村|會館|山莊|hotel|inn|hostel|resort)/i;
+/* 貼上的內容如果是從訂房網頁「選字複製」而不是確認信，會夾雜網站介面的
+   文字——麵包屑導覽（首頁 › 台灣 › 宜蘭）、星等評論、「立即預訂」這類
+   按鈕字樣、「平均每晚 NT$3,200 起」這種只是搜尋結果頁的參考價。這些
+   行要在找「飯店名稱」與「地址」時排除，不然很容易抓到麵包屑當名字。
+   刻意不影響已標籤的抽取（例如「飯店名稱：」開頭的那行）——那已經是
+   明確的標籤，不需要這層過濾。 */
+function isAccomNoiseLine(line){
+  if(/[›>]/.test(line)&&(line.match(/[›>]/g)||[]).length>=1&&/^(首頁|home|台灣|日本)/i.test(line)) return true;
+  if(/^\d+(\.\d+)?\s*分[\s(（]/.test(line)) return true;   // 「4.6 分 (2,341 則評論)」
+  if(/(則評論|reviews?\)|評分)/i.test(line)) return true;
+  if(/(立即預訂|立即訂房|立即訂票|查看地圖|查看更多|查看座位|更多房型|免費取消|限時優惠|訂今付訂金|熱門優惠|立即比價|訂房保證|比價中|查詢結果|剩\s*\d+\s*間|以上僅供參考)/.test(line)) return true;
+  if(/^(分享|收藏|詳情|地圖)(\s|　)*(分享|收藏|詳情|地圖)*$/.test(line)) return true;
+  return false;
+}
 function classifyAccommodationText(text){
   const body=String(text||'').trim();
   if(!body) return {isAccommodation:false,score:0};
@@ -8900,7 +8919,7 @@ function classifyAccommodationText(text){
   const hasInOut=/入住|check[-\s]?in|チェックイン/i.test(body)&&/退房|check[-\s]?out|チェックアウト/i.test(body);
   if(hasInOut) score+=3;
   if(/訂[房單]編號|confirmation\s*(?:number|code|#)|reservation\s*(?:number|id)/i.test(body)) score+=2;
-  const hasLodging=/(飯店|旅館|民宿|旅店|hotel|inn|hostel|resort)/i.test(body);
+  const hasLodging=ACCOM_LODGING_RE.test(body);
   if(hasLodging) score+=1;
   // 住宿詞 + 日期（或日期區間）：像「山中民宿 / 2026-09-05 ~ 09-06 / 已預訂」
   // 這種極簡的訂房筆記，靠關鍵字數量湊不到門檻，但它確實是訂房資料。
@@ -8938,20 +8957,21 @@ function extractAccommodation(text){
   const lines=String(text||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   const body=lines.join('\n');
   const out={};
-  const pickLine=re=>lines.find(l=>re.test(l))||'';
-  // 飯店名稱：先找標籤（飯店名稱：xxx），沒有就找含「飯店/旅館/hotel」
-  // 的那一行；再沒有就用第一行——訂房信的第一行通常就是飯店名。
+  // 網頁選字複製的雜訊行（麵包屑、評論分數、「立即預訂」之類的按鈕字樣）
+  // 在找名稱／地址時先濾掉；已標籤的抽取不受影響，見上面的說明。
+  const cleanLines=lines.filter(l=>!isAccomNoiseLine(l));
+  const pickLine=re=>cleanLines.find(l=>re.test(l))||'';
+  // 飯店名稱：先找標籤（飯店名稱：xxx），沒有就找含「飯店/旅館/酒店」
+  // 的那一行；再沒有就用第一個乾淨行——訂房信的第一行通常就是飯店名，
+  // 但網頁複製的第一行常常是麵包屑，所以用濾過雜訊的清單。
   let hotel=(body.match(/(?:飯店名稱|旅館名稱|住宿名稱|hotel(?:\s*name)?|宿泊先)\s*[:：]\s*(.+)/i)||[])[1];
   if(!hotel){
-    // 含住宿字眼的行可能不只一行，「民宿訂房」這種標題也會中。先把
-    // 看起來像標題／標籤的行排掉（訂房、確認、通知、booking…），
-    // 剩下的第一行才是真正的名字。
-    const cands=lines.filter(l=>/(飯店|旅館|民宿|旅店|hotel|inn|hostel|resort)/i.test(l)&&l.length<=60);
+    const cands=cleanLines.filter(l=>ACCOM_LODGING_RE.test(l)&&l.length<=60);
     const isLabel=l=>/(訂房|預訂|預約|確認|通知|booking|reservation|confirmation)/i.test(l);
     const line=cands.find(l=>!isLabel(l))||cands[0]||'';
     if(line) hotel=line.replace(/^[-・*\s]+/,'');
   }
-  if(!hotel&&lines.length) hotel=lines[0];
+  if(!hotel&&cleanLines.length) hotel=cleanLines[0];
   if(hotel){
     hotel=hotel.replace(/\s*[（(]\s*(?:訂房編號|confirmation)[^)）]*[)）]\s*/i,'').trim();
     if(hotel.length<=80) out.hotelName=hotel;
@@ -8975,7 +8995,18 @@ function extractAccommodation(text){
   const addr=(body.match(/(?:地址|住所|address)\s*[:：]\s*(.+)/i)||[])[1]
     ||pickLine(/(?:[縣市].{0,12}[區鄉鎮市].{0,20}[路街道])|\d+\s+\w+\s+(?:St|Street|Rd|Road|Ave)/i);
   if(addr&&addr.length<=100) out.address=addr.trim();
-  const cost=body.match(/(?:NT\$|TWD|JPY|USD|\$|¥|總金額|總價|金額|費用|total)\s*[:：]?\s*([\d,]+)|([\d,]+)\s*元/i);
+  // 費用：優先找明確標成「總金額／合計／實付」的數字。訂房網頁常常在
+  // 同一段文字裡先出現「平均每晚 NT$3,200 起」這種搜尋結果參考價，
+  // 沒有這道優先序的話會被它搶先抓走，變成把一晚的價錢當成總價。
+  const totalCost=body.match(/(?:總金額|總價|合計|總計|實付|應付|grand\s*total|total\s*(?:amount|price|cost)?)\s*[:：]?\s*(?:NT\$|TWD|JPY|USD|\$|¥)?\s*([\d,]+)/i);
+  let cost=totalCost;
+  if(!cost){
+    // 沒有明確總額標籤時才退回寬鬆比對，但先把「平均每晚／每晚／起／
+    // 低至」這類參考價那幾行整行拿掉，不然一定會抓到搜尋結果頁的
+    // 參考價而不是真正要付的錢。
+    const withoutTeasers=lines.filter(l=>!/(平均每晚|每晚|per\s*night|起|低至|as\s*low\s*as|\/\s*晚)/i.test(l)).join('\n');
+    cost=withoutTeasers.match(/(?:NT\$|TWD|JPY|USD|\$|¥|金額|費用|total)\s*[:：]?\s*([\d,]+)|([\d,]+)\s*元/i);
+  }
   if(cost){
     const n=parseInt(String(cost[1]||cost[2]).replace(/,/g,''),10);
     if(n>0&&n<10000000) out.cost=n;
@@ -9018,8 +9049,17 @@ function transportModeOf(segment){
   const hit=TRANSPORT_MODE_RULES.find(r=>r.re.test(segment));
   return hit?hit.mode:'other';
 }
+// 跟住宿一樣，訂票網頁選字複製會夾雜「立即訂票」「更多班次」「查看
+// 座位表」這類介面字樣，找起訖地名時要先排除，不然「更多車站資訊」
+// 裡的「車站」會被誤認成一個地名。
+function isTransportNoiseLine(line){
+  return /(立即訂票|立即比價|選擇座位|查看座位表?|比價中|更多班次|訂位確認|查詢結果|熱門優惠|以上僅供參考|列車時刻查詢|訂票系統)/.test(line);
+}
 function extractTransport(text,raceDate){
   const body=String(text||'').replace(/\r/g,'');
+  // 訂位代號通常整趟行程只有一個、會出現在最前面的抬頭或最後的總結，
+  // 不一定落在去程或回程各自的段落裡。用整份文字找，兩段都能對上票。
+  const sharedRef=(body.match(/(?:訂位代號|訂票代號|予約番号|PNR|booking\s*(?:ref|reference|code)|confirmation\s*(?:number|code))\s*[:：]?\s*([A-Z0-9]{4,12})/i)||[])[1];
   const dateLike='(\\d{4}\\s*[-/年.]\\s*\\d{1,2}\\s*[-/月.]\\s*\\d{1,2}|\\d{1,2}\\s*[-/月.]\\s*\\d{1,2}(?:日)?)';
   const timeLike='((?:上午|下午|AM|PM|am|pm)?\\s*\\d{1,2}\\s*[:：時]\\s*\\d{2}(?:\\s*(?:AM|PM|am|pm|発|發))?)';
   // 切段：明確標了「去程／回程／Outbound／Return／往路／復路」的地方切開，
@@ -9047,26 +9087,34 @@ function extractTransport(text,raceDate){
     // 「車次」高鐵跟台鐵都在用：段落裡只看到車次會判成火車，抬頭寫著
     // 高鐵／新幹線就該是高鐵。只針對這一組模糊做修正，不整包用抬頭判。
     if(mode==='train'&&/高鐵|THSR|新幹線|shinkansen/i.test(full)) mode='hsr';
-    // 出發時間：先找標籤，再退回段落裡第一個日期＋緊接的時間
+    // 出發時間：先找標籤，再退回段落裡第一個日期＋緊接的時間。網頁
+    // 複製常常把日期跟時刻拆成兩行（日期一行、車次時刻另一行），
+    // 用 [\s\S] 讓比對可以跨一行，但字數預算收緊，不會抓到太遠的時間。
     let dep='';
-    const depRe=new RegExp('(?:出發|發車|起飛|departure|depart|出発)[^\\n]{0,10}?'+dateLike+'(?:[^\\n]{0,10}?'+timeLike+')?','i');
+    const depRe=new RegExp('(?:出發|發車|起飛|departure|depart|出発)[\\s\\S]{0,16}?'+dateLike+'(?:[\\s\\S]{0,16}?'+timeLike+')?','i');
     let m=seg.match(depRe);
     if(m) dep=parseAccomDateTime(m[1],m[2]);
     if(!dep){
-      m=seg.match(new RegExp(dateLike+'[^\\n]{0,16}?'+timeLike,'i'));
+      m=seg.match(new RegExp(dateLike+'[\\s\\S]{0,20}?'+timeLike,'i'));
       if(m) dep=parseAccomDateTime(m[1],m[2]);
       else { m=seg.match(new RegExp(dateLike)); if(m) dep=parseAccomDateTime(m[1],''); }
     }
-    // 起訖：X → Y 或「X 到 Y」；沒有箭頭就找含「機場／站／港」的第一個地名
+    // 起訖：X → Y 或「X 到 Y」。先把 HH:MM 這種時間字樣拿掉再比對——
+    // 網頁常見的寫法是「08:31 台北 → 09:56 左營」，時間夾在地名中間，
+    // 沒有先拿掉的話箭頭前後抓到的會是「台北」跟「09:56」而不是兩個站名。
     let from='',to='';
-    m=seg.match(/([^\s→\->—至到]{2,20})\s*(?:→|->|➜|⇒|—|至|到|-\s)\s*([^\s→\->—\n]{2,20})/);
+    const segNoTime=seg.replace(/\d{1,2}\s*[:：]\s*\d{2}/g,' ');
+    m=segNoTime.match(/([^\s→\->—至到]{2,20})\s*(?:→|->|➜|⇒|—|至|到|-\s)\s*([^\s→\->—\n]{2,20})/);
     if(m){ from=m[1].trim(); to=m[2].trim(); }
-    if(!from){ m=seg.match(/([^\s、，,]{1,16}(?:機場|車站|火車站|高鐵站|港|碼頭|轉運站|Airport|Station|Terminal))/i); if(m) from=m[1]; }
+    if(!from){
+      const cleanSeg=seg.split(/\r?\n/).filter(l=>!isTransportNoiseLine(l)).join('\n');
+      m=cleanSeg.match(/([^\s、，,]{1,16}(?:機場|車站|火車站|高鐵站|港|碼頭|轉運站|Airport|Station|Terminal))/i);
+      if(m) from=m[1];
+    }
     // 班次／座位／代號放備註，之後對票用。
     // 先把訂位代號抽掉再找班次：ABC123 這種代號會被「兩個字母＋數字」的
     // 班機號規則吃掉（BC123）。
     const refRe=/(?:訂位代號|訂票代號|予約番号|PNR|booking\s*(?:ref|reference|code)|confirmation\s*(?:number|code))\s*[:：]?\s*([A-Z0-9]{4,12})/i;
-    const ref=full.match(refRe);
     const segNoRef=seg.replace(refRe,'');
     const bits=[];
     const num=segNoRef.match(/\b([A-Z]{2}\s?\d{2,4})\b/)
@@ -9078,7 +9126,7 @@ function extractTransport(text,raceDate){
     const arr=seg.match(new RegExp('(?:抵達|到達|arrival|arrive|到着)[^\\n]{0,8}?'+timeLike,'i'))
       ||seg.match(new RegExp(timeLike+'[ \\t]*(?:抵達|到達|着|arrival|arrive)','i'));
     if(arr) bits.push(t('ui.transportArrive','抵達')+' '+arr[1].trim());
-    if(ref) bits.push('#'+ref[1]);
+    if(sharedRef) bits.push('#'+sharedRef);
     if(to) bits.unshift(from+' → '+to);
     // 方向：有標記照標記；沒有就用日期跟賽事日比——比賽前是去程，之後是回程
     let direction='outbound';
