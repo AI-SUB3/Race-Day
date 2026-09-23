@@ -3197,6 +3197,11 @@ class Training(Group):
 
     def body(self, page):
         c = self.checks
+        # 靜態檢查：整份程式不可以出現「向後查找」正規表示式——iOS Safari 16.4
+        # 以前不支援，一碰到就是語法錯誤，整個網站的程式都跑不起來
+        import pathlib as _pl, re as _re
+        _src=_pl.Path(APP).read_text(encoding='utf-8')
+        c['no_regex_lookbehind_for_old_ios'] = len(_re.findall(r'\(\?<[!=]', _src))==0
         page.add_script_tag(content=FIT_GENERATOR_JS)
         page.evaluate('''()=>{ state.races=[]; trainings=[];
             shoes.length=0; shoes.push({id:'s1',name:'Pegasus 41',targetKm:700,isRetired:false,trainingKm:50}); }''')
@@ -3266,6 +3271,10 @@ class Training(Group):
         }''')
         c['shoe_km_follows_edit_and_delete'] = page.evaluate('''async()=>{
             openTrainingOverlay(); trainingPeriod='all'; refreshTrainingOverlay();
+            // v3.80 起「全部」依年月收合，預設只展開最新月份——要點的列得先展開才畫得出來
+            trainingOpenYears=new Set(liveTrainings().map(x=>x.date.slice(0,4)));
+            trainingOpenMonths=new Set(liveTrainings().map(x=>x.date.slice(0,7)));
+            refreshTrainingOverlay();
             const id=liveTrainings().find(x=>x.distanceKm===30).id;
             document.querySelector(`[data-action="training-edit"][data-id="${id}"]`).click();
             const sel=document.querySelector(`[data-training-shoe="${id}"]`);
@@ -3375,6 +3384,130 @@ class Training(Group):
             return !!pushed && pushed.uid==='u1' && pushed.n===trainings.length;
         }''')
 
+        # ---- 依賽事建議準備週期與減量週數（v3.81.0） ----
+        c['training_period_table_all_rows'] = page.evaluate('''()=>{
+            const chk=(sport,km,prep,taper)=>{ const r=emptyRace('x',sport,'registered','2026-12-20');
+              if(km!=null) r.route.distanceKm=km; const c2=classifyRaceForTraining(r);
+              return !!c2 && c2.prep===prep && taperRangeText(c2)===taper; };
+            return chk('road_running',5,4,'1') && chk('road_running',10,6,'1') && chk('road_running',21.0975,8,'1–2')
+              && chk('road_running',42.195,16,'2–3') && chk('ultra_marathon',100,20,'2–3') && chk('road_running',60,20,'2–3')
+              && chk('trail_running',15,8,'1') && chk('trail_running',25,14,'1–2') && chk('trail_running',43,20,'2–3')
+              && chk('duathlon',30,8,'1') && chk('triathlon',51.5,12,'1') && chk('triathlon',113,16,'2–3')
+              && chk('triathlon',226,24,'2–3');
+        }''')
+        # 距離沒填時從名稱判斷；表格沒有的運動不給建議、圖表維持 12 週
+        c['training_period_infers_from_name_and_skips_unknown'] = page.evaluate('''()=>{
+            const w=(name,sport,km)=>{ const r=emptyRace(name,sport,'registered','2026-12-20');
+              if(km!=null) r.route.distanceKm=km; return effectivePrepWeeks(r); };
+            const noSuggest=emptyRace('自行車賽','cycling','registered','2026-12-20'); noSuggest.route.distanceKm=100;
+            return w('IRONMAN 70.3 Taiwan','triathlon',null)===16 && w('Challenge Taiwan 226','triathlon',null)===24
+                && w('臺北全程馬拉松','road_running',null)===16 && w('萬金石半程馬拉松','road_running',null)===8
+                && w('路跑（沒線索）','road_running',null)===12
+                && classifyRaceForTraining(noSuggest)===null && effectivePrepWeeks(noSuggest)===12;
+        }''')
+        # 使用者填的優先；無效值退回建議；改距離時建議跟著變（建議值不寫進資料）
+        c['training_period_user_value_wins_and_suggestion_is_live'] = page.evaluate('''()=>{
+            const r=emptyRace('臺北馬拉松','road_running','registered','2026-12-20'); r.route.distanceKm=21.0975;
+            const a=effectivePrepWeeks(r);
+            r.route.distanceKm=42.195; const b=effectivePrepWeeks(r);
+            r.trainingPlan.prepWeeks=18; r.trainingPlan.taperWeeks=2; const own=[effectivePrepWeeks(r),effectiveTaperWeeks(r)];
+            r.trainingPlan.prepWeeks=0; r.trainingPlan.taperWeeks=-3; const bad=[effectivePrepWeeks(r),effectiveTaperWeeks(r)];
+            return a===8 && b===16 && own.join()==='18,2' && bad.join()==='16,3'
+                && r.trainingPlan.taperStartDate==='';      // 不自動填日期欄位（會讓減量期徽章自動成立）
+        }''')
+        # 長條圖依週數畫、減量週數標灰；超過 16 週只標偶數週與第 1 週
+        c['buildup_uses_race_weeks'] = page.evaluate('''()=>{
+            state.races=[]; trainings=[];
+            const r=emptyRace('Challenge Taiwan 226','triathlon','completed','2026-03-01');
+            state.races.push(r);
+            trainings.push(migrateTraining({date:'2026-02-20',distanceKm:40,sport:'ride',fingerprint:'q1'}));
+            trainings.push(migrateTraining({date:'2026-02-18',distanceKm:12,sport:'run',fingerprint:'q2'}));  // 路跑賽只算跑步
+            const b=computeTrainingBuildup(r);
+            const d=document.createElement('div'); d.innerHTML=trainingBuildupHtml(r);
+            const bars=d.querySelectorAll('.buildup-bar'), taper=d.querySelectorAll('.buildup-bar.is-taper');
+            const labels=[...d.querySelectorAll('.buildup-bar text')].map(x=>x.textContent);
+            const sub=d.querySelector('.buildup-sub').textContent;
+            // 馬拉松：16 根、最後 3 根是減量期
+            const m=emptyRace('臺北馬拉松','road_running','completed','2026-03-01'); m.route.distanceKm=42.195;
+            const dm=document.createElement('div'); dm.innerHTML=trainingBuildupHtml(m);
+            return b.N===24 && bars.length===24 && taper.length===3 && sub.includes('24 週') && sub.includes('226K')
+                && !labels.includes('23') && labels.includes('24') && labels.includes('1')
+                && dm.querySelectorAll('.buildup-bar').length===16 && dm.querySelectorAll('.buildup-bar.is-taper').length===3;
+        }''')
+        c['training_plan_drawer_and_card_show_suggestion'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('臺北馬拉松','road_running','registered','2026-12-20'); r.route.distanceKm=42.195;
+            state.races.push(r);
+            const d=document.createElement('div'); d.innerHTML=trainingPlanDashCardHtml(r);
+            const card=d.querySelector('.dash-card-sub').textContent, faint=!!d.querySelector('.dash-card.is-empty');
+            r.trainingPlan.prepWeeks=18; d.innerHTML=trainingPlanDashCardHtml(r);
+            const card2=d.querySelector('.dash-card-sub').textContent;
+            r.trainingPlan.prepWeeks=null;
+            selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,250));
+            openDrawer('trainingPlan'); await new Promise(s=>setTimeout(s,400));
+            const ph=document.querySelector('[data-path="trainingPlan.prepWeeks"]').placeholder;
+            const hint=(document.querySelector('.tp-hint')||{}).textContent||'';
+            closeDrawer();
+            return card==='準備 16 週・減量 2–3 週（建議）' && faint                 // 只有建議值時卡片仍是淡色
+                && card2==='準備 18 週・減量 2–3 週（建議）'                          // 哪段是建議就標哪段
+                && ph==='建議 16' && hint.includes('全程馬拉松');
+        }''')
+        # ---- 「全部」依年份、月份收合（v3.80.0） ----
+        SEED700 = '''trainings=[]; let n=0; const t0=todayISO();
+            for(let d=0;n<700;d+=3){ trainings.push(migrateTraining({id:'g'+n,date:addDaysStr(t0,-d),startTime:'06:15',
+              sport:'run',distanceKm:+(5+((n*37)%15)+0.3).toFixed(1),durationSeconds:1800+((n*53)%3600),fingerprint:'g'+n})); n++; }'''
+        c['all_tab_groups_by_year_and_month'] = page.evaluate('''()=>{ %s
+            openTrainingOverlay(); trainingPeriod='all'; refreshTrainingOverlay();
+            const ov=document.getElementById('training-overlay');
+            const years=[...ov.querySelectorAll('[data-training-year]')];
+            const curY=todayISO().slice(0,4), curM=todayISO().slice(0,7);
+            const openYears=years.filter(b=>b.getAttribute('aria-expanded')==='true').map(b=>b.dataset.trainingYear);
+            const openMonths=[...ov.querySelectorAll('[data-training-month][aria-expanded="true"]')].map(b=>b.dataset.trainingMonth);
+            const rows=ov.querySelectorAll('.training-row').length;
+            const expect=liveTrainings().filter(x=>x.date.slice(0,7)===curM).length;
+            // 預設只展開最新的年份與月份；只畫出那個月的列（效能：700 筆不會一次全畫）
+            return years[0].dataset.trainingYear===curY
+                && JSON.stringify(openYears)===JSON.stringify([curY])
+                && JSON.stringify(openMonths)===JSON.stringify([curM])
+                && rows===expect && rows<60;
+        }''' % SEED700)
+        c['group_stats_add_up'] = page.evaluate('''()=>{
+            // 某一年的次數＝那一年各月份次數加總
+            const ov=document.getElementById('training-overlay');
+            const y=String(Number(todayISO().slice(0,4))-1);
+            ov.querySelector(`[data-training-year="${y}"]`).click();
+            const num=s=>parseInt(s,10);
+            const yCount=num(ov.querySelector(`[data-training-year="${y}"] .training-group-stats`).textContent);
+            const mCounts=[...ov.querySelectorAll('[data-training-month]')].filter(b=>b.dataset.trainingMonth.startsWith(y))
+              .map(b=>num(b.querySelector('.training-group-stats').textContent));
+            const real=liveTrainings().filter(x=>x.date.startsWith(y)).length;
+            return mCounts.length===12 && mCounts.reduce((a,b)=>a+b,0)===yCount && yCount===real;
+        }''')
+        c['group_toggles_render_only_open_months'] = page.evaluate('''()=>{
+            const ov=document.getElementById('training-overlay');
+            const y=String(Number(todayISO().slice(0,4))-1);
+            const before=ov.querySelectorAll('.training-row').length;     // 去年展開了、但月份都還收著
+            const m=y+'-06';
+            ov.querySelector(`[data-training-month="${m}"]`).click();
+            const afterOpen=ov.querySelectorAll('.training-row').length;
+            const inJune=liveTrainings().filter(x=>x.date.slice(0,7)===m).length;
+            ov.querySelector(`[data-training-year="${y}"]`).click();        // 收起整年
+            const afterCollapse=ov.querySelectorAll('.training-row').length;
+            return afterOpen===before+inJune && afterCollapse===before;
+        }''')
+        c['week_and_month_tabs_stay_flat_and_reopen_resets'] = page.evaluate('''()=>{
+            const ov=document.getElementById('training-overlay');
+            ov.querySelector('[data-training-period="week"]').click();
+            const weekFlat=!ov.querySelector('[data-training-year]');
+            ov.querySelector('[data-training-period="month"]').click();
+            const monthFlat=!ov.querySelector('[data-training-year]');
+            // 重新打開訓練頁：展開狀態回到預設
+            trainingOpenYears.add('2021');
+            closeTrainingOverlay(); openTrainingOverlay(); trainingPeriod='all'; refreshTrainingOverlay();
+            const open=[...ov.querySelectorAll('[data-training-year][aria-expanded="true"]')].map(b=>b.dataset.trainingYear);
+            closeTrainingOverlay();
+            return weekFlat && monthFlat && JSON.stringify(open)===JSON.stringify([todayISO().slice(0,4)]);
+        }''')
         # ---- 在訓練頁拖放檔案（v3.79.0：之前會卡在「放開以匯入檔案」畫面） ----
         DRAG = '''const drag=async(files,target)=>{
             const dt=new DataTransfer(); files.forEach(f=>dt.items.add(f));

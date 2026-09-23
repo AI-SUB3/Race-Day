@@ -1401,6 +1401,17 @@
   .training-edit select{font:inherit;font-size:calc(13px*var(--fs,1));padding:5px 8px;border-radius:6px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);}
   .training-delete{color:var(--flag);}
   .training-footer{margin-top:18px;text-align:center;}
+  .training-group-head{
+    display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;cursor:pointer;
+    background:transparent;border:none;border-bottom:1px solid var(--rule);color:var(--ink);font:inherit;
+  }
+  .training-group-head:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
+  .training-group-head.is-year{padding:12px 2px 10px;font-size:calc(17px*var(--fs,1));font-weight:700;}
+  .training-group-head.is-month{padding:9px 2px 8px 18px;font-size:calc(14px*var(--fs,1));font-weight:600;background:var(--surface);}
+  .training-caret{width:12px;flex-shrink:0;color:var(--stone);font-size:calc(12px*var(--fs,1));}
+  .training-group-label{flex-shrink:0;}
+  .training-group-stats{margin-left:auto;color:var(--stone);font-weight:400;font-size:calc(12px*var(--fs,1));text-align:right;}
+  .training-month-rows{padding-left:18px;}
   #training-import-modal{z-index:245;}
   .training-progress{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;margin:8px 0 14px;}
   .training-progress span{display:block;height:100%;background:var(--trail);transition:width .2s;}
@@ -1413,6 +1424,7 @@
   .training-raceday-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0;font-size:calc(13px*var(--fs,1));}
   .training-failed{margin-bottom:12px;}
   .shoe-imported-hint{display:block;color:var(--trail);margin-top:3px;}
+  .tp-hint{color:var(--ink-soft);line-height:1.6;margin:0 0 10px;}
   .buildup-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:6px;}
   .buildup-head h3{margin:0;font-size:calc(15px*var(--fs,1));}
   .buildup-sub{color:var(--stone);}
@@ -2832,6 +2844,11 @@ const SECTION_PREP=[
   {path:'nutritionPlan.electrolyteTabletCount',label:'電解質 / 鹽錠數量',type:'number'},
   {path:'nutritionPlan.hydrationCapacityMl',label:'水袋容量預估',type:'number',unit:'ml'},
   {path:'nutritionPlan.notes',label:'補給備註',type:'textarea',wide:true},
+  // 準備週期／減量週數（v3.81.0）：沒填時輸入框顯示依賽事算出的建議值
+  {path:'trainingPlan.prepWeeks',label:'準備週期',type:'number',unit:'週',
+   placeholderFn:race=>{ const c=classifyRaceForTraining(race); return c?tf('ui.tpSuggest','建議 {n}',c.prep):''; }},
+  {path:'trainingPlan.taperWeeks',label:'減量週數',type:'number',unit:'週',
+   placeholderFn:race=>{ const c=classifyRaceForTraining(race); return c?tf('ui.tpSuggest','建議 {n}',taperRangeText(c)):''; }},
   {path:'trainingPlan.planStartDate',label:'訓練計畫開始日',type:'date'},
   {path:'trainingPlan.planEndDate',label:'訓練計畫結束日',type:'date'},
   {path:'trainingPlan.taperStartDate',label:'減量期開始日',type:'date'},
@@ -3371,7 +3388,7 @@ function emptyRace(name,sportType,status,raceDate){
     equipmentChecklist:[],
     nutritionPlan:{gelCount:null,electrolyteTabletCount:null,hydrationCapacityMl:null,notes:''},
     nutritionSchedule:[],
-    trainingPlan:{planStartDate:'',planEndDate:'',taperStartDate:'',weeklyMileageTargetKm:null,keyWorkoutNotes:'',externalPlanUrl:'',notes:''},
+    trainingPlan:{prepWeeks:null,taperWeeks:null,planStartDate:'',planEndDate:'',taperStartDate:'',weeklyMileageTargetKm:null,keyWorkoutNotes:'',externalPlanUrl:'',notes:''},
     results:{gunTimeSeconds:null,chipTimeSeconds:null,overallRank:null,overallParticipants:null,ageGroupRank:null,ageGroupParticipants:null,isPb:false,firstHalfSeconds:null,secondHalfSeconds:null},
     performanceData:{avgHr:null,maxHr:null,avgCadence:null,avgPowerWatts:null,dataSource:'',notes:'',shoeId:''},
     splits:[],
@@ -3395,7 +3412,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.79.0';
+const APP_VERSION='v3.81.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3748,7 +3765,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.dropzoneTrainingTitle':'ドロップしてトレーニング記録を取り込む','ui.dropzoneTrainingHint':'FIT／GPX／TCX、複数ファイルもまとめてどうぞ','ui.trainingTitle':'トレーニング記録','ui.trainingShort':'トレーニング','ui.trainingImport':'＋ FIT／GPX を取り込む','ui.trainingHint':'トレーニング記録はレースとは別に保存され、レースの統計・PB・バッジには影響しません。複数ファイルをまとめて選べます。','ui.trainingWeek':'今週','ui.trainingMonth':'今月','ui.trainingAll':'すべて','ui.trainingKm':'km','ui.trainingCount':'回','ui.trainingHours':'合計時間','ui.trainingEmpty':'まだトレーニング記録がありません。「取り込む」から時計のFIT／GPX／TCXを選んでください（複数可）。','ui.trainingEmptyPeriod':'この期間の記録はありません。','ui.trainingExport':'トレーニング記録を書き出す（JSON）','ui.trainingImportTitle':'トレーニング記録の取り込み','ui.trainingNew':'件の新しい記録','ui.trainingDupes':'件は取り込み済みのためスキップ','ui.trainingFailed':'件は読み込めませんでした','ui.trainingStillImport':'トレーニングとして取り込む','ui.trainingNoShoe':'（シューズ指定なし）','ui.trainingPickShoe':'シューズを選ぶ','ui.trainingDelete':'この記録を削除','ui.buildupTitle':'レース前のトレーニング','ui.buildupAvg':'週平均','ui.buildupLongest':'最長','ui.buildupTaper':'テーパー','ui.buildupEmpty':'レース前 12 週間のトレーニング記録がありません。','ui.shoeTrainingManualLabel':'練習距離（手動入力）','ui.feedbackCaption':'ご意見をどうぞ','ui.fontSmallTitle':'文字サイズ：小','ui.fontMediumTitle':'文字サイズ：中','ui.fontLargeTitle':'文字サイズ：大','ui.feedbackTitle':'フィードバック','ui.feedbackNotReady':'フィードバックフォームは準備中です','ui.climateAvgLabel':'例年平均','ui.climateAvgBasis':'{a} 年 × 前後 {b} 日','ui.climateAvgSamples':'、計 {n} 件','ui.climateAvgYearsOnly':'{n} 年分の同日データ','ui.weatherNeedsGpsHistory':'GPS 軌跡がないため当日の過去天気を自動取得できません。下の項目に手動入力できます','ui.weatherTooEarly':'リアルタイム予報はレース 7 日前から取得できます','ui.logiFee':'エントリー','ui.logiDeposit':'デポジット','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'参加費が未払い','ui.logiWarnStayGap':'宿泊がレース当日をカバーしていません','ui.logiWarnLateArrival':'往路の到着がスタート時刻より後','ui.logiWarnNoTransport':'海外レースの交通が未手配','ui.hofYearsHint':'{a}－{b}、うち {c} 年に出走','ui.careerShareButton':'生涯サマリーを保存','ui.careerShareTitle':'生涯サマリーを保存','ui.careerOptHero':'フルマラソン PB','ui.careerOptTiles':'生涯データ','ui.careerMissingHero':'フルマラソンの記録がありません','ui.careerMissingTracks':'GPS 軌跡の記録がありません','ui.careerMissingShoes':'シューズを登録した完走記録がありません','ui.careerMissingFuel':'補給の記録がありません','ui.careerShareFilename':'生涯サマリー.png','ui.careerShareFailed':'画像の生成に失敗しました。もう一度お試しください','ui.shareMissingHr':'心拍データなし','ui.shareMissingShoe':'シューズ未登録','ui.shareMissingShoeSport':'この種目では表示しません','ui.shareMissingFuel':'補給の記録なし','ui.shareMissingTrack':'GPX 軌跡なし','ui.resultDistance':'距離','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.tpSuggest':'推奨 {n}','ui.tpPrepN':'準備 {n} 週','ui.tpTaperN':'テーパー {n} 週','ui.tpSuggestedTag':'（推奨）','ui.tpHint':'「{a}」の推奨：準備 {b} 週','ui.tpHintTaper':'、テーパー {n} 週。未入力なら推奨値を、入力すればその値を使います。','ui.tpHintNone':'この種目・距離には推奨週数がありません（対象はロード・トレイル・ウルトラ・デュアスロン・トライアスロン）。未入力の場合、レース前トレーニングは 12 週で表示します。','ui.buildupSubN':'レース前 {n} 週','ui.buildupSubHow':'数字は「レース何週前か」','ui.buildupSrcOwn':'設定した準備期間','ui.buildupSrcTable':'{n}の推奨準備期間','ui.buildupSrcDefault':'既定','ui.buildupTaperN':'テーパー（最後の {n} 週）','ui.buildupEmptyN':'レース前 {n} 週間のトレーニング記録がありません。','field.prep.trainingPlan.prepWeeks':'準備期間','field.prep.trainingPlan.taperWeeks':'テーパー週数','ui.trainingNSessions':'{n} 回','ui.trainingMonthLabel':'{n}月','ui.dropzoneTrainingTitle':'ドロップしてトレーニング記録を取り込む','ui.dropzoneTrainingHint':'FIT／GPX／TCX、複数ファイルもまとめてどうぞ','ui.trainingTitle':'トレーニング記録','ui.trainingShort':'トレーニング','ui.trainingImport':'＋ FIT／GPX を取り込む','ui.trainingHint':'トレーニング記録はレースとは別に保存され、レースの統計・PB・バッジには影響しません。複数ファイルをまとめて選べます。','ui.trainingWeek':'今週','ui.trainingMonth':'今月','ui.trainingAll':'すべて','ui.trainingKm':'km','ui.trainingCount':'回','ui.trainingHours':'合計時間','ui.trainingEmpty':'まだトレーニング記録がありません。「取り込む」から時計のFIT／GPX／TCXを選んでください（複数可）。','ui.trainingEmptyPeriod':'この期間の記録はありません。','ui.trainingExport':'トレーニング記録を書き出す（JSON）','ui.trainingImportTitle':'トレーニング記録の取り込み','ui.trainingNew':'件の新しい記録','ui.trainingDupes':'件は取り込み済みのためスキップ','ui.trainingFailed':'件は読み込めませんでした','ui.trainingStillImport':'トレーニングとして取り込む','ui.trainingNoShoe':'（シューズ指定なし）','ui.trainingPickShoe':'シューズを選ぶ','ui.trainingDelete':'この記録を削除','ui.buildupTitle':'レース前のトレーニング','ui.buildupAvg':'週平均','ui.buildupLongest':'最長','ui.buildupTaper':'テーパー','ui.buildupEmpty':'レース前 12 週間のトレーニング記録がありません。','ui.shoeTrainingManualLabel':'練習距離（手動入力）','ui.feedbackCaption':'ご意見をどうぞ','ui.fontSmallTitle':'文字サイズ：小','ui.fontMediumTitle':'文字サイズ：中','ui.fontLargeTitle':'文字サイズ：大','ui.feedbackTitle':'フィードバック','ui.feedbackNotReady':'フィードバックフォームは準備中です','ui.climateAvgLabel':'例年平均','ui.climateAvgBasis':'{a} 年 × 前後 {b} 日','ui.climateAvgSamples':'、計 {n} 件','ui.climateAvgYearsOnly':'{n} 年分の同日データ','ui.weatherNeedsGpsHistory':'GPS 軌跡がないため当日の過去天気を自動取得できません。下の項目に手動入力できます','ui.weatherTooEarly':'リアルタイム予報はレース 7 日前から取得できます','ui.logiFee':'エントリー','ui.logiDeposit':'デポジット','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'参加費が未払い','ui.logiWarnStayGap':'宿泊がレース当日をカバーしていません','ui.logiWarnLateArrival':'往路の到着がスタート時刻より後','ui.logiWarnNoTransport':'海外レースの交通が未手配','ui.hofYearsHint':'{a}－{b}、うち {c} 年に出走','ui.careerShareButton':'生涯サマリーを保存','ui.careerShareTitle':'生涯サマリーを保存','ui.careerOptHero':'フルマラソン PB','ui.careerOptTiles':'生涯データ','ui.careerMissingHero':'フルマラソンの記録がありません','ui.careerMissingTracks':'GPS 軌跡の記録がありません','ui.careerMissingShoes':'シューズを登録した完走記録がありません','ui.careerMissingFuel':'補給の記録がありません','ui.careerShareFilename':'生涯サマリー.png','ui.careerShareFailed':'画像の生成に失敗しました。もう一度お試しください','ui.shareMissingHr':'心拍データなし','ui.shareMissingShoe':'シューズ未登録','ui.shareMissingShoeSport':'この種目では表示しません','ui.shareMissingFuel':'補給の記録なし','ui.shareMissingTrack':'GPX 軌跡なし','ui.resultDistance':'距離','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -4232,7 +4249,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.dropzoneTrainingTitle':'Drop to import training','ui.dropzoneTrainingHint':'FIT／GPX／TCX — many files at once is fine','ui.trainingTitle':'Training log','ui.trainingShort':'Training','ui.trainingImport':'＋ Import FIT／GPX','ui.trainingHint':'Training is stored separately from races and never affects race stats, PBs or badges. You can pick many files at once.','ui.trainingWeek':'This week','ui.trainingMonth':'This month','ui.trainingAll':'All','ui.trainingKm':'km','ui.trainingCount':'sessions','ui.trainingHours':'Total time','ui.trainingEmpty':'No training yet. Tap Import and choose FIT／GPX／TCX files from your watch — multiple files are fine.','ui.trainingEmptyPeriod':'No training in this period.','ui.trainingExport':'Export training log (JSON)','ui.trainingImportTitle':'Import training','ui.trainingNew':'new sessions','ui.trainingDupes':'already imported, skipped','ui.trainingFailed':'files could not be read','ui.trainingStillImport':'import as training anyway','ui.trainingNoShoe':'(no shoe)','ui.trainingPickShoe':'Pick shoe','ui.trainingDelete':'Delete','ui.buildupTitle':'Pre-race training','ui.buildupAvg':'Weekly avg','ui.buildupLongest':'Longest','ui.buildupTaper':'Taper','ui.buildupEmpty':'No training logged in the 12 weeks before this race.','ui.shoeTrainingManualLabel':'Training km (manual)','ui.feedbackCaption':'Tell me what you think','ui.fontSmallTitle':'Text size: small','ui.fontMediumTitle':'Text size: medium','ui.fontLargeTitle':'Text size: large','ui.feedbackTitle':'Send feedback','ui.feedbackNotReady':'The feedback form is coming soon','ui.climateAvgLabel':'Climate average','ui.climateAvgBasis':'{a} years × ±{b} days','ui.climateAvgSamples':', {n} samples','ui.climateAvgYearsOnly':'{n} years, same date','ui.weatherNeedsGpsHistory':'No GPS track, so race-day historical weather cannot be fetched automatically; you can fill the fields below manually','ui.weatherTooEarly':'Live forecast becomes available 7 days before the race','ui.logiFee':'Entry','ui.logiDeposit':'Deposit','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'entry fee unpaid','ui.logiWarnStayGap':'stay does not cover race day','ui.logiWarnLateArrival':'outbound trip departs after the start','ui.logiWarnNoTransport':'overseas race with no transport planned','ui.hofYearsHint':'{a}–{b}, raced in {c} of them','ui.careerShareButton':'Save career summary','ui.careerShareTitle':'Save career summary','ui.careerOptHero':'Marathon PB','ui.careerOptTiles':'Career stats','ui.careerMissingHero':'no marathon result yet','ui.careerMissingTracks':'no GPS tracks imported','ui.careerMissingShoes':'no finishes with a shoe linked','ui.careerMissingFuel':'no fuel logged as consumed','ui.careerShareFilename':'career-summary.png','ui.careerShareFailed':'Could not generate the image; please try again','ui.shareMissingHr':'no heart-rate data','ui.shareMissingShoe':'no shoe linked','ui.shareMissingShoeSport':'not shown for this sport','ui.shareMissingFuel':'nothing marked as consumed','ui.shareMissingTrack':'no GPX track','ui.resultDistance':'Distance','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.tpSuggest':'suggested {n}','ui.tpPrepN':'{n}-week build','ui.tpTaperN':'{n}-week taper','ui.tpSuggestedTag':' (suggested)','ui.tpHint':'Suggested for “{a}”: {b}-week build','ui.tpHintTaper':', {n}-week taper. Leave blank to use these, or enter your own.','ui.tpHintNone':'No suggested weeks for this sport or distance (the table covers road, trail, ultra, duathlon and triathlon). Pre-race training shows 12 weeks by default.','ui.buildupSubN':'{n} weeks before the race','ui.buildupSubHow':'numbers are weeks before race day','ui.buildupSrcOwn':'your build length','ui.buildupSrcTable':'suggested build for {n}','ui.buildupSrcDefault':'default','ui.buildupTaperN':'Taper (last {n} wk)','ui.buildupEmptyN':'No training logged in the {n} weeks before this race.','field.prep.trainingPlan.prepWeeks':'Build length','field.prep.trainingPlan.taperWeeks':'Taper length','ui.trainingNSessions':'{n} sessions','ui.trainingMonthLabel':'Month {n}','ui.dropzoneTrainingTitle':'Drop to import training','ui.dropzoneTrainingHint':'FIT／GPX／TCX — many files at once is fine','ui.trainingTitle':'Training log','ui.trainingShort':'Training','ui.trainingImport':'＋ Import FIT／GPX','ui.trainingHint':'Training is stored separately from races and never affects race stats, PBs or badges. You can pick many files at once.','ui.trainingWeek':'This week','ui.trainingMonth':'This month','ui.trainingAll':'All','ui.trainingKm':'km','ui.trainingCount':'sessions','ui.trainingHours':'Total time','ui.trainingEmpty':'No training yet. Tap Import and choose FIT／GPX／TCX files from your watch — multiple files are fine.','ui.trainingEmptyPeriod':'No training in this period.','ui.trainingExport':'Export training log (JSON)','ui.trainingImportTitle':'Import training','ui.trainingNew':'new sessions','ui.trainingDupes':'already imported, skipped','ui.trainingFailed':'files could not be read','ui.trainingStillImport':'import as training anyway','ui.trainingNoShoe':'(no shoe)','ui.trainingPickShoe':'Pick shoe','ui.trainingDelete':'Delete','ui.buildupTitle':'Pre-race training','ui.buildupAvg':'Weekly avg','ui.buildupLongest':'Longest','ui.buildupTaper':'Taper','ui.buildupEmpty':'No training logged in the 12 weeks before this race.','ui.shoeTrainingManualLabel':'Training km (manual)','ui.feedbackCaption':'Tell me what you think','ui.fontSmallTitle':'Text size: small','ui.fontMediumTitle':'Text size: medium','ui.fontLargeTitle':'Text size: large','ui.feedbackTitle':'Send feedback','ui.feedbackNotReady':'The feedback form is coming soon','ui.climateAvgLabel':'Climate average','ui.climateAvgBasis':'{a} years × ±{b} days','ui.climateAvgSamples':', {n} samples','ui.climateAvgYearsOnly':'{n} years, same date','ui.weatherNeedsGpsHistory':'No GPS track, so race-day historical weather cannot be fetched automatically; you can fill the fields below manually','ui.weatherTooEarly':'Live forecast becomes available 7 days before the race','ui.logiFee':'Entry','ui.logiDeposit':'Deposit','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'entry fee unpaid','ui.logiWarnStayGap':'stay does not cover race day','ui.logiWarnLateArrival':'outbound trip departs after the start','ui.logiWarnNoTransport':'overseas race with no transport planned','ui.hofYearsHint':'{a}–{b}, raced in {c} of them','ui.careerShareButton':'Save career summary','ui.careerShareTitle':'Save career summary','ui.careerOptHero':'Marathon PB','ui.careerOptTiles':'Career stats','ui.careerMissingHero':'no marathon result yet','ui.careerMissingTracks':'no GPS tracks imported','ui.careerMissingShoes':'no finishes with a shoe linked','ui.careerMissingFuel':'no fuel logged as consumed','ui.careerShareFilename':'career-summary.png','ui.careerShareFailed':'Could not generate the image; please try again','ui.shareMissingHr':'no heart-rate data','ui.shareMissingShoe':'no shoe linked','ui.shareMissingShoeSport':'not shown for this sport','ui.shareMissingFuel':'nothing marked as consumed','ui.shareMissingTrack':'no GPX track','ui.resultDistance':'Distance','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -7150,9 +7167,11 @@ function renderField(race,cfg,ns){
     case 'duration':
       input=`<input id="${id}" type="text" placeholder="H:MM:SS" data-path="${cfg.path}" data-kind="duration" value="${val!=null?secToHMS(val):''}">`;
       break;
-    case 'number':
-      input=`<input id="${id}" type="number" step="any" data-path="${cfg.path}" value="${val!=null?val:''}">`;
+    case 'number':{
+      const ph=cfg.placeholderFn?cfg.placeholderFn(race):'';
+      input=`<input id="${id}" type="number" step="any" data-path="${cfg.path}" value="${val!=null?val:''}"${ph?` placeholder="${escapeHtml(ph)}"`:''}>`;
       break;
+    }
     default:
       input=`<input id="${id}" type="${cfg.type||'text'}" data-path="${cfg.path}" value="${escapeHtml(val!=null?val:'')}">`;
   }
@@ -7478,15 +7497,113 @@ function nutritionPlanDashCardHtml(race){
   const sub=parts.length?parts.join('/  '):t('ui.dashNutritionEmpty','尚未設定補給');
   return dashCardHtml('nutritionPlan',t('ui.drawerNutritionTitle','補給設定'),sub,!parts.length);
 }
+/* ============================================================
+   依賽事類型與距離建議「準備週期」與「減量週數」（v3.81.0）。
+   來源是使用者提供的對照表。建議值是即時算出來的、不寫進資料：
+   使用者之後把半馬改成全馬，建議值會自己從 8 週變 16 週；寫死的話
+   改了距離也不會跟著更新。使用者自己填了週數，就一律以使用者的為準。
+   ============================================================ */
+const TRAINING_PERIOD_TABLE=[
+  {key:'road5',   label:'5 公里',             prep:4,  taper:[1,1]},
+  {key:'road10',  label:'8–15 公里',          prep:6,  taper:[1,1]},
+  {key:'half',    label:'半程馬拉松（21.1K）', prep:8,  taper:[1,2]},
+  {key:'full',    label:'全程馬拉松（42.2K）', prep:16, taper:[2,3]},
+  {key:'ultra',   label:'超級馬拉松（50K+）',  prep:20, taper:[2,3]},
+  {key:'trailS',  label:'越野跑 8–20K',        prep:8,  taper:[1,1]},
+  {key:'trailM',  label:'越野跑 21–40K',       prep:14, taper:[1,2]},
+  {key:'trailL',  label:'越野跑 41K 以上',     prep:20, taper:[2,3]},
+  {key:'duathlon',label:'鐵人兩項',            prep:8,  taper:[1,1]},
+  {key:'tri51',   label:'鐵人三項 51.5K（標鐵）',prep:12, taper:[1,1]},
+  {key:'tri113',  label:'鐵人三項 113K（70.3）',prep:16, taper:[2,3]},
+  {key:'tri226',  label:'鐵人三項 226K（超級鐵人）',prep:24,taper:[2,3]},
+];
+/* 距離：優先用賽事填的距離；沒填就從名稱猜（很多賽事只填了名字）。
+   只認明確的寫法，猜不到就回 null，不硬猜。 */
+function inferRaceDistanceKm(race){
+  const km=race.route&&race.route.distanceKm;
+  if(km!=null&&Number(km)>0) return Number(km);
+  const n=String(race.name||'');
+  if(/226|超級鐵人|full\s*distance|ironman(?!\s*70\.3)(?!.*70\.3)/i.test(n)&&race.sportType==='triathlon') return 226;
+  if(/70\.3|113\s*k|半程鐵人|half\s*iron/i.test(n)) return 113;
+  if(/51\.5|標鐵|標準鐵人|olympic/i.test(n)) return 51.5;
+  if(/超級馬拉松|超馬|ultra/i.test(n)){ const m=n.match(/(\d{2,3})\s*(?:k|km|公里)/i); return m?Number(m[1]):50; }
+  if(/半程馬拉松|半馬|half\s*marathon/i.test(n)) return 21.0975;
+  // 不用「向後查找」（lookbehind）語法：iOS Safari 16.4 以前不支援，整支程式會直接語法錯誤。
+  // 半馬已經在上一行提早回傳，這裡只要再擋一次「半／half」就夠了。
+  if(/全程馬拉松|全馬|馬拉松|marathon/i.test(n)&&!/半|half/i.test(n)) return 42.195;
+  const m=n.match(/(\d{1,3}(?:\.\d+)?)\s*(?:k|km|公里)\b/i)||n.match(/(\d{1,3}(?:\.\d+)?)\s*(?:k|km|公里)/i);
+  return m?Number(m[1]):null;
+}
+/* 表格沒有涵蓋的距離（例如路跑 30K），用相鄰兩級的中點切：
+   路跑 21.1K 與 42.2K 的中點是 31.65K，所以 30K 歸到半馬那一級。 */
+function classifyRaceForTraining(race){
+  const st=race.sportType, km=inferRaceDistanceKm(race);
+  const pick=key=>TRAINING_PERIOD_TABLE.find(x=>x.key===key)||null;
+  if(st==='ultra_marathon') return pick('ultra');
+  if(st==='duathlon') return pick('duathlon');
+  if(km==null) return null;
+  if(st==='road_running'){
+    if(km<=7) return pick('road5');
+    if(km<=18) return pick('road10');
+    if(km<=31.65) return pick('half');
+    if(km<=46) return pick('full');
+    return pick('ultra');
+  }
+  if(st==='trail_running'){
+    if(km<=20.5) return pick('trailS');
+    if(km<=40.5) return pick('trailM');
+    return pick('trailL');
+  }
+  if(st==='triathlon'){
+    if(km<=82) return pick('tri51');
+    if(km<=170) return pick('tri113');
+    return pick('tri226');
+  }
+  return null;   // 自行車、游泳、障礙賽、其他：表格沒有，不給建議
+}
+function validWeeks(v){
+  const n=Number(v);
+  return Number.isInteger(n)&&n>=1&&n<=52?n:null;
+}
+// 實際採用的週數：使用者填的 > 表格建議 > 12 週（原本的固定值）
+function effectivePrepWeeks(race){
+  const own=validWeeks(race.trainingPlan&&race.trainingPlan.prepWeeks);
+  if(own) return own;
+  const c=classifyRaceForTraining(race);
+  return c?c.prep:BUILDUP_WEEKS;
+}
+// 減量取區間的上限：對照表寫「2–3 週」時，長條圖把最多 3 週都標成減量期，
+// 使用者如果只減 2 週，自己把欄位改成 2 就好
+function effectiveTaperWeeks(race){
+  const own=validWeeks(race.trainingPlan&&race.trainingPlan.taperWeeks);
+  if(own) return own;
+  const c=classifyRaceForTraining(race);
+  return c?c.taper[1]:2;
+}
+function taperRangeText(c){
+  return c.taper[0]===c.taper[1]?String(c.taper[0]):`${c.taper[0]}–${c.taper[1]}`;
+}
 function trainingPlanDashCardHtml(race){
   const tp=race.trainingPlan||{};
   const parts=[];
+  const c=classifyRaceForTraining(race);
+  const ownPrep=validWeeks(tp.prepWeeks), ownTaper=validWeeks(tp.taperWeeks);
+  if(ownPrep||c){
+    const prepTxt=tf('ui.tpPrepN','準備 {n} 週',ownPrep||c.prep);
+    const taperTxt=tf('ui.tpTaperN','減量 {n} 週',ownTaper||(c?taperRangeText(c):effectiveTaperWeeks(race)));
+    // 哪一段是建議值就標哪一段；兩段都是建議值時只在最後標一次，不要重複
+    const tag=t('ui.tpSuggestedTag','（建議）');
+    if(!ownPrep&&!ownTaper) parts.push(prepTxt+'・'+taperTxt+tag);
+    else parts.push(prepTxt+(ownPrep?'':tag)+'・'+taperTxt+(ownTaper?'':tag));
+  }
   if(tp.planStartDate&&tp.planEndDate) parts.push(tp.planStartDate+' → '+tp.planEndDate);
   else if(tp.planStartDate) parts.push(tp.planStartDate+' →');
   if(tp.taperStartDate) parts.push(t('ui.dashTaper','減量')+' '+tp.taperStartDate);
   if(tp.weeklyMileageTargetKm!=null) parts.push(t('ui.dashWeekly','週跑量')+' '+tp.weeklyMileageTargetKm+' km');
   const sub=parts.length?parts.join('/  '):t('ui.dashTrainingEmpty','尚未設定訓練計畫');
-  return dashCardHtml('trainingPlan',t('ui.drawerTrainingTitle','訓練計畫與減量期'),sub,!parts.length);
+  const userFilled=!!(ownPrep||ownTaper||tp.planStartDate||tp.planEndDate||tp.taperStartDate||tp.weeklyMileageTargetKm!=null
+    ||(tp.keyWorkoutNotes||'').trim()||(tp.externalPlanUrl||'').trim()||(tp.notes||'').trim());
+  return dashCardHtml('trainingPlan',t('ui.drawerTrainingTitle','訓練計畫與減量期'),sub,!userFilled);
 }
 function goalsDashCardHtml(race){
   const filled=(race.goals||[]).filter(g=>g.targetTimeSeconds!=null);
@@ -7732,7 +7849,16 @@ const DRAWER_SECTIONS={
   },
   trainingPlan:{
     title:()=>t('ui.drawerTrainingTitle','訓練計畫與減量期'),
-    body:race=>`<div class="section-body">${SECTION_PREP.filter(f=>f.path.startsWith('trainingPlan.')).map(f=>renderField(race,f,'prep')).join('')}</div>`,
+    body:race=>{
+      const c=classifyRaceForTraining(race);
+      // 講清楚這場被判成哪一類：判斷錯了（例如距離沒填、名稱看不出來）
+      // 使用者才知道要去補距離，或直接自己填週數
+      const hint=c
+        ?tf2('ui.tpHint','依「{a}」建議：準備 {b} 週',t('tp.cat.'+c.key,c.label),c.prep)
+          +tf('ui.tpHintTaper','、減量 {n} 週。沒填就用建議值，填了以你填的為準。',taperRangeText(c))
+        :t('ui.tpHintNone','這個賽事類型或距離沒有對應的建議週數（對照表只涵蓋路跑、越野、超馬、鐵人兩項與三項）。沒填的話，賽前訓練週期預設顯示 12 週。');
+      return `<p class="small tp-hint">${escapeHtml(hint)}</p><div class="section-body">${SECTION_PREP.filter(f=>f.path.startsWith('trainingPlan.')).map(f=>renderField(race,f,'prep')).join('')}</div>`;
+    },
   },
   goals:{
     title:()=>t('ui.goalsTitle','賽前目標'),
@@ -14631,7 +14757,7 @@ function thumbSvg(thumb,size){
    週的切法對齊比賽日：「賽前第 1 週」是比賽前 7 天（不含比賽當天），
    「賽前第 2 週」再往前 7 天，依此類推。用日曆週（週一到週日）切的話，
    比賽落在週三跟落在週日，最後一週的長度會不一樣，減量期就比不準。 */
-const BUILDUP_WEEKS=12;
+const BUILDUP_WEEKS=12;   // 沒有對照表建議、使用者也沒填時的預設週數
 function trainingSportsForRace(race){
   const st=race.sportType;
   if(['road_running','trail_running','ultra_marathon','obstacle_race'].includes(st)) return ['run'];
@@ -14647,8 +14773,11 @@ function computeTrainingBuildup(race){
   if(!raceDate) return null;
   const sports=trainingSportsForRace(race);
   const today=todayISO();
+  // 週數依這場賽事而定（v3.81.0）：使用者填的準備週期 > 對照表建議 > 12 週
+  const N=effectivePrepWeeks(race);
+  const T=Math.min(effectiveTaperWeeks(race),N-1);
   const weeks=[];
-  for(let k=BUILDUP_WEEKS;k>=1;k--){
+  for(let k=N;k>=1;k--){
     const from=addDaysStr(raceDate,-7*k), to=addDaysStr(raceDate,-7*(k-1)-1);
     const items=liveTrainings().filter(x=>x.date>=from&&x.date<=to&&(!sports||sports.includes(x.sport)))
       .sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
@@ -14660,18 +14789,19 @@ function computeTrainingBuildup(race){
   const longest=inWindow.reduce((m,x)=>Math.max(m,Number(x.distanceKm)||0),0);
   const pastWeeks=weeks.filter(w=>!w.future&&!w.inProgress);
   const avg=pastWeeks.length?pastWeeks.reduce((s,w)=>s+w.km,0)/pastWeeks.length:0;
-  // 減量：最後兩週的平均 對比 賽前第 3～5 週的平均。兩段都要有資料才算，
-  // 比賽還沒到最後兩週時不顯示（還沒開始減量，算出來的數字沒有意義）。
+  // 減量：最後 T 週的平均 對比 減量前三週的平均（T 依賽事而定，全馬預設 3、
+  // 半馬 2）。減量那幾週都要「已經過完」才算——比賽前幾天打開，賽前第 1 週
+  // 才過一半，累積的量當然很少，那不是減量，是週還沒結束。
   const byK=k=>weeks.find(w=>w.k===k);
-  const lastTwo=[byK(1),byK(2)], build=[byK(3),byK(4),byK(5)];
+  const taperWeeks=[], build=[];
+  for(let k=1;k<=T;k++) if(byK(k)) taperWeeks.push(byK(k));
+  for(let k=T+1;k<=T+3;k++) if(byK(k)) build.push(byK(k));
   let taper=null;
-  // 兩週都要「已經過完」才算——比賽前幾天打開，賽前第 1 週才過一半，
-  // 累積的量當然很少，那不是減量，是週還沒結束。
-  if(lastTwo.every(w=>!w.future&&!w.inProgress)&&build.some(w=>w.km>0)){
-    const a=(lastTwo[0].km+lastTwo[1].km)/2, b=build.reduce((s,w)=>s+w.km,0)/3;
+  if(taperWeeks.length&&taperWeeks.every(w=>!w.future&&!w.inProgress)&&build.some(w=>w.km>0)){
+    const a=taperWeeks.reduce((s,w)=>s+w.km,0)/taperWeeks.length, b=build.reduce((s,w)=>s+w.km,0)/build.length;
     if(b>0) taper=Math.round((a/b-1)*100);
   }
-  return {weeks,peak,longest,avg,taper,count:inWindow.length,sports};
+  return {weeks,peak,longest,avg,taper,count:inWindow.length,sports,N,T};
 }
 let buildupOpenWeek=null;   // {raceId,k}：目前點開哪一週
 function trainingBuildupHtml(race){
@@ -14679,30 +14809,37 @@ function trainingBuildupHtml(race){
   if(!liveTrainings().length) return '';
   const b=computeTrainingBuildup(race);
   if(!b) return '';
+  // 副標講清楚週數從哪來：使用者自己設的、或依哪一類賽事建議的
+  const cls=classifyRaceForTraining(race);
+  const own=validWeeks(race.trainingPlan&&race.trainingPlan.prepWeeks);
+  const source=own?t('ui.buildupSrcOwn','你設定的準備週期')
+    :(cls?tf('ui.buildupSrcTable','{n}建議準備期',t('tp.cat.'+cls.key,cls.label)):t('ui.buildupSrcDefault','預設'));
   const title=`<div class="buildup-head"><h3>${t('ui.buildupTitle','賽前訓練週期')}</h3>
-    <span class="small buildup-sub">${tf('ui.buildupSub','比賽前 {n} 週・數字是「賽前第幾週」',BUILDUP_WEEKS)}</span></div>`;
+    <span class="small buildup-sub">${tf('ui.buildupSubN','比賽前 {n} 週',b.N)}（${escapeHtml(source)}）・${t('ui.buildupSubHow','數字是「賽前第幾週」')}</span></div>`;
   if(!b.count){
     return `<div class="subsection buildup-card">${title}
-      <p class="empty-hint small">${t('ui.buildupEmpty','這場賽事前 12 週沒有訓練紀錄。')}</p></div>`;
+      <p class="empty-hint small">${tf('ui.buildupEmptyN','這場賽事前 {n} 週沒有訓練紀錄。',b.N)}</p></div>`;
   }
-  const W=320,H=84,bw=W/BUILDUP_WEEKS;
+  const W=320,H=84,bw=W/b.N;
   const open=buildupOpenWeek&&buildupOpenWeek.raceId===race.id?buildupOpenWeek.k:null;
   let bars='';
   b.weeks.forEach((w,i)=>{
     const h=b.peak>0?Math.max(w.km>0?3:0,(w.km/b.peak)*(H-6)):0;
-    const x=i*bw+3, y=H-h;
-    const cls=['buildup-bar',w.km===b.peak&&w.km>0?'is-peak':'',w.k<=2?'is-taper':'',open===w.k?'is-open':'',w.future?'is-future':'',w.inProgress?'is-progress':''].filter(Boolean).join(' ');
+    const barW=Math.min(bw-6,26), x=i*bw+(bw-barW)/2, y=H-h;
+    const cls=['buildup-bar',w.km===b.peak&&w.km>0?'is-peak':'',w.k<=b.T?'is-taper':'',open===w.k?'is-open':'',w.future?'is-future':'',w.inProgress?'is-progress':''].filter(Boolean).join(' ');
+    // 超過 16 週時長條變細，每一根都標數字會擠在一起：只標偶數週與第 1 週
+    const showLabel=b.N<=16||w.k%2===0||w.k===1;
     bars+=`<g class="${cls}" data-action="buildup-week" data-race-id="${race.id}" data-week="${w.k}" role="button" tabindex="0"
         aria-label="${escapeHtml(tf('ui.buildupWeekAria','賽前第 {n} 週',w.k)+'：'+w.km.toFixed(1)+' km')}">
       <rect x="${i*bw}" y="0" width="${bw}" height="${H+16}" fill="transparent"/>
-      ${w.future?`<rect x="${x}" y="${H-3}" width="${bw-6}" height="3" rx="1.5" class="buildup-future-mark"/>`
-        :`<rect x="${x}" y="${y}" width="${bw-6}" height="${h}" rx="3"/>`}
-      <text x="${x+(bw-6)/2}" y="${H+12}" text-anchor="middle">${w.k}</text></g>`;
+      ${w.future?`<rect x="${x}" y="${H-3}" width="${barW}" height="3" rx="1.5" class="buildup-future-mark"/>`
+        :`<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="3"/>`}
+      ${showLabel?`<text x="${x+barW/2}" y="${H+12}" text-anchor="middle">${w.k}</text>`:''}</g>`;
   });
   const foot=[
     `${t('ui.buildupAvg','週平均')} <b>${b.avg.toFixed(0)} km</b>`,
     `${t('ui.buildupLongest','最長一次')} <b>${b.longest.toFixed(1)} km</b>`,
-    b.taper!=null?`${t('ui.buildupTaper','減量')} <b>${b.taper>0?'+':''}${b.taper}%</b>`:'',
+    b.taper!=null?`${tf('ui.buildupTaperN','減量（最後 {n} 週）',b.T)} <b>${b.taper>0?'+':''}${b.taper}%</b>`:'',
   ].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
   let drill='';
   if(open!=null){
@@ -14761,6 +14898,66 @@ function trainingPeriodRange(p){
   if(p==='month') return {from:today.slice(0,8)+'01',to:today};
   return {from:'0000-00-00',to:'9999-99-99'};
 }
+/* ---- 「全部」分頁：依年份 → 月份收合（v3.80.0） ----
+   預設只展開最新的那一年、以及那一年最新的月份，其他只顯示摘要。
+   只有展開中的月份才畫出每一列——幾百筆訓練時，一次畫出幾百列加
+   幾百張縮圖 SVG 會很慢，展開一個月通常只有二、三十列。
+   展開狀態只記在這次打開訓練頁的期間（跟表格檢視的年份收合同一個原則），
+   重新打開、或匯入新資料之後回到預設。 */
+let trainingOpenYears=null, trainingOpenMonths=null;
+function trainingGroupStatsHtml(items){
+  const km=items.reduce((s,x)=>s+(Number(x.distanceKm)||0),0);
+  const sec=items.reduce((s,x)=>s+(Number(x.durationSeconds)||0),0);
+  const h=Math.floor(sec/3600), m=Math.round((sec%3600)/60);
+  return [tf('ui.trainingNSessions','{n} 次',items.length),km.toFixed(1)+' km',`${h}:${String(m).padStart(2,'0')}`].join(' ・ ');
+}
+function trainingMonthLabel(ym){
+  const n=parseInt(ym.slice(5),10);
+  if(state.lang==='en') return new Date(Number(ym.slice(0,4)),n-1,1).toLocaleString('en-US',{month:'long'});
+  return tf('ui.trainingMonthLabel','{n} 月',n);
+}
+function trainingGroupedHtml(list,rowHtml){
+  if(!list.length) return '';
+  if(!trainingOpenYears){
+    trainingOpenYears=new Set([list[0].date.slice(0,4)]);
+    trainingOpenMonths=new Set([list[0].date.slice(0,7)]);
+  }
+  // list 已經是新到舊排序，Map 的插入順序就是新到舊
+  const byYear=new Map();
+  list.forEach(x=>{
+    const y=x.date.slice(0,4), ym=x.date.slice(0,7);
+    if(!byYear.has(y)) byYear.set(y,new Map());
+    const months=byYear.get(y);
+    if(!months.has(ym)) months.set(ym,[]);
+    months.get(ym).push(x);
+  });
+  let html='';
+  byYear.forEach((months,y)=>{
+    const yOpen=trainingOpenYears.has(y);
+    const all=[...months.values()].flat();
+    html+=`<div class="training-year">
+      <button type="button" class="training-group-head is-year" data-training-year="${y}" aria-expanded="${yOpen}">
+        <span class="training-caret" aria-hidden="true">${yOpen?'▾':'▸'}</span>
+        <span class="training-group-label">${y}</span>
+        <span class="training-group-stats mono">${trainingGroupStatsHtml(all)}</span>
+      </button>`;
+    if(yOpen){
+      months.forEach((items,ym)=>{
+        const mOpen=trainingOpenMonths.has(ym);
+        html+=`<div class="training-month">
+          <button type="button" class="training-group-head is-month" data-training-month="${ym}" aria-expanded="${mOpen}">
+            <span class="training-caret" aria-hidden="true">${mOpen?'▾':'▸'}</span>
+            <span class="training-group-label">${escapeHtml(trainingMonthLabel(ym))}</span>
+            <span class="training-group-stats mono">${trainingGroupStatsHtml(items)}</span>
+          </button>
+          ${mOpen?`<div class="training-month-rows">${items.map(rowHtml).join('')}</div>`:''}
+        </div>`;
+      });
+    }
+    html+='</div>';
+  });
+  return html;
+}
 function trainingOverlayHtml(){
   const {from,to}=trainingPeriodRange(trainingPeriod);
   const list=liveTrainings().filter(x=>x.date>=from&&x.date<=to)
@@ -14772,7 +14969,7 @@ function trainingOverlayHtml(){
     .map(([v,l])=>`<button type="button" class="training-tab${trainingPeriod===v?' is-on':''}" data-training-period="${v}" aria-pressed="${trainingPeriod===v}">${l}</button>`).join('');
   const shoeOpts=sel=>`<option value="">${t('ui.trainingNoShoe','（不指定鞋款）')}</option>`
     +shoes.filter(s=>!s.isRetired||s.id===sel).map(s=>`<option value="${s.id}"${s.id===sel?' selected':''}>${escapeHtml(s.name)}</option>`).join('');
-  const rows=list.map(x=>{
+  const rowHtml=x=>{
     const shoe=shoes.find(s=>s.id===x.shoeId);
     const stats=[x.distanceKm!=null?x.distanceKm.toFixed(1)+' km':'',x.durationSeconds?fmtTrainingDuration(x.durationSeconds):'',
       x.durationSeconds&&x.distanceKm&&SHOE_SPORTS.includes(x.sport)?formatPace(x.durationSeconds/x.distanceKm):'',
@@ -14790,7 +14987,9 @@ function trainingOverlayHtml(){
           :(editing?`<div class="training-edit"><button type="button" class="btn-text-small training-delete" data-action="training-delete" data-id="${x.id}">${t('ui.trainingDelete','刪除這筆')}</button></div>`
           :`<button type="button" class="training-shoe" data-action="training-edit" data-id="${x.id}">⋯</button>`)}
       </div></div>`;
-  }).join('');
+  };
+  // 「全部」依年份、月份收合；本週／本月筆數少，維持平鋪
+  const rows=trainingPeriod==='all'?trainingGroupedHtml(list,rowHtml):list.map(rowHtml).join('');
   return `<div class="training-inner">
     <div class="training-top">
       <h2>${t('ui.trainingTitle','訓練紀錄')}</h2>
@@ -14812,6 +15011,7 @@ function trainingOverlayHtml(){
   </div>`;
 }
 function openTrainingOverlay(){
+  trainingOpenYears=null; trainingOpenMonths=null;
   const el=document.getElementById('training-overlay');
   el.innerHTML=trainingOverlayHtml(); el.hidden=false;
   document.body.classList.add('overlay-open');
@@ -14904,6 +15104,7 @@ async function confirmTrainingImport(){
   try{ if(st.shoeId) localStorage.setItem(TRAINING_LAST_SHOE_KEY,st.shoeId); }catch(e){}
   await persistTrainings();
   closeTrainingImportModal();
+  trainingOpenYears=null; trainingOpenMonths=null;   // 新資料多半在最新的月份，回到預設展開才看得到
   refreshTrainingOverlay();
   if(currentRace) renderDetailKeepOpen();
   showToast(tf('ui.trainingImported','已匯入 {n} 筆訓練紀錄',picked.length));
@@ -14929,6 +15130,18 @@ document.getElementById('training-overlay').addEventListener('click',async e=>{
   if(e.target.closest('[data-action="training-import"]')){ document.getElementById('training-file-input').click(); return; }
   const tab=e.target.closest('[data-training-period]');
   if(tab){ trainingPeriod=tab.dataset.trainingPeriod; trainingEditId=null; refreshTrainingOverlay(); return; }
+  const yh=e.target.closest('[data-training-year]');
+  if(yh){
+    const y=yh.dataset.trainingYear;
+    trainingOpenYears.has(y)?trainingOpenYears.delete(y):trainingOpenYears.add(y);
+    refreshTrainingOverlay(); return;
+  }
+  const mh=e.target.closest('[data-training-month]');
+  if(mh){
+    const m=mh.dataset.trainingMonth;
+    trainingOpenMonths.has(m)?trainingOpenMonths.delete(m):trainingOpenMonths.add(m);
+    refreshTrainingOverlay(); return;
+  }
   const edit=e.target.closest('[data-action="training-edit"]');
   if(edit){ trainingEditId=trainingEditId===edit.dataset.id?null:edit.dataset.id; refreshTrainingOverlay(); return; }
   const del=e.target.closest('[data-action="training-delete"]');
