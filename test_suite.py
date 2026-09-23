@@ -1120,7 +1120,35 @@ class Radar(Group):
                 // 圖上只標 5 個軸名、數值在表格，表格不可以被切掉
                 return r.compact && r.table && r.tableFits && r.texts===5 && r.out===0 && r.W<360;
             }''' % (FIX, BOUNDS))
-        page.set_viewport_size({'width':1100,'height':900})
+        # ---- 瀏覽器縮放（Ctrl＋）：雷達圖要重畫成新的解析度（v3.87.0） ----
+        page.set_viewport_size({'width':1100,'height':900}); page.wait_for_timeout(200)
+        page.evaluate('''async()=>{ state.races=[];
+            const r=emptyRace('路跑','road_running','completed','2026-01-01'); r.route.distanceKm=42.195; r.route.elevationGainM=300;
+            r.results.chipTimeSeconds=10774; r.raceDayWeather.feelsLikeTempC=24;
+            r.splits=[1,2,3,4,5,6].map(i=>({distanceKm:1,splitTimeSeconds:300+i*3,avgPaceSecPerKm:300+i*3,avgHr:150+i}));
+            state.races.push(r); selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,300));
+            document.getElementById('section-post').open=true; await new Promise(s=>setTimeout(s,1300)); }''')
+        cdp = page.context.new_cdp_session(page)
+        results = []
+        for zoom in (1.25, 2):
+            cdp.send('Emulation.setDeviceMetricsOverride',{'width':1100,'height':900,'deviceScaleFactor':zoom,'mobile':False})
+            page.wait_for_timeout(500)
+            results.append(page.evaluate('''()=>{ const c=document.querySelector('canvas[data-race-radar]');
+                return c.width===Math.round(c.clientWidth*window.devicePixelRatio)
+                    && c.height===Math.round(c.clientHeight*window.devicePixelRatio); }'''))
+        cdp.send('Emulation.clearDeviceMetricsOverride')
+        page.wait_for_timeout(300)
+        c['radar_redraws_on_browser_zoom'] = all(results)
+        # 桌機把視窗拉窄：不用重新整理，雷達圖就要切到精簡模式（圖上只標軸名＋表格）
+        page.evaluate('''async()=>{ %s
+            await importAs('triathlon'); document.getElementById('section-post').open=true;
+            await new Promise(s=>setTimeout(s,500)); }''' % FIX)
+        wide = page.evaluate("()=>document.querySelector('.race-radar').classList.contains('is-compact')")
+        page.set_viewport_size({'width':380,'height':900}); page.wait_for_timeout(500)
+        narrow = page.evaluate("()=>document.querySelector('.race-radar').classList.contains('is-compact')")
+        page.set_viewport_size({'width':1100,'height':900}); page.wait_for_timeout(500)
+        back = page.evaluate("()=>document.querySelector('.race-radar').classList.contains('is-compact')")
+        c['radar_switches_layout_on_window_resize'] = (wide is False) and (narrow is True) and (back is False)
 
 class Sync(Group):
     """雲端合併規則：本機優先，永不覆蓋本機已有值。"""

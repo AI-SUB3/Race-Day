@@ -3435,7 +3435,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.86.0';
+const APP_VERSION='v3.87.0';
 
 /* ============================================================
    多語系（i18n）
@@ -8304,9 +8304,10 @@ function drawRaceRadar(canvas,dims,progress){
   const ctx=canvas.getContext('2d');
   const dpr=window.devicePixelRatio||1;
   const cssW=canvas.clientWidth||300,cssH=canvas.clientHeight||300;
-  if(canvas.width!==cssW*dpr||canvas.height!==cssH*dpr){
-    canvas.width=cssW*dpr;canvas.height=cssH*dpr;
-  }
+  // 背板尺寸要取整數：瀏覽器縮放 110%、125% 時 dpr 是小數，canvas.width 會被
+  // 截斷，實際比例跟 setTransform 用的 dpr 對不上，整張圖會有點糊
+  const bw=Math.round(cssW*dpr), bh=Math.round(cssH*dpr);
+  if(canvas.width!==bw||canvas.height!==bh){ canvas.width=bw; canvas.height=bh; }
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,cssW,cssH);
   const cx=cssW/2,cy=cssH/2;
@@ -8525,7 +8526,8 @@ function drawRaceRadarSeries(canvas,series,progress){
   const compact=(canvas.clientWidth||340)<360;
   if(wrap) wrap.classList.toggle('is-compact',compact);
   const cssW=canvas.clientWidth||340,cssH=canvas.clientHeight||340;
-  if(canvas.width!==cssW*dpr||canvas.height!==cssH*dpr){ canvas.width=cssW*dpr; canvas.height=cssH*dpr; }
+  const bw=Math.round(cssW*dpr), bh=Math.round(cssH*dpr);
+  if(canvas.width!==bw||canvas.height!==bh){ canvas.width=bw; canvas.height=bh; }
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,cssW,cssH);
   const cx=cssW/2, cy=cssH/2+4;
@@ -16808,6 +16810,29 @@ function redrawThemeDependentCanvases(){
     if(race) drawRadarData(canvas,radarDataForRace(race),1);
   });
 }
+/* 瀏覽器縮放（Ctrl＋／－、觸控板縮放）會改變 devicePixelRatio。canvas 只在
+   畫的那一刻依當時的比例決定解析度，縮放後不重畫的話，瀏覽器只是把原本
+   那張較小的點陣圖拉大，雷達圖就糊了（v3.87.0，使用者回報）。
+   兩個觸發點都要：
+   - 像素比例改變：用 matchMedia('(resolution: …dppx)') 監聽，比例一變就
+     重畫，並改監聽新的比例（這個查詢只對「當下的比例」成立）。
+   - 視窗大小改變：雷達圖寬度跟著容器走，桌機把視窗拉窄也要重畫，精簡模式
+     （圖上只標軸名＋表格）才會即時切換。
+   只重畫畫面上已經有的雷達圖，不重跑生長動畫。 */
+(function watchCanvasResolution(){
+  let mq=null, timer=null;
+  const redrawSoon=()=>{ clearTimeout(timer); timer=setTimeout(redrawThemeDependentCanvases,120); };
+  const onDprChange=()=>{ redrawSoon(); listen(); };
+  function listen(){
+    if(mq&&mq.removeEventListener) mq.removeEventListener('change',onDprChange);
+    if(!window.matchMedia) return;
+    mq=window.matchMedia(`(resolution: ${window.devicePixelRatio||1}dppx)`);
+    if(mq.addEventListener) mq.addEventListener('change',onDprChange);
+    else if(mq.addListener) mq.addListener(onDprChange);   // Safari 13 以前
+  }
+  listen();
+  window.addEventListener('resize',redrawSoon);
+})();
 applyTheme(document.documentElement.getAttribute('data-theme')||'light');
 document.getElementById('btn-theme-toggle').addEventListener('click',()=>{
   const next=document.documentElement.getAttribute('data-theme')==='dark' ? 'light':'dark';
