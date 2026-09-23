@@ -1157,6 +1157,16 @@ FAKE_CLOUD_JS = r'''window.__makeFakeCloud=function(initialRaces,initialTraining
   const log=[];
   const fc={enabled:true,log,store,
     async fetchAll(uid){ log.push(['fetchAll']); return [...store.races.values()].map(r=>JSON.parse(JSON.stringify(r))); },
+    pageCalls:[], failAt:null,
+    async fetchRacesPage(uid,afterId,size){
+      fc.pageCalls.push([afterId,size]);
+      if(fc.failAt!=null&&fc.pageCalls.length-1===fc.failAt){ fc.failAt=null; throw new Error('模擬分頁崩潰'); }
+      const all=[...store.races.values()].sort((a,b)=>a.id<b.id?-1:1);
+      const start=afterId?all.findIndex(r=>r.id>afterId):0;
+      const slice=start<0?[]:all.slice(start,start+size);
+      log.push(['fetchRacesPage',afterId,size]);
+      return {races:slice.map(r=>JSON.parse(JSON.stringify(r))),lastId:slice.length?slice[slice.length-1].id:afterId,done:slice.length<size};
+    },
     async fetchChangedSince(uid,since){ log.push(['fetchChangedSince',since]); return [...store.races.values()].filter(r=>(r.updatedAt||'')>since).map(r=>JSON.parse(JSON.stringify(r))); },
     async upsertRaces(uid,races,del){ log.push(['upsertRaces',races.map(r=>r.id),del||[]]); (del||[]).forEach(id=>store.races.delete(id)); races.forEach(r=>store.races.set(r.id,JSON.parse(JSON.stringify(r)))); return {batches:1,oversized:[]}; },
     async replaceAll(){ log.push(['replaceAll']); return {batches:1,oversized:[]}; },
@@ -1270,8 +1280,8 @@ class Sync(Group):
             const cloud=await fresh([A,B,C],[A,B,C]);
             await handleAuthChange({uid:'u1'}); await wait(1200);
             const kinds=cloud.log.map(x=>x[0]);
-            // 完整下載只有一次；沒有 replaceAll（會再下載全部）、沒有上傳任何賽事
-            const ok=kinds.filter(k=>k==='fetchAll').length===1 && !kinds.includes('replaceAll')
+            // 完整下載只做一輪（v3.91 起分批）；沒有 replaceAll（會再下載全部）、沒有上傳任何賽事
+            const ok=kinds.includes('fetchRacesPage') && !kinds.includes('fetchAll') && !kinds.includes('replaceAll')
               && !kinds.includes('upsertRaces') && !kinds.includes('upsertTrainingMonths');
             window.__cloud=null; state.user=null; return ok;
         }''' % SETUP)
@@ -1281,7 +1291,7 @@ class Sync(Group):
             cloudKnown=null; await handleAuthChange({uid:'u1'}); await wait(1200);
             const f=cloud.log.find(x=>x[0]==='fetchChangedSince');
             // 只抓最新版本往前一天之後的（容忍不同裝置的時鐘誤差）
-            const ok=!!f && f[1].slice(0,10)==='2026-09-02' && !cloud.log.some(x=>x[0]==='fetchAll'||x[0]==='upsertRaces');
+            const ok=!!f && f[1].slice(0,10)==='2026-09-02' && !cloud.log.some(x=>x[0]==='fetchAll'||x[0]==='fetchRacesPage'||x[0]==='upsertRaces');
             window.__cloud=null; state.user=null; return ok;
         }''' % SETUP)
         c['sync_edit_uploads_only_that_race'] = page.evaluate('''async()=>{ %s
@@ -1307,7 +1317,7 @@ class Sync(Group):
             state.races=[]; cloudKnown=null;
             await handleAuthChange({uid:'u1'}); await wait(1300);
             const deletes=cloud.log.filter(x=>x[0]==='upsertRaces').flatMap(x=>x[2]);
-            const ok=cloud.log.some(x=>x[0]==='fetchAll') && deletes.length===0
+            const ok=cloud.log.some(x=>x[0]==='fetchRacesPage') && deletes.length===0
               && state.races.map(r=>r.id).sort().join()==='a,b,c' && cloud.store.races.size===3;
             window.__cloud=null; state.user=null; return ok;
         }''' % SETUP)
@@ -1339,6 +1349,50 @@ class Sync(Group):
             const ok=noUploadOnOpen && JSON.stringify(cloud.log)===JSON.stringify([['upsertTrainingMonths',['2026-09']]]);
             window.__cloud=null; state.user=null; return ok;
         }''' % SETUP)
+        # ---- 第一次完整下載分批、可續傳（v3.91.0：v3.90 實機登入仍然崩潰） ----
+        PAGED = '''const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const mkp=i=>Object.assign(emptyRace('賽事'+i,'road_running','completed','2025-01-01'),{id:'r'+String(i).padStart(2,'0'),updatedAt:'2026-09-'+String(1+i%28).padStart(2,'0')+'T00:00:00.000Z'});
+            const R=[...Array(12)].map((_,i)=>mkp(i));
+            const reset=async(local)=>{ await saveJson('cloud-sync-state-v1',null); localStorage.removeItem('sync-inflight-v1'); cloudKnown=null; cloudPendingDeletes=[];
+              state.races=local.map(r=>JSON.parse(JSON.stringify(r))); trainings=[]; };
+            const trace=c=>c.pageCalls.map(x=>(x[0]||'start')+'/'+x[1]).join(' ');'''
+        c['sync_first_download_is_paged'] = page.evaluate('''async()=>{ %s
+            await reset(R); const cloud=__makeFakeCloud(R,[]); window.__cloud=cloud;
+            await handleAuthChange({uid:'u1'}); await wait(1200);
+            const st=await loadJson('cloud-sync-state-v1',null);
+            const ok=trace(cloud)==='start/5 r04/5 r09/5' && !cloud.log.some(x=>x[0]==='fetchAll'||x[0]==='upsertRaces')
+              && !st.byUid.u1.fullSync && Object.keys(st.byUid.u1.races).length===12 && localStorage.getItem('sync-inflight-v1')===null;
+            window.__cloud=null; state.user=null; hideSyncPill(); return ok;
+        }''' % PAGED)
+        # 中途崩潰（這裡用丟出錯誤模擬）：重新打開從中斷處接著抓，不從頭
+        c['sync_resumes_after_crash'] = page.evaluate('''async()=>{ %s
+            await reset(R); const cloud=__makeFakeCloud(R,[]); cloud.failAt=1; window.__cloud=cloud;
+            await handleAuthChange({uid:'u1'}); await wait(600);
+            const marker=JSON.parse(localStorage.getItem('sync-inflight-v1')||'null');
+            cloud.pageCalls.length=0; cloudKnown=null;
+            await handleAuthChange({uid:'u1'}); await wait(1200);
+            const st=await loadJson('cloud-sync-state-v1',null);
+            const ok=!!marker && marker.afterId==='r04' && trace(cloud)==='r04/5 r09/5'
+              && !st.byUid.u1.fullSync && Object.keys(st.byUid.u1.races).length===12;
+            window.__cloud=null; state.user=null; hideSyncPill(); return ok;
+        }''' % PAGED)
+        # 同一個位置崩潰兩次：那一批的 5 場逐筆下載，把特別大的那一場隔開
+        c['sync_isolates_repeat_crash_point'] = page.evaluate('''async()=>{ %s
+            await reset(R); const cloud=__makeFakeCloud(R,[]); window.__cloud=cloud;
+            cloud.failAt=1; await handleAuthChange({uid:'u1'}); await wait(500);
+            cloudKnown=null; cloud.pageCalls.length=0; cloud.failAt=0; await handleAuthChange({uid:'u1'}); await wait(500);
+            cloudKnown=null; cloud.pageCalls.length=0; await handleAuthChange({uid:'u1'}); await wait(1500);
+            const ok=trace(cloud)==='r04/1 r05/1 r06/1 r07/1 r08/1 r09/5';
+            window.__cloud=null; state.user=null; hideSyncPill(); return ok;
+        }''' % PAGED)
+        # ?nosync=1：已登入也完全不碰雲端（一打開就崩潰、連登出都沒辦法時的出口）
+        c['sync_nosync_escape_hatch'] = page.evaluate('''async()=>{ %s
+            await reset(R); const cloud=__makeFakeCloud(R,[]); window.__cloud=cloud; sessionStorage.setItem('no-sync','1');
+            await handleAuthChange({uid:'u1'}); await wait(500);
+            const pill=(document.getElementById('sync-progress-pill')||{}).textContent||'';
+            const ok=cloud.log.length===0 && cloud.pageCalls.length===0 && pill.includes('nosync');
+            sessionStorage.removeItem('no-sync'); window.__cloud=null; state.user=null; hideSyncPill(); return ok;
+        }''' % PAGED)
         c['malformed_cloud_payload_safe'] = page.evaluate('''()=>{
             try{
                 mergeGlobalListsIntoState(null);
