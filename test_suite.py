@@ -967,6 +967,22 @@ class Mobile(Group):
             applyFontScale('medium');
             return ok;
         }''')
+        # 360px 小螢幕（很多 Android 手機）：三種字級都不可以左右溢出；
+        # 「大」字級時三個圖示按鈕可以整組換到下一行，但不能被拆散
+        page.set_viewport_size({'width':360,'height':800})
+        page.wait_for_timeout(250)
+        c['phone_360_no_overflow_any_scale'] = page.evaluate('''async()=>{
+            const out=[];
+            for(const sc of ['small','medium','large']){
+              applyFontScale(sc); await new Promise(s=>setTimeout(s,200));
+              const tools=[...document.querySelectorAll('.cal-tools > button')].map(b=>Math.round(b.getBoundingClientRect().top));
+              out.push(document.documentElement.scrollWidth<=window.innerWidth+1 && Math.max(...tools)-Math.min(...tools)<4);
+            }
+            applyFontScale('medium');
+            return out.every(Boolean);
+        }''')
+        page.set_viewport_size({'width':390,'height':844})
+        page.wait_for_timeout(250)
         c['pinch_zoom_blocked'] = page.evaluate('''()=>{
             const e=new Event('gesturestart',{cancelable:true,bubbles:true});
             document.dispatchEvent(e);
@@ -3046,6 +3062,243 @@ class FeedbackConfigured(Group):
                 && String(args[2]||'').includes('noopener');
         }''')
 
+# 測試用 FIT 檔產生器（file header + session + record 訊息）。訓練匯入要走
+# 真正的二進位解析路徑，不能用假的摘要物件代替。
+FIT_GENERATOR_JS = r'''// 測試用 FIT 產生器：file header + session(18) + record(20) 訊息。小端序。
+window.__makeFit=function(opt){
+  const FIT_EPOCH=Date.UTC(1989,11,31,0,0,0)/1000;
+  const start=Math.round(opt.start.getTime()/1000)-FIT_EPOCH;
+  const bytes=[];
+  const u8=v=>bytes.push(v&255);
+  const u16=v=>{u8(v);u8(v>>8);};
+  const u32=v=>{u8(v);u8(v>>8);u8(v>>16);u8(v>>24);};
+  // record 定義（local 0）：253 timestamp u32、0 lat s32、1 lon s32、2 alt u16、3 hr u8
+  u8(0x40);u8(0);u8(0);u16(20);u8(5);
+  [[253,4,0x86],[0,4,0x85],[1,4,0x85],[2,2,0x84],[3,1,0x02]].forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
+  const n=opt.gps?opt.points:0;
+  for(let i=0;i<n;i++){
+    const a=i/(n-1)*Math.PI*2;
+    const lat=opt.lat+Math.sin(a)*0.01, lon=opt.lon+Math.cos(a)*0.014+Math.sin(a*3)*0.002;
+    u8(0x00); u32(start+i*Math.round(opt.seconds/n));
+    const toSc=d=>Math.round(d*Math.pow(2,31)/180);
+    const la=toSc(lat), lo=toSc(lon);
+    u32(la>>>0); u32(lo>>>0); u16(Math.round((opt.alt+Math.sin(a*2)*15+500)*5)); u8(opt.hr);
+  }
+  // session 定義（local 1）：2 start u32、253 ts u32、5 sport enum、7 elapsed u32(ms)、9 dist u32(cm)、16 avgHr u8、22 ascent u16
+  u8(0x41);u8(0);u8(0);u16(18);u8(7);
+  [[2,4,0x86],[253,4,0x86],[5,1,0x00],[7,4,0x86],[9,4,0x86],[16,1,0x02],[22,2,0x84]].forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
+  u8(0x01); u32(start); u32(start+opt.seconds); u8(opt.sport); u32(opt.seconds*1000); u32(Math.round(opt.km*100000));
+  u8(opt.hr); u16(opt.ascent);
+  const data=new Uint8Array(bytes);
+  const out=new Uint8Array(14+data.length);
+  const dv=new DataView(out.buffer);
+  dv.setUint8(0,14); dv.setUint8(1,0x10); dv.setUint16(2,2093,true); dv.setUint32(4,data.length,true);
+  out[8]=46;out[9]=70;out[10]=73;out[11]=84;   // ".FIT"
+  out.set(data,14);
+  return new File([out],opt.name||'run.fit',{type:'application/octet-stream'});
+};
+'''
+
+class Training(Group):
+    """訓練紀錄（方案 B）：解析、匯入分類、鞋款里程、跟賽事的隔離、賽前訓練週期、同步合併。"""
+
+    def body(self, page):
+        c = self.checks
+        page.add_script_tag(content=FIT_GENERATOR_JS)
+        page.evaluate('''()=>{ state.races=[]; trainings=[];
+            shoes.length=0; shoes.push({id:'s1',name:'Pegasus 41',targetKm:700,isRetired:false,trainingKm:50}); }''')
+        MK = '''const mk=(d,km,sec,name,o)=>__makeFit(Object.assign({name,start:new Date(d),gps:true,points:120,
+            seconds:sec,km,hr:145,ascent:40,sport:1,lat:25.03,lon:121.56,alt:20},o||{}));'''
+
+        # ---- 解析 ----
+        c['fit_outdoor_uses_watch_totals'] = page.evaluate('''async()=>{ %s
+            const r=await parseTrainingFile(mk('2026-09-14T06:10:00',12.3,3600,'o.fit',{points:300,hr:142,ascent:88}));
+            return r.date==='2026-09-14' && r.startTime==='06:10' && r.sport==='run'
+                && r.distanceKm===12.3 && r.durationSeconds===3600 && r.avgHr===142
+                && r.elevationGainM===88                       // 手錶的爬升（氣壓計）優先於 GPS 重算
+                && r.thumb.length===200 && r.fingerprint.length>=16;
+        }''' % MK)
+        # 跑步機沒有 GPS：賽事匯入會拒絕，訓練不可以
+        c['fit_treadmill_without_gps_imports'] = page.evaluate('''async()=>{ %s
+            const r=await parseTrainingFile(mk('2026-09-15T19:30:00',9,2700,'t.fit',{gps:false,hr:150,ascent:0}));
+            return r.distanceKm===9 && r.durationSeconds===2700 && r.avgHr===150 && r.thumb===null;
+        }''' % MK)
+        c['gpx_reads_sport_and_name'] = page.evaluate('''async()=>{
+            const pts=[]; for(let i=0;i<30;i++) pts.push(`<trkpt lat="${25+i*0.001}" lon="${121.5+i*0.001}"><ele>10</ele><time>2026-09-10T22:${String(i).padStart(2,'0')}:00Z</time></trkpt>`);
+            const gpx=`<?xml version="1.0"?><gpx><trk><name>Evening Ride</name><type>cycling</type><trkseg>${pts.join('')}</trkseg></trk></gpx>`;
+            const r=await parseTrainingFile(new File([gpx],'ride.gpx'));
+            return r.sport==='ride' && r.name==='Evening Ride' && r.distanceKm>0 && !!r.thumb;
+        }''')
+
+        # ---- 匯入分類：新的／重複／比賽當天／讀不到 ----
+        c['batch_import_classifies_files'] = page.evaluate('''async()=>{ %s
+            state.races=[]; trainings=[];
+            const race=emptyRace('大阪馬拉松','road_running','completed','2026-02-22');
+            race.route.distanceKm=42.195; race.results.chipTimeSeconds=10774; race.performanceData.shoeId='s1';
+            state.races.push(race);
+            await startTrainingImport([mk('2026-01-10T06:00:00',15,4500,'a.fit'),mk('2026-01-17T06:00:00',30,9600,'b.fit'),
+              mk('2026-02-08T06:00:00',12,3600,'c.fit'),mk('2026-02-22T08:00:00',42.4,10774,'race.fit'),
+              new File([new Uint8Array([1,2,3])],'broken.fit'),new File(['x'],'note.txt')]);
+            const st=trainingImportState;
+            const ok=st.fresh.length===3 && st.raceDay.length===1 && st.raceDay[0]._race.name==='大阪馬拉松'
+              && st.failed.length===1 && st.dupes.length===0;
+            const sel=document.querySelector('[data-training-import-shoe]');
+            sel.value='s1'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+            document.querySelector('[data-action="confirm-training-import"]').click();
+            await new Promise(s=>setTimeout(s,300));
+            return ok && liveTrainings().length===3 && liveTrainings().every(x=>x.shoeId==='s1');
+        }''' % MK)
+        c['reimport_and_cross_format_are_duplicates'] = page.evaluate('''async()=>{ %s
+            await startTrainingImport([mk('2026-01-10T06:00:00',15,4500,'a.fit')]);   // 同一個檔
+            const same=trainingImportState.dupes.length===1; closeTrainingImportModal();
+            // 同一次運動另存成 GPX：檔案不同，但日期、開始時間、距離都一樣
+            const rec=migrateTraining({date:'2026-01-10',startTime:'06:00',distanceKm:15.05,fingerprint:'other'});
+            return same && !!findDuplicateTraining(rec);
+        }''' % MK)
+        c['race_day_file_can_be_opted_in'] = page.evaluate('''async()=>{ %s
+            await startTrainingImport([mk('2026-02-22T08:00:00',42.4,10774,'race2.fit')]);
+            const box=document.querySelector('[data-raceday="0"]');
+            const disabledBefore=document.querySelector('[data-action="confirm-training-import"]').disabled;
+            box.checked=true; box.dispatchEvent(new Event('change',{bubbles:true}));
+            const enabledAfter=!document.querySelector('[data-action="confirm-training-import"]').disabled;
+            closeTrainingImportModal();
+            return disabledBefore && enabledAfter;
+        }''' % MK)
+
+        # ---- 鞋款里程：賽事＋手動補登＋匯入，比賽當天不重複算 ----
+        c['shoe_km_adds_imported_training'] = page.evaluate('''()=>{
+            const s=computeShoeStats('s1');
+            return Math.abs(s.raceDistance-42.195)<0.01 && s.manualTrainingKm===50
+                && Math.abs(s.importedTrainingKm-57)<0.01 && Math.abs(s.totalDistance-149.195)<0.01;
+        }''')
+        c['shoe_km_follows_edit_and_delete'] = page.evaluate('''async()=>{
+            openTrainingOverlay(); trainingPeriod='all'; refreshTrainingOverlay();
+            const id=liveTrainings().find(x=>x.distanceKm===30).id;
+            document.querySelector(`[data-action="training-edit"][data-id="${id}"]`).click();
+            const sel=document.querySelector(`[data-training-shoe="${id}"]`);
+            sel.value=''; sel.dispatchEvent(new Event('change',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,200));
+            const afterUnlink=computeShoeStats('s1').importedTrainingKm;
+            const id2=liveTrainings().find(x=>x.distanceKm===12).id;
+            document.querySelector(`[data-action="training-edit"][data-id="${id2}"]`).click();
+            document.querySelector(`[data-action="training-delete"][data-id="${id2}"]`).click();
+            await new Promise(s=>setTimeout(s,200));
+            const afterDelete=computeShoeStats('s1').importedTrainingKm;
+            const tomb=trainings.find(x=>x.id===id2);
+            closeTrainingOverlay();
+            return Math.abs(afterUnlink-27)<0.01 && Math.abs(afterDelete-15)<0.01
+                && !!tomb.deletedAt && tomb.thumb===null;      // 軟刪除留墓碑，跨裝置才同步得到
+        }''')
+
+        # ---- 隔離：訓練不可以碰到任何賽事相關的東西 ----
+        c['training_never_touches_race_data'] = page.evaluate('''async()=>{
+            const before={races:state.races.length,
+              career:JSON.stringify([computeHallOfFameData().totalCompleted,computeHallOfFameData().totalDistance]),
+              chips:(renderCalendar(),document.querySelectorAll('.cal-chip').length)};
+            trainings.push(migrateTraining({date:todayISO(),distanceKm:21,durationSeconds:6000,sport:'run',fingerprint:'iso'}));
+            await persistTrainings();
+            const after={races:state.races.length,
+              career:JSON.stringify([computeHallOfFameData().totalCompleted,computeHallOfFameData().totalDistance]),
+              chips:(renderCalendar(),document.querySelectorAll('.cal-chip').length)};
+            const snap=JSON.stringify(buildPublicSnapshot(state.races[0]));
+            return JSON.stringify(before)===JSON.stringify(after)
+                && !/fingerprint|trainings/.test(snap);
+        }''')
+
+        # ---- 賽前訓練週期 ----
+        c['buildup_weeks_align_to_race_day'] = page.evaluate('''()=>{
+            trainings=[];
+            const race=emptyRace('測試賽','road_running','completed','2026-03-01');   // 週日
+            const add=(d,km,sport)=>trainings.push(migrateTraining({date:d,distanceKm:km,sport:sport||'run',fingerprint:d+km}));
+            add('2026-02-28',5);   // 比賽前一天 → 賽前第 1 週
+            add('2026-02-22',20);  // 比賽前 7 天 → 賽前第 1 週
+            add('2026-02-21',30);  // 比賽前 8 天 → 賽前第 2 週
+            add('2026-03-01',42);  // 比賽當天 → 不算
+            add('2026-02-25',50,'ride');   // 路跑賽只算跑步
+            const b=computeTrainingBuildup(race);
+            const w=k=>b.weeks.find(x=>x.k===k);
+            return w(1).km===25 && w(2).km===30 && b.longest===30
+                && w(1).from==='2026-02-22' && w(1).to==='2026-02-28';
+        }''')
+        c['buildup_multisport_counts_all_sports'] = page.evaluate('''()=>{
+            const tri=emptyRace('三鐵','triathlon','completed','2026-03-01');
+            return computeTrainingBuildup(tri).weeks.find(x=>x.k===1).km===75;   // 5+20 跑＋50 騎
+        }''')
+        c['buildup_taper_waits_for_complete_weeks'] = page.evaluate('''()=>{
+            trainings=[];
+            const past=emptyRace('過去','road_running','completed','2026-03-01');
+            for(let k=1;k<=5;k++){ const d=addDaysStr('2026-03-01',-7*k+1);
+              trainings.push(migrateTraining({date:d,distanceKm:k<=2?30:60,sport:'run',fingerprint:'p'+k})); }
+            const pastTaper=computeTrainingBuildup(past).taper;           // (30+30)/2 ÷ 60 −1 = −50%
+            const soon=emptyRace('五天後','road_running','registered',addDaysStr(todayISO(),5));
+            trainings.push(migrateTraining({date:todayISO(),distanceKm:5,sport:'run',fingerprint:'now'}));
+            const b=computeTrainingBuildup(soon);
+            const w1=b.weeks.find(x=>x.k===1);
+            return pastTaper===-50 && w1.inProgress===true && b.taper===null;
+        }''')
+        c['buildup_card_hidden_until_feature_used'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('沒訓練資料','road_running','registered','2026-12-20');
+            state.races.push(r);
+            trainings=[];
+            const none=trainingBuildupHtml(r);
+            trainings.push(migrateTraining({date:'2020-01-01',distanceKm:5,sport:'run',fingerprint:'old'}));
+            const empty=trainingBuildupHtml(r);
+            return none==='' && empty.includes('沒有訓練紀錄');
+        }''')
+        c['buildup_week_drilldown_keeps_section_open'] = page.evaluate('''async()=>{
+            trainings=[];
+            state.races=[];
+            const r=emptyRace('鑽取測試','road_running','completed','2026-03-01');
+            state.races.push(r);
+            trainings.push(migrateTraining({date:'2026-02-25',distanceKm:12,durationSeconds:3600,avgHr:140,sport:'run',fingerprint:'d1'}));
+            selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,250));
+            const sec=document.getElementById('section-prep'); sec.open=true;
+            document.querySelector('[data-action="buildup-week"][data-week="1"]').dispatchEvent(new MouseEvent('click',{bubbles:true}));
+            await new Promise(s=>setTimeout(s,250));
+            const drill=document.querySelector('.buildup-drill');
+            return !!drill && drill.textContent.includes('12.0 km') && document.getElementById('section-prep').open;
+        }''')
+
+        # ---- 同步合併 ----
+        c['merge_uses_updated_at_and_tombstones'] = page.evaluate('''()=>{
+            trainings=[migrateTraining({id:'m1',date:'2026-01-01',distanceKm:10,updatedAt:'2026-01-02T00:00:00Z'}),
+                       migrateTraining({id:'m2',date:'2026-01-03',distanceKm:8,updatedAt:'2026-01-05T00:00:00Z'})];
+            mergeTrainings([
+              {id:'m1',date:'2026-01-01',distanceKm:10,updatedAt:'2026-01-09T00:00:00Z',deletedAt:'2026-01-09T00:00:00Z'},  // 別台裝置刪了
+              {id:'m2',date:'2026-01-03',distanceKm:99,updatedAt:'2026-01-04T00:00:00Z'},                                  // 雲端比較舊
+              {id:'m3',date:'2026-01-07',distanceKm:6,updatedAt:'2026-01-07T00:00:00Z'}]);                                // 雲端才有
+            const g=id=>trainings.find(x=>x.id===id);
+            return !!g('m1').deletedAt && g('m2').distanceKm===8 && !!g('m3') && liveTrainings().length===2;
+        }''')
+        c['persist_schedules_cloud_push'] = page.evaluate('''async()=>{
+            let pushed=null;
+            const realCloud=window.__cloud, realUser=state.user;
+            window.__cloud=Object.assign({},realCloud||{},{enabled:true,replaceTrainings:async(uid,list)=>{ pushed={uid,n:list.length}; }});
+            state.user={uid:'u1'};
+            await persistTrainings();
+            await new Promise(s=>setTimeout(s,1300));
+            window.__cloud=realCloud; state.user=realUser;
+            return !!pushed && pushed.uid==='u1' && pushed.n===trainings.length;
+        }''')
+
+        # ---- 畫面層級：匯入視窗一定要疊在訓練頁上面（v3.67 的教訓） ----
+        c['import_modal_above_training_overlay'] = page.evaluate('''async()=>{ %s
+            openTrainingOverlay();
+            await startTrainingImport([mk('2025-05-05T06:00:00',8,2400,'z.fit')]);
+            const oz=parseInt(getComputedStyle(document.getElementById('training-overlay')).zIndex,10);
+            const mz=parseInt(getComputedStyle(document.getElementById('training-import-modal')).zIndex,10);
+            const btn=document.querySelector('[data-action="confirm-training-import"]');
+            const b=btn.getBoundingClientRect();
+            const hit=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);
+            const onTop=mz>oz && !!(hit&&hit.closest('#training-import-modal'));
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));
+            const modalClosed=document.getElementById('training-import-modal').hidden;
+            const overlayStill=!document.getElementById('training-overlay').hidden;
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));
+            return onTop && modalClosed && overlayStill && document.getElementById('training-overlay').hidden;
+        }''' % MK)
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -3064,6 +3317,7 @@ GROUPS = {
     'pubview':    lambda: PublicView('pubview'),
     'paste':      lambda: PasteReport('paste'),
     'feedback':   lambda: FeedbackConfigured('feedback'),
+    'training':   lambda: Training('training'),
 }
 
 

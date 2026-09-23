@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.75.0
+> 貼到新對話開頭即可接續。最後更新：v3.76.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（275 項檢查，17 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（293 項檢查，18 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -131,6 +131,12 @@ APP=/path/to/index.html python3 test_suite.py
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
 | 功能因缺資料而不出現時，要說原因 | 「選項消失」跟「功能壞掉」在畫面上一樣。分享選項灰掉＋標原因（v3.61）、照片略過清單（v3.38）、氣象沒軌跡的說明（v3.71）都是同一條 |
 | 預報不可以佔用「實際值」欄位 | 回填一律只填空欄位。預報先填了 `raceDayWeather.feelsLikeTempC`，賽後歷史天氣就補不進真正的實測值。預報只填 `climateForecast.*` |
+| 訓練紀錄跟賽事完全分開 | 獨立陣列 `trainings`、儲存鍵 `trainings-v1`、雲端 `users/{uid}/trainings/{YYYY-MM}`。**絕對不要把訓練放進 `state.races`**——所有賽事統計都是靠「資料不在那裡」來隔離的，不是靠過濾 |
+| 比賽當天的 FIT 不當訓練 | 賽事已經把距離算進鞋款，重複匯入會算兩次。`matchRaceForTraining()`：同日期＋距離差 20% 以內 |
+| 匯入的鞋款里程動態加總 | `importedTrainingKmForShoe()`，不寫回 `shoe.trainingKm`（那個欄位是手動補登）。寫回的話刪除／換鞋要反向扣，容易錯 |
+| 賽前訓練週期：週對齊比賽日、減量等整週結束 | 不用日曆週。還沒過完的那週不列入平均與減量 |
+| `renderDetail()` 會收起所有區段 | 整頁重建、沒有記住展開狀態。局部更新優先（只換那張卡）；非整頁重畫不可時用 `renderDetailKeepOpen()` |
+| 版面測試至少要測 360px | 390px 過了不代表 360px 過（很多 Android 是 360）。行事曆工具列在 360px＋大字級會換行（圖示按鈕整組換） |
 | 新增 CSS 的 font-size 要乘 `--fs` | 字級切換靠 `calc(Npx*var(--fs,1))`。**之後新加的樣式也要這樣寫**，不然那一塊不會跟著縮放。例外：30px 以上的大數字、字級控制項本身 |
 | manifest 的相對路徑是相對於 manifest 自己 | `icons/manifest.webmanifest` 裡寫 `"start_url":"."` 會解析成 `/Race-Day/icons/` → 安裝後的 PWA 一開就 404，但瀏覽器直接開完全正常。`start_url`／`scope`／`id` 一律寫絕對路徑 `/Race-Day/`。改完要**先移除已安裝的 App** 再重裝，舊安裝不會自動更新 start_url |
 | 回饋表單只帶版本／裝置／畫面 | 公開收件匣，使用者按之前看不到會送什麼。絕不夾帶賽事資料，有測試鎖住 |
