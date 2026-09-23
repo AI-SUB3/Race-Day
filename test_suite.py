@@ -3375,6 +3375,47 @@ class Training(Group):
             return !!pushed && pushed.uid==='u1' && pushed.n===trainings.length;
         }''')
 
+        # ---- 在訓練頁拖放檔案（v3.79.0：之前會卡在「放開以匯入檔案」畫面） ----
+        DRAG = '''const drag=async(files,target)=>{
+            const dt=new DataTransfer(); files.forEach(f=>dt.items.add(f));
+            const fire=type=>target.dispatchEvent(new DragEvent(type,{bubbles:true,cancelable:true,dataTransfer:dt}));
+            fire('dragenter'); fire('dragover'); await new Promise(s=>setTimeout(s,60));
+            const text=document.querySelector('.global-dropzone-title').textContent;
+            fire('drop'); await new Promise(s=>setTimeout(s,500));
+            return {text,stuck:!document.getElementById('global-dropzone').hidden};
+        };'''
+        c['drop_on_training_page_imports_and_clears'] = page.evaluate('''async()=>{ %s %s
+            trainings=[]; state.races=[];
+            openTrainingOverlay();
+            const r=await drag([mk('2026-09-01T06:00:00',12,3600,'a.fit'),mk('2026-09-03T06:00:00',8,2400,'b.fit')],
+                               document.querySelector('#training-overlay .training-inner'));
+            const btn=document.querySelector('[data-action="cancel-training-import"]');
+            const b=btn&&btn.getBoundingClientRect();
+            const hit=b&&document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);
+            const ok=r.text==='放開以匯入訓練紀錄' && r.stuck===false
+              && trainingImportState && trainingImportState.fresh.length===2
+              && !!(hit&&hit.closest('#training-import-modal'));      // 匯入視窗沒有被任何東西蓋住
+            closeTrainingImportModal(); closeTrainingOverlay();
+            return ok;
+        }''' % (MK, DRAG))
+        c['drop_elsewhere_still_imports_race'] = page.evaluate('''async()=>{ %s %s
+            let routed=null; const real=window.routeDroppedFiles;
+            window.routeDroppedFiles=async fs=>{ routed=fs.map(f=>f.name); };
+            const r=await drag([mk('2026-09-01T06:00:00',12,3600,'race.fit')],document.getElementById('main-content'));
+            window.routeDroppedFiles=real;
+            return r.text==='放開以匯入檔案' && r.stuck===false
+                && JSON.stringify(routed)==='["race.fit"]' && document.getElementById('training-import-modal').hidden;
+        }''' % (MK, DRAG))
+        # 保險：就算有元素在 drop 時 stopPropagation()，畫面也不能卡住（這次 bug 的成因）
+        c['dropzone_never_sticks_even_if_drop_is_swallowed'] = page.evaluate('''async()=>{ %s %s
+            const trap=document.createElement('div');
+            trap.style.cssText='position:fixed;inset:0;z-index:1';
+            trap.addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); });
+            document.body.appendChild(trap);
+            const r=await drag([mk('2026-09-01T06:00:00',5,1500,'x.fit')],trap);
+            trap.remove();
+            return r.stuck===false;
+        }''' % (MK, DRAG))
         # ---- 畫面層級：匯入視窗一定要疊在訓練頁上面（v3.67 的教訓） ----
         c['import_modal_above_training_overlay'] = page.evaluate('''async()=>{ %s
             openTrainingOverlay();

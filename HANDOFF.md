@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.78.0
+> 貼到新對話開頭即可接續。最後更新：v3.79.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（301 項檢查，18 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（304 項檢查，18 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -131,6 +131,7 @@ APP=/path/to/index.html python3 test_suite.py
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
 | 功能因缺資料而不出現時，要說原因 | 「選項消失」跟「功能壞掉」在畫面上一樣。分享選項灰掉＋標原因（v3.61）、照片略過清單（v3.38）、氣象沒軌跡的說明（v3.71）都是同一條 |
 | 預報不可以佔用「實際值」欄位 | 回填一律只填空欄位。預報先填了 `raceDayWeather.feelsLikeTempC`，賽後歷史天氣就補不進真正的實測值。預報只填 `climateForecast.*` |
+| 檔案拖放只有一個入口：全域的 window 監聽 | 不要在子元素自己接 `drop` 又 `stopPropagation()`——「放開以匯入檔案」畫面（z-index 500）會收不掉、把一切蓋住。要分情境就在全域 `drop` 裡判斷（例：訓練頁開著 → `startTrainingImport`）。捕獲階段另有一道保險重置 |
 | 頂端列「＋ 新增賽事」下方的訓練鈕是往下掛的 | 桌機 `position:absolute` 掛在新增賽事下面、`.topbar-row1` 補 36px 底部留白。改回一般堆疊的話，其他控制項會對齊兩顆按鈕的中間而變低 |
 | 測試批次不要塞太多群組 | 單一指令上限 300 秒；超時被砍會噴 Playwright EPIPE，看起來像錯誤其實不是。一批 2～4 組 |
 | `showAppBanner()` 是共用的 | 更新、安裝提示、儲存空間警告都用它。要改其中一種的外觀就加 `kind`，不要改共用樣式 |
