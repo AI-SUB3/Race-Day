@@ -1354,8 +1354,26 @@
     .help-fab::before{display:none;}
   }
   /* ---- 訓練紀錄（v3.76.0） ---- */
-  .training-entry{display:inline-flex;align-items:center;gap:5px;font-size:calc(13px*var(--fs,1));}
-  .training-entry svg{width:17px;height:17px;display:block;}   /* 跟旁邊的檢視切換圖示同尺寸，按鈕才一樣高 */
+  /* 頂端列：「＋ 新增賽事」與「訓練」疊成一欄、同寬。訓練是次要動作，
+     用外框樣式、矮一點、字小一點，一眼看得出主從關係。 */
+  .topbar-primary-stack{display:flex;flex-direction:column;align-items:stretch;gap:6px;}
+  .training-entry{
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    font:inherit;font-size:calc(12.5px*var(--fs,1));font-weight:500;line-height:1;
+    padding:6px 12px;border-radius:6px;cursor:pointer;
+    background:transparent;color:var(--ink);border:1px solid var(--rule);
+  }
+  .training-entry:hover{border-color:var(--ink-soft);}
+  .training-entry:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .training-entry svg{width:15px;height:15px;display:block;flex-shrink:0;}
+  /* 桌機：訓練鈕往下「掛」在新增賽事下面，不參與整排的垂直置中——不然
+     小中大、深淺色、語言、頭像會對齊兩顆按鈕疊起來的中間，看起來比
+     「＋ 新增賽事」低半截。頂端列底部補上同樣的高度，才不會蓋到下面。 */
+  @media (min-width:641px){
+    .topbar-primary-stack{position:relative;}
+    .topbar-primary-stack .training-entry{position:absolute;left:0;right:0;top:calc(100% + 6px);height:30px;box-sizing:border-box;}
+    .topbar-row1{padding-bottom:36px;}
+  }
   .training-overlay{position:fixed;inset:0;z-index:208;overflow-y:auto;background:var(--bg,#0F1316);color:var(--ink);}
   .training-overlay[hidden]{display:none;}
   .training-inner{max-width:720px;margin:0 auto;padding:22px 18px 120px;}
@@ -1416,13 +1434,10 @@
   /* 手機：行事曆工具列本來就很擠（上一月／月份／下一月／兩個檢視切換），
      加了「訓練」之後在「大」字級會超出螢幕 19px（測試抓到的）。把按鈕左右
      留白與月份標籤的最小寬度收窄，360px 的小螢幕在「大」字級也放得下。 */
+  /* 手機的頂端列沒有「＋ 新增賽事」（改成右下角的浮動按鈕），訓練鈕就
+     單獨排在這一列最後面，保留文字——只剩圖示的話太容易被忽略。 */
   @media (max-width:640px){
-    .training-entry span{display:none;}
-    .cal-nav{gap:4px;}
-    .cal-tools{gap:4px;}
-    .cal-nav .btn-ghost{padding:6px 6px;}
-    #cal-view-toggle{padding:6px 6px!important;}
-    .cal-label{min-width:80px;}
+    .training-entry{padding:7px 10px;}
   }
   /* 字級切換：分段按鈕，三個字本身大小遞增，一眼看得出是在調字級。
      這三顆按鈕自己的字級「不」跟著 --fs 縮放——否則切到大，控制項自己也
@@ -2586,7 +2601,13 @@
             <button id="btn-sample-data" type="button" class="action-menu-item" data-i18n="ui.sampleData">範例資料</button>
           </div>
         </div>
-        <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
+        <div class="topbar-primary-stack">
+          <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
+          <button id="btn-training" class="training-entry" type="button" data-i18n-title="ui.trainingTitle" title="訓練紀錄" aria-label="訓練紀錄">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
+            <span data-i18n="ui.trainingShort">訓練</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -2600,10 +2621,6 @@
         <span class="cal-tools">
         <button id="cal-view-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.gridViewToggle" title="切換檢視" aria-label="切換為獎牌牆檢視">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        </button>
-        <button id="btn-training" class="btn-ghost training-entry" type="button" data-i18n-title="ui.trainingTitle" title="訓練紀錄" aria-label="訓練紀錄">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
-          <span data-i18n="ui.trainingShort">訓練</span>
         </button>
         <button id="cal-table-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.tableViewToggle" title="切換為緊湊表格檢視" aria-label="切換為緊湊表格檢視">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14h18M9 4v16"/></svg>
@@ -3378,7 +3395,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.77.0';
+const APP_VERSION='v3.78.0';
 
 /* ============================================================
    多語系（i18n）

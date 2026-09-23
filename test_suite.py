@@ -983,6 +983,13 @@ class Mobile(Group):
         }''')
         page.set_viewport_size({'width':390,'height':844})
         page.wait_for_timeout(250)
+        # 手機頂端列沒有「＋ 新增賽事」，訓練鈕排在最後面，而且要保留文字
+        c['training_button_visible_with_label_on_phone'] = page.evaluate('''()=>{
+            const tr=document.getElementById('btn-training');
+            const r=tr.getBoundingClientRect(), span=tr.querySelector('span');
+            return !!tr.closest('.topbar-actions') && r.width>0 && r.right<=window.innerWidth
+                && getComputedStyle(span).display!=='none' && span.textContent.trim()==='訓練';
+        }''')
         c['pinch_zoom_blocked'] = page.evaluate('''()=>{
             const e=new Event('gesturestart',{cancelable:true,bubbles:true});
             document.dispatchEvent(e);
@@ -3081,6 +3088,37 @@ class FeedbackConfigured(Group):
             return a.right<=b.left && Math.abs(midA-midB)<2
                 && cap.textContent.trim()==='說說你的想法'
                 && getComputedStyle(cap).animationName==='none';   // 不跟說明鈕一起浮動
+        }''')
+        # ---- 訓練入口在頂端列「＋ 新增賽事」正下方（v3.78.0） ----
+        c['training_button_below_new_race'] = page.evaluate('''()=>{
+            const tr=document.getElementById('btn-training'), nw=document.getElementById('btn-new');
+            const a=tr.getBoundingClientRect(), b=nw.getBoundingClientRect();
+            return !!tr.closest('.topbar-actions') && !tr.closest('.cal-nav')
+                && a.top>=b.bottom && Math.abs(a.left-b.left)<1 && Math.abs(a.width-b.width)<1   // 正下方、同寬
+                && a.height<b.height;                                                             // 小一點
+        }''')
+        # 其他控制項要對齊「＋ 新增賽事」，不是對齊兩顆按鈕疊起來的中間；訓練鈕不可以超出頂端列
+        c['top_bar_controls_align_with_new_race'] = page.evaluate('''async()=>{
+            const out=[];
+            for(const sc of ['small','medium','large']){
+              applyFontScale(sc); await new Promise(s=>setTimeout(s,150));
+              const mid=el=>{const r=el.getBoundingClientRect(); return r.top+r.height/2;};
+              const nb=document.getElementById('btn-new');
+              const off=Math.max(...['.font-scale','#btn-theme-toggle','.lang-switcher']
+                .map(q=>Math.abs(mid(document.querySelector(q))-mid(nb))));
+              const inside=document.getElementById('btn-training').getBoundingClientRect().bottom
+                <=document.querySelector('header').getBoundingClientRect().bottom;
+              out.push(off<1.5 && inside);
+            }
+            applyFontScale('medium');
+            return out.every(Boolean);
+        }''')
+        c['training_button_opens_overlay'] = page.evaluate('''async()=>{
+            document.getElementById('btn-training').click();
+            await new Promise(s=>setTimeout(s,200));
+            const open=!document.getElementById('training-overlay').hidden;
+            closeTrainingOverlay();
+            return open;
         }''')
         c['feedback_prefill_builds_google_form_url'] = page.evaluate('''()=>{
             const u=new URL(buildFeedbackUrl());
