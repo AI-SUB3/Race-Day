@@ -2424,6 +2424,31 @@
   .app-banner-actions button{font:inherit;font-size:calc(13px*var(--fs,1));border-radius:6px;padding:6px 12px;cursor:pointer;border:1px solid rgba(255,255,255,0.28);background:transparent;color:inherit;}
   .app-banner-actions button.primary{background:var(--surface);color:var(--ink);border-color:var(--surface);}
   .app-banner.is-warn{border-left:4px solid var(--flag);}
+  /* ---- 有新版本：紅色箭頭從右上角指向「立即更新」（v3.77.0） ---- */
+  .app-banner.is-update{flex-direction:row;align-items:center;flex-wrap:wrap;gap:10px 16px;
+    padding:14px 16px;border:2px solid #E5383B;}
+  .app-banner.is-update .app-banner-text{flex:1 1 auto;font-weight:600;}
+  .app-banner.is-update .app-banner-actions{margin-left:auto;align-items:center;}
+  .update-cta{position:relative;display:inline-flex;}
+  .app-banner.is-update .app-banner-actions button.primary{
+    background:#E5383B;border-color:#E5383B;color:#fff;font-weight:700;padding:7px 14px;
+    animation:update-pulse 1.6s ease-out infinite;
+  }
+  /* 箭頭放在按鈕右上角、提示框外面；尖端朝左下指向按鈕，沿著斜線來回「戳」 */
+  .update-arrow{position:absolute;right:-30px;top:-34px;width:34px;height:34px;color:#E5383B;
+    pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+    animation:update-arrow-poke 0.9s ease-in-out infinite;}
+  @keyframes update-arrow-poke{0%,100%{transform:translate(0,0);}50%{transform:translate(-6px,6px);}}
+  @keyframes update-pulse{
+    0%{box-shadow:0 0 0 0 rgba(229,56,59,0.6);}
+    70%{box-shadow:0 0 0 10px rgba(229,56,59,0);}
+    100%{box-shadow:0 0 0 0 rgba(229,56,59,0);}
+  }
+  /* 系統設定「減少動態效果」的人：箭頭留著、不動；按鈕不閃 */
+  @media (prefers-reduced-motion:reduce){
+    .update-arrow{animation:none;}
+    .app-banner.is-update .app-banner-actions button.primary{animation:none;}
+  }
   .storage-cleanup-list{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto;margin:8px 0 12px;}
   .storage-cleanup-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);}
   .storage-cleanup-row img{width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--rule);}
@@ -3353,7 +3378,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.76.0';
+const APP_VERSION='v3.77.0';
 
 /* ============================================================
    多語系（i18n）
@@ -19742,13 +19767,28 @@ let localDataReady=null;
    常駐提示條：安裝到主畫面／有新版本／儲存空間快滿。
    ============================================================ */
 let activeBanner=null;
+/* kind:'update' 是「有新版本」那一種：要醒目，因為使用者不按就會一直停在
+   舊版。版面跟其他提示不同——文字在左、主要按鈕放最右邊，紅色箭頭從提示
+   框外面的右上方指向按鈕。如果照一般提示「文字在上、按鈕在下、主要按鈕
+   在左」，箭頭會剛好蓋住上面那行字。 */
+const UPDATE_ARROW_SVG=`<svg class="update-arrow" viewBox="0 0 40 40" aria-hidden="true">
+  <path d="M34 6 L12 28" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M10 14 L10 30 L26 30" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
 function showAppBanner({text,actions,kind}){
   hideAppBanner();
   const el=document.createElement('div');
-  el.className='app-banner'+(kind==='warn'?' is-warn':'');
+  el.className='app-banner'+(kind==='warn'?' is-warn':'')+(kind==='update'?' is-update':'');
   el.setAttribute('role','status');
-  el.innerHTML=`<span>${escapeHtml(text)}</span><div class="app-banner-actions">${
-    actions.map((a,i)=>`<button type="button" data-banner-action="${i}"${a.primary?' class="primary"':''}>${escapeHtml(a.label)}</button>`).join('')
+  // 更新提示：主要按鈕排到最後（最右邊），外面包一層放箭頭
+  const order=kind==='update'
+    ? actions.map((a,i)=>({a,i})).sort((x,y)=>(x.a.primary?1:0)-(y.a.primary?1:0))
+    : actions.map((a,i)=>({a,i}));
+  el.innerHTML=`<span class="app-banner-text">${escapeHtml(text)}</span><div class="app-banner-actions">${
+    order.map(({a,i})=>{
+      const btn=`<button type="button" data-banner-action="${i}"${a.primary?' class="primary"':''}>${escapeHtml(a.label)}</button>`;
+      return (kind==='update'&&a.primary)?`<span class="update-cta">${btn}${UPDATE_ARROW_SVG}</span>`:btn;
+    }).join('')
   }</div>`;
   el.addEventListener('click',e=>{
     const b=e.target.closest('[data-banner-action]'); if(!b) return;
@@ -19789,7 +19829,7 @@ function registerOfflineWorker(){
 }
 function offerWorkerUpdate(reg){
   swWaitingReg=reg;
-  showAppBanner({text:t('ui.updateAvailable','有新版本可以更新'),actions:[
+  showAppBanner({kind:'update',text:t('ui.updateAvailable','有新版本可以更新'),actions:[
     {label:t('ui.updateNow','立即更新'),primary:true,run:()=>{
       if(!swWaitingReg||!swWaitingReg.waiting) return;
       swReloadRequested=true;

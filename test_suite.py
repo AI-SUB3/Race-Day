@@ -2103,6 +2103,61 @@ class Offline(Group):
         c['nosw_param_keeps_sw_off_for_this_session'] = page.evaluate(
             "async()=>window.__swDisabled===true && sessionStorage.getItem('sw-off-v1')==='1'"
             " && (await navigator.serviceWorker.getRegistrations()).length===0")
+        # ---- 有新版本的提醒要醒目：紅色箭頭從右上角指向「立即更新」（v3.77.0） ----
+        page.goto(self.url, wait_until='domcontentloaded')
+        page.wait_for_timeout(1200)
+        c['update_banner_has_arrow_on_primary'] = page.evaluate('''async()=>{
+            let posted=null;
+            offerWorkerUpdate({waiting:{postMessage:m=>{ posted=m; }}});
+            await new Promise(s=>setTimeout(s,100));
+            const ban=document.querySelector('.app-banner.is-update');
+            if(!ban) return false;
+            const btns=[...ban.querySelectorAll('.app-banner-actions button')];
+            const primary=ban.querySelector('button.primary');
+            const arrow=ban.querySelector('.update-cta .update-arrow');
+            const ok=btns[btns.length-1]===primary                 // 主要按鈕在最右邊
+              && !!arrow && arrow.getAttribute('aria-hidden')==='true'
+              && getComputedStyle(arrow).animationName==='update-arrow-poke';
+            primary.click();
+            return ok && posted && posted.type==='SKIP_WAITING' && swReloadRequested===true;
+        }''')
+        # 其他提示（安裝、儲存空間）不可以跟著長出箭頭
+        c['other_banners_have_no_arrow'] = page.evaluate('''()=>{
+            swReloadRequested=false;
+            showAppBanner({text:'儲存空間快滿了',kind:'warn',actions:[{label:'清理',primary:true},{label:'稍後'}]});
+            const ban=document.querySelector('.app-banner');
+            const ok=!ban.classList.contains('is-update') && !ban.querySelector('.update-arrow')
+              && ban.querySelector('.app-banner-actions button').classList.contains('primary');   // 原本的順序不變
+            hideAppBanner();
+            return ok;
+        }''')
+        # 360px 手機：箭頭不可以超出螢幕，也不可以蓋到提示文字（量字的實際範圍，不是量框）
+        page.set_viewport_size({'width':360,'height':760})
+        page.wait_for_timeout(200)
+        c['update_arrow_fits_small_phone'] = page.evaluate('''async()=>{
+            offerWorkerUpdate({waiting:{postMessage(){}}});
+            await new Promise(s=>setTimeout(s,100));
+            const ban=document.querySelector('.app-banner.is-update');
+            const arrow=ban.querySelector('.update-arrow').getBoundingClientRect();
+            const r=document.createRange(); r.selectNodeContents(ban.querySelector('.app-banner-text'));
+            const g=r.getBoundingClientRect();
+            const covers=!(g.right<=arrow.left||arrow.right<=g.left||g.bottom<=arrow.top||arrow.bottom<=g.top);
+            hideAppBanner();
+            return arrow.left>=0 && arrow.right<=window.innerWidth && !covers;
+        }''')
+        # 系統設定「減少動態效果」：箭頭還在，但不動
+        page.emulate_media(reduced_motion='reduce')
+        c['update_arrow_respects_reduced_motion'] = page.evaluate('''async()=>{
+            offerWorkerUpdate({waiting:{postMessage(){}}});
+            await new Promise(s=>setTimeout(s,100));
+            const ban=document.querySelector('.app-banner.is-update');
+            const a=ban.querySelector('.update-arrow');
+            const ok=!!a && getComputedStyle(a).animationName==='none'
+              && getComputedStyle(ban.querySelector('button.primary')).animationName==='none';
+            hideAppBanner();
+            return ok;
+        }''')
+        page.emulate_media(reduced_motion='no-preference')
 
 class Climate(Group):
     """氣候與表現：個人距離曲線、溫度估計值退回、越野校正開關。"""
