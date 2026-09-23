@@ -1510,6 +1510,20 @@
     #topbar,.topbar-row2,.quick-nav{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--paper);}
     .drawer-overlay,.global-dropzone-overlay{backdrop-filter:none;-webkit-backdrop-filter:none;}
   }
+  /* ---- iPhone 狀態列（v3.90.0）----
+     網站設定了 viewport-fit=cover＋半透明狀態列，從主畫面開啟時內容會延伸
+     到狀態列底下（這樣才能滿版），但原本整份 CSS 沒有任何地方預留狀態列
+     的高度：標題「賽事紀錄」被狀態列的時間蓋住（使用者截圖），全螢幕視窗
+     的標題與「×」也在狀態列底下、很難點到。
+     高度統一放在 --sat，桌機上是 0，完全不受影響；測試可以把它設成 47px
+     模擬 iPhone。
+     頂端列用「上邊框」加高而不是改內距：頂端列在不同狀態（捲動後變精簡）
+     有不同的內距，用邊框不管哪種狀態都是額外加上去；背景預設會延伸到邊框
+     底下，所以顏色跟頂端列一樣。捲動容器的邊框不會跟著捲，內容也不會捲到
+     狀態列底下。 ---- */
+  :root{--sat:env(safe-area-inset-top,0px);}
+  #topbar{border-top:var(--sat) solid transparent;}
+  .training-overlay,.hof-overlay,.fatigue-overlay{border-top:var(--sat) solid transparent;}
   /* 安全模式：?safe=fx 關掉所有動畫與特效、?safe=img 不顯示圖片 */
   [data-safe~="fx"] *,[data-safe~="fx"] *::before,[data-safe~="fx"] *::after{
     animation:none!important;transition:none!important;filter:none!important;
@@ -2644,6 +2658,11 @@
     border-radius:3px;background:var(--surface);color:var(--ink);resize:vertical;margin-bottom:8px;
   }
   .paste-error{color:var(--flag);font-size:calc(13px*var(--fs,1));min-height:18px;margin:0 0 8px;}
+  /* iPhone 狀態列：這三條要放在樣式表最後面——它們原本的位置規則寫在比較
+     後面，放在前面會被蓋掉（測試抓到：「×」按鈕完全沒有往下移） */
+  .hof-close{top:calc(16px + var(--sat));}
+  .story-progress-row{padding-top:calc(12px + var(--sat));}
+  .story-close-btn{top:calc(20px + var(--sat));}
 </style>
 </head>
 <body>
@@ -3482,7 +3501,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.88.0';
+const APP_VERSION='v3.90.0';
 
 /* ============================================================
    多語系（i18n）
@@ -4945,7 +4964,7 @@ function hasExampleRaces(){
 // 範例洗掉。
 function clearExampleRaces(){
   const before=state.races.length;
-  state.races=state.races.filter(r=>!EXAMPLE_RACE_IDS.includes(r.id));
+  keepRaces(r=>!EXAMPLE_RACE_IDS.includes(r.id));
   const removed=before-state.races.length;
   if(state.selectedId&&EXAMPLE_RACE_IDS.includes(state.selectedId)){
     state.selectedId=null;currentRace=null;
@@ -5156,10 +5175,66 @@ function mergeGlobalListsIntoState(cloud){
     });
   }
 }
+/* ============================================================
+   增量同步（v3.89.0）。原本每次打開網站（已登入）都會：下載全部賽事 →
+   replaceAll 為了找要刪的再下載全部 → 整份重新上傳；每改一個欄位也跑一次
+   同樣的流程。資料大多是封面與相簿照片，iPhone Safari 分頁記憶體撐不住，
+   使用者回報「登入就打不開、登出就正常」。
+   改成：記住雲端每場賽事的版本（updatedAt），只上傳本機版本不一樣的；
+   打開網站時只下載上次同步之後有更新的（多往前抓一天，容忍不同裝置的
+   時鐘誤差）；雲端刪除只接受明確的「永久刪除」動作，不用「本機沒有」
+   去推測（本機資料要是被清掉，那樣會把雲端也刪光）。
+   同步狀態跟賽事一樣存在 IndexedDB：要被清就一起被清，不會只剩一邊。
+   ============================================================ */
+const CLOUD_SYNC_STATE_KEY='cloud-sync-state-v1';
+let cloudKnown=null;          // {since, races:{id:updatedAt}, trainings:{id:updatedAt}}；null＝還沒跟雲端對過
+let cloudPendingDeletes=[];   // 永久刪除、還沒從雲端刪掉的賽事 id
+let cloudSyncRunning=false, cloudSyncQueued=false;
+async function loadCloudSyncStore(){
+  try{ const st=await loadJson(CLOUD_SYNC_STATE_KEY,null); return st&&typeof st==='object'?st:{byUid:{},pendingDeletes:[]}; }
+  catch(e){ return {byUid:{},pendingDeletes:[]}; }
+}
+async function saveCloudSyncStore(){
+  try{
+    const st=await loadCloudSyncStore();
+    st.byUid=st.byUid||{};
+    if(state.user&&cloudKnown) st.byUid[state.user.uid]=cloudKnown;
+    st.pendingDeletes=cloudPendingDeletes.slice();
+    await saveJson(CLOUD_SYNC_STATE_KEY,st);
+  }catch(e){ console.error('同步狀態儲存失敗',e); }
+}
+// 永久刪除賽事：除了從本機拿掉，還要記下 id，下次同步時從雲端刪掉
+function keepRaces(keepFn){
+  const removed=state.races.filter(r=>!keepFn(r)).map(r=>r.id);
+  state.races=state.races.filter(keepFn);
+  if(removed.length){
+    removed.forEach(id=>{ if(!cloudPendingDeletes.includes(id)) cloudPendingDeletes.push(id); });
+    saveCloudSyncStore();
+  }
+}
 async function cloudSyncAllRaces(){
   if(!state.user||!cloudEnabled()) return;
+  // 還沒跟雲端對過（登入流程還在跑）就先不動；登入流程合併完會自己呼叫
+  if(!cloudKnown) return;
+  if(cloudSyncRunning){ cloudSyncQueued=true; return; }
+  cloudSyncRunning=true;
   try{
-    const pushResult=await window.__cloud.replaceAll(state.user.uid,state.races);
+    const known=cloudKnown.races;
+    const changed=state.races.filter(r=>known[r.id]!==(r.updatedAt||''));
+    const deleteIds=cloudPendingDeletes.slice();
+    let pushResult=null;
+    if(changed.length||deleteIds.length){
+      pushResult=await window.__cloud.upsertRaces(state.user.uid,changed,deleteIds);
+      const skipped=new Set(((pushResult&&pushResult.oversized)||[]).map(x=>x.race.id));
+      changed.forEach(r=>{
+        if(skipped.has(r.id)) return;
+        known[r.id]=r.updatedAt||'';
+        if((r.updatedAt||'')>(cloudKnown.since||'')) cloudKnown.since=r.updatedAt;
+      });
+      deleteIds.forEach(id=>{ delete known[id]; });
+      cloudPendingDeletes=cloudPendingDeletes.filter(id=>!deleteIds.includes(id));
+      await saveCloudSyncStore();
+    }
     // 有賽事因為自己就超過單一文件上限被跳過時一定要講出來，否則使用者
     // 會以為整包都上去了，直到換一台裝置才發現少了幾場。
     if(pushResult&&pushResult.oversized&&pushResult.oversized.length){
@@ -5180,6 +5255,9 @@ async function cloudSyncAllRaces(){
       cloudSyncHasError=true;
       renderAuthArea();
     }
+  }finally{
+    cloudSyncRunning=false;
+    if(cloudSyncQueued){ cloudSyncQueued=false; cloudSyncAllRaces(); }
   }
 }
 let pendingSyncOverwriteNotice=0;
@@ -5442,12 +5520,44 @@ async function handleAuthChange(user){
     if(localDataReady) await localDataReady;
     if(signInAttemptInFlight){ signInAttemptInFlight=false; logFeatureUse('auth_google_signin'); }
     try{
-      const cloudRaces=await window.__cloud.fetchAll(user.uid);
+      const store=await loadCloudSyncStore();
+      // 合併、不要覆蓋：永久刪除時的儲存是非同步的，登入時可能還沒寫完；
+      // 直接用儲存的版本蓋掉記憶體裡的清單，剛刪的賽事就會被雲端那份「復活」
+      // （測試抓到的）
+      cloudPendingDeletes=[...new Set([...cloudPendingDeletes,...(Array.isArray(store.pendingDeletes)?store.pendingDeletes:[])])];
+      const prior=store.byUid&&store.byUid[user.uid];
+      const localIds=new Set(state.races.map(r=>r.id));
+      // 增量下載的前提：上次同步過、而且上次知道的每一場本機都還在。本機少了
+      // 任何一場（資料被清過）就改成完整下載，把缺的補回來。
+      const canIncremental=!!(prior&&prior.since&&prior.races
+        &&Object.keys(prior.races).every(id=>localIds.has(id)||cloudPendingDeletes.includes(id)));
+      let cloudRaces;
+      if(canIncremental){
+        const since=new Date(new Date(prior.since).getTime()-86400000).toISOString();
+        cloudRaces=await window.__cloud.fetchChangedSince(user.uid,since);
+        cloudKnown={since:prior.since,races:Object.assign({},prior.races),trainings:Object.assign({},prior.trainings||{})};
+      }else{
+        cloudRaces=await window.__cloud.fetchAll(user.uid);
+        cloudKnown={since:'',races:{},trainings:Object.assign({},(prior&&prior.trainings)||{})};
+      }
+      // 本機已經永久刪除、還沒從雲端刪掉的，不要合併回來（不然會「復活」）
+      cloudRaces=cloudRaces.filter(r=>!cloudPendingDeletes.includes(r.id));
+      cloudRaces.forEach(r=>{
+        cloudKnown.races[r.id]=r.updatedAt||'';
+        if((r.updatedAt||'')>(cloudKnown.since||'')) cloudKnown.since=r.updatedAt;
+      });
+      if(!cloudKnown.since) cloudKnown.since=new Date(0).toISOString();
+      const before=new Map(state.races.map(r=>[r.id,r.updatedAt||'']));
       pendingSyncOverwriteNotice=0;
       await mergeCloudAndLocal(cloudRaces);
-      await persist();
-      await cloudSyncAllRaces();
-      renderAll();
+      cloudRaces=null;   // 讓大量圖片資料可以盡早被回收
+      const localChanged=state.races.length!==before.size||state.races.some(r=>before.get(r.id)!==(r.updatedAt||''));
+      await saveCloudSyncStore();
+      if(localChanged){
+        try{ await saveJson(STORAGE_KEY,state.races); }catch(e){ console.error('本機儲存失敗',e); showStorageError(); }
+      }
+      await cloudSyncAllRaces();   // 只上傳本機比較新或雲端沒有的
+      if(localChanged) renderAll();
       if(pendingSyncOverwriteNotice>0) showSyncOverwriteNotice(pendingSyncOverwriteNotice);
     }catch(err){
       console.error('雲端資料讀取失敗',err);
@@ -5472,11 +5582,13 @@ async function handleAuthChange(user){
     try{
       if(window.__cloud.fetchTrainings){
         const cloudTrainings=await window.__cloud.fetchTrainings(user.uid);
+        if(cloudKnown){ cloudKnown.trainings={}; cloudTrainings.forEach(x=>{ cloudKnown.trainings[x.id]=x.updatedAt||''; }); }
+        const before=new Map(trainings.map(x=>[x.id,x.updatedAt||'']));
         mergeTrainings(cloudTrainings);
-        await saveJson(TRAININGS_KEY,trainings);
+        const changed=trainings.length!==before.size||trainings.some(x=>before.get(x.id)!==(x.updatedAt||''));
+        if(changed) await saveJson(TRAININGS_KEY,trainings);
         await cloudSyncTrainings();
-        refreshTrainingOverlay();
-        if(currentRace) renderDetailKeepOpen();
+        if(changed){ refreshTrainingOverlay(); if(currentRace) renderDetailKeepOpen(); }
       }
     }catch(err){
       console.error('訓練紀錄雲端讀取失敗',err);
@@ -7199,7 +7311,7 @@ function showBadgeUnboxing(badgeId){
 function purgeOldTrash(){
   const cutoff=Date.now()-TRASH_RETENTION_DAYS*86400000;
   const before=state.races.length;
-  state.races=state.races.filter(r=>!(r.deletedAt&&new Date(r.deletedAt).getTime()<cutoff));
+  keepRaces(r=>!(r.deletedAt&&new Date(r.deletedAt).getTime()<cutoff));
   return before!==state.races.length;
 }
 function recoveryCount(){
@@ -15040,9 +15152,20 @@ async function persistTrainings(){
   trainingCloudTimer=setTimeout(()=>{ cloudSyncTrainings(); },1000);
 }
 async function cloudSyncTrainings(){
-  if(!state.user||!cloudEnabled()||!window.__cloud||!window.__cloud.replaceTrainings) return;
-  try{ await window.__cloud.replaceTrainings(state.user.uid,trainings); }
-  catch(err){ console.error('訓練紀錄雲端同步失敗',err); }
+  if(!state.user||!cloudEnabled()||!window.__cloud||!window.__cloud.upsertTrainingMonths) return;
+  if(!cloudKnown) return;   // 登入流程還沒跟雲端對過
+  try{
+    const tk=cloudKnown.trainings||(cloudKnown.trainings={});
+    const changed=trainings.filter(x=>tk[x.id]!==(x.updatedAt||''));
+    if(!changed.length) return;
+    // 只重寫有變動的月份（一個月一份文件，內容是那個月的全部訓練）
+    const months=new Set(changed.map(x=>(x.date||'').slice(0,7)||'unknown'));
+    const byMonth={};
+    trainings.forEach(x=>{ const m=(x.date||'').slice(0,7)||'unknown'; if(months.has(m)) (byMonth[m]=byMonth[m]||[]).push(x); });
+    await window.__cloud.upsertTrainingMonths(state.user.uid,byMonth);
+    changed.forEach(x=>{ tk[x.id]=x.updatedAt||''; });
+    await saveCloudSyncStore();
+  }catch(err){ console.error('訓練紀錄雲端同步失敗',err); }
 }
 // 雲端與本機合併：同一筆以 updatedAt 新的為準（刪除也是一種更新，
 // 靠 deletedAt 這個「墓碑」跨裝置傳遞，不然 A 裝置刪掉的會被 B 裝置
@@ -19739,7 +19862,7 @@ function restoreDeletedRace(id){
   persist();renderAll();renderRecoveryButton();openRecoveryModal();
 }
 function purgeDeletedRace(id){
-  state.races=state.races.filter(x=>x.id!==id);
+  keepRaces(x=>x.id!==id);
   recoveryConfirmPurgeAll=false;
   persist();renderRecoveryButton();openRecoveryModal();
 }
@@ -19769,7 +19892,7 @@ function purgeAllDeletedRaces(){
   }
   resetPurgeAllConfirm();
   // 只刪掉真的在垃圾桶裡的（有 deletedAt 的），沒刪除的賽事一律不動。
-  state.races=state.races.filter(r=>!r.deletedAt);
+  keepRaces(r=>!r.deletedAt);
   persist();renderRecoveryButton();openRecoveryModal();
   showToast(tf('ui.recoveryPurgedAll','已永久刪除 {n} 場賽事',count));
 }
@@ -21519,7 +21642,7 @@ init();
     getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
   import {
-    getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, writeBatch, increment
+    getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, writeBatch, increment, query, where
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
   import {
     getMessaging, getToken, onMessage
@@ -21567,6 +21690,42 @@ init();
     async fetchAll(uid){
       const snap=await getDocs(racesCol(uid));
       return snap.docs.map(d=>d.data());
+    },
+    /* 只抓 updatedAt 晚於 since 的賽事（v3.89.0）。原本每次打開網站都把
+       全部賽事（連同封面與相簿照片）下載一次，iPhone Safari 分頁記憶體撐
+       不住（使用者回報「登入就打不開、登出就正常」）。updatedAt 是 ISO
+       字串，字典序就是時間順序。 */
+    async fetchChangedSince(uid,sinceIso){
+      const snap=await getDocs(query(racesCol(uid),where('updatedAt','>',sinceIso)));
+      return snap.docs.map(d=>d.data());
+    },
+    /* 只寫入有變的賽事、只刪除指定的 id（v3.89.0）。replaceAll 為了找出
+       「雲端上要刪掉的賽事」會先把全部賽事再下載一次、然後整份重新上傳，
+       每改一個欄位就這樣跑一輪——這裡不下載任何東西。 */
+    async upsertRaces(uid,races,deleteIds){
+      const ids=deleteIds||[];
+      for(let i=0;i<ids.length;i+=FS_BATCH_OPS){
+        const batch=writeBatch(db);
+        ids.slice(i,i+FS_BATCH_OPS).forEach(id=>batch.delete(doc(racesCol(uid),id)));
+        await batch.commit();
+      }
+      const {chunks,oversized}=chunkRacesForSync(races||[]);
+      for(const chunk of chunks){
+        const batch=writeBatch(db);
+        chunk.forEach(r=>batch.set(doc(racesCol(uid), r.id), r));
+        await batch.commit();
+      }
+      return {batches:chunks.length,oversized};
+    },
+    // 訓練紀錄：只寫入有變的月份（不先下載全部月份）
+    async upsertTrainingMonths(uid,byMonth){
+      const col=collection(db,'users',uid,'trainings');
+      const months=Object.keys(byMonth||{});
+      for(let i=0;i<months.length;i+=20){
+        const batch=writeBatch(db);
+        months.slice(i,i+20).forEach(m=>batch.set(doc(col,m),{items:byMonth[m],updatedAt:new Date().toISOString()}));
+        await batch.commit();
+      }
     },
     // 分批送出，原因與門檻見 chunkRacesForSync() 上面的說明。回傳
     // 被跳過的賽事，呼叫端負責告訴使用者是哪幾場、為什麼。

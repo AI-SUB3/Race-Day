@@ -1150,6 +1150,27 @@ class Radar(Group):
         back = page.evaluate("()=>document.querySelector('.race-radar').classList.contains('is-compact')")
         c['radar_switches_layout_on_window_resize'] = (wide is False) and (narrow is True) and (back is False)
 
+# 假的雲端：記錄每一次呼叫、模擬雲端上的賽事與訓練紀錄（測增量同步用）
+FAKE_CLOUD_JS = r'''window.__makeFakeCloud=function(initialRaces,initialTrainings){
+  const store={races:new Map((initialRaces||[]).map(r=>[r.id,JSON.parse(JSON.stringify(r))])),
+               trainings:(initialTrainings||[]).map(x=>JSON.parse(JSON.stringify(x)))};
+  const log=[];
+  const fc={enabled:true,log,store,
+    async fetchAll(uid){ log.push(['fetchAll']); return [...store.races.values()].map(r=>JSON.parse(JSON.stringify(r))); },
+    async fetchChangedSince(uid,since){ log.push(['fetchChangedSince',since]); return [...store.races.values()].filter(r=>(r.updatedAt||'')>since).map(r=>JSON.parse(JSON.stringify(r))); },
+    async upsertRaces(uid,races,del){ log.push(['upsertRaces',races.map(r=>r.id),del||[]]); (del||[]).forEach(id=>store.races.delete(id)); races.forEach(r=>store.races.set(r.id,JSON.parse(JSON.stringify(r)))); return {batches:1,oversized:[]}; },
+    async replaceAll(){ log.push(['replaceAll']); return {batches:1,oversized:[]}; },
+    async fetchGlobalLists(){ return null; },
+    async syncGlobalLists(){ log.push(['syncGlobalLists']); },
+    async fetchTrainings(){ log.push(['fetchTrainings']); return store.trainings.map(x=>JSON.parse(JSON.stringify(x))); },
+    async upsertTrainingMonths(uid,byMonth){ log.push(['upsertTrainingMonths',Object.keys(byMonth).sort()]); },
+    async replaceTrainings(){ log.push(['replaceTrainings']); },
+    onAuthChange(){}, signIn(){}, signOut(){},
+  };
+  return fc;
+};
+'''
+
 class Sync(Group):
     """雲端合併規則：本機優先，永不覆蓋本機已有值。"""
 
@@ -1224,15 +1245,100 @@ class Sync(Group):
         c['sync_reports_skipped_races_to_user'] = page.evaluate('''async()=>{
             const realCloud=window.__cloud, realUser=state.user;
             state.user={uid:'u1'};
+            // v3.89 起改走只上傳有變的 upsertRaces；要有一場「跟雲端版本不同」的賽事才會上傳
+            const realKnown=cloudKnown, realRaces=state.races;
             window.__cloud={enabled:true,
-              replaceAll:async()=>({batches:1,oversized:[{race:{name:'爆量賽事'},size:2000000}]}),
+              upsertRaces:async()=>({batches:1,oversized:[{race:{id:'big',name:'爆量賽事'},size:2000000}]}),
               syncGlobalLists:async()=>{}, logFeatureUse:async()=>{}};
+            cloudKnown={since:'',races:{},trainings:{}};
+            state.races=[Object.assign(emptyRace('爆量賽事','road_running','completed','2025-01-01'),{id:'big',updatedAt:'2026-01-01T00:00:00Z'})];
             document.querySelectorAll('.foreground-toast').forEach(n=>n.remove());
-            try{ await cloudSyncAllRaces(); }finally{ window.__cloud=realCloud; state.user=realUser; }
+            try{ await cloudSyncAllRaces(); }finally{ window.__cloud=realCloud; state.user=realUser; cloudKnown=realKnown; state.races=realRaces; }
             await new Promise(s=>setTimeout(s,200));
             const txt=[...document.querySelectorAll('.foreground-toast')].map(n=>n.textContent).join(' ');
             return txt.includes('爆量賽事') && txt.includes('1');
         }''')
+        # ---- 增量同步（v3.89.0：iPhone「登入就打不開」） ----
+        page.add_script_tag(content=FAKE_CLOUD_JS)
+        SETUP = '''const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const mk=(id,t)=>Object.assign(emptyRace('賽事'+id,'road_running','completed','2025-01-01'),{id,updatedAt:t});
+            const A=mk('a','2026-09-01T00:00:00.000Z'), B=mk('b','2026-09-02T00:00:00.000Z'), C=mk('c','2026-09-03T00:00:00.000Z');
+            const fresh=async(local,cloudRaces,tr)=>{ await saveJson('cloud-sync-state-v1',null); cloudKnown=null; cloudPendingDeletes=[];
+              state.races=local.map(r=>JSON.parse(JSON.stringify(r))); trainings=(tr||[]).map(x=>migrateTraining(JSON.parse(JSON.stringify(x))));
+              const c=__makeFakeCloud(cloudRaces,tr||[]); window.__cloud=c; return c; };'''
+        c['sync_first_sign_in_no_reupload'] = page.evaluate('''async()=>{ %s
+            const cloud=await fresh([A,B,C],[A,B,C]);
+            await handleAuthChange({uid:'u1'}); await wait(1200);
+            const kinds=cloud.log.map(x=>x[0]);
+            // 完整下載只有一次；沒有 replaceAll（會再下載全部）、沒有上傳任何賽事
+            const ok=kinds.filter(k=>k==='fetchAll').length===1 && !kinds.includes('replaceAll')
+              && !kinds.includes('upsertRaces') && !kinds.includes('upsertTrainingMonths');
+            window.__cloud=null; state.user=null; return ok;
+        }''' % SETUP)
+        c['sync_second_open_is_incremental'] = page.evaluate('''async()=>{ %s
+            const cloud=await fresh([A,B,C],[A,B,C]);
+            await handleAuthChange({uid:'u1'}); await wait(1200); cloud.log.length=0;
+            cloudKnown=null; await handleAuthChange({uid:'u1'}); await wait(1200);
+            const f=cloud.log.find(x=>x[0]==='fetchChangedSince');
+            // 只抓最新版本往前一天之後的（容忍不同裝置的時鐘誤差）
+            const ok=!!f && f[1].slice(0,10)==='2026-09-02' && !cloud.log.some(x=>x[0]==='fetchAll'||x[0]==='upsertRaces');
+            window.__cloud=null; state.user=null; return ok;
+        }''' % SETUP)
+        c['sync_edit_uploads_only_that_race'] = page.evaluate('''async()=>{ %s
+            const cloud=await fresh([A,B,C],[A,B,C]);
+            await handleAuthChange({uid:'u1'}); await wait(1200); cloud.log.length=0;
+            const b=state.races.find(r=>r.id==='b'); b.name='改名'; b.updatedAt=new Date().toISOString();
+            await persist(); await wait(1300);
+            const ok=JSON.stringify(cloud.log)===JSON.stringify([['upsertRaces',['b'],[]]]);
+            window.__cloud=null; state.user=null; return ok;
+        }''' % SETUP)
+        c['sync_permanent_delete_only_that_race'] = page.evaluate('''async()=>{ %s
+            const cloud=await fresh([A,B,C],[A,B,C]);
+            await handleAuthChange({uid:'u1'}); await wait(1200); cloud.log.length=0;
+            keepRaces(r=>r.id!=='c'); await persist(); await wait(1300);
+            const ok=JSON.stringify(cloud.log)===JSON.stringify([['upsertRaces',[],['c']]])
+              && [...cloud.store.races.keys()].sort().join()==='a,b' && cloudPendingDeletes.length===0;
+            window.__cloud=null; state.user=null; return ok;
+        }''' % SETUP)
+        # 本機資料被清掉、同步紀錄還在：必須完整下載補回，絕對不可以刪雲端
+        c['sync_wiped_local_never_deletes_cloud'] = page.evaluate('''async()=>{ %s
+            const cloud=await fresh([A,B,C],[A,B,C]);
+            await handleAuthChange({uid:'u1'}); await wait(1200); cloud.log.length=0;
+            state.races=[]; cloudKnown=null;
+            await handleAuthChange({uid:'u1'}); await wait(1300);
+            const deletes=cloud.log.filter(x=>x[0]==='upsertRaces').flatMap(x=>x[2]);
+            const ok=cloud.log.some(x=>x[0]==='fetchAll') && deletes.length===0
+              && state.races.map(r=>r.id).sort().join()==='a,b,c' && cloud.store.races.size===3;
+            window.__cloud=null; state.user=null; return ok;
+        }''' % SETUP)
+        # 沒登入時永久刪除：登入後不可以被雲端那份「復活」，而且要從雲端刪掉
+        c['sync_offline_delete_not_resurrected'] = page.evaluate('''async()=>{ %s
+            await saveJson('cloud-sync-state-v1',null); cloudKnown=null; cloudPendingDeletes=[];
+            state.user=null; state.races=[A,B,C].map(r=>JSON.parse(JSON.stringify(r)));
+            keepRaces(r=>r.id!=='a');
+            const cloud=__makeFakeCloud([A,B,C],[]); window.__cloud=cloud;
+            await handleAuthChange({uid:'u1'}); await wait(1300);
+            const ok=state.races.map(r=>r.id).sort().join()==='b,c' && [...cloud.store.races.keys()].sort().join()==='b,c';
+            window.__cloud=null; state.user=null; return ok;
+        }''' % SETUP)
+        c['sync_local_only_race_pushed'] = page.evaluate('''async()=>{ %s
+            const D=mk('d','2026-09-10T00:00:00.000Z');
+            const cloud=await fresh([A,B,D],[A,B]);
+            await handleAuthChange({uid:'u1'}); await wait(1300);
+            const ok=JSON.stringify(cloud.log.filter(x=>x[0]==='upsertRaces'))===JSON.stringify([['upsertRaces',['d'],[]]]);
+            window.__cloud=null; state.user=null; return ok;
+        }''' % SETUP)
+        c['sync_trainings_only_changed_month'] = page.evaluate('''async()=>{ %s
+            const T=[{id:'t1',date:'2026-08-05',updatedAt:'2026-08-05T00:00:00.000Z'},{id:'t2',date:'2026-09-06',updatedAt:'2026-09-06T00:00:00.000Z'}];
+            const cloud=await fresh([A],[A],T);
+            await handleAuthChange({uid:'u1'}); await wait(1200);
+            const noUploadOnOpen=!cloud.log.some(x=>x[0]==='upsertTrainingMonths'||x[0]==='replaceTrainings');
+            cloud.log.length=0;
+            const t2=trainings.find(x=>x.id==='t2'); t2.shoeId='s1'; t2.updatedAt=new Date().toISOString();
+            await persistTrainings(); await wait(1400);
+            const ok=noUploadOnOpen && JSON.stringify(cloud.log)===JSON.stringify([['upsertTrainingMonths',['2026-09']]]);
+            window.__cloud=null; state.user=null; return ok;
+        }''' % SETUP)
         c['malformed_cloud_payload_safe'] = page.evaluate('''()=>{
             try{
                 mergeGlobalListsIntoState(null);
@@ -1424,6 +1530,28 @@ class Mobile(Group):
         _src=_pl.Path(APP).read_text(encoding='utf-8')
         c['calendar_thumbs_lazy_load'] = ('class="cal-chip-thumb"' in _src and 'class="cal-list-thumb"' in _src
             and all('loading="lazy"' in seg.split('>')[0] for seg in _src.split('<img class="cal-')[1:3]))
+        # ---- iPhone 狀態列：內容不可以被狀態列蓋住（v3.90.0，使用者截圖：標題被時間蓋住） ----
+        c['content_clears_status_bar'] = page.evaluate('''async()=>{
+            const root=document.documentElement;
+            const measure=async()=>{ await new Promise(s=>setTimeout(s,150));
+              const h1=document.querySelector('#topbar h1');
+              openTrainingOverlay(); await new Promise(s=>setTimeout(s,150));
+              const tr=document.querySelector('#training-overlay h2');
+              const r={title:h1.getBoundingClientRect().top, training:tr.getBoundingClientRect().top};
+              closeTrainingOverlay();
+              const probe=cls=>{ const el=document.createElement('button'); el.className=cls; document.body.appendChild(el);
+                const v=parseFloat(getComputedStyle(el).top); el.remove(); return v; };
+              r.hofClose=probe('hof-close'); r.storyClose=probe('story-close-btn');
+              return r; };
+            const none=await measure();
+            root.style.setProperty('--sat','47px');
+            const bar=await measure();
+            root.style.removeProperty('--sat');
+            // 有狀態列時全部剛好往下讓出 47px；沒有時維持原位（桌機的 env() 是 0）
+            const d=k=>Math.round(bar[k]-none[k]);
+            return d('title')===47 && d('training')===47 && d('hofClose')===47 && d('storyClose')===47
+                && none.hofClose===16 && none.storyClose===20;
+        }''')
         c['pinch_zoom_blocked'] = page.evaluate('''()=>{
             const e=new Event('gesturestart',{cancelable:true,bubbles:true});
             document.dispatchEvent(e);
@@ -3808,14 +3936,17 @@ class Training(Group):
             return !!g('m1').deletedAt && g('m2').distanceKm===8 && !!g('m3') && liveTrainings().length===2;
         }''')
         c['persist_schedules_cloud_push'] = page.evaluate('''async()=>{
+            // v3.89 起只上傳有變的月份：雲端還一筆都沒有時，每個有訓練的月份都要上傳
             let pushed=null;
-            const realCloud=window.__cloud, realUser=state.user;
-            window.__cloud=Object.assign({},realCloud||{},{enabled:true,replaceTrainings:async(uid,list)=>{ pushed={uid,n:list.length}; }});
-            state.user={uid:'u1'};
+            const realCloud=window.__cloud, realUser=state.user, realKnown=cloudKnown;
+            window.__cloud=Object.assign({},realCloud||{},{enabled:true,upsertTrainingMonths:async(uid,byMonth)=>{
+              pushed={uid,months:Object.keys(byMonth).length,n:Object.values(byMonth).reduce((a,x)=>a+x.length,0)}; }});
+            state.user={uid:'u1'}; cloudKnown={since:'',races:{},trainings:{}};
             await persistTrainings();
             await new Promise(s=>setTimeout(s,1300));
-            window.__cloud=realCloud; state.user=realUser;
-            return !!pushed && pushed.uid==='u1' && pushed.n===trainings.length;
+            window.__cloud=realCloud; state.user=realUser; cloudKnown=realKnown;
+            const months=new Set(trainings.map(x=>(x.date||'').slice(0,7)||'unknown')).size;
+            return !!pushed && pushed.uid==='u1' && pushed.n===trainings.length && pushed.months===months;
         }''')
 
         # ---- 依賽事建議準備週期與減量週數（v3.81.0） ----
