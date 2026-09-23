@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.81.0
+> 貼到新對話開頭即可接續。最後更新：v3.84.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（314 項檢查，18 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（329 項檢查，18 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -131,6 +131,9 @@ APP=/path/to/index.html python3 test_suite.py
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
 | 功能因缺資料而不出現時，要說原因 | 「選項消失」跟「功能壞掉」在畫面上一樣。分享選項灰掉＋標原因（v3.61）、照片略過清單（v3.38）、氣象沒軌跡的說明（v3.71）都是同一條 |
 | 預報不可以佔用「實際值」欄位 | 回填一律只填空欄位。預報先填了 `raceDayWeather.feelsLikeTempC`，賽後歷史天氣就補不進真正的實測值。預報只填 `climateForecast.*` |
+| 多項運動分段推算只是退路 | FIT 有多個 session 一律用 `buildRaceLegs()`（手錶記的、精確）；只有 1 個 session 才推算：二鐵 `inferRunBikeRunLegs()`、三鐵 `inferSwimBikeRunLegs()`，共用 `analyzeSpeedProfile()`，依 `sportType` 選用。推算的分段標 `inferred:true`；推算的游泳距離一律 null |
+| 游泳分段每 100 公尺、距離用手錶的 | `computeSwimSplitsFromPoints()` 優先用 record 欄位 5（`p.dist`）。中位數快於 50 秒／100m 視為 GPS 亂跳、整段不列（`leg.swimGpsRejected`）。推算的游泳段不算分段。雷達不納入游泳 |
+| 多項運動的分段表與雷達一律依分段算 | `leg.splits`（匯入時每段各自算）；舊資料用 `legSplitGroups()` 依時間歸組、跨交界的略過。心率區間用 `hrZoneInfoForRace(hr,race,legSport)`，不要用整場的運動種類 |
 | **不可以用正規表示式向後查找** | iOS Safari 16.4 以前不支援，整支程式直接語法錯誤、網站打不開。有靜態檢查 `no_regex_lookbehind_for_old_ios` |
 | 準備週期／減量週數：建議值即時算、不寫進資料 | `effectivePrepWeeks()`／`effectiveTaperWeeks()`：使用者填的 > `TRAINING_PERIOD_TABLE` > 12 週。不要自動填 `taperStartDate`（徽章會自動成立） |
 | 訓練頁「全部」只畫展開中的月份 | `trainingOpenYears`／`trainingOpenMonths`（記憶體，開頁與匯入後重置）。寫測試要點某一列前，先把那個月份展開 |

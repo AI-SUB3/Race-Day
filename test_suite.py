@@ -707,6 +707,64 @@ class SportUnits(Group):
         }''')
 
 
+# 依速度剖面產生 FIT（單一或多個 session），用來測二鐵分段推算。
+FIT_PROFILE_GENERATOR_JS = r'''// 依速度剖面產生 FIT：每 2 秒一個點、直線前進。segments:[{sec,kmh,hr}]；
+// sessions 不給＝整場單一 session（模擬手錶用「跑步」單一模式錄完）；
+// 給了就依 [{sport, fromSeg, toSeg}] 寫多個 session（模擬多項運動模式）。
+window.__makeFitProfile=function(opt){
+  const FIT_EPOCH=Date.UTC(1989,11,31,0,0,0)/1000;
+  const start=Math.round(opt.start.getTime()/1000)-FIT_EPOCH;
+  const bytes=[]; const u8=v=>bytes.push(v&255); const u16=v=>{u8(v);u8(v>>8);}; const u32=v=>{u8(v);u8(v>>8);u8(v>>16);u8(v>>24);};
+  // withDist：多寫 record 欄位 5（手錶記的累計距離）；segments[i].noise：座標加上
+  // 左右亂跳的雜訊（公尺），模擬開放水域游泳時斷斷續續的 GPS——距離欄位不受影響
+  const fields=[[253,4,0x86],[0,4,0x85],[1,4,0x85],[2,2,0x84],[3,1,0x02]];
+  if(opt.withDist) fields.push([5,4,0x86]);
+  u8(0x40);u8(0);u8(0);u16(20);u8(fields.length);
+  fields.forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
+  let lat=24.98, lon=121.53, t=0, dist=0; const segBounds=[]; let seed=7;
+  const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280-0.5; };
+  const toSc=d=>Math.round(d*Math.pow(2,31)/180);
+  opt.segments.forEach((sg,si)=>{
+    const from={t,dist};
+    for(let s=0;s<sg.sec;s+=2){
+      const m=sg.kmh/3.6*2; dist+=m;
+      const heading=(si%2?0.3:0.9);
+      lat+=Math.cos(heading)*m/111320; lon+=Math.sin(heading)*m/(111320*Math.cos(lat*Math.PI/180));
+      t+=2;
+      const nz=sg.noise||0, jl=rnd()*nz/111320, jo=rnd()*nz/111320;
+      u8(0x00); u32(start+t); u32(toSc(lat+jl)>>>0); u32(toSc(lon+jo)>>>0); u16(Math.round((20+500)*5)); u8(sg.hr||150);
+      if(opt.withDist) u32(Math.round(dist*100));
+    }
+    segBounds.push({from,to:{t,dist}});
+  });
+  u8(0x41);u8(0);u8(0);u16(18);u8(7);
+  [[2,4,0x86],[253,4,0x86],[5,1,0x00],[7,4,0x86],[9,4,0x86],[16,1,0x02],[22,2,0x84]].forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
+  const sessions=opt.sessions||[{sport:1,fromSeg:0,toSeg:opt.segments.length-1}];
+  sessions.forEach(ss=>{
+    const a=segBounds[ss.fromSeg].from, b=segBounds[ss.toSeg].to;
+    u8(0x01); u32(start+a.t); u32(start+b.t); u8(ss.sport); u32((b.t-a.t)*1000); u32(Math.round((b.dist-a.dist)*100)); u8(150); u16(0);
+  });
+  const data=new Uint8Array(bytes); const out=new Uint8Array(14+data.length); const dv=new DataView(out.buffer);
+  dv.setUint8(0,14); dv.setUint8(1,0x10); dv.setUint16(2,2093,true); dv.setUint32(4,data.length,true);
+  out[8]=46;out[9]=70;out[10]=73;out[11]=84; out.set(data,14);
+  return new File([out],opt.name||'profile.fit',{type:'application/octet-stream'});
+};
+window.__DUATHLON_SEGMENTS=[
+  {sec:1224,kmh:14.7,hr:165},                    // 0 跑 5K
+  {sec:20,kmh:10,hr:160},{sec:60,kmh:1,hr:150},{sec:26,kmh:9,hr:150},   // 1-3 T1：跑進來、換裝、牽車
+  {sec:1800,kmh:33,hr:158},{sec:30,kmh:12,hr:150},{sec:1800,kmh:33,hr:158},{sec:30,kmh:12,hr:150},{sec:734,kmh:33,hr:158}, // 4-8 騎 40K（兩次折返）
+  {sec:20,kmh:15,hr:150},{sec:46,kmh:1,hr:148},{sec:10,kmh:8,hr:150},   // 9-11 T2：滑進來、換鞋、起跑
+  {sec:1276,kmh:14.1,hr:172},                    // 12 跑 5K
+];
+window.__TRIATHLON_SEGMENTS=[
+  {sec:1800,kmh:3,hr:150},                               // 0 游泳 1.5K
+  {sec:120,kmh:9,hr:160},{sec:90,kmh:1,hr:150},{sec:30,kmh:8,hr:150},   // 1-3 T1：上岸跑、換裝、牽車
+  {sec:2400,kmh:33,hr:155},{sec:30,kmh:12,hr:145},{sec:1964,kmh:33,hr:155},   // 4-6 騎 40K
+  {sec:20,kmh:15,hr:148},{sec:60,kmh:1,hr:146},{sec:10,kmh:8,hr:150},  // 7-9 T2
+  {sec:2571,kmh:14,hr:170},                              // 10 跑 10K
+];
+'''
+
 class Multisport(Group):
     """鐵人三項分項成績：FIT session → legs，各段用自己的單位。"""
 
@@ -753,6 +811,176 @@ class Multisport(Group):
             await new Promise(s=>setTimeout(s,350));
             return !document.querySelector('.leg-breakdown');
         }''')
+
+        # ---- 單一模式錄完的二鐵 FIT：依速度推算分段（v3.82.0） ----
+        page.add_script_tag(content=FIT_PROFILE_GENERATOR_JS)
+        c['duathlon_single_session_legs_inferred'] = page.evaluate('''async()=>{
+            const s=await parseActivityFile(__makeFitProfile({start:new Date('2021-05-09T07:00:00'),segments:__DUATHLON_SEGMENTS}));
+            const L=s.inferredLegs||[];
+            const near=(v,truth,tol)=>Math.abs(v-truth)<=tol;
+            return s.fitSessionCount===1 && (s.legs||[]).length===0 && L.length===5
+                && L.map(l=>l.sport).join()==='running,transition,cycling,transition,running'
+                && L.every(l=>l.inferred===true)
+                && near(L[2].durationSeconds,4394,15)            // 騎車：真實 73:14
+                && L[1].durationSeconds>=60 && L[1].durationSeconds<=120   // T1：真實 106 秒（只看得到換裝那段，會略短）
+                && L[3].durationSeconds>=45 && L[3].durationSeconds<=100   // T2：真實 76 秒
+                && near(L[0].distanceKm,5.0,0.2) && near(L[2].distanceKm,39.9,0.8) && near(L[4].distanceKm,5.0,0.2)
+                && L[0].avgHr===165 && L[2].avgHr===158 && L[4].avgHr===172;   // 心率分到對的段
+        }''')
+        # 不該拆的不可以拆：路跑中途慢走、越野下坡衝刺、純騎車、騎車前後跑太短
+        c['duathlon_inference_no_false_positives'] = page.evaluate('''async()=>{
+            const st=new Date('2021-05-09T07:00:00');
+            const inf=async segs=>(await parseActivityFile(__makeFitProfile({start:st,segments:segs}))).inferredLegs;
+            return !(await inf([{sec:1500,kmh:14},{sec:40,kmh:4},{sec:1500,kmh:14},{sec:40,kmh:4},{sec:1200,kmh:14.5}]))
+                && !(await inf([{sec:1800,kmh:8},{sec:180,kmh:22},{sec:1800,kmh:9}]))
+                && !(await inf([{sec:3600,kmh:30}]))
+                && !(await inf([{sec:60,kmh:14},{sec:3600,kmh:30},{sec:60,kmh:14}]));
+        }''')
+        # 用多項運動模式錄的檔案：照舊用手錶記的精確分段，不走推算
+        c['duathlon_multisession_uses_watch_legs'] = page.evaluate('''async()=>{
+            const s=await parseActivityFile(__makeFitProfile({start:new Date('2021-05-09T07:00:00'),segments:__DUATHLON_SEGMENTS,
+              sessions:[{sport:1,fromSeg:0,toSeg:0},{sport:3,fromSeg:1,toSeg:3},{sport:2,fromSeg:4,toSeg:8},{sport:3,fromSeg:9,toSeg:11},{sport:1,fromSeg:12,toSeg:12}]}));
+            return (s.legs||[]).length===5 && !s.inferredLegs && !s.legs.some(l=>l.inferred)
+                && s.legs[1].durationSeconds===106 && s.legs[3].durationSeconds===76;
+        }''')
+        # 套用：鐵人兩項才套推算分段；其他種類只提示
+        c['duathlon_inferred_legs_apply_only_to_duathlon'] = page.evaluate('''async()=>{
+            const run=async sport=>{
+              state.races=[];
+              const r=emptyRace('tSt 新北微風鐵人賽',sport,'completed','2021-05-09'); state.races.push(r);
+              selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,250));
+              document.querySelectorAll('.foreground-toast').forEach(n=>n.remove());
+              await importActivityFile(__makeFitProfile({start:new Date('2021-05-09T07:00:00'),segments:__DUATHLON_SEGMENTS}));
+              await new Promise(s=>setTimeout(s,500));
+              const ok=document.querySelector('[data-action="confirm-gpx-import"]');
+              if(ok){ ok.click(); await new Promise(s=>setTimeout(s,600)); }
+              document.getElementById('section-post').open=true;
+              await new Promise(s=>setTimeout(s,200));
+              return {legs:(state.races[0].legs||[]).length,
+                toast:[...document.querySelectorAll('.foreground-toast')].map(n=>n.textContent).join(' '),
+                note:!!document.querySelector('.leg-inferred-note')};
+            };
+            const du=await run('duathlon'), road=await run('road_running');
+            return du.legs===5 && du.note && du.toast.includes('依速度推算')
+                && road.legs===0 && !road.note && road.toast.includes('改成「鐵人兩項」');
+        }''')
+
+        # ---- v3.83.0：每段各自的每公里分段、雷達圖依分段計算、三鐵推算 ----
+        IMPORT = '''const importAs=async(sport,segs,sessions)=>{
+            state.races=[]; const r=emptyRace('測試',sport,'completed','2021-05-09'); state.races.push(r);
+            selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,250));
+            await importActivityFile(__makeFitProfile({start:new Date('2021-05-09T07:00:00'),segments:segs,sessions}));
+            await new Promise(s=>setTimeout(s,450));
+            const ok=document.querySelector('[data-action="confirm-gpx-import"]'); if(ok){ ok.click(); await new Promise(s=>setTimeout(s,550)); }
+            return state.races[0];
+        };'''
+        c['legs_get_their_own_splits'] = page.evaluate('''async()=>{ %s
+            const du=await importAs('duathlon',__DUATHLON_SEGMENTS);
+            const cnt=du.legs.map(l=>(l.splits||[]).length);
+            // 多 session 的三鐵檔：游泳與轉換區不算每公里分段
+            const tri=await importAs('triathlon',__TRIATHLON_SEGMENTS,[{sport:5,fromSeg:0,toSeg:0},{sport:3,fromSeg:1,toSeg:3},
+              {sport:2,fromSeg:4,toSeg:6},{sport:3,fromSeg:7,toSeg:9},{sport:1,fromSeg:10,toSeg:10}]);
+            const tcnt=tri.legs.map(l=>l.sport[0]+(l.splits||[]).length).join(' ');
+            // 跑步段 2571 秒×14 km/h＝9.998 km，不滿 10 公里，最後一段不足 1 公里不計 → 9 個；
+            // 游泳 1.5 km 每 100 公尺一段（v3.84.0）→ 14 個（最後一段落在切點上，同樣不計）
+            return cnt.join()==='5,0,39,0,5' && tcnt==='s14 t0 c40 t0 r9' && !tri.legs.some(l=>l.inferred);
+        }''' % IMPORT)
+        c['triathlon_single_session_legs_inferred'] = page.evaluate('''async()=>{ %s
+            const r=await importAs('triathlon',__TRIATHLON_SEGMENTS);
+            const L=r.legs||[];
+            return L.map(l=>l.sport).join()==='swimming,transition,cycling,transition,running'
+                && L.every(l=>l.inferred) && L[0].distanceKm===null            // 水裡 GPS 不可靠，不給游泳距離
+                && Math.abs(L[0].durationSeconds-1800)<=20
+                && L[1].durationSeconds>=200 && L[1].durationSeconds<=270   // T1 含上岸跑：真實 240 秒
+                && Math.abs(L[2].durationSeconds-4394)<=15
+                && Math.abs(L[4].distanceKm-10)<=0.3;
+        }''' % IMPORT)
+        c['splits_table_grouped_by_leg'] = page.evaluate('''async()=>{
+            const race=state.races[0];   // 上一項的三鐵
+            const d=document.createElement('div'); d.innerHTML=renderSplitsChart(race);
+            const heads=[...d.querySelectorAll('.splits-leg-head')].map(x=>x.textContent);
+            const bike=[...d.querySelectorAll('.leg-cycling .splits-gap-primary')].map(x=>x.textContent);
+            const run=[...d.querySelectorAll('.leg-running')];
+            const firstRunKm=run[0]&&run[0].querySelector('.splits-dist').textContent;
+            return !!d.querySelector('.splits-by-leg') && heads.length===3
+                && heads[0].includes('游泳') && !!d.querySelector('.splits-leg-note')
+                && bike.length===40 && bike.every(x=>/km\\/h$/.test(x))
+                && run.length===10 && firstRunKm==='1K';                    // 每段公里數從 1 重新算
+        }''')
+        c['old_legs_without_splits_fall_back_by_time'] = page.evaluate('''async()=>{ %s
+            const du=await importAs('duathlon',__DUATHLON_SEGMENTS);
+            const old=JSON.parse(JSON.stringify(du)); old.legs.forEach(l=>delete l.splits);
+            const lg=legSplitGroups(old);
+            const kept=lg.groups.reduce((a,g)=>a+g.splits.length,0);
+            const d=document.createElement('div'); d.innerHTML=renderSplitsChart(old);
+            // 跨越交界的那幾公里略過，其餘歸到正確的段；畫面上提示可以重新匯入
+            return lg.precise===false && kept<old.splits.length && kept>=old.splits.length-4
+                && lg.groups.find(g=>g.leg.sport==='cycling').splits.length>=37
+                && !!d.querySelector('.splits-leg-approx');
+        }''' % IMPORT)
+        c['radar_stability_and_hr_per_leg'] = page.evaluate('''async()=>{ %s
+            const du=await importAs('duathlon',__DUATHLON_SEGMENTS);
+            const dims=computeRaceRadar(du);
+            const st=dims.find(d=>d.key==='stability');
+            // 跑步最大心率 190、騎車 175：同樣 158 bpm，騎車段的區間比較高
+            const saved=userProfile&&userProfile.hr;
+            userProfile.hr={running:{restingHr:50,maxHr:190},cycling:{restingHr:50,maxHr:175}};
+            const zr=hrZoneInfoForRace(158,du,'running').zone, zc=hrZoneInfoForRace(158,du,'cycling').zone;
+            userProfile.hr=saved;
+            const cv=parseFloat(st.raw.replace('CV ',''));
+            return cv<10 && st.raw.includes('分段') && st.value>0.6 && zc>zr;
+        }''' % IMPORT)
+        c['single_sport_splits_and_radar_unchanged'] = page.evaluate('''()=>{
+            const solo=emptyRace('路跑','road_running','completed','2026-01-01');
+            solo.splits=[1,2,3,4,5].map(i=>({distanceKm:1,splitTimeSeconds:300+i,avgPaceSecPerKm:300+i,avgHr:150}));
+            const d=document.createElement('div'); d.innerHTML=renderSplitsChart(solo);
+            const st=computeRaceRadar(solo).find(x=>x.key==='stability');
+            return !d.querySelector('.splits-by-leg') && d.querySelectorAll('tbody tr').length===5
+                && !st.raw.includes('分段');
+        }''')
+        # ---- 游泳每 100 公尺一個分段（v3.84.0） ----
+        SWIM = '''const SES=[{sport:5,fromSeg:0,toSeg:0},{sport:3,fromSeg:1,toSeg:3},{sport:2,fromSeg:4,toSeg:6},{sport:3,fromSeg:7,toSeg:9},{sport:1,fromSeg:10,toSeg:10}];
+            const noisy=__TRIATHLON_SEGMENTS.map((sg,i)=>i===0?Object.assign({},sg,{noise:25}):sg);
+            const swimLeg=async o=>{ const s=await parseActivityFile(__makeFitProfile(Object.assign({start:new Date('2021-05-09T07:00:00'),sessions:SES},o)));
+              const race=emptyRace('三鐵','triathlon','completed','2021-05-09'); race.legs=s.legs; race.splits=s.splits;
+              return {race,leg:s.legs.find(l=>l.sport==='swimming')}; };'''
+        # 手錶記的累計距離優先：座標加了雜訊，分段仍然正確（每 100 公尺 2 分鐘）
+        c['swim_splits_every_100m_from_watch_distance'] = page.evaluate('''async()=>{ %s
+            const {leg}=await swimLeg({segments:noisy,withDist:true});
+            const sp=leg.splits||[];
+            return sp.length>=14 && sp.every(x=>x.distanceKm===0.1 && x.splitTimeSeconds===120 && x.avgPaceSecPerKm===1200);
+        }''' % SWIM)
+        # 只有亂掉的 GPS：算出比世界紀錄還快的配速 → 整段不列，並說明原因
+        c['swim_splits_rejected_when_gps_is_nonsense'] = page.evaluate('''async()=>{ %s
+            const {race,leg}=await swimLeg({segments:noisy,withDist:false});
+            const d=document.createElement('div'); d.innerHTML=renderSplitsChart(race);
+            return (leg.splits||[]).length===0 && leg.swimGpsRejected===true
+                && d.querySelector('.splits-leg-note').textContent.includes('世界紀錄');
+        }''' % SWIM)
+        c['swim_table_rows_per_100m'] = page.evaluate('''async()=>{ %s
+            const {race}=await swimLeg({segments:noisy,withDist:true});
+            const d=document.createElement('div'); d.innerHTML=renderSplitsChart(race);
+            const rows=[...d.querySelectorAll('.leg-swimming')];
+            return rows.length>=14 && rows[0].querySelector('.splits-dist').textContent==='100 m'
+                && rows[1].querySelector('.splits-dist').textContent==='200 m'
+                && rows[0].querySelector('.splits-gap-primary').textContent.includes('/100m');
+        }''' % SWIM)
+        # 推算的游泳段（跑步模式錄的）刻意不算，並說明
+        c['inferred_swim_has_no_splits'] = page.evaluate('''async()=>{
+            const s=await parseActivityFile(__makeFitProfile({start:new Date('2021-05-09T07:00:00'),segments:__TRIATHLON_SEGMENTS}));
+            const race=emptyRace('三鐵','triathlon','completed','2021-05-09'); race.legs=s.inferredTriLegs; race.splits=s.splits;
+            const d=document.createElement('div'); d.innerHTML=renderSplitsChart(race);
+            const swim=race.legs.find(l=>l.sport==='swimming');
+            return !(swim.splits&&swim.splits.length) && d.querySelector('.splits-leg-note').textContent.includes('跑步模式');
+        }''')
+        # 雷達不納入游泳：游泳段 GPS 再亂，穩定度都不變
+        c['radar_excludes_swim'] = page.evaluate('''async()=>{ %s
+            const a=await swimLeg({segments:__TRIATHLON_SEGMENTS,withDist:true});
+            const b=await swimLeg({segments:__TRIATHLON_SEGMENTS.map((sg,i)=>i===0?Object.assign({},sg,{kmh:1.5}):sg),withDist:true});
+            const st=r=>computeRaceRadar(r).find(x=>x.key==='stability').raw;
+            // 游泳慢了一倍，穩定度照樣只看騎車與跑步
+            return st(a.race)===st(b.race) && (a.leg.splits||[]).length>0;
+        }''' % SWIM)
 
 
 class Sync(Group):
