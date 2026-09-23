@@ -2,14 +2,25 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
+<script>
+  // 在畫面繪製前套用上次選的主題，深色模式使用者不會先閃一下淺色
+  (function(){
+    try{
+      if(localStorage.getItem('race-day-showcase-theme') === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      }
+    }catch(e){}
+  })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>網站地圖 — 賽事紀錄</title>
-<meta name="description" content="賽事紀錄網站的完整功能地圖：首頁介紹、行事曆總覽、賽事詳情頁、工具與資料管理，一次看懂整個網站的架構。">
+<meta name="description" content="賽事紀錄的功能地圖：行事曆與生涯數據、賽事詳情頁五個區段、賽事工具、訓練紀錄、個人設定、資料備份與隨處可用的捷徑，找不到功能時回來看一眼。">
 <meta name="robots" content="noindex">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&family=Noto+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#E6E9E6; --surface2:#DEE2DC; --surface:#FAFAF8; --ink:#16231C; --ink-soft:#4B564E;
@@ -28,6 +39,7 @@
   p{margin:0;}
   a{color:inherit;}
   .mono{font-family:'IBM Plex Mono', monospace;}
+  kbd{font-family:'IBM Plex Mono', monospace; font-size:.92em; padding:1px 6px; border:1px solid var(--rule); border-bottom-width:2px; border-radius:4px; background:var(--surface); color:var(--ink);}
   .container{max-width:880px; margin:0 auto; padding-inline:28px;}
 
   .btn-ghost{
@@ -57,69 +69,90 @@
     border:1px solid var(--rule); font-size:14px; color:var(--ink-soft); line-height:1.7;
   }
   .hero .spa-note strong{color:var(--ink); font-weight:600;}
+  .hero .version{margin-top:14px; font-size:12.5px; color:var(--stone);}
+
+  /* ---- 路線總覽：一排可以直接跳到各 CP 的小標籤 ---- */
+  .jump{list-style:none; margin:26px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:8px;}
+  .jump a{
+    display:inline-flex; align-items:baseline; gap:7px; text-decoration:none; font-size:13.5px;
+    padding:6px 12px; border:1px solid var(--rule); border-radius:999px; background:var(--surface);
+    transition:border-color .15s ease;
+  }
+  .jump a:hover{border-color:var(--gold);}
+  .jump b{font-family:'IBM Plex Mono', monospace; font-size:11.5px; font-weight:600; color:var(--gold);}
 
   /* ---- 賽道式目錄：一條垂直路線，每個大分類是一個 CP 標記 ---- */
-  .course{position:relative; padding-block:12px 60px;}
-  .course-line{
-    position:absolute; left:23px; top:8px; bottom:8px; width:3px;
-    background:var(--rule); border-radius:2px;
-  }
-  .cp{position:relative; padding-left:64px; margin-bottom:52px;}
+  .course{position:relative; padding-block:28px 60px;}
+  .cp{position:relative; padding-left:64px; margin-bottom:52px; scroll-margin-top:24px;}
   .cp:last-child{margin-bottom:0;}
+  .cp::before{content:''; position:absolute; left:22px; top:25px; bottom:-77px; width:3px; background:var(--rule); border-radius:2px;}
+  .cp:last-child::before{display:none;}
   .cp-marker{
     position:absolute; left:0; top:2px; width:47px; height:47px; border-radius:50%;
     background:var(--surface); border:3px solid var(--gold); display:flex; align-items:center; justify-content:center;
     font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:14px; color:var(--gold);
     box-shadow:0 2px 10px var(--shadow); z-index:1;
   }
+  .cp-marker.start{font-size:11.5px; background:var(--trail); border-color:var(--trail); color:#F5F1E6;}
+  /* 終點用方格旗，跟匯出懶人包頁的終點一致 */
+  .cp-marker.finish{
+    border-color:var(--ink);
+    background:repeating-conic-gradient(var(--ink) 0 25%, var(--surface) 0 50%) 0 0 / 11px 11px;
+  }
   .cp-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px;}
   .cp-head h2{font-size:23px;}
   .cp-head .cp-tag{
-    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--stone);
+    font-family:'IBM Plex Mono', 'Noto Sans TC', monospace; font-size:12px; color:var(--stone);
     border:1px solid var(--rule); border-radius:4px; padding:2px 8px;
   }
-  .cp-desc{font-size:14.5px; color:var(--ink-soft); line-height:1.75; max-width:560px; margin-bottom:16px;}
+  .cp-desc{font-size:14.5px; color:var(--ink-soft); line-height:1.75; max-width:600px; margin-bottom:16px;}
   .cp-items{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px;}
   .cp-items li{border-top:1px solid var(--rule);}
   .cp-items li:last-child{border-bottom:1px solid var(--rule);}
-  /* .item-row 是共用的排版（名稱靠左、備註靠右），START 那組唯一真的
-     連到別的頁面（功能介紹頁）所以用 <a>，其餘 CP1～CP4 底下的項目
-     只是同一支單頁應用程式裡的功能位置、不是各自獨立的網址，改成純
-     文字的 <div>，不套用連結的底線／手指游標／hover 變色，才不會讓人
-     以為點下去會各自跳到不同地方。 */
+  /* 真的會跳到另一個網址的項目用 <a>；其餘只是「主程式裡的哪個位置」，
+     用純文字 <div>，不套連結的底線與 hover，免得讓人以為點下去會跳走。 */
   .cp-items a.item-row, .cp-items div.item-row{
-    display:flex; justify-content:space-between; align-items:baseline; gap:16px;
+    display:flex; justify-content:space-between; align-items:baseline; gap:18px;
     padding:13px 4px;
   }
   .cp-items a.item-row{text-decoration:none; transition:padding-left 0.15s ease;}
   .cp-items a.item-row:hover{padding-left:10px; color:var(--gold);}
   .cp-items a.item-row:hover .item-hint{color:var(--gold);}
-  .cp-items .item-name{font-size:15px; font-weight:500;}
-  .cp-items .item-hint{font-size:13px; color:var(--stone); text-align:right; flex-shrink:0;}
+  .cp-items a.item-row .item-name::after{content:' ↗'; font-size:.85em; color:var(--gold);}
+  .cp-items .item-name{font-size:15px; font-weight:500; flex:0 1 auto; min-width:8em;}
+  /* 備註可以比較長（詳情頁各區段的內容），允許換行、最多佔六成寬 */
+  .cp-items .item-hint{font-size:13px; line-height:1.65; color:var(--stone); text-align:right; flex:0 1 60%;}
 
   footer{border-top:1px solid var(--rule); margin-top:12px;}
   footer .container{padding-block:26px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;}
 
   @media (max-width:640px){
+    .container{padding-inline:18px;}
+    .hero{padding-top:44px;}
     .hero h1{font-size:30px;}
     .cp{padding-left:56px;}
     .cp-marker{width:40px; height:40px; font-size:12px;}
-    .course-line{left:19px;}
+    .cp-marker.start{font-size:10px;}
+    .cp::before{left:18.5px; top:20px; bottom:-72px;}
     .cp-items .item-row{flex-direction:column; gap:3px;}
-    .cp-items .item-hint{text-align:left;}
+    .cp-items .item-hint{text-align:left; flex-basis:auto;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{transition-duration:.001ms !important;}
   }
 </style>
 </head>
 <body>
 
 <nav style="border-bottom:1px solid var(--rule);">
-  <div class="container" style="display:flex; align-items:center; justify-content:space-between; padding-block:20px;">
+  <div class="container" style="display:flex; align-items:center; justify-content:space-between; padding-block:20px; gap:12px;">
     <a href="../" style="display:flex; align-items:baseline; gap:10px; text-decoration:none;">
       <span style="font-family:'LXGW WenKai TC',serif; font-weight:700; font-size:22px;">賽事紀錄</span>
       <span class="mono" style="font-size:12px; color:var(--stone);">My Race</span>
     </a>
     <div style="display:flex; align-items:center; gap:10px;">
-      <button type="button" class="icon-toggle" id="theme-toggle" aria-label="切換淺色／深色主題">
+      <button type="button" class="icon-toggle" id="theme-toggle" aria-label="切換淺色／深色主題" aria-pressed="false">
         <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg>
         <svg class="icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"></path></svg>
       </button>
@@ -131,73 +164,145 @@
 <main>
   <section class="container hero">
     <h1>網站地圖</h1>
-    <p>賽事紀錄網站目前有哪些內容、各自放在哪裡，整理成一條路線給你參考——像賽前看賽道圖一樣，找不到東西的時候回來看一眼就好。</p>
+    <p>賽事紀錄有哪些功能、各自放在哪裡，整理成一條路線給你參考——像賽前看賽道圖一樣，找不到東西的時候回來看一眼就好。</p>
     <div class="spa-note">
-      <strong>關於這份地圖：</strong>「賽事紀錄」主程式是單頁應用程式，行事曆、賽事詳情、鞋款管理等功能都在同一個網址裡切換，沒有各自獨立的頁面網址，所以下面 CP1～CP4 底下的項目是純文字說明「進去主程式後要找哪個分頁或按鈕」，不是可以個別點擊的連結。
+      <strong>關於這份地圖：</strong>「賽事紀錄」主程式是單頁應用程式，行事曆、賽事詳情、訓練紀錄等功能都在同一個網址裡切換，沒有各自獨立的頁面網址。所以下面只有標 ↗ 的項目是可以點的連結，其餘是文字說明「進去主程式後要找哪個按鈕或區塊」。
     </div>
+    <p class="version">依 v3.87.0 整理。實際畫面以網站為準，改版後位置可能略有不同。</p>
+
+    <ul class="jump" aria-label="跳到各個 CP">
+      <li><a href="#start"><b>START</b>先看這裡</a></li>
+      <li><a href="#cp1"><b>CP1</b>行事曆與總覽</a></li>
+      <li><a href="#cp2"><b>CP2</b>賽事詳情頁</a></li>
+      <li><a href="#cp3"><b>CP3</b>賽事工具</a></li>
+      <li><a href="#cp4"><b>CP4</b>訓練紀錄</a></li>
+      <li><a href="#cp5"><b>CP5</b>個人設定與帳號</a></li>
+      <li><a href="#cp6"><b>CP6</b>資料備份與復原</a></li>
+      <li><a href="#cp7"><b>CP7</b>隨處可用的捷徑</a></li>
+      <li><a href="#finish"><b>FINISH</b>卡關的時候</a></li>
+    </ul>
   </section>
 
   <section class="container course">
-    <div class="course-line" aria-hidden="true"></div>
-
-    <div class="cp">
-      <div class="cp-marker">START</div>
-      <div class="cp-head"><h2>首頁介紹</h2><span class="cp-tag">獨立頁面</span></div>
-      <p class="cp-desc">產品介紹頁，給還沒用過這個網站的人看：功能特色、使用情境、免費使用說明。</p>
+    <div class="cp" id="start">
+      <div class="cp-marker start">START</div>
+      <div class="cp-head"><h2>先看這裡</h2><span class="cp-tag">獨立頁面</span></div>
+      <p class="cp-desc">不用登入、直接打開就能看的說明頁，適合第一次用的人。</p>
       <ul class="cp-items">
-        <li><a class="item-row" href="../about/"><span class="item-name">賽事紀錄 — 從報名到終點的完整紀錄</span><span class="item-hint">功能介紹頁</span></a></li>
+        <li><a class="item-row" href="../about/"><span class="item-name">功能介紹頁</span><span class="item-hint">賽事紀錄能做什麼、適合誰用</span></a></li>
+        <li><a class="item-row" href="../fit-guide/"><span class="item-name">匯出 FIT 檔懶人包</span><span class="item-hint">把 Garmin、COROS、Strava 的紀錄搬進來</span></a></li>
       </ul>
     </div>
 
-    <div class="cp">
+    <div class="cp" id="cp1">
       <div class="cp-marker">CP1</div>
       <div class="cp-head"><h2>行事曆與總覽</h2><span class="cp-tag">主程式首頁</span></div>
-      <p class="cp-desc">打開主程式後看到的第一個畫面，管理所有賽事、回顧生涯數據跟成就。</p>
+      <p class="cp-desc">打開主程式後看到的第一個畫面：所有賽事、生涯數據跟成就都在這裡。</p>
       <ul class="cp-items">
-        <li><div class="item-row"><span class="item-name">月曆檢視／緊湊表格檢視</span><span class="item-hint">頁面右上角切換</span></div></li>
-        <li><div class="item-row"><span class="item-name">賽事搜尋與篩選（即將到來／歷史紀錄）</span><span class="item-hint">搜尋框旁的篩選按鈕</span></div></li>
-        <li><div class="item-row"><span class="item-name">備戰釘選卡片</span><span class="item-hint">14 天內賽事自動置頂</span></div></li>
-        <li><div class="item-row"><span class="item-name">生涯數據、氣候與表現散佈圖、爬升趨勢圖、參賽熱力圖</span><span class="item-hint">累積 5 場完賽後自動出現</span></div></li>
-        <li><div class="item-row"><span class="item-name">榮譽櫃與成就徽章</span><span class="item-hint">生涯數據下方可展開</span></div></li>
-        <li><div class="item-row"><span class="item-name">年度回顧故事模式、年度回顧長圖卡</span><span class="item-hint">歷年完賽場次圖旁的按鈕</span></div></li>
+        <li><div class="item-row"><span class="item-name">月曆／本月賽事清單</span><span class="item-hint">上方「‹ 年 月 ›」切換月份；手機自動改成清單，格子依運動別上色</span></div></li>
+        <li><div class="item-row"><span class="item-name">獎牌牆、緊湊表格</span><span class="item-hint">「今天」按鈕右邊的兩個圖示</span></div></li>
+        <li><div class="item-row"><span class="item-name">篩選與搜尋</span><span class="item-hint">全部／即將到來／歷史紀錄，出國比賽多的話會多一個「海外賽事」</span></div></li>
+        <li><div class="item-row"><span class="item-name">備戰釘選卡</span><span class="item-hint">14 天內開賽的賽事自動置頂，含打包進度與天氣預報</span></div></li>
+        <li><div class="item-row"><span class="item-name">生涯數據與圖表</span><span class="item-hint">累積 5 場後出現：PB、里程、爬升趨勢、氣候與表現散佈圖、參賽熱力圖</span></div></li>
+        <li><div class="item-row"><span class="item-name">生涯回顧</span><span class="item-hint">長按全馬 PB 卡片 1.5 秒解鎖，可下載成高畫質長圖</span></div></li>
+        <li><div class="item-row"><span class="item-name">年度回顧長圖卡</span><span class="item-hint">「歷年完賽場次」長條圖下方選年份，按「下載」</span></div></li>
+        <li><div class="item-row"><span class="item-name">年度回顧相片輪播</span><span class="item-hint">指令控制台輸入「&gt;」後選擇（見 CP7）</span></div></li>
+        <li><div class="item-row"><span class="item-name">榮譽櫃（103 枚徽章）</span><span class="item-hint">生涯數據最下方，可篩選已解鎖／進行中／未達成</span></div></li>
       </ul>
     </div>
 
-    <div class="cp">
+    <div class="cp" id="cp2">
       <div class="cp-marker">CP2</div>
-      <div class="cp-head"><h2>賽事詳情頁</h2><span class="cp-tag">點選任一場賽事後</span></div>
-      <p class="cp-desc">單一場賽事的完整紀錄，分成六個可摺疊分頁，從報名一路記到賽後檢討。</p>
+      <div class="cp-head"><h2>賽事詳情頁</h2><span class="cp-tag">點任一場賽事後</span></div>
+      <p class="cp-desc">單一場賽事的完整紀錄。最上方是標題與成績，下面分成五個區段；點上方的區段導覽列可以直接跳過去，手機上也能左右滑切換。</p>
       <ul class="cp-items">
-        <li><div class="item-row"><span class="item-name">基本資訊與時間</span><span class="item-hint">狀態、抽籤、報名時程</span></div></li>
-        <li><div class="item-row"><span class="item-name">地理與路線</span><span class="item-hint">海拔圖、路線地圖、空間記憶迴廊（照片對位）</span></div></li>
-        <li><div class="item-row"><span class="item-name">氣象</span><span class="item-hint">歷史天氣回填、即時預報、海象紀錄</span></div></li>
-        <li><div class="item-row"><span class="item-name">預算與行程規劃</span><span class="item-hint">住宿、交通、同行者</span></div></li>
-        <li><div class="item-row"><span class="item-name">裝備、補給與戰略</span><span class="item-hint">裝備看板、補給品資料庫、配速試算、環境折損預測</span></div></li>
-        <li><div class="item-row"><span class="item-name">賽後紀錄與個人數據</span><span class="item-hint">成績儀表板、分段配速分析、鞋款戰力</span></div></li>
+        <li><div class="item-row"><span class="item-name">標題區</span><span class="item-hint">生命週期軌道（考慮中→抽籤中→已報名→已完賽）、封面照片、同系列歷屆比較</span></div></li>
+        <li><div class="item-row"><span class="item-name">成績儀表板</span><span class="item-hint">完賽後才出現：完賽時間、距離、配速、心率，以及「產生分享圖」</span></div></li>
+        <li><div class="item-row"><span class="item-name">基本資訊與時間</span><span class="item-hint">名稱、運動種類、地點、號碼布、起跑分區、報名與抽籤</span></div></li>
+        <li><div class="item-row"><span class="item-name">路線與氣象</span><span class="item-hint">官方路線：海拔圖、路線地圖、CP 明細、照片時空對位；當日氣象：即時預報、歷史天氣、歷年平均</span></div></li>
+        <li><div class="item-row"><span class="item-name">裝備、補給與戰略</span><span class="item-hint">目標時間、配速試算與手環、環境折損預測、裝備清單、補給時程、訓練計畫與賽前訓練週期</span></div></li>
+        <li><div class="item-row"><span class="item-name">預算與行程規劃</span><span class="item-hint">報名費、住宿、交通、同行者，會算出總花費並提醒漏掉的事</span></div></li>
+        <li><div class="item-row"><span class="item-name">賽後紀錄與個人數據</span><span class="item-hint">成績與心得、分段配速一覽、賽事能力雷達、三鐵分項成績、多媒體與相片牆</span></div></li>
       </ul>
     </div>
 
-    <div class="cp">
+    <div class="cp" id="cp3">
       <div class="cp-marker">CP3</div>
       <div class="cp-head"><h2>賽事工具</h2><span class="cp-tag">詳情頁「更多操作」選單</span></div>
-      <p class="cp-desc">跟單一賽事綁在一起的實用小工具，都收在詳情頁標題旁的「更多操作」裡。</p>
+      <p class="cp-desc">跟單一場賽事綁在一起的小工具，大多收在詳情頁標題旁的「更多操作」裡。</p>
       <ul class="cp-items">
-        <li><div class="item-row"><span class="item-name">下載賽前作戰卡／應援指南圖</span><span class="item-hint">報名中賽事適用</span></div></li>
-        <li><div class="item-row"><span class="item-name">複製賽後檢討 AI 提示詞</span><span class="item-hint">已完賽賽事適用</span></div></li>
-        <li><div class="item-row"><span class="item-name">疲勞模式（賽中用）</span><span class="item-hint">全螢幕大字配速提示</span></div></li>
-        <li><div class="item-row"><span class="item-name">貼上資料快速填入／複製賽事</span><span class="item-hint">從簡章或舊賽事帶入資料</span></div></li>
+        <li><div class="item-row"><span class="item-name">賽前作戰卡、親友應援指南圖</span><span class="item-hint">賽前的賽事適用，下載成手機桌布大小的圖</span></div></li>
+        <li><div class="item-row"><span class="item-name">成績分享圖與公開連結</span><span class="item-hint">成績儀表板的「產生分享圖」；公開連結在分享視窗最下方，需登入</span></div></li>
+        <li><div class="item-row"><span class="item-name">複製賽後檢討 AI 提示詞</span><span class="item-hint">已完賽的賽事適用</span></div></li>
+        <li><div class="item-row"><span class="item-name">疲勞模式</span><span class="item-hint">比賽中用，全螢幕大字，大動作滑動就能操作</span></div></li>
+        <li><div class="item-row"><span class="item-name">加入行事曆提醒</span><span class="item-hint">下載 .ics（內建倒數一個月、一週提醒），或直接在 Google 日曆開啟</span></div></li>
+        <li><div class="item-row"><span class="item-name">貼上資料快速填入、複製賽事</span><span class="item-hint">從簡章帶入資料，或複製成明年的同一場</span></div></li>
       </ul>
     </div>
 
-    <div class="cp">
+    <div class="cp" id="cp4">
       <div class="cp-marker">CP4</div>
-      <div class="cp-head"><h2>資料與工具管理</h2><span class="cp-tag">頁面右上角「資料管理」選單</span></div>
-      <p class="cp-desc">整個帳號層級的資料進出跟共用設定，不綁在單一賽事上。</p>
+      <div class="cp-head"><h2>訓練紀錄</h2><span class="cp-tag">頂端列「訓練」</span></div>
+      <p class="cp-desc">平常的訓練另外存放，不會影響賽事統計、PB 或徽章。入口在「＋ 新增賽事」正下方，手機上在頂端列最右邊。</p>
       <ul class="cp-items">
-        <li><div class="item-row"><span class="item-name">匯入 Excel／JSON</span><span class="item-hint">批次建立賽事</span></div></li>
-        <li><div class="item-row"><span class="item-name">匯出 JSON／CSV／Python 分析套件／行事曆提醒</span><span class="item-hint">備份與資料分析</span></div></li>
-        <li><div class="item-row"><span class="item-name">鞋款管理</span><span class="item-hint">賽事詳情頁「賽後紀錄」分頁裡</span></div></li>
-        <li><div class="item-row"><span class="item-name">雲端同步與個人資訊</span><span class="item-hint">選用，需登入 Google 帳號</span></div></li>
+        <li><div class="item-row"><span class="item-name">匯入訓練檔</span><span class="item-hint">「＋ 匯入 FIT／GPX」，可以一次選很多檔，或直接拖進頁面</span></div></li>
+        <li><div class="item-row"><span class="item-name">本週／本月／全部</span><span class="item-hint">「全部」依年份、月份收合，附次數、公里、時數</span></div></li>
+        <li><div class="item-row"><span class="item-name">鞋款里程</span><span class="item-hint">匯入時選這批穿哪雙鞋，里程自動加到鞋款上</span></div></li>
+        <li><div class="item-row"><span class="item-name">賽前訓練週期</span><span class="item-hint">顯示在每場賽事的「裝備、補給與戰略」區段</span></div></li>
+        <li><div class="item-row"><span class="item-name">備份訓練紀錄</span><span class="item-hint">訓練頁最下方匯出 JSON；登入後也會雲端同步</span></div></li>
+        <li><a class="item-row" href="../fit-guide/"><span class="item-name">不知道怎麼匯出手錶紀錄？</span><span class="item-hint">匯出 FIT 檔懶人包</span></a></li>
+      </ul>
+    </div>
+
+    <div class="cp" id="cp5">
+      <div class="cp-marker">CP5</div>
+      <div class="cp-head"><h2>個人設定與帳號</h2><span class="cp-tag">頂端列右側</span></div>
+      <p class="cp-desc">跟「人」有關、所有賽事共用的設定。</p>
+      <ul class="cp-items">
+        <li><div class="item-row"><span class="item-name">帳號選單</span><span class="item-hint">右上角頭像：登入／登出、同步診斷、啟用推播通知、建立個人資訊、範例資料</span></div></li>
+        <li><div class="item-row"><span class="item-name">個人資訊</span><span class="item-hint">心率區間、身體數據、鞋款管理、補給品管理四個分頁</span></div></li>
+        <li><div class="item-row"><span class="item-name">範例資料</span><span class="item-hint">帳號選單裡，一鍵建立五場示範賽事，再按一次就清除</span></div></li>
+        <li><div class="item-row"><span class="item-name">語言</span><span class="item-hint">繁體中文／日本語／English，你自己輸入的內容不會被翻譯</span></div></li>
+        <li><div class="item-row"><span class="item-name">字體大小</span><span class="item-hint">深淺色切換左邊的「小／中／大」</span></div></li>
+        <li><div class="item-row"><span class="item-name">深色模式</span><span class="item-hint">右上角月亮／太陽圖示</span></div></li>
+        <li><div class="item-row"><span class="item-name">雲端同步</span><span class="item-hint">選用，用 Google 帳號登入後跨裝置同步，本機資料永遠優先</span></div></li>
+      </ul>
+    </div>
+
+    <div class="cp" id="cp6">
+      <div class="cp-marker">CP6</div>
+      <div class="cp-head"><h2>資料備份與復原</h2><span class="cp-tag">「資料管理」選單與左下角</span></div>
+      <p class="cp-desc">備份、搬到新裝置、救回誤刪的資料。</p>
+      <ul class="cp-items">
+        <li><div class="item-row"><span class="item-name">匯入 Excel／JSON</span><span class="item-hint">「資料管理」選單，批次建立賽事或還原備份</span></div></li>
+        <li><div class="item-row"><span class="item-name">匯出 JSON／CSV／Python 分析套件</span><span class="item-hint">「資料管理」選單，備份與資料分析</span></div></li>
+        <li><div class="item-row"><span class="item-name">匯出全部行事曆提醒</span><span class="item-hint">左下角「匯出行事曆提醒」，一次匯出所有還沒到的賽事</span></div></li>
+        <li><div class="item-row"><span class="item-name">垃圾桶與資料復原</span><span class="item-hint">左下角「已刪除賽事」，誤刪的賽事 30 天內都能還原</span></div></li>
+        <li><div class="item-row"><span class="item-name">清理封面</span><span class="item-hint">儲存空間快滿時跳出的提示裡，最佔空間的排前面</span></div></li>
+      </ul>
+    </div>
+
+    <div class="cp" id="cp7">
+      <div class="cp-marker">CP7</div>
+      <div class="cp-head"><h2>隨處可用的捷徑</h2><span class="cp-tag">任何畫面</span></div>
+      <p class="cp-desc">不用先找按鈕的操作方式，熟了之後會快很多。</p>
+      <ul class="cp-items">
+        <li><div class="item-row"><span class="item-name">指令控制台</span><span class="item-hint">按 <kbd>Cmd</kbd>／<kbd>Ctrl</kbd>＋<kbd>K</kbd>；手機在搜尋框第一個字打「&gt;」或「#」</span></div></li>
+        <li><div class="item-row"><span class="item-name">在空白處直接貼上</span><span class="item-hint">賽事資訊、成績頁、心得、訂房信、車票機票、網址都會自動辨識</span></div></li>
+        <li><div class="item-row"><span class="item-name">拖曳檔案</span><span class="item-hint">FIT／GPX／TCX、JSON 備份、照片直接拖進畫面</span></div></li>
+        <li><div class="item-row"><span class="item-name">手機手勢</span><span class="item-hint">長按賽事卡片叫出選單；清單往右滑完賽、往左滑刪除</span></div></li>
+        <li><div class="item-row"><span class="item-name">快速新增（手機）</span><span class="item-hint">右下角「＋」懸浮按鈕</span></div></li>
+        <li><div class="item-row"><span class="item-name">離線使用與加入主畫面</span><span class="item-hint">開過一次之後沒訊號也打得開</span></div></li>
+      </ul>
+    </div>
+
+    <div class="cp" id="finish">
+      <div class="cp-marker finish" role="img" aria-label="終點"></div>
+      <div class="cp-head"><h2>卡關的時候</h2><span class="cp-tag">FINISH</span></div>
+      <p class="cp-desc">找不到功能或網站怪怪的，先試這兩個。</p>
+      <ul class="cp-items">
+        <li><div class="item-row"><span class="item-name">使用說明</span><span class="item-hint">右下角的路跑小人圖示，網站內建的精簡版說明</span></div></li>
+        <li><div class="item-row"><span class="item-name">網站打不開、一直重新整理</span><span class="item-hint">在網址後面加上 <span class="mono">?nosw=1</span> 再開，賽事資料不會被清掉</span></div></li>
       </ul>
     </div>
   </section>
@@ -213,16 +318,16 @@
 <script>
 (function(){
   var STORAGE_KEY = 'race-day-showcase-theme';
-  var saved = null;
-  try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
-  if(saved === 'dark'){ document.documentElement.setAttribute('data-theme','dark'); }
-
   var btn = document.getElementById('theme-toggle');
-  btn.addEventListener('click', function(){
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var next = isDark ? 'light' : 'dark';
-    if(next === 'dark'){ document.documentElement.setAttribute('data-theme','dark'); }
+  function apply(theme){
+    if(theme === 'dark'){ document.documentElement.setAttribute('data-theme','dark'); }
     else{ document.documentElement.removeAttribute('data-theme'); }
+    btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+  }
+  apply(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+  btn.addEventListener('click', function(){
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    apply(next);
     try{ localStorage.setItem(STORAGE_KEY, next); }catch(e){}
   });
 })();
