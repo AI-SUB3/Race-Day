@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<script>
+  // 跟功能介紹頁共用同一個主題設定，從介紹頁點過來不會突然換色
+  (function(){
+    try{
+      if(localStorage.getItem('race-day-showcase-theme') === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      }
+    }catch(e){}
+    document.documentElement.classList.add('js');
+  })();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>匯出 FIT 檔懶人包：Garmin、COROS、Strava — 賽事紀錄</title>
+<meta name="description" content="從 Garmin、COROS、Strava 匯出單場賽事與全部運動紀錄的 FIT 檔，再匯入賽事紀錄。圖文步驟，包含解壓縮與常見卡關。">
+<link rel="canonical" href="https://ai-sub3.github.io/Race-Day/fit-guide/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="匯出 FIT 檔懶人包：Garmin、COROS、Strava">
+<meta property="og:description" content="單場賽事幾分鐘搞定，全部運動紀錄打包一次。匯出、解壓縮、匯入賽事紀錄，一步一步來。">
+<meta property="og:url" content="https://ai-sub3.github.io/Race-Day/fit-guide/">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B08D2E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='5'/%3E%3Cpath d='M8.5 12.5 7 21l5-3 5 3-1.5-8.5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E6E9E6; --surface2:#DEE2DC; --surface:#FAFAF8; --ink:#16231C; --ink-soft:#4B564E;
+    --rule:#D8DAD3; --trail:#2E6B49; --contour:#3A5A8C; --flag:#B8451F; --stone:#8B8D82; --gold:#B08D2E;
+    --single:var(--trail); --bulk:var(--contour);
+  }
+  [data-theme="dark"]{
+    --paper:#0D1013; --surface2:#161B21; --surface:#1E232A; --ink:#EDEEE9; --ink-soft:#9BA3A0;
+    --rule:#2A3038; --trail:#4C9A72; --contour:#7B9FD1; --flag:#E07850; --stone:#6B7178; --gold:#D9B15C;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'Noto Sans TC', system-ui, sans-serif; font-size:16px; line-height:1.8;
+    transition:background-color .25s ease, color .25s ease;
+  }
+  h1,h2,h3{font-family:'LXGW WenKai TC', 'Noto Sans TC', serif; font-weight:700; margin:0; line-height:1.4; text-wrap:balance;}
+  p{margin:0;}
+  a{color:inherit;}
+  .mono{font-family:'IBM Plex Mono', ui-monospace, monospace;}
+  code{font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:.9em; background:var(--surface2); padding:1px 6px; border-radius:4px; word-break:break-all;}
+  :focus-visible{outline:2px solid var(--gold); outline-offset:3px;}
+  .wrap{max-width:1080px; margin:0 auto; padding-inline:28px;}
+  .measure{max-width:640px;}
+  section{padding-block:clamp(52px, 8vw, 88px);}
+  .band{background:var(--surface2); border-block:1px solid var(--rule);}
+  .sect-h2{font-size:clamp(23px, 2.6vw + 14px, 32px);}
+  .lede{color:var(--ink-soft); margin-top:12px;}
+
+  /* ---------- nav ---------- */
+  nav{border-bottom:1px solid var(--rule);}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; gap:12px; padding-block:18px;}
+  .brand{display:flex; align-items:baseline; gap:10px; text-decoration:none;}
+  .brand b{font-family:'LXGW WenKai TC', serif; font-size:22px;}
+  .brand span{font-size:12px; color:var(--stone);}
+  .nav-actions{display:flex; align-items:center; gap:10px;}
+  .icon-toggle{
+    display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;
+    border-radius:6px; border:1px solid var(--rule); background:none; cursor:pointer; color:var(--ink);
+  }
+  .icon-toggle:hover{border-color:var(--ink);}
+  .icon-toggle svg{display:none;}
+  .icon-toggle .icon-moon{display:block;}
+  [data-theme="dark"] .icon-toggle .icon-sun{display:block;}
+  [data-theme="dark"] .icon-toggle .icon-moon{display:none;}
+  .btn-ghost{
+    display:inline-flex; align-items:center; height:40px; padding:0 16px; border:1px solid var(--rule);
+    border-radius:6px; text-decoration:none; font-size:14px; font-weight:500;
+  }
+  .btn-ghost:hover{border-color:var(--ink);}
+
+  /* ---------- hero：整個流程畫成一條賽道 ---------- */
+  .hero{padding-top:clamp(44px, 8vw, 80px); padding-bottom:clamp(40px, 7vw, 72px);}
+  .hero h1{font-size:clamp(30px, 5vw + 12px, 50px); max-width:15em;}
+  .hero .lede{font-size:clamp(15px, 1.2vw + 12px, 18px); max-width:36em;}
+  .route{
+    list-style:none; margin:44px 0 0; padding:0; position:relative;
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:18px;
+  }
+  /* 賽道線：虛線連起四個點位，跟 App 海拔圖上標 CP 的虛線同一種語彙 */
+  .route::before{
+    content:''; position:absolute; left:26px; right:calc((100% - 54px) / 4 - 26px); top:25px; height:0;
+    border-top:3px dashed var(--stone); opacity:.7;
+  }
+  .route li{position:relative; display:flex; flex-direction:column; gap:4px;}
+  .node{
+    width:52px; height:52px; border-radius:50%; display:grid; place-items:center;
+    font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:14px;
+    background:var(--paper); border:3px solid var(--gold); color:var(--ink); position:relative; margin-bottom:10px;
+  }
+  .node.start{background:var(--trail); border-color:var(--trail); color:#F5F1E6; font-family:'Noto Sans TC', sans-serif; font-size:13px; font-weight:700;}
+  /* 終點用方格旗 */
+  .node.finish{
+    border-color:var(--ink); color:transparent;
+    background:repeating-conic-gradient(var(--ink) 0 25%, var(--surface) 0 50%) 0 0 / 12px 12px;
+  }
+  .route strong{font-size:17px;}
+  .route small{font-size:14px; color:var(--ink-soft); line-height:1.6;}
+  .hero-note{margin-top:28px; font-size:14px; color:var(--stone);}
+
+  /* ---------- chooser ---------- */
+  .choose{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:22px; margin-top:34px;}
+  .choice{
+    background:var(--surface); border:1px solid var(--rule); border-radius:12px; padding:26px 26px 24px;
+    border-top:6px solid var(--single);
+  }
+  .choice.bulk{border-top-color:var(--bulk);}
+  .choice h3{font-size:22px;}
+  .choice dl{margin:14px 0 0; display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px;}
+  .choice dt{color:var(--ink-soft);}
+  .choice dd{margin:0;}
+
+  /* ---------- platform tabs ---------- */
+  .tabs{display:flex; gap:6px; margin-top:30px; padding:5px; background:var(--surface); border:1px solid var(--rule); border-radius:10px; width:max-content; max-width:100%;}
+  .tab{
+    border:0; background:none; color:var(--ink-soft); font:inherit; font-weight:700; font-size:16px;
+    padding:9px 22px; border-radius:7px; cursor:pointer;
+  }
+  .tab[aria-selected="true"]{background:var(--ink); color:var(--paper);}
+  .tab:not([aria-selected="true"]):hover{color:var(--ink);}
+  .js .panel[hidden]{display:none;}
+  html:not(.js) .panel[hidden]{display:block;}
+  .panel{margin-top:30px;}
+  .no-js-title{display:none;}
+  html:not(.js) .no-js-title{display:block; font-size:26px; margin:40px 0 0;}
+  html:not(.js) .tabs{display:none;}
+
+  .flows{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:26px; align-items:start;}
+  .flow{background:var(--surface); border:1px solid var(--rule); border-radius:12px; padding:24px; border-top:6px solid var(--single);}
+  .flow.bulk{border-top-color:var(--bulk);}
+  .flow h3{font-size:21px;}
+  .facts{margin:12px 0 4px; display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:14px; line-height:1.65;}
+  .facts dt{color:var(--ink-soft); white-space:nowrap;}
+  .facts dd{margin:0;}
+
+  /* 步驟編號用 CP：真的是一條依序走完的路線，所以才編號 */
+  .steps{list-style:none; margin:18px 0 0; padding:0; display:flex; flex-direction:column; gap:20px;}
+  .steps > li{display:grid; grid-template-columns:48px minmax(0,1fr); gap:12px; align-items:start;}
+  .cp{
+    width:44px; height:28px; border-radius:14px; border:2px solid var(--gold);
+    display:grid; place-items:center; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:12.5px;
+    background:var(--paper); margin-top:2px;
+  }
+  .steps p{font-size:15.5px;}
+  .steps .sub{font-size:14px; color:var(--ink-soft); margin-top:6px;}
+  .shot{margin:12px 0 0; border-radius:10px; overflow:hidden;}
+  .shot svg{display:block; width:100%; height:auto; max-width:420px;}
+  .ui{font-weight:700;}
+
+  /* ---------- SVG 示意圖：全部走 CSS 變數，深淺色自動跟著換 ---------- */
+  .m-frame{fill:var(--surface); stroke:var(--rule); stroke-width:1.5;}
+  .m-bar{fill:var(--surface2);}
+  .m-dot{fill:var(--rule);}
+  .m-url{fill:var(--surface);}
+  .m-block{fill:var(--surface2);}
+  .m-ph{fill:var(--rule);}
+  .m-line{stroke:var(--rule); stroke-width:1.5; fill:none;}
+  .m-t{font-family:'Noto Sans TC', sans-serif; font-size:13px; fill:var(--ink);}
+  .m-b{font-weight:700;}
+  .m-s{font-family:'Noto Sans TC', sans-serif; font-size:11.5px; fill:var(--ink-soft);}
+  .m-x{font-family:'IBM Plex Mono', monospace; font-size:10px; fill:var(--stone);}
+  .m-xs{font-family:'Noto Sans TC', sans-serif; font-size:10.5px; fill:var(--stone);}
+  .m-n{font-family:'IBM Plex Mono', monospace; font-size:12px; font-weight:600; fill:var(--ink);}
+  .m-hl{fill:var(--gold); fill-opacity:.2; stroke:var(--gold); stroke-width:2;}
+  .m-ring{fill:none; stroke:var(--gold); stroke-width:2.5;}
+  .m-btn{fill:var(--ink);}
+  .m-btn-t{font-family:'Noto Sans TC', sans-serif; font-size:11.5px; font-weight:700; fill:var(--paper);}
+  .m-ico{fill:none; stroke:var(--ink-soft); stroke-width:1.6;}
+  .m-inkfill{fill:var(--ink);}
+  .m-trail{fill:none; stroke:var(--trail); stroke-width:2.2; stroke-linejoin:round;}
+  .m-folder{fill:var(--gold); fill-opacity:.55;}
+  .m-file{fill:var(--surface); stroke:var(--ink-soft); stroke-width:1.4;}
+  .m-fit{fill:var(--gold); fill-opacity:.25; stroke:var(--gold); stroke-width:1.8;}
+  .m-arrow{stroke:var(--ink-soft); stroke-width:2; fill:none;}
+  .m-arrowhead{fill:var(--ink-soft);}
+  .m-dash{fill:none; stroke:var(--stone); stroke-width:1.6; stroke-dasharray:5 4;}
+  .m-dot-trail{fill:var(--trail);} .m-dot-flag{fill:var(--flag);} .m-dot-stone{fill:var(--stone);}
+
+  /* ---------- import ---------- */
+  .tips{margin-top:18px; padding:16px 18px; border-radius:10px; background:var(--surface2); font-size:14.5px; display:flex; flex-direction:column; gap:8px;}
+  .band .tips{background:var(--paper);}
+  .tips b{font-weight:700;}
+
+  /* ---------- faq ---------- */
+  .faq{max-width:760px; margin-top:28px;}
+  .faq details{border-bottom:1px solid var(--rule);}
+  .faq details:first-child{border-top:1px solid var(--rule);}
+  .faq summary{
+    cursor:pointer; list-style:none; padding-block:17px; font-weight:700; font-size:16px;
+    display:flex; justify-content:space-between; gap:16px;
+  }
+  .faq summary::-webkit-details-marker{display:none;}
+  .faq summary::after{content:'+'; font-family:'IBM Plex Mono', monospace; font-weight:500; font-size:20px; color:var(--gold); transition:transform .15s ease;}
+  .faq details[open] summary::after{transform:rotate(45deg);}
+  .faq details p{padding-bottom:18px; color:var(--ink-soft); font-size:15px;}
+
+  footer{border-top:1px solid var(--rule); padding-block:28px; font-size:13px; color:var(--stone);}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:10px 22px; justify-content:space-between;}
+  footer a{color:var(--ink-soft);}
+
+  @media (max-width:880px){
+    .flows, .choose{grid-template-columns:minmax(0,1fr);}
+  }
+  @media (max-width:680px){
+    .wrap{padding-inline:18px;}
+    /* 手機上賽道改成直的往下走 */
+    .route{grid-template-columns:1fr; gap:22px;}
+    .route::before{left:24px; right:auto; top:26px; bottom:26px; height:auto; border-top:0; border-left:3px dashed var(--stone);}
+    .route li{display:grid; grid-template-columns:52px 1fr; column-gap:16px; align-items:center;}
+    .route .node{grid-row:span 2; margin-bottom:0;}
+    .tabs{width:100%;}
+    .tab{flex:1; padding:9px 8px;}
+    .flow{padding:20px 16px;}
+    .steps > li{grid-template-columns:44px minmax(0,1fr); gap:10px;}
+    .cp{width:40px;}
+    .steps .shot{margin-left:-54px;}
+    .btn-ghost{padding:0 12px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{transition-duration:.001ms !important;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="https://ai-sub3.github.io/Race-Day/about/"><b>賽事紀錄</b><span class="mono">My Race</span></a>
+    <div class="nav-actions">
+      <button type="button" class="icon-toggle" id="theme-toggle" aria-label="切換淺色／深色主題" aria-pressed="false">
+        <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg>
+        <svg class="icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"></path></svg>
+      </button>
+      <a class="btn-ghost" href="https://ai-sub3.github.io/Race-Day/">開啟賽事紀錄</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <h1>手錶裡的紀錄，搬進賽事紀錄</h1>
+      <p class="lede">Garmin、COROS、Strava 匯出 FIT 檔的圖文懶人包。只搬一場比賽，幾分鐘就好；想把全部運動紀錄搬過來，打包一次就行。</p>
+
+      <ol class="route" aria-label="整個流程">
+        <li><span class="node start">起點</span><strong>手錶</strong><small>比賽、訓練都存在這裡</small></li>
+        <li><span class="node">CP1</span><strong>從平台匯出</strong><small>Garmin、COROS 或 Strava</small></li>
+        <li><span class="node">CP2</span><strong>解壓縮</strong><small>.zip、.gz 解開才是 .fit</small></li>
+        <li><span class="node finish" aria-hidden="true">終點</span><strong>匯入賽事紀錄</strong><small>單場進賽事，整批進訓練</small></li>
+      </ol>
+      <p class="hero-note">各平台的按鈕名稱以英文介面為準。平台改版時字樣可能會變，但位置通常不會差太多。</p>
+    </div>
+  </section>
+
+  <!-- CHOOSER -->
+  <section class="band" id="choose">
+    <div class="wrap">
+      <h2 class="sect-h2">先決定：要搬哪些紀錄？</h2>
+      <p class="lede measure">兩種都是 FIT 檔，差別在匯出的方式和放進去的地方。</p>
+      <div class="choose">
+        <div class="choice">
+          <h3>只要這一場比賽</h3>
+          <dl>
+            <dt>會補上</dt><dd>分段配速、海拔剖面、心率、步頻，三鐵還有分項成績</dd>
+            <dt>放進</dt><dd>那場賽事的「賽後紀錄與個人數據」</dd>
+            <dt>要多久</dt><dd>當下就能下載</dd>
+          </dl>
+        </div>
+        <div class="choice bulk">
+          <h3>全部運動紀錄</h3>
+          <dl>
+            <dt>會補上</dt><dd>訓練週里程、鞋款累積里程、賽前訓練週期</dd>
+            <dt>放進</dt><dd>頂端列的「訓練」頁</dd>
+            <dt>要多久</dt><dd>先申請，平台處理好寄信給你</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPORT -->
+  <section id="export">
+    <div class="wrap">
+      <h2 class="sect-h2">從你的平台匯出</h2>
+      <p class="lede measure">選你手錶同步的平台。手錶是 Garmin、平常也同步到 Strava 的話，從哪一邊匯出都可以，建議用 Garmin，拿到的是最原始的檔案。</p>
+
+      <div class="tabs" role="tablist" aria-label="選擇平台">
+        <button class="tab" role="tab" id="tab-garmin" aria-controls="garmin" aria-selected="true">Garmin</button>
+        <button class="tab" role="tab" id="tab-coros" aria-controls="coros" aria-selected="false" tabindex="-1">COROS</button>
+        <button class="tab" role="tab" id="tab-strava" aria-controls="strava" aria-selected="false" tabindex="-1">Strava</button>
+      </div>
+
+      <!-- ================= GARMIN ================= -->
+      <div class="panel" id="garmin" role="tabpanel" aria-labelledby="tab-garmin">
+        <h2 class="no-js-title">Garmin</h2>
+        <div class="flows">
+
+          <article class="flow">
+            <h3>只要這一場比賽</h3>
+            <dl class="facts">
+              <dt>在哪做</dt><dd>電腦瀏覽器，手機 Garmin Connect App 沒有匯出檔案的功能</dd>
+              <dt>拿到</dt><dd>一個 .zip，裡面是一個 .fit</dd>
+            </dl>
+            <ol class="steps">
+              <li><span class="cp">CP1</span><div>
+                <p>到 <span class="ui">connect.garmin.com</span> 登入，從左側「活動」清單點進那一場比賽。</p>
+              </div></li>
+              <li><span class="cp">CP2</span><div>
+                <p>按右上角的齒輪，選 <span class="ui">Export File</span>（舊版介面叫 <span class="ui">Export Original</span>）。</p>
+                <p class="sub">不要選 Export to GPX／TCX，那是轉檔過的版本，少了一些資料。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 210" role="img" aria-label="Garmin Connect 活動頁，右上角齒輪選單的第一項 Export File 被標出來">
+                    <rect x="1" y="1" width="358" height="208" rx="10" class="m-frame"/>
+                    <path d="M1 27V11a10 10 0 0 1 10-10h338a10 10 0 0 1 10 10v16z" class="m-bar"/>
+                    <circle cx="15" cy="14" r="3" class="m-dot"/><circle cx="26" cy="14" r="3" class="m-dot"/><circle cx="37" cy="14" r="3" class="m-dot"/>
+                    <rect x="56" y="7" width="200" height="14" rx="7" class="m-url"/>
+                    <text x="66" y="18" class="m-x">connect.garmin.com/…/activity</text>
+                    <text x="18" y="58" class="m-t m-b">臺北馬拉松</text>
+                    <text x="18" y="77" class="m-s">42.20 km　3:05:12</text>
+                    <line x1="18" y1="186" x2="176" y2="186" class="m-line"/>
+                    <polyline points="18,172 44,158 70,166 96,138 122,150 148,126 176,140" class="m-trail"/>
+                    <circle cx="324" cy="52" r="16" class="m-hl"/>
+                    <circle cx="324" cy="52" r="7" fill="none" stroke="var(--ink)" stroke-width="3.2" stroke-dasharray="2.6 2.2"/>
+                    <circle cx="324" cy="52" r="2.4" class="m-inkfill"/>
+                    <rect x="188" y="76" width="158" height="120" rx="8" class="m-frame"/>
+                    <rect x="194" y="82" width="146" height="26" rx="5" class="m-hl"/>
+                    <text x="206" y="99.5" class="m-t m-b">Export File</text>
+                    <text x="206" y="128" class="m-s">Export to TCX</text>
+                    <text x="206" y="152" class="m-s">Export to GPX</text>
+                    <text x="206" y="176" class="m-s">Export to Google Earth</text>
+                  </svg>
+                </figure>
+              </div></li>
+              <li><span class="cp">CP3</span><div>
+                <p>下載下來的是 .zip，點兩下解壓縮，裡面的 .fit 就是手錶的原始檔。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 140" role="img" aria-label="activity 的 .zip 解壓縮後得到 .fit 檔">
+                    <rect x="1" y="1" width="358" height="138" rx="10" class="m-frame"/>
+                    <path d="M62 22h38l16 16v52H62z" class="m-file"/><path d="M100 22v16h16" class="m-file"/>
+                    <rect x="85" y="30" width="8" height="5" class="m-ph"/><rect x="85" y="40" width="8" height="5" class="m-ph"/><rect x="85" y="50" width="8" height="5" class="m-ph"/><rect x="82" y="60" width="14" height="14" rx="2" class="m-ph"/>
+                    <text x="89" y="112" text-anchor="middle" class="m-s">123456789.zip</text>
+                    <text x="180" y="46" text-anchor="middle" class="m-xs">解壓縮</text>
+                    <line x1="146" y1="58" x2="206" y2="58" class="m-arrow"/><path d="M214 58l-10-6v12z" class="m-arrowhead"/>
+                    <path d="M244 22h38l16 16v52h-54z" class="m-fit"/><path d="M282 22v16h16" class="m-fit"/>
+                    <text x="271" y="66" text-anchor="middle" class="m-n">FIT</text>
+                    <text x="271" y="112" text-anchor="middle" class="m-s">123456789_ACTIVITY.fit</text>
+                  </svg>
+                </figure>
+              </div></li>
+            </ol>
+          </article>
+
+          <article class="flow bulk">
+            <h3>全部運動紀錄</h3>
+            <dl class="facts">
+              <dt>在哪做</dt><dd>電腦瀏覽器</dd>
+              <dt>要等多久</dt><dd>通常 48 小時內寄信，資料多時最久可能 30 天</dd>
+              <dt>拿到</dt><dd>一個很大的 .zip，裡面還有一層 .zip，要解兩次</dd>
+            </dl>
+            <ol class="steps">
+              <li><span class="cp">CP1</span><div>
+                <p>登入 Garmin 帳號設定，進 <span class="ui">Data Management</span> →「<span class="ui">Export Your Data</span>」，按 <span class="ui">Request Data Export</span>。</p>
+                <p class="sub">也可以直接開 <code>garmin.com/account/datamanagement/exportdata</code>。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 200" role="img" aria-label="Garmin 帳號的 Data Management 頁面，Request Data Export 按鈕被標出來">
+                    <rect x="1" y="1" width="358" height="198" rx="10" class="m-frame"/>
+                    <path d="M1 27V11a10 10 0 0 1 10-10h338a10 10 0 0 1 10 10v16z" class="m-bar"/>
+                    <circle cx="15" cy="14" r="3" class="m-dot"/><circle cx="26" cy="14" r="3" class="m-dot"/><circle cx="37" cy="14" r="3" class="m-dot"/>
+                    <rect x="56" y="7" width="200" height="14" rx="7" class="m-url"/>
+                    <text x="66" y="18" class="m-x">garmin.com/account/…</text>
+                    <rect x="10" y="38" width="120" height="150" rx="6" class="m-block"/>
+                    <rect x="20" y="52" width="70" height="7" rx="3.5" class="m-ph"/>
+                    <rect x="20" y="72" width="56" height="7" rx="3.5" class="m-ph"/>
+                    <rect x="15" y="88" width="110" height="24" rx="5" class="m-hl"/>
+                    <text x="22" y="104" class="m-s" style="fill:var(--ink);font-weight:700;font-size:11px">Data Management</text>
+                    <rect x="20" y="126" width="64" height="7" rx="3.5" class="m-ph"/>
+                    <text x="144" y="60" class="m-t m-b">Export Your Data</text>
+                    <rect x="144" y="72" width="196" height="6" rx="3" class="m-ph"/>
+                    <rect x="144" y="84" width="170" height="6" rx="3" class="m-ph"/>
+                    <rect x="144" y="96" width="186" height="6" rx="3" class="m-ph"/>
+                    <rect x="144" y="118" width="150" height="30" rx="6" class="m-btn"/>
+                    <text x="219" y="137.5" text-anchor="middle" class="m-btn-t">Request Data Export</text>
+                    <rect x="139" y="113" width="160" height="40" rx="9" class="m-ring"/>
+                    <text x="144" y="176" class="m-s">處理好會寄 Email 給你</text>
+                  </svg>
+                </figure>
+              </div></li>
+              <li><span class="cp">CP2</span><div>
+                <p>收到信就盡快下載，下載連結過幾天會失效。</p>
+              </div></li>
+              <li><span class="cp">CP3</span><div>
+                <p>解壓縮後依序打開 <span class="ui">DI_CONNECT</span> → <span class="ui">DI-Connect-Uploaded-Files</span>，裡面還有一個或幾個 .zip，再解一次就是一個個 .fit。</p>
+                <p class="sub">其他資料夾是睡眠、每日心率這類健康資料，用不到。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 190" role="img" aria-label="Garmin 匯出壓縮檔的資料夾結構：DI_CONNECT、DI-Connect-Uploaded-Files、UploadedFiles 壓縮檔、裡面的 fit 檔">
+                    <rect x="1" y="1" width="358" height="188" rx="10" class="m-frame"/>
+                    <path d="M24 40v30h14M50 80v20h8M70 112v18h8M88 140v20h10" class="m-line"/>
+                    <path d="M16 22h11l5 5v14H16z" class="m-file"/><rect x="20" y="27" width="4" height="10" class="m-ph"/>
+                    <text x="40" y="37" class="m-s">garmin_export.zip</text>
+                    <path d="M40 62h7l2 3h11v12H40z" class="m-folder"/>
+                    <text x="66" y="75" class="m-s">DI_CONNECT</text>
+                    <rect x="56" y="87" width="210" height="26" rx="5" class="m-hl"/>
+                    <path d="M60 92h7l2 3h11v12H60z" class="m-folder"/>
+                    <text x="86" y="105" class="m-s" style="fill:var(--ink);font-weight:700">DI-Connect-Uploaded-Files</text>
+                    <path d="M80 122h11l5 5v14H80z" class="m-file"/><rect x="84" y="127" width="4" height="10" class="m-ph"/>
+                    <text x="104" y="136" class="m-s">UploadedFiles_0-_Part1.zip</text>
+                    <path d="M100 152h11l5 5v14h-16z" class="m-fit"/>
+                    <text x="124" y="166" class="m-t m-b">…_ACTIVITY.fit</text>
+                    <text x="228" y="166" class="m-xs">× 很多個</text>
+                  </svg>
+                </figure>
+              </div></li>
+            </ol>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- ================= COROS ================= -->
+      <div class="panel" id="coros" role="tabpanel" aria-labelledby="tab-coros" hidden>
+        <h2 class="no-js-title">COROS</h2>
+        <div class="flows">
+
+          <article class="flow">
+            <h3>只要這一場比賽</h3>
+            <dl class="facts">
+              <dt>在哪做</dt><dd>手機 COROS App 就行，不用電腦</dd>
+              <dt>拿到</dt><dd>一個 .fit</dd>
+            </dl>
+            <ol class="steps">
+              <li><span class="cp">CP1</span><div>
+                <p>打開 COROS App，進活動列表，點進那一場比賽。</p>
+              </div></li>
+              <li><span class="cp">CP2</span><div>
+                <p>按右上角的 <span class="ui">⋯</span>，選 <span class="ui">Export Data</span>，格式選 <span class="ui">.FIT</span>。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 230" role="img" aria-label="COROS App 活動頁右上角的三點選單裡的 Export Data，以及格式選擇裡的 .FIT">
+                    <rect x="14" y="8" width="150" height="214" rx="20" class="m-frame"/>
+                    <text x="30" y="42" class="m-t">‹</text>
+                    <circle cx="143" cy="37" r="12" class="m-hl"/>
+                    <circle cx="137" cy="37" r="1.8" class="m-inkfill"/><circle cx="143" cy="37" r="1.8" class="m-inkfill"/><circle cx="149" cy="37" r="1.8" class="m-inkfill"/>
+                    <text x="30" y="72" class="m-t m-b">臺北馬拉松</text>
+                    <text x="30" y="90" class="m-s">42.20 km　3:05:12</text>
+                    <polyline points="30,128 52,116 72,122 94,104 116,112 146,96" class="m-trail"/>
+                    <path d="M14 150h150v52a20 20 0 0 1-20 20H34a20 20 0 0 1-20-20z" class="m-block"/>
+                    <rect x="24" y="160" width="130" height="26" rx="6" class="m-hl"/>
+                    <text x="36" y="177.5" class="m-t m-b">Export Data</text>
+                    <rect x="36" y="198" width="70" height="7" rx="3.5" class="m-ph"/>
+                    <line x1="172" y1="115" x2="188" y2="115" class="m-arrow"/><path d="M194 115l-8-5v10z" class="m-arrowhead"/>
+                    <rect x="198" y="8" width="150" height="214" rx="20" class="m-frame"/>
+                    <text x="273" y="42" text-anchor="middle" class="m-t m-b">Export Data</text>
+                    <rect x="208" y="60" width="130" height="28" rx="6" class="m-hl"/>
+                    <circle cx="222" cy="74" r="5" fill="var(--gold)"/>
+                    <text x="234" y="78.5" class="m-t m-b">.FIT</text>
+                    <circle cx="222" cy="106" r="5" class="m-ico"/><text x="234" y="110.5" class="m-s">.TCX</text>
+                    <circle cx="222" cy="136" r="5" class="m-ico"/><text x="234" y="140.5" class="m-s">.GPX</text>
+                    <line x1="210" y1="160" x2="336" y2="160" class="m-line"/>
+                    <circle cx="228" cy="184" r="10" class="m-block"/><text x="228" y="210" text-anchor="middle" class="m-xs">檔案</text>
+                    <circle cx="273" cy="184" r="10" class="m-block"/><text x="273" y="210" text-anchor="middle" class="m-x">AirDrop</text>
+                    <circle cx="318" cy="184" r="10" class="m-block"/><text x="318" y="210" text-anchor="middle" class="m-x">Email</text>
+                  </svg>
+                </figure>
+              </div></li>
+              <li><span class="cp">CP3</span><div>
+                <p>用「儲存到檔案」、AirDrop 或 Email 存下來。</p>
+                <p class="sub">人在手機上的話，直接在賽事紀錄選這個檔案匯入就好，整個流程不用經過電腦。</p>
+              </div></li>
+            </ol>
+          </article>
+
+          <article class="flow bulk">
+            <h3>全部運動紀錄</h3>
+            <dl class="facts">
+              <dt>在哪做</dt><dd>電腦瀏覽器，COROS Training Hub</dd>
+              <dt>要等多久</dt><dd>處理好會寄到你填的信箱</dd>
+              <dt>拿到</dt><dd>一整批 .fit，壓縮過的話先解開</dd>
+            </dl>
+            <ol class="steps">
+              <li><span class="cp">CP1</span><div>
+                <p>在電腦上登入 <span class="ui">t.coros.com</span>，點上方的 <span class="ui">Activity List</span>。</p>
+              </div></li>
+              <li><span class="cp">CP2</span><div>
+                <p>按畫面右側的 <span class="ui">Export Data</span>，格式選 <span class="ui">.FIT</span>，填上要收信的 Email。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 220" role="img" aria-label="COROS Training Hub 的 Activity List 頁面，右側 Export Data 按鈕，以及選擇 .FIT 與填寫 Email 的視窗">
+                    <rect x="1" y="1" width="358" height="218" rx="10" class="m-frame"/>
+                    <path d="M1 27V11a10 10 0 0 1 10-10h338a10 10 0 0 1 10 10v16z" class="m-bar"/>
+                    <circle cx="15" cy="14" r="3" class="m-dot"/><circle cx="26" cy="14" r="3" class="m-dot"/><circle cx="37" cy="14" r="3" class="m-dot"/>
+                    <rect x="56" y="7" width="200" height="14" rx="7" class="m-url"/>
+                    <text x="66" y="18" class="m-x">t.coros.com</text>
+                    <rect x="16" y="44" width="56" height="7" rx="3.5" class="m-ph"/>
+                    <rect x="84" y="36" width="92" height="24" rx="5" class="m-hl"/>
+                    <text x="130" y="52.5" text-anchor="middle" class="m-s" style="fill:var(--ink);font-weight:700">Activity List</text>
+                    <rect x="188" y="44" width="48" height="7" rx="3.5" class="m-ph"/>
+                    <rect x="258" y="72" width="88" height="26" rx="6" class="m-frame"/>
+                    <text x="302" y="89.5" text-anchor="middle" class="m-s" style="fill:var(--ink);font-weight:700">Export Data</text>
+                    <rect x="253" y="67" width="98" height="36" rx="9" class="m-ring"/>
+                    <rect x="16" y="112" width="230" height="8" rx="4" class="m-ph"/>
+                    <rect x="16" y="132" width="200" height="8" rx="4" class="m-ph"/>
+                    <rect x="16" y="152" width="216" height="8" rx="4" class="m-ph"/>
+                    <rect x="16" y="172" width="180" height="8" rx="4" class="m-ph"/>
+                    <rect x="150" y="116" width="196" height="92" rx="9" class="m-frame"/>
+                    <text x="164" y="138" class="m-t m-b">Export Data</text>
+                    <circle cx="170" cy="158" r="5" fill="var(--gold)"/><text x="181" y="162" class="m-t m-b">.FIT</text>
+                    <circle cx="230" cy="158" r="5" class="m-ico"/><text x="241" y="162" class="m-s">.TCX</text>
+                    <rect x="164" y="176" width="136" height="20" rx="4" class="m-frame"/>
+                    <text x="171" y="190" class="m-x">you@example.com</text>
+                    <rect x="306" y="176" width="28" height="20" rx="4" class="m-btn"/>
+                    <path d="M314 186l4 4 8-8" fill="none" stroke="var(--paper)" stroke-width="2"/>
+                  </svg>
+                </figure>
+              </div></li>
+              <li><span class="cp">CP3</span><div>
+                <p>收到信後下載。如果是壓縮檔，解開之後就是一整個資料夾的 .fit。</p>
+              </div></li>
+            </ol>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- ================= STRAVA ================= -->
+      <div class="panel" id="strava" role="tabpanel" aria-labelledby="tab-strava" hidden>
+        <h2 class="no-js-title">Strava</h2>
+        <div class="flows">
+
+          <article class="flow">
+            <h3>只要這一場比賽</h3>
+            <dl class="facts">
+              <dt>在哪做</dt><dd>電腦瀏覽器，Strava App 沒有匯出檔案的功能</dd>
+              <dt>拿到</dt><dd>當初上傳的原始檔，從手錶同步來的多半是 .fit</dd>
+            </dl>
+            <ol class="steps">
+              <li><span class="cp">CP1</span><div>
+                <p>到 <span class="ui">strava.com</span> 登入，打開那一場活動的頁面。只有自己的活動能匯出。</p>
+              </div></li>
+              <li><span class="cp">CP2</span><div>
+                <p>按左側那排圖示裡的 <span class="ui">⋯</span>，選 <span class="ui">Export Original</span>。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 200" role="img" aria-label="Strava 活動頁左側的三點選單，Export Original 被標出來">
+                    <rect x="1" y="1" width="358" height="198" rx="10" class="m-frame"/>
+                    <path d="M1 27V11a10 10 0 0 1 10-10h338a10 10 0 0 1 10 10v16z" class="m-bar"/>
+                    <circle cx="15" cy="14" r="3" class="m-dot"/><circle cx="26" cy="14" r="3" class="m-dot"/><circle cx="37" cy="14" r="3" class="m-dot"/>
+                    <rect x="56" y="7" width="200" height="14" rx="7" class="m-url"/>
+                    <text x="66" y="18" class="m-x">strava.com/activities/…</text>
+                    <rect x="12" y="38" width="36" height="150" rx="7" class="m-block"/>
+                    <circle cx="30" cy="60" r="8" class="m-ico"/>
+                    <circle cx="30" cy="88" r="8" class="m-ico"/>
+                    <circle cx="30" cy="116" r="8" class="m-ico"/>
+                    <circle cx="30" cy="148" r="13" class="m-hl"/>
+                    <circle cx="24" cy="148" r="1.8" class="m-inkfill"/><circle cx="30" cy="148" r="1.8" class="m-inkfill"/><circle cx="36" cy="148" r="1.8" class="m-inkfill"/>
+                    <rect x="56" y="112" width="150" height="72" rx="8" class="m-frame"/>
+                    <text x="68" y="134" class="m-s">Export GPX</text>
+                    <rect x="62" y="146" width="138" height="28" rx="5" class="m-hl"/>
+                    <text x="72" y="164.5" class="m-t m-b">Export Original</text>
+                    <text x="220" y="60" class="m-t m-b">臺北馬拉松</text>
+                    <text x="220" y="79" class="m-s">42.20 km　3:05:12</text>
+                    <line x1="220" y1="170" x2="342" y2="170" class="m-line"/>
+                    <polyline points="220,156 240,142 258,150 278,124 300,134 320,112 342,122" class="m-trail"/>
+                  </svg>
+                </figure>
+              </div></li>
+              <li><span class="cp">CP3</span><div>
+                <p>下載的就是原始檔。當初如果是手動上傳 GPX，拿到的會是 .gpx，一樣可以匯入。</p>
+              </div></li>
+            </ol>
+          </article>
+
+          <article class="flow bulk">
+            <h3>全部運動紀錄</h3>
+            <dl class="facts">
+              <dt>在哪做</dt><dd>電腦瀏覽器</dd>
+              <dt>要等多久</dt><dd>通常幾小時內寄信</dd>
+              <dt>拿到</dt><dd>一個 .zip，裡面的活動多半是 .fit.gz，要再解一次</dd>
+            </dl>
+            <ol class="steps">
+              <li><span class="cp">CP1</span><div>
+                <p>右上角頭像 → <span class="ui">Settings</span> → 左側 <span class="ui">My Account</span>，拉到最下面「Download or Delete Your Account」，按 <span class="ui">Get Started</span>。</p>
+                <p class="sub">這一步不會刪除帳號，只是進到下載資料的頁面。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 200" role="img" aria-label="Strava 設定裡的 My Account 頁面，最下方 Get Started 按鈕被標出來">
+                    <rect x="1" y="1" width="358" height="198" rx="10" class="m-frame"/>
+                    <path d="M1 27V11a10 10 0 0 1 10-10h338a10 10 0 0 1 10 10v16z" class="m-bar"/>
+                    <circle cx="15" cy="14" r="3" class="m-dot"/><circle cx="26" cy="14" r="3" class="m-dot"/><circle cx="37" cy="14" r="3" class="m-dot"/>
+                    <rect x="56" y="7" width="200" height="14" rx="7" class="m-url"/>
+                    <text x="66" y="18" class="m-x">strava.com/account</text>
+                    <rect x="10" y="38" width="104" height="150" rx="6" class="m-block"/>
+                    <text x="20" y="60" class="m-s">My Profile</text>
+                    <rect x="15" y="70" width="94" height="24" rx="5" class="m-hl"/>
+                    <text x="22" y="86" class="m-s" style="fill:var(--ink);font-weight:700">My Account</text>
+                    <rect x="20" y="108" width="62" height="7" rx="3.5" class="m-ph"/>
+                    <rect x="20" y="126" width="74" height="7" rx="3.5" class="m-ph"/>
+                    <rect x="126" y="46" width="200" height="6" rx="3" class="m-ph"/>
+                    <rect x="126" y="60" width="170" height="6" rx="3" class="m-ph"/>
+                    <rect x="126" y="74" width="186" height="6" rx="3" class="m-ph"/>
+                    <line x1="126" y1="98" x2="346" y2="98" class="m-line"/>
+                    <text x="126" y="124" class="m-s" style="fill:var(--ink);font-weight:700">Download or Delete Your Account</text>
+                    <rect x="126" y="140" width="96" height="28" rx="6" class="m-btn"/>
+                    <text x="174" y="158.5" text-anchor="middle" class="m-btn-t">Get Started</text>
+                    <rect x="121" y="135" width="106" height="38" rx="9" class="m-ring"/>
+                    <text x="236" y="159" class="m-xs">不會刪帳號</text>
+                  </svg>
+                </figure>
+              </div></li>
+              <li><span class="cp">CP2</span><div>
+                <p>在「Download Request」那一段按 <span class="ui">Request Your Archive</span>（新版介面可能寫成 Request download）。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 104" role="img" aria-label="Download Request 區段的 Request Your Archive 按鈕">
+                    <rect x="1" y="1" width="358" height="102" rx="10" class="m-frame"/>
+                    <text x="20" y="32" class="m-t m-b">Download Request (optional)</text>
+                    <rect x="20" y="44" width="230" height="6" rx="3" class="m-ph"/>
+                    <rect x="20" y="62" width="160" height="28" rx="6" class="m-btn"/>
+                    <text x="100" y="80.5" text-anchor="middle" class="m-btn-t">Request Your Archive</text>
+                    <rect x="15" y="57" width="170" height="38" rx="9" class="m-ring"/>
+                  </svg>
+                </figure>
+              </div></li>
+              <li><span class="cp">CP3</span><div>
+                <p>收到信下載 .zip 解開，打開 <span class="ui">activities</span> 資料夾。裡面多半是 .fit.gz，要再解壓縮一次才會變成 .fit。</p>
+                <p class="sub">Mac：全選之後點兩下就會解開。Windows：用免費的 7-Zip，全選 → 右鍵 → 7-Zip →「解壓縮至此」。</p>
+                <figure class="shot">
+                  <svg viewBox="0 0 360 180" role="img" aria-label="Strava 匯出壓縮檔裡的 activities 資料夾，.fit.gz 再解壓縮一次變成 .fit，旁邊的 activities.csv 是對照表">
+                    <rect x="1" y="1" width="358" height="178" rx="10" class="m-frame"/>
+                    <path d="M24 40v110M24 70h14M24 150h14M50 84v16h8" class="m-line"/>
+                    <path d="M16 22h11l5 5v14H16z" class="m-file"/><rect x="20" y="27" width="4" height="10" class="m-ph"/>
+                    <text x="40" y="37" class="m-s">export_12345678.zip</text>
+                    <rect x="36" y="57" width="150" height="26" rx="5" class="m-hl"/>
+                    <path d="M40 62h7l2 3h11v12H40z" class="m-folder"/>
+                    <text x="66" y="75" class="m-s" style="fill:var(--ink);font-weight:700">activities</text>
+                    <path d="M60 92h11l5 5v14H60z" class="m-file"/>
+                    <text x="84" y="106" class="m-s">10483920341.fit.gz</text>
+                    <line x1="206" y1="102" x2="232" y2="102" class="m-arrow"/><path d="M238 102l-8-5v10z" class="m-arrowhead"/>
+                    <path d="M246 92h11l5 5v14h-16z" class="m-fit"/>
+                    <text x="268" y="106" class="m-t m-b">….fit</text>
+                    <path d="M40 142h11l5 5v14H40z" class="m-file"/>
+                    <text x="64" y="156" class="m-s">activities.csv</text>
+                    <text x="160" y="156" class="m-xs">哪個檔是哪一天的對照表</text>
+                  </svg>
+                </figure>
+              </div></li>
+            </ol>
+          </article>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- IMPORT -->
+  <section class="band" id="import">
+    <div class="wrap">
+      <h2 class="sect-h2">拿到 .fit 之後，放進賽事紀錄</h2>
+      <p class="lede measure">賽事紀錄只認 .fit、.gpx、.tcx 三種檔案。拿到的如果還是 .zip 或 .gz，先解開再匯入。</p>
+      <div class="flows" style="margin-top:30px;">
+
+        <article class="flow">
+          <h3>單場比賽，匯入到那場賽事</h3>
+          <ol class="steps">
+            <li><span class="cp">CP1</span><div>
+              <p>打開那場賽事，展開「賽後紀錄與個人數據」，按 <span class="ui">匯入運動紀錄檔（GPX / TCX / FIT）</span>。也可以直接把 .fit 拖進頁面。</p>
+              <figure class="shot">
+                <svg viewBox="0 0 360 210" role="img" aria-label="賽事紀錄的賽事頁，賽後紀錄區塊裡的匯入運動紀錄檔按鈕，下方是可以直接拖檔案進來的區域">
+                  <rect x="1" y="1" width="358" height="208" rx="10" class="m-frame"/>
+                  <text x="18" y="36" class="m-t m-b">臺北馬拉松</text>
+                  <rect x="100" y="23" width="52" height="18" rx="9" fill="var(--trail)" fill-opacity=".2"/>
+                  <text x="126" y="36" text-anchor="middle" class="m-xs" style="fill:var(--trail)">已完賽</text>
+                  <rect x="12" y="54" width="336" height="30" rx="6" class="m-block"/>
+                  <text x="24" y="74" class="m-t m-b">賽後紀錄與個人數據</text>
+                  <path d="M328 66l6 6 6-6" fill="none" stroke="var(--ink-soft)" stroke-width="1.8"/>
+                  <rect x="24" y="98" width="240" height="30" rx="6" class="m-frame"/>
+                  <text x="36" y="117.5" class="m-s" style="fill:var(--ink);font-weight:700">匯入運動紀錄檔（GPX / TCX / FIT）</text>
+                  <rect x="19" y="93" width="250" height="40" rx="9" class="m-ring"/>
+                  <rect x="24" y="146" width="312" height="50" rx="8" class="m-dash"/>
+                  <path d="M52 156h11l5 5v14H52z" class="m-fit"/>
+                  <text x="190" y="176" text-anchor="middle" class="m-s">或把 .fit 直接拖進這一頁</text>
+                </svg>
+              </figure>
+            </div></li>
+            <li><span class="cp">CP2</span><div>
+              <p>預覽會逐欄標出「會取代現有的⋯」，確認沒問題再按套用。檔案裡沒有的欄位不會被清空。</p>
+            </div></li>
+          </ol>
+          <div class="tips">
+            <p><b>還沒建立這場賽事？</b>在主畫面直接把 .fit 拖進去，會幫你開好一場新的，狀態是已完賽、日期抓檔案裡的時間，補上名稱就好。</p>
+            <p><b>鐵人三項、二鐵：</b>先把賽事種類設成「鐵人三項」或「鐵人兩項」再匯入。手錶就算整場用單一模式錄，也能依速度拆出各段。</p>
+          </div>
+        </article>
+
+        <article class="flow bulk">
+          <h3>全部紀錄，匯入到「訓練」</h3>
+          <ol class="steps">
+            <li><span class="cp">CP1</span><div>
+              <p>按頂端列「＋ 新增賽事」正下方的 <span class="ui">訓練</span>（手機在頂端列最右邊），再按 <span class="ui">＋ 匯入 FIT／GPX</span>。</p>
+              <figure class="shot">
+                <svg viewBox="0 0 360 236" role="img" aria-label="頂端列的訓練按鈕，打開訓練頁後的匯入按鈕，以及匯入預覽分成新的、重複的、比賽當天的、讀不到的四類">
+                  <rect x="1" y="1" width="358" height="234" rx="10" class="m-frame"/>
+                  <text x="18" y="38" class="m-t m-b">賽事紀錄</text>
+                  <rect x="232" y="16" width="112" height="26" rx="6" class="m-btn"/>
+                  <text x="288" y="33.5" text-anchor="middle" class="m-btn-t">＋ 新增賽事</text>
+                  <rect x="232" y="48" width="112" height="20" rx="5" class="m-frame"/>
+                  <text x="288" y="62" text-anchor="middle" class="m-s" style="fill:var(--ink);font-weight:700">訓練</text>
+                  <rect x="227" y="43" width="122" height="30" rx="8" class="m-ring"/>
+                  <line x1="1" y1="84" x2="359" y2="84" class="m-line"/>
+                  <text x="18" y="112" class="m-t m-b">訓練</text>
+                  <rect x="214" y="96" width="130" height="26" rx="6" class="m-btn"/>
+                  <text x="279" y="113.5" text-anchor="middle" class="m-btn-t">＋ 匯入 FIT／GPX</text>
+                  <rect x="209" y="91" width="140" height="36" rx="9" class="m-ring"/>
+                  <circle cx="26" cy="148" r="4" class="m-dot-trail"/><text x="38" y="152" class="m-s" style="fill:var(--ink)">新的訓練</text><text x="340" y="152" text-anchor="end" class="m-n">128</text>
+                  <line x1="18" y1="162" x2="342" y2="162" class="m-line"/>
+                  <circle cx="26" cy="176" r="4" class="m-dot-stone"/><text x="38" y="180" class="m-s">重複的（自動略過）</text><text x="340" y="180" text-anchor="end" class="m-n">12</text>
+                  <line x1="18" y1="190" x2="342" y2="190" class="m-line"/>
+                  <circle cx="26" cy="204" r="4" class="m-dot-flag"/><text x="38" y="208" class="m-s">比賽當天的（預設不匯入）</text><text x="340" y="208" text-anchor="end" class="m-n">3</text>
+                </svg>
+              </figure>
+            </div></li>
+            <li><span class="cp">CP2</span><div>
+              <p>把資料夾裡的 .fit 全選，幾百個也可以；或整批拖進訓練頁。</p>
+            </div></li>
+            <li><span class="cp">CP3</span><div>
+              <p>預覽會分成新的、重複的、比賽當天的、讀不到的四類。跑步類可以順便選穿哪雙鞋，按確認才會寫入。</p>
+            </div></li>
+          </ol>
+          <div class="tips">
+            <p><b>比賽當天的檔案為什麼被擋下？</b>那場的里程已經算進鞋款，當成訓練再匯入會算兩次。完賽紀錄請照「單場比賽」那一欄的方式，匯入到那場賽事。</p>
+            <p><b>之後怎麼更新？</b>整批匯出做一次就好。之後有新的訓練，匯入新的檔案即可；不小心選到舊的也會自動略過。</p>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <h2 class="sect-h2">卡關的時候</h2>
+      <div class="faq">
+        <details>
+          <summary>選不到檔案，或匯入時說讀不到</summary>
+          <p>多半是還沒解壓縮。賽事紀錄只認 .fit、.gpx、.tcx；Garmin 給的是 .zip，Strava 整批匯出的是 .fit.gz，都要先解開。</p>
+        </details>
+        <details>
+          <summary>手機的 Garmin Connect 或 Strava App 找不到匯出</summary>
+          <p>這兩個 App 都沒有匯出檔案的功能，要用電腦開網頁版。三家裡只有 COROS App 可以直接在手機匯出單場的 .fit。</p>
+        </details>
+        <details>
+          <summary>申請了整批匯出，一直沒收到信</summary>
+          <p>先看垃圾郵件匣。Strava 通常幾小時內寄出；Garmin 資料多的話最久可能要 30 天。Garmin 的下載連結過幾天會失效，收到就先下載。</p>
+        </details>
+        <details>
+          <summary>Garmin 和 Strava 都匯出了，會不會重複？</summary>
+          <p>不會。同一個檔案、或同一天同一個開始時間且距離差 1% 以內的紀錄，會被判成重複並自動略過。</p>
+        </details>
+        <details>
+          <summary>新款 Garmin 手錶匯入後，海拔剖面是空的</summary>
+          <p>這是舊版的問題，v3.86.0 已經修好。把那場的 .fit 重新匯入一次，海拔、坡度校正配速和整場爬升就會補上。</p>
+        </details>
+        <details>
+          <summary>一定要用 FIT 嗎？GPX 可不可以？</summary>
+          <p>GPX 也能匯入。但 FIT 是手錶的原始檔，心率、步頻、手錶記錄的爬升都在裡面；鐵人三項、二鐵的分項成績也只有 FIT 拆得出來。能選的話就選 FIT。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 劉恩龍 LIU EN LUNG</span>
+    <span><a href="https://ai-sub3.github.io/Race-Day/about/">功能介紹</a>　<a href="https://ai-sub3.github.io/Race-Day/">開啟賽事紀錄</a></span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // ---- 主題切換（跟功能介紹頁同一個儲存鍵） ----
+  var KEY = 'race-day-showcase-theme';
+  var btn = document.getElementById('theme-toggle');
+  function apply(theme){
+    if(theme === 'dark') document.documentElement.setAttribute('data-theme','dark');
+    else document.documentElement.removeAttribute('data-theme');
+    btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+  }
+  apply(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+  btn.addEventListener('click', function(){
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    apply(next);
+    try{ localStorage.setItem(KEY, next); }catch(e){}
+  });
+
+  // ---- 平台分頁 ----
+  // 沒有 JS 時三個平台全部攤開（見 CSS 的 html:not(.js)），不會有內容藏起來拿不到
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  var panels = tabs.map(function(t){ return document.getElementById(t.getAttribute('aria-controls')); });
+  function select(i, focus){
+    tabs.forEach(function(t, j){
+      var on = i === j;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      panels[j].hidden = !on;
+    });
+    if(focus) tabs[i].focus();
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){
+      select(i, false);
+      // 網址帶上平台，傳給朋友時直接打開對的分頁（例如 …/fit-guide/#strava）
+      try{ history.replaceState(null, '', '#' + panels[i].id); }catch(e){}
+    });
+    t.addEventListener('keydown', function(e){
+      var n = tabs.length, k = e.key, to = null;
+      if(k === 'ArrowRight') to = (i + 1) % n;
+      else if(k === 'ArrowLeft') to = (i - 1 + n) % n;
+      else if(k === 'Home') to = 0;
+      else if(k === 'End') to = n - 1;
+      if(to !== null){ e.preventDefault(); select(to, true); }
+    });
+  });
+  var fromHash = panels.findIndex(function(p){ return '#' + p.id === location.hash; });
+  select(fromHash >= 0 ? fromHash : 0, false);
+  if(fromHash >= 0){
+    var ex = document.getElementById('export');
+    if(ex) ex.scrollIntoView();
+  }
+})();
+</script>
+</body>
+</html>
