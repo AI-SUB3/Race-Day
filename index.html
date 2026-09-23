@@ -13,6 +13,19 @@
     var f=localStorage.getItem('font-scale-v1');
     if(f==='small'||f==='large') document.documentElement.setAttribute('data-font', f);
   }catch(e){}
+  /* 安全模式（v3.88.0）：iPhone 打不開時用來在實機上找原因。
+     ?safe=fx 關掉所有視覺特效、?safe=img 不顯示圖片、?safe=all 兩個都關、
+     ?safe=off 恢復。存在 sessionStorage：這個分頁裡重新整理仍然有效，
+     關掉分頁就恢復正常，不會永久改掉使用者的設定。 */
+  try{
+    var m=location.search.match(/[?&]safe=([a-z]+)/);
+    if(m){
+      if(m[1]==='off') sessionStorage.removeItem('safe-mode');
+      else if(/^(fx|img|all)$/.test(m[1])) sessionStorage.setItem('safe-mode',m[1]);
+    }
+    var sm=sessionStorage.getItem('safe-mode');
+    if(sm) document.documentElement.setAttribute('data-safe',sm==='all'?'fx img':sm);
+  }catch(e){}
 })();
 </script>
 <script>
@@ -1474,6 +1487,40 @@
   @media (max-width:640px){
     .training-entry{padding:7px 10px;}
   }
+  /* ---- 觸控裝置（手機、平板）關掉大面積的合成效果（v3.88.0）----
+     使用者回報 iPhone Safari 開網站就「重複發生問題」（分頁一直崩潰）。
+     v3.46 查到的原因：iOS Safari 遇到「要把整片內容先畫成一張大圖才能處理」
+     的效果時，沒有分塊處理，記憶體一超過就把分頁殺掉。當時只處理了彈窗時
+     #main-content 的 filter:blur，這次把同一類的效果全部列出來：
+     - #ambient-glow：固定在畫面上、整頁寬、60% 視窗高的 mix-blend-mode。混合
+       模式要把它底下的所有內容先合成成一張圖才能混色，而且它一直都在（透明度
+       0 也一樣）——跟當年的 filter:blur 是同一種失敗模式，嫌疑最大。
+     - 備戰釘選的流體漸層：兩塊 blur(70px) 的色塊，加上不停的動畫。
+     - 詳情頁標題後方的 blur(90px) 光暈。
+     - 頂端列、第二列、快速導覽列、抽屜遮罩、拖放畫面的毛玻璃（backdrop-filter）。
+     手機上改成不需要合成大圖的寫法：光暈與混色層拿掉（頁面底色的微量主色
+     調是用 CSS 變數做的，照樣有），色塊改用放射漸層，毛玻璃改成不透明底色。
+     桌機（有滑鼠）完全不變。 ---- */
+  @media (hover:none),(pointer:coarse){
+    #ambient-glow{display:none!important;}
+    .detail-ambient-glow{display:none;}
+    .focus-mesh-blob{filter:none;will-change:auto;animation:none;}
+    .focus-mesh-blob-a{background:radial-gradient(closest-side,rgba(var(--gold-rgb),0.30),transparent);}
+    .focus-mesh-blob-b{background:radial-gradient(closest-side,var(--trail),transparent);}
+    #topbar,.topbar-row2,.quick-nav{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--paper);}
+    .drawer-overlay,.global-dropzone-overlay{backdrop-filter:none;-webkit-backdrop-filter:none;}
+  }
+  /* 安全模式：?safe=fx 關掉所有動畫與特效、?safe=img 不顯示圖片 */
+  [data-safe~="fx"] *,[data-safe~="fx"] *::before,[data-safe~="fx"] *::after{
+    animation:none!important;transition:none!important;filter:none!important;
+    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+    mix-blend-mode:normal!important;will-change:auto!important;
+  }
+  [data-safe~="fx"] #ambient-glow,[data-safe~="fx"] .focus-mesh,[data-safe~="fx"] .detail-ambient-glow{display:none!important;}
+  [data-safe~="img"] img:not(.safe-keep){display:none!important;}
+  .safe-mode-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    z-index:600;background:#E5383B;color:#fff;font-size:13px;padding:8px 14px;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,.3);}
+  .safe-mode-banner a{color:#fff;text-decoration:underline;margin-left:8px;}
   /* 字級切換：分段按鈕，三個字本身大小遞增，一眼看得出是在調字級。
      這三顆按鈕自己的字級「不」跟著 --fs 縮放——否則切到大，控制項自己也
      變大，頂端列在手機上會被擠爆。 */
@@ -3435,7 +3482,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.87.0';
+const APP_VERSION='v3.88.0';
 
 /* ============================================================
    多語系（i18n）
@@ -15574,6 +15621,14 @@ document.getElementById('training-overlay').addEventListener('change',async e=>{
 // 檔案」畫面收不到 drop、永遠關不掉，而且它 z-index 500，把訓練的匯入
 // 視窗整個蓋住——使用者看到的就是「卡住不會動」。
 document.getElementById('btn-training').addEventListener('click',openTrainingOverlay);
+(function showSafeModeBanner(){
+  const sm=document.documentElement.getAttribute('data-safe');
+  if(!sm) return;
+  const el=document.createElement('div');
+  el.className='safe-mode-banner';
+  el.innerHTML=`${escapeHtml(t('ui.safeModeOn','安全模式'))}：${escapeHtml(sm)}<a href="?safe=off">${escapeHtml(t('ui.safeModeExit','離開'))}</a>`;
+  document.body.appendChild(el);
+})();
 function hallOfFameHtml(){
   const d=computeHallOfFameData();
   const hero=d.marathonPB!=null?`<div class="hof-hero" id="hof-hero">
@@ -15974,7 +16029,7 @@ function renderCalendar(){
     const extra=dayRaces.length-shown.length;
     cells.push(`<div class="cal-cell${muted?' muted':''}${isToday?' today':''}${isWeekend?' weekend':''}">
       <span class="cal-daynum">${cellD}</span>
-      ${shown.map(r=>`<button type="button" class="cal-chip status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" style="--chip-tint:${sportBgVar(r.sportType)}" title="${escapeHtml(r.name)}">${r.coverImage?`<img class="cal-chip-thumb" src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" style="${focalPointStyle(r)}">`:`<span class="cal-chip-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}<span class="cal-chip-text">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span></button>`).join('')}
+      ${shown.map(r=>`<button type="button" class="cal-chip status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" style="--chip-tint:${sportBgVar(r.sportType)}" title="${escapeHtml(r.name)}">${r.coverImage?`<img class="cal-chip-thumb" src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" loading="lazy" decoding="async" style="${focalPointStyle(r)}">`:`<span class="cal-chip-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}<span class="cal-chip-text">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span></button>`).join('')}
       ${extra>0?`<span class="cal-more">+${extra}</span>`:''}
     </div>`);
     // 手機清單檢視只列本月、有賽事的日期，避免小螢幕上格子太擠、觸控熱區太小
@@ -15985,7 +16040,7 @@ function renderCalendar(){
           ${dayRaces.map(r=>`<div class="swipe-row" data-id="${r.id}">
             <div class="swipe-action-bg"></div>
             <button type="button" class="cal-list-item swipe-card status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
-              ${r.coverImage?`<img class="cal-list-thumb" src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" style="${focalPointStyle(r)}">`:`<span class="cal-list-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}
+              ${r.coverImage?`<img class="cal-list-thumb" src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" loading="lazy" decoding="async" style="${focalPointStyle(r)}">`:`<span class="cal-list-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}
               <span class="cal-list-text">
                 <span class="cal-list-name-row">
                   <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>

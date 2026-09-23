@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.87.0
+> 貼到新對話開頭即可接續。最後更新：v3.88.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（343 項檢查，19 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（347 項檢查，19 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -132,6 +132,8 @@ APP=/path/to/index.html python3 test_suite.py
 | 功能因缺資料而不出現時，要說原因 | 「選項消失」跟「功能壞掉」在畫面上一樣。分享選項灰掉＋標原因（v3.61）、照片略過清單（v3.38）、氣象沒軌跡的說明（v3.71）都是同一條 |
 | 預報不可以佔用「實際值」欄位 | 回填一律只填空欄位。預報先填了 `raceDayWeather.feelsLikeTempC`，賽後歷史天氣就補不進真正的實測值。預報只填 `climateForecast.*` |
 | 多項運動分段推算只是退路 | FIT 有多個 session 一律用 `buildRaceLegs()`（手錶記的、精確）；只有 1 個 session 才推算：二鐵 `inferRunBikeRunLegs()`、三鐵 `inferSwimBikeRunLegs()`，共用 `analyzeSpeedProfile()`，依 `sportType` 選用。推算的分段標 `inferred:true`；推算的游泳距離一律 null |
+| **觸控裝置不可以有大面積合成效果** | `mix-blend-mode`、大半徑 `filter:blur`、`backdrop-filter` 在 iOS Safari 都要先把大片內容合成成一張圖，會撐爆分頁（「重複發生問題」）。一律放在 `@media (hover:hover) and (pointer:fine)` 或用 `@media (hover:none),(pointer:coarse)` 關掉。v3.88 全部列過一次 |
+| iPhone 打不開時用安全模式找原因 | `?safe=fx`（關特效）→ `?safe=img`（關圖片）→ `?safe=all`，可與 `?nosw=1` 併用。存在 sessionStorage |
 | canvas 要跟著縮放重畫 | 雷達圖是唯一的 canvas。`watchCanvasResolution()` 監聽像素比例與視窗大小，呼叫 `redrawThemeDependentCanvases()`。背板尺寸用 `Math.round(css×dpr)`。之後新增任何 canvas 都要掛進這個重畫流程 |
 | **FIT 海拔要讀欄位 2 或 78** | 新款 Garmin 只寫 78（enhanced_altitude）。只讀 2 的話海拔剖面、GAP、爬升全空。真實檔案才發現——模擬檔都寫欄位 2 |
 | 能拿到真實檔案就用真實檔案驗 | v3.86 用使用者的 Forerunner 945 檔案一次抓到三件模擬檔抓不到的事：海拔欄位、下水前幾分鐘水溫偏熱、心率來源。真實檔案含個人 GPS 軌跡，**不要放進公開 repo**；把學到的特徵寫進測試產生器 |

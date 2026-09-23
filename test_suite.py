@@ -1385,6 +1385,45 @@ class Mobile(Group):
             return !!tr.closest('.topbar-actions') && r.width>0 && r.right<=window.innerWidth
                 && getComputedStyle(span).display!=='none' && span.textContent.trim()==='訓練';
         }''')
+        # ---- iPhone 分頁崩潰（「重複發生問題」）：觸控裝置不可以有大面積合成效果（v3.88.0） ----
+        br = page.context.browser
+        PROBE = '''async()=>{
+            state.races=[]; const r=emptyRace('若狹路','trail_running','registered',addDaysStr(todayISO(),5)); state.races.push(r);
+            renderAll(); await new Promise(s=>setTimeout(s,400));
+            const cs=(q,prop)=>{ const el=document.querySelector(q); return el?getComputedStyle(el)[prop]:null; };
+            const bd=q=>cs(q,'backdropFilter')||cs(q,'webkitBackdropFilter');
+            return {hoverNone:matchMedia('(hover:none)').matches, glow:cs('#ambient-glow','display'),
+              topbar:bd('#topbar'), row2:bd('.topbar-row2'), blob:cs('.focus-mesh-blob','filter'), anim:cs('.focus-mesh-blob','animationName')};
+        }'''
+        tctx = br.new_context(viewport={'width':390,'height':844}, is_mobile=True, has_touch=True)
+        tp = tctx.new_page(); tp.goto('file://'+APP); tp.wait_for_timeout(900)
+        touch = tp.evaluate(PROBE); tctx.close()
+        dctx = br.new_context(viewport={'width':1200,'height':900})
+        dp = dctx.new_page(); dp.goto('file://'+APP); dp.wait_for_timeout(900)
+        desk = dp.evaluate(PROBE); dctx.close()
+        c['touch_devices_drop_large_compositing_effects'] = (touch['hoverNone'] is True and touch['glow']=='none'
+            and touch['topbar']=='none' and touch['row2']=='none' and touch['blob']=='none' and touch['anim']=='none')
+        # 桌機（有滑鼠）維持原本的效果
+        c['desktop_keeps_visual_effects'] = (desk['hoverNone'] is False and desk['glow']!='none'
+            and 'blur' in (desk['topbar'] or '') and 'blur' in (desk['blob'] or ''))
+        # 安全模式：?safe=fx 開、重新整理仍有效、?safe=all 連圖片一起關、?safe=off 恢復
+        sctx = br.new_context(viewport={'width':390,'height':844}, is_mobile=True, has_touch=True)
+        sp = sctx.new_page(); base='file://'+APP
+        sp.goto(base+'?safe=fx'); sp.wait_for_timeout(700)
+        a = sp.evaluate("()=>[document.documentElement.getAttribute('data-safe'),!!document.querySelector('.safe-mode-banner')]")
+        sp.goto(base); sp.wait_for_timeout(700)
+        b = sp.evaluate("()=>document.documentElement.getAttribute('data-safe')")
+        sp.goto(base+'?safe=all'); sp.wait_for_timeout(700)
+        c3 = sp.evaluate("()=>{const i=document.createElement('img');document.body.appendChild(i);const d=getComputedStyle(i).display;i.remove();return [document.documentElement.getAttribute('data-safe'),d];}")
+        sp.goto(base+'?safe=off'); sp.wait_for_timeout(700)
+        d = sp.evaluate("()=>[document.documentElement.getAttribute('data-safe'),!!document.querySelector('.safe-mode-banner')]")
+        sctx.close()
+        c['safe_mode_lifecycle'] = (a==['fx',True] and b=='fx' and c3==['fx img','none'] and d==[None,False])
+        # 行事曆縮圖延遲載入：一百多場賽事時不要一次解碼全部
+        import pathlib as _pl
+        _src=_pl.Path(APP).read_text(encoding='utf-8')
+        c['calendar_thumbs_lazy_load'] = ('class="cal-chip-thumb"' in _src and 'class="cal-list-thumb"' in _src
+            and all('loading="lazy"' in seg.split('>')[0] for seg in _src.split('<img class="cal-')[1:3]))
         c['pinch_zoom_blocked'] = page.evaluate('''()=>{
             const e=new Event('gesturestart',{cancelable:true,bubbles:true});
             document.dispatchEvent(e);
