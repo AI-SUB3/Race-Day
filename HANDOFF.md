@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.84.0
+> 貼到新對話開頭即可接續。最後更新：v3.86.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（329 項檢查，18 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（341 項檢查，19 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -132,6 +132,11 @@ APP=/path/to/index.html python3 test_suite.py
 | 功能因缺資料而不出現時，要說原因 | 「選項消失」跟「功能壞掉」在畫面上一樣。分享選項灰掉＋標原因（v3.61）、照片略過清單（v3.38）、氣象沒軌跡的說明（v3.71）都是同一條 |
 | 預報不可以佔用「實際值」欄位 | 回填一律只填空欄位。預報先填了 `raceDayWeather.feelsLikeTempC`，賽後歷史天氣就補不進真正的實測值。預報只填 `climateForecast.*` |
 | 多項運動分段推算只是退路 | FIT 有多個 session 一律用 `buildRaceLegs()`（手錶記的、精確）；只有 1 個 session 才推算：二鐵 `inferRunBikeRunLegs()`、三鐵 `inferSwimBikeRunLegs()`，共用 `analyzeSpeedProfile()`，依 `sportType` 選用。推算的分段標 `inferred:true`；推算的游泳距離一律 null |
+| **FIT 海拔要讀欄位 2 或 78** | 新款 Garmin 只寫 78（enhanced_altitude）。只讀 2 的話海拔剖面、GAP、爬升全空。真實檔案才發現——模擬檔都寫欄位 2 |
+| 能拿到真實檔案就用真實檔案驗 | v3.86 用使用者的 Forerunner 945 檔案一次抓到三件模擬檔抓不到的事：海拔欄位、下水前幾分鐘水溫偏熱、心率來源。真實檔案含個人 GPS 軌跡，**不要放進公開 repo**；把學到的特徵寫進測試產生器 |
+| 游泳水溫略過前 3 分鐘、心率來源看 device_info | 剛下水手錶帶著體溫。ANT+／120＝胸帶、內建／10＝手腕光學 |
+| 多項運動雷達＝游泳、騎車、跑步疊圖 | `computeRaceRadarSeries()`；距離滿分依運動（`RADAR_LEG_FULL_KM`）；游泳不畫。繪製一律走 `radarDataForRace()`＋`drawRadarData()`，不要直接呼叫 `drawRaceRadar(computeRaceRadar())`。疊圖的數值要寫短，手機才放得下（有畫布文字邊界測試） |
+| `multisport`、`radar` 群組都要單獨跑 | 每項都要產生並解析 FIT，各自接近 300 秒上限。雷達相關測試已拆到 `radar`；再加就再拆 |
 | 游泳分段每 100 公尺、距離用手錶的 | `computeSwimSplitsFromPoints()` 優先用 record 欄位 5（`p.dist`）。中位數快於 50 秒／100m 視為 GPS 亂跳、整段不列（`leg.swimGpsRejected`）。推算的游泳段不算分段。雷達不納入游泳 |
 | 多項運動的分段表與雷達一律依分段算 | `leg.splits`（匯入時每段各自算）；舊資料用 `legSplitGroups()` 依時間歸組、跨交界的略過。心率區間用 `hrZoneInfoForRace(hr,race,legSport)`，不要用整場的運動種類 |
 | **不可以用正規表示式向後查找** | iOS Safari 16.4 以前不支援，整支程式直接語法錯誤、網站打不開。有靜態檢查 `no_regex_lookbehind_for_old_ios` |

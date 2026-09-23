@@ -717,8 +717,18 @@ window.__makeFitProfile=function(opt){
   const bytes=[]; const u8=v=>bytes.push(v&255); const u16=v=>{u8(v);u8(v>>8);}; const u32=v=>{u8(v);u8(v>>8);u8(v>>16);u8(v>>24);};
   // withDist：多寫 record 欄位 5（手錶記的累計距離）；segments[i].noise：座標加上
   // 左右亂跳的雜訊（公尺），模擬開放水域游泳時斷斷續續的 GPS——距離欄位不受影響
-  const fields=[[253,4,0x86],[0,4,0x85],[1,4,0x85],[2,2,0x84],[3,1,0x02]];
+  // enhancedAlt：海拔只寫欄位 78（新款 Garmin 的寫法），不寫欄位 2
+  // withTemp：寫欄位 13（溫度，sint8）；segments[i].temp 或 segments[i].tempFirst＋tempFirstSec（剛下水偏熱）
+  const fields=[[253,4,0x86],[0,4,0x85],[1,4,0x85],opt.enhancedAlt?[78,4,0x86]:[2,2,0x84],[3,1,0x02]];
   if(opt.withDist) fields.push([5,4,0x86]);
+  if(opt.withTemp) fields.push([13,1,0x01]);
+  // device_info：hrSource 'strap'＝ANT+ 心率帶（source 1、type 120）；'wrist'＝內建光學（source 5、type 10）
+  if(opt.hrSource){
+    const strap=opt.hrSource==='strap';
+    u8(0x42);u8(0);u8(0);u16(23);u8(3);
+    [[0,1,0x02],[1,1,0x02],[25,1,0x00]].forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
+    u8(0x02); u8(strap?1:4); u8(strap?120:10); u8(strap?1:5);
+  }
   u8(0x40);u8(0);u8(0);u16(20);u8(fields.length);
   fields.forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
   let lat=24.98, lon=121.53, t=0, dist=0; const segBounds=[]; let seed=7;
@@ -732,8 +742,12 @@ window.__makeFitProfile=function(opt){
       lat+=Math.cos(heading)*m/111320; lon+=Math.sin(heading)*m/(111320*Math.cos(lat*Math.PI/180));
       t+=2;
       const nz=sg.noise||0, jl=rnd()*nz/111320, jo=rnd()*nz/111320;
-      u8(0x00); u32(start+t); u32(toSc(lat+jl)>>>0); u32(toSc(lon+jo)>>>0); u16(Math.round((20+500)*5)); u8(sg.hr||150);
+      const altRaw=Math.round(((sg.alt!=null?sg.alt:20)+(sg.climb?sg.climb*(s/sg.sec):0)+500)*5);
+      u8(0x00); u32(start+t); u32(toSc(lat+jl)>>>0); u32(toSc(lon+jo)>>>0);
+      if(opt.enhancedAlt) u32(altRaw); else u16(altRaw);
+      u8(sg.hr||150);
       if(opt.withDist) u32(Math.round(dist*100));
+      if(opt.withTemp){ const tv=(sg.tempFirstSec&&s<sg.tempFirstSec)?sg.tempFirst:(sg.temp!=null?sg.temp:25); u8(tv<0?256+tv:tv); }
     }
     segBounds.push({from,to:{t,dist}});
   });
@@ -742,7 +756,7 @@ window.__makeFitProfile=function(opt){
   const sessions=opt.sessions||[{sport:1,fromSeg:0,toSeg:opt.segments.length-1}];
   sessions.forEach(ss=>{
     const a=segBounds[ss.fromSeg].from, b=segBounds[ss.toSeg].to;
-    u8(0x01); u32(start+a.t); u32(start+b.t); u8(ss.sport); u32((b.t-a.t)*1000); u32(Math.round((b.dist-a.dist)*100)); u8(150); u16(0);
+    u8(0x01); u32(start+a.t); u32(start+b.t); u8(ss.sport); u32((b.t-a.t)*1000); u32(Math.round((b.dist-a.dist)*100)); u8(150); u16(ss.ascent!=null?ss.ascent:0xFFFF);
   });
   const data=new Uint8Array(bytes); const out=new Uint8Array(14+data.length); const dv=new DataView(out.buffer);
   dv.setUint8(0,14); dv.setUint8(1,0x10); dv.setUint16(2,2093,true); dv.setUint32(4,data.length,true);
@@ -982,6 +996,131 @@ class Multisport(Group):
             return st(a.race)===st(b.race) && (a.leg.splits||[]).length>0;
         }''' % SWIM)
 
+
+
+class Radar(Group):
+    """多項運動雷達圖（v3.85 疊圖、v3.86 加入游泳）＋ FIT 海拔／水溫／心率來源。
+    從 multisport 拆出來：那個群組每項都要產生並解析 FIT，已經接近 300 秒上限。"""
+
+    def body(self, page):
+        c = self.checks
+        page.add_script_tag(content=FIT_PROFILE_GENERATOR_JS)
+        page.evaluate('''()=>{ userProfile=userProfile||{};
+            userProfile.hr={running:{restingHr:50,maxHr:190},cycling:{restingHr:50,maxHr:175},swimming:{restingHr:50,maxHr:170}}; }''')
+        FIX = '''const SEGS=__TRIATHLON_SEGMENTS.map((sg,i)=>i===0?Object.assign({},sg,{temp:27,tempFirst:32,tempFirstSec:120}):sg);
+            const SES=[{sport:5,fromSeg:0,toSeg:0},{sport:3,fromSeg:1,toSeg:3},{sport:2,fromSeg:4,toSeg:6,ascent:420},
+                       {sport:3,fromSeg:7,toSeg:9},{sport:1,fromSeg:10,toSeg:10,ascent:35}];
+            const fit=o=>__makeFitProfile(Object.assign({start:new Date('2025-04-26T06:30:00'),segments:SEGS,sessions:SES,
+                          withDist:true,withTemp:true,enhancedAlt:true,hrSource:'wrist'},o||{}));
+            const importAs=async(sport,o)=>{
+              state.races=[]; const r=emptyRace('鐵人',sport,'completed','2025-04-26'); state.races.push(r);
+              selectRace(r.id,{scroll:false}); await new Promise(s=>setTimeout(s,250));
+              await importActivityFile(fit(o)); await new Promise(s=>setTimeout(s,450));
+              const ok=document.querySelector('[data-action="confirm-gpx-import"]'); if(ok){ ok.click(); await new Promise(s=>setTimeout(s,550)); }
+              return state.races[0]; };'''
+        # ---- FIT 解析：這三項都是用使用者的真實檔案（Forerunner 945）才發現的 ----
+        c['fit_enhanced_altitude_is_read'] = page.evaluate('''async()=>{ %s
+            // 新款 Garmin 只寫欄位 78；原本只讀欄位 2，海拔剖面、GAP、爬升全部是空的
+            const segs=SEGS.map((sg,i)=>i===4?Object.assign({},sg,{climb:300}):sg);
+            const pts=parseFitPoints(await fit({segments:segs}).arrayBuffer());
+            const s=await parseActivityFile(fit({segments:segs}));
+            return pts.filter(p=>p.ele!=null).length>100 && s.elevationGainM>=250 && s.elevationGainM<=350;
+        }''' % FIX)
+        c['legs_get_watch_ascent_and_swim_water_temp'] = page.evaluate('''async()=>{ %s
+            const s=await parseActivityFile(fit());
+            const g=sp=>s.legs.find(l=>l.sport===sp);
+            // 下水前 2 分鐘 32°C（手錶還帶著體溫），之後 27°C：略過前 3 分鐘取中位數 → 27
+            return g('cycling').elevationGainM===420 && g('running').elevationGainM===35
+                && g('swimming').elevationGainM===null && g('swimming').waterTempC===27
+                && g('cycling').waterTempC===undefined;
+        }''' % FIX)
+        c['hr_source_strap_vs_wrist'] = page.evaluate('''async()=>{ %s
+            const src=async h=>parseFitPoints(await fit({hrSource:h}).arrayBuffer()).hrSource;
+            return (await src('strap'))==='strap' && (await src('wrist'))==='wrist';
+        }''' % FIX)
+        c['water_temp_harshness_follows_wetsuit_rules'] = page.evaluate('''()=>{
+            const h=waterTempHarshness;
+            return h(21)===0 && h(18)===0 && h(24)===0 && Math.abs(h(16)-2/6)<0.01 && h(12)===1
+                && Math.abs(h(28)-4/5.5)<0.01 && h(29.5)===1 && h(null)===null;
+        }''')
+        # ---- 雷達圖：泳、騎、跑三個形狀 ----
+        c['radar_three_series_with_swim'] = page.evaluate('''async()=>{ %s
+            const r=await importAs('triathlon');
+            const d=computeRaceRadarSeries(r);
+            const se=sp=>d.series.find(x=>x.sport===sp);
+            const dim=(sp,k)=>se(sp).dims.find(x=>x.key===k);
+            // 游泳：距離依 3.8 km 滿分、沒有爬升、溫度用水溫；穩定度的區段長度依距離調整
+            // （1.5 km＝14 個 100 m 分段 → 每 200 m 一段 → 7 段；3.8 km 以上 → 每 500 m）
+            const swimSplits=r.legs.find(l=>l.sport==='swimming').splits;
+            const bs=swimBlockSize(swimSplits.length);
+            const blocks=[]; for(let i=0;i+bs<=swimSplits.length;i+=bs) blocks.push(1);
+            return d.series.map(x=>x.sport).join()==='swimming,cycling,running'
+                && Math.abs(dim('swimming','distance').value-1.5/3.8)<0.02
+                && dim('swimming','elevation').value===null
+                && dim('swimming','temp').raw==='水 27°C' && dim('swimming','temp').value===Math.min((27-24)/5.5,1)
+                && dim('cycling','elevation').raw==='420 m'                    // 用手錶記錄的爬升
+                && bs===2 && blocks.length===7 && swimBlockSize(38)===5 && swimBlockSize(3)===1
+                && dim('swimming','stability').raw!=null
+                && dim('cycling','temp').label==='溫度嚴苛';
+        }''' % FIX)
+        c['radar_single_sport_unchanged'] = page.evaluate('''()=>{
+            const solo=emptyRace('路跑','road_running','completed','2026-01-01'); solo.route.distanceKm=42.195;
+            solo.splits=[1,2,3,4,5].map(i=>({distanceKm:1,splitTimeSeconds:300+i,avgPaceSecPerKm:300+i,avgHr:150}));
+            const d=document.createElement('div'); d.innerHTML=renderRaceRadarHtml(solo);
+            return Array.isArray(radarDataForRace(solo)) && !d.querySelector('.is-overlay') && !d.querySelector('.race-radar-legend');
+        }''')
+        # 游泳用手腕心率時要說明來源；有胸帶就不說明
+        c['radar_wrist_hr_note_only_for_wrist'] = page.evaluate('''async()=>{ %s
+            const a=await importAs('triathlon',{hrSource:'wrist'});
+            const da=document.createElement('div'); da.innerHTML=renderRaceRadarHtml(a);
+            const b=await importAs('triathlon',{hrSource:'strap'});
+            const db=document.createElement('div'); db.innerHTML=renderRaceRadarHtml(b);
+            const legend=[...da.querySelectorAll('.race-radar-legend-item')].map(x=>x.textContent.trim()).join();
+            return legend==='游泳,自行車,跑步' && da.textContent.includes('手腕光學心率') && !db.textContent.includes('手腕光學心率');
+        }''' % FIX)
+        # 推算出來的游泳段（單一模式錄的）沒有分段 → 不畫，並說明
+        c['radar_inferred_swim_not_drawn'] = page.evaluate('''async()=>{ %s
+            const r=await importAs('triathlon',{sessions:null});
+            const d=computeRaceRadarSeries(r);
+            const h=document.createElement('div'); h.innerHTML=renderRaceRadarHtml(r);
+            return d.series.map(x=>x.sport).join()==='cycling,running' && h.textContent.includes('沒有分段資料');
+        }''' % FIX)
+        c['radar_overlay_hr_uses_leg_zones'] = page.evaluate('''()=>{
+            const r=emptyRace('二鐵','duathlon','completed','2021-05-09');
+            const mk=(sport,hr)=>({sport,distanceKm:10,durationSeconds:3000,startTime:'2021-05-09T07:00:00Z',endTime:'2021-05-09T08:00:00Z',
+              splits:[1,2,3,4,5].map(()=>({distanceKm:1,splitTimeSeconds:300,avgPaceSecPerKm:300,avgHr:hr}))});
+            r.legs=[mk('running',158),{sport:'transition',durationSeconds:60},mk('cycling',158),{sport:'transition',durationSeconds:60},mk('running',158)];
+            const d=computeRaceRadarSeries(r);
+            const hr=s=>d.series.find(x=>x.sport===s).dims.find(x=>x.key==='hr').value;
+            return hr('cycling')===1 && hr('running')===0;
+        }''')
+        # ---- 版面：桌機數值標在各軸旁、手機改用表格；任何文字都不可以超出畫布 ----
+        BOUNDS = '''const check=async()=>{
+            const canvas=document.querySelector('canvas.is-overlay'); const wrap=canvas.closest('.race-radar');
+            const W=canvas.clientWidth,H=canvas.clientHeight,calls=[];
+            const proto=CanvasRenderingContext2D.prototype, orig=proto.fillText;
+            proto.fillText=function(txt,x,y){ calls.push({x,y,w:this.measureText(String(txt)).width,align:this.textAlign}); return orig.apply(this,arguments); };
+            try{ drawRadarData(canvas,radarDataForRace(state.races[0]),1); } finally{ proto.fillText=orig; }
+            const out=calls.filter(c2=>{ const l=c2.align==='right'?c2.x-c2.w:(c2.align==='center'?c2.x-c2.w/2:c2.x); return l<0||l+c2.w>W||c2.y<0||c2.y>H; });
+            const tw=wrap.querySelector('.race-radar-values-wrap');
+            return {texts:calls.length,out:out.length,compact:wrap.classList.contains('is-compact'),
+              table:getComputedStyle(tw).display!=='none',tableFits:tw.scrollWidth<=tw.clientWidth+1,W}; };'''
+        c['radar_desktop_values_on_canvas'] = page.evaluate('''async()=>{ %s %s
+            await importAs('triathlon'); document.getElementById('section-post').open=true;
+            await new Promise(s=>setTimeout(s,400));
+            const r=await check();
+            return !r.compact && !r.table && r.texts>=15 && r.out===0;
+        }''' % (FIX, BOUNDS))
+        for w in (390, 360):
+            page.set_viewport_size({'width':w,'height':900}); page.wait_for_timeout(250)
+            c[f'radar_phone_{w}_compact_with_table'] = page.evaluate('''async()=>{ %s %s
+                await importAs('triathlon'); document.getElementById('section-post').open=true;
+                await new Promise(s=>setTimeout(s,400));
+                const r=await check();
+                // 圖上只標 5 個軸名、數值在表格，表格不可以被切掉
+                return r.compact && r.table && r.tableFits && r.texts===5 && r.out===0 && r.W<360;
+            }''' % (FIX, BOUNDS))
+        page.set_viewport_size({'width':1100,'height':900})
 
 class Sync(Group):
     """雲端合併規則：本機優先，永不覆蓋本機已有值。"""
@@ -3813,6 +3952,7 @@ GROUPS = {
     'paste':      lambda: PasteReport('paste'),
     'feedback':   lambda: FeedbackConfigured('feedback'),
     'training':   lambda: Training('training'),
+    'radar':      lambda: Radar('radar'),
 }
 
 
