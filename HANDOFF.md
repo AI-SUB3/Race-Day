@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.73.0
+> 貼到新對話開頭即可接續。最後更新：v3.75.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（261 項檢查，16 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（275 項檢查，17 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -131,6 +131,9 @@ APP=/path/to/index.html python3 test_suite.py
 | 縮圖 480px 上限（v3.26.0） | 卡片實測需要 490～510 裝置像素。再往上到 640px 要 69KB，跟 760px 原圖的 80KB 幾乎一樣，等於存第二份原圖；而直接用原圖渲染會從 75ms 變 152ms（base64 串進 innerHTML 的字串成本） |
 | 功能因缺資料而不出現時，要說原因 | 「選項消失」跟「功能壞掉」在畫面上一樣。分享選項灰掉＋標原因（v3.61）、照片略過清單（v3.38）、氣象沒軌跡的說明（v3.71）都是同一條 |
 | 預報不可以佔用「實際值」欄位 | 回填一律只填空欄位。預報先填了 `raceDayWeather.feelsLikeTempC`，賽後歷史天氣就補不進真正的實測值。預報只填 `climateForecast.*` |
+| 新增 CSS 的 font-size 要乘 `--fs` | 字級切換靠 `calc(Npx*var(--fs,1))`。**之後新加的樣式也要這樣寫**，不然那一塊不會跟著縮放。例外：30px 以上的大數字、字級控制項本身 |
+| manifest 的相對路徑是相對於 manifest 自己 | `icons/manifest.webmanifest` 裡寫 `"start_url":"."` 會解析成 `/Race-Day/icons/` → 安裝後的 PWA 一開就 404，但瀏覽器直接開完全正常。`start_url`／`scope`／`id` 一律寫絕對路徑 `/Race-Day/`。改完要**先移除已安裝的 App** 再重裝，舊安裝不會自動更新 start_url |
+| 回饋表單只帶版本／裝置／畫面 | 公開收件匣，使用者按之前看不到會送什麼。絕不夾帶賽事資料，有測試鎖住 |
 | 歷年平均跟比賽有沒有結束無關 | 那是地點×日期的多年平均，賽前最需要。不要綁 `raceIsHistorical()`。取樣＝往前 5 年 × 同月同日 ±3 天（`CLIMATE_AVG_YEARS`／`CLIMATE_AVG_WINDOW`），樣本數要顯示在畫面上 |
 | 天氣自動查詢的前提是有 GPS 軌跡 | 需要座標。沒軌跡就查不了，但一定要在畫面上講出來，並保留手動填寫的路 |
 | 從全螢幕圖層開的彈窗要拉 z-index | 生涯回顧是 210，一般 `.modal-overlay` 只有 50，不拉就被蓋住＝「按了沒反應」。驗收要測「看得到」「按得到」，不是只測「有沒有打開」 |

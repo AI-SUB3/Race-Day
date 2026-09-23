@@ -500,6 +500,17 @@ class Drawers(Group):
             // 2027~2023 只有 2024 是閏年，所以只該送出一次查詢
             return urls.length===1 && urls[0].includes('2024-02-26') && urls[0].includes('2024-03-03');
         }''')
+        # ---- 意見回饋按鈕 ----
+        c['feedback_not_configured_shows_notice'] = page.evaluate('''async()=>{
+            document.querySelectorAll('.foreground-toast').forEach(n=>n.remove());
+            let opened=false; const real=window.open; window.open=()=>{opened=true;};
+            document.getElementById('btn-feedback').click();
+            await new Promise(s=>setTimeout(s,200));
+            window.open=real;
+            const toast=[...document.querySelectorAll('.foreground-toast')].map(n=>n.textContent).join('');
+            // 還沒設定表單網址：不可以是死按鈕，要說明
+            return opened===false && toast.includes('準備中') && buildFeedbackUrl()==='';
+        }''')
         c['empty_drawer_cards_muted_filled_cards_not'] = page.evaluate('''async()=>{
             const r=emptyRace('卡片','road_running','registered','2026-11-01');
             r.location.city='臺北市'; r.route.distanceKm=42.195;
@@ -915,6 +926,47 @@ class Mobile(Group):
 
     def body(self, page):
         c = self.checks
+        # 手機多一顆「新增賽事」懸浮鈕在說明鈕上方——回饋鈕要疊到它上面，三顆互不重疊
+        c['feedback_fab_stacks_above_new_race_on_phone'] = page.evaluate('''()=>{
+            const box=id=>{ const el=document.getElementById(id);
+              if(!el||getComputedStyle(el).display==='none') return null;
+              return el.getBoundingClientRect(); };
+            const fb=box('btn-feedback'), nw=box('btn-new-fab'), help=box('btn-help');
+            const overlap=(a,b)=>a&&b&&!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
+            return !!fb && !!nw && !!help
+                && !overlap(fb,nw) && !overlap(fb,help)
+                && fb.bottom<=nw.top && nw.bottom<=help.top
+                && Math.abs((fb.left+fb.width/2)-(help.left+help.width/2))<1;
+        }''')
+        # ---- 字級切換（手機）：手機禁止雙指縮放，這是唯一放大字的方式 ----
+        c['font_scale_changes_text_size'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('字級測試','road_running','completed','2025-04-27');
+            r.route.distanceKm=21.0975; r.results.chipTimeSeconds=5185;
+            r.budget={registrationFee:1200,currency:'TWD',paymentStatus:'paid'};
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const size=async sc=>{ applyFontScale(sc); await new Promise(s=>setTimeout(s,150));
+              return parseFloat(getComputedStyle(document.querySelector('.dash-card-sub')).fontSize); };
+            const S=await size('small'), M=await size('medium'), L=await size('large');
+            return Math.abs(M-13)<0.05 && Math.abs(S-11.7)<0.05 && Math.abs(L-14.95)<0.1;
+        }''')
+        # 30px 以上的大數字不縮放——放大會在手機上把完賽時間撐出螢幕
+        c['font_scale_keeps_display_numbers'] = page.evaluate('''async()=>{
+            const el=document.querySelector('.results-big-time');
+            if(!el) return false;
+            const at=async sc=>{ applyFontScale(sc); await new Promise(s=>setTimeout(s,150));
+              return parseFloat(getComputedStyle(el).fontSize); };
+            const S=await at('small'), L=await at('large');
+            applyFontScale('medium');
+            return S===L;
+        }''')
+        c['font_scale_large_no_horizontal_overflow_on_phone'] = page.evaluate('''async()=>{
+            applyFontScale('large'); await new Promise(s=>setTimeout(s,300));
+            const ok=document.documentElement.scrollWidth<=window.innerWidth+1;
+            applyFontScale('medium');
+            return ok;
+        }''')
         c['pinch_zoom_blocked'] = page.evaluate('''()=>{
             const e=new Event('gesturestart',{cancelable:true,bubbles:true});
             document.dispatchEvent(e);
@@ -2888,6 +2940,112 @@ class PasteReport(Group):
                 && vals.includes('5') && vals.includes('10') && vals.includes('30');
         }''')
 
+class FeedbackConfigured(Group):
+    """回饋按鈕在填好表單設定之後的行為（用原始碼替換常數的方式模擬）。"""
+    def setup_page(self, page):
+        import pathlib
+        src=pathlib.Path(APP).read_text(encoding='utf-8')
+        src=src.replace("const FEEDBACK_FORM_URL='';",
+                        "const FEEDBACK_FORM_URL='https://docs.google.com/forms/d/e/TESTFORM/viewform';",1)
+        src=src.replace("const FEEDBACK_PREFILL={version:'',device:'',page:''};",
+                        "const FEEDBACK_PREFILL={version:'entry.111',device:'222',page:'entry.333'};",1)
+        tmp=pathlib.Path('/tmp/_feedback_cfg.html'); tmp.write_text(src,encoding='utf-8')
+        page.goto('file://'+str(tmp)); page.wait_for_timeout(900)
+
+    def body(self, page):
+        c = self.checks
+        self.setup_page(page)
+        c['feedback_fab_stacks_without_overlap_desktop'] = page.evaluate('''()=>{
+            const box=id=>{ const el=document.getElementById(id);
+              if(!el||getComputedStyle(el).display==='none') return null;
+              return el.getBoundingClientRect(); };
+            const fb=box('btn-feedback'), help=box('btn-help');
+            const overlap=(a,b)=>a&&b&&!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
+            const cxA=fb.left+fb.width/2, cxB=help.left+help.width/2;
+            const hit=document.elementFromPoint(cxA,fb.top+fb.height/2);
+            return !overlap(fb,help) && fb.bottom<=help.top          // 在說明鈕上方
+                && Math.abs(cxA-cxB)<1                               // 水平置中對齊
+                && fb.width<help.width                               // 次要入口，小一號
+                && !!(hit&&hit.closest('#btn-feedback'));
+        }''')
+        # ---- 字級切換（桌機）：位置、記憶、按下狀態 ----
+        c['font_scale_control_left_of_theme_toggle'] = page.evaluate('''()=>{
+            const group=document.querySelector('.font-scale');
+            const theme=document.getElementById('btn-theme-toggle');
+            if(!group||!theme) return false;
+            const g=group.getBoundingClientRect(), t2=theme.getBoundingClientRect();
+            const labels=[...group.querySelectorAll('[data-font-scale]')].map(b=>b.textContent.trim()).join('');
+            return g.right<=t2.left && labels==='小中大'
+                && group.querySelector('[data-font-scale="medium"]').getAttribute('aria-pressed')==='true';
+        }''')
+        c['font_scale_persists_and_syncs'] = page.evaluate('''async()=>{
+            document.querySelector('[data-font-scale="large"]').click();
+            await new Promise(s=>setTimeout(s,150));
+            const saved=localStorage.getItem('font-scale-v1');
+            const attr=document.documentElement.getAttribute('data-font');
+            const pressed=[...document.querySelectorAll('[data-font-scale]')]
+              .filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.fontScale).join();
+            document.querySelector('[data-font-scale="medium"]').click();
+            await new Promise(s=>setTimeout(s,150));
+            // 「中」是預設值：不留屬性、不留 localStorage
+            return saved==='large' && attr==='large' && pressed==='large'
+                && localStorage.getItem('font-scale-v1')===null
+                && !document.documentElement.hasAttribute('data-font');
+        }''')
+        # 控制項本身不跟著縮放——否則切到大，頂端列自己也被撐大
+        c['font_scale_control_itself_does_not_scale'] = page.evaluate('''async()=>{
+            const btn=document.querySelector('[data-font-scale="medium"]');
+            const before=getComputedStyle(btn).fontSize;
+            applyFontScale('large'); await new Promise(s=>setTimeout(s,150));
+            const after=getComputedStyle(btn).fontSize;
+            applyFontScale('medium');
+            return before===after;
+        }''')
+        # ---- 回饋按鈕旁的文字 ----
+        c['feedback_caption_left_of_button_and_static'] = page.evaluate('''()=>{
+            const cap=document.getElementById('feedback-fab-caption');
+            const btn=document.getElementById('btn-feedback');
+            const a=cap.getBoundingClientRect(), b=btn.getBoundingClientRect();
+            const midA=a.top+a.height/2, midB=b.top+b.height/2;
+            return a.right<=b.left && Math.abs(midA-midB)<2
+                && cap.textContent.trim()==='說說你的想法'
+                && getComputedStyle(cap).animationName==='none';   // 不跟說明鈕一起浮動
+        }''')
+        c['feedback_prefill_builds_google_form_url'] = page.evaluate('''()=>{
+            const u=new URL(buildFeedbackUrl());
+            return u.pathname.endsWith('/viewform') && u.searchParams.get('usp')==='pp_url'
+                && u.searchParams.get('entry.111')===APP_VERSION
+                && !!u.searchParams.get('entry.222')          // 只寫數字也要自動補 entry. 前綴
+                && u.searchParams.get('entry.333')==='首頁';
+        }''')
+        # 只帶版本／裝置／畫面，絕不夾帶賽事資料
+        c['feedback_url_carries_no_race_data'] = page.evaluate('''async()=>{
+            state.races=[];
+            const r=emptyRace('私密賽事名稱XYZ','road_running','completed','2025-02-24');
+            r.results.chipTimeSeconds=10774; r.bibNumber='003150';
+            state.races.push(r); selectRace(r.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            const url=decodeURIComponent(buildFeedbackUrl());
+            return !url.includes('私密賽事名稱XYZ') && !url.includes('003150')
+                && !url.includes('2:59:34') && url.includes('賽事詳情');
+        }''')
+        # 點文字等同按回饋鈕
+        c['feedback_caption_is_clickable'] = page.evaluate('''async()=>{
+            let args=null; const real=window.open; window.open=(...a)=>{ args=a; };
+            document.getElementById('feedback-fab-caption').click();
+            await new Promise(s=>setTimeout(s,150));
+            window.open=real;
+            return !!args && args[0].includes('TESTFORM');
+        }''')
+        c['feedback_opens_new_tab'] = page.evaluate('''async()=>{
+            let args=null; const real=window.open; window.open=(...a)=>{ args=a; };
+            document.getElementById('btn-feedback').click();
+            await new Promise(s=>setTimeout(s,150));
+            window.open=real;
+            return !!args && args[0].includes('TESTFORM') && args[1]==='_blank'
+                && String(args[2]||'').includes('noopener');
+        }''')
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -2905,6 +3063,7 @@ GROUPS = {
     'publink':    lambda: PublicLink('publink'),
     'pubview':    lambda: PublicView('pubview'),
     'paste':      lambda: PasteReport('paste'),
+    'feedback':   lambda: FeedbackConfigured('feedback'),
 }
 
 

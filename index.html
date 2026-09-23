@@ -10,6 +10,8 @@
     var t=localStorage.getItem('theme-pref-v1');
     if(!t){ t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'; }
     document.documentElement.setAttribute('data-theme', t);
+    var f=localStorage.getItem('font-scale-v1');
+    if(f==='small'||f==='large') document.documentElement.setAttribute('data-font', f);
   }catch(e){}
 })();
 </script>
@@ -104,6 +106,15 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6.3.0/dist/umd.js" integrity="sha384-heZBNbZ5qOuEy6kN0six3ZVIzCVxqm0GmdO13Biy02ZPr/Ec/pXgGK5IBi2+z+XP" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
+  /* ---- 字級大小（v3.75.0）：所有 30px 以下的 font-size 都乘上 --fs。
+     30px 以上是大數字（完賽時間、倒數天數），本來就夠大，放大反而會在
+     手機上撐出螢幕，所以不縮放。
+     手機的 viewport 設了 user-scalable=no，雙指縮放是關掉的——對手機
+     使用者來說，這是唯一能把字放大的方式。 ---- */
+  :root{--fs:1;}
+  html[data-font="small"]{--fs:0.9;}
+  html[data-font="large"]{--fs:1.15;}
+
   :root{
     --paper:#E6E9E6;
     --surface:#FAFAF8;
@@ -233,7 +244,7 @@
     background:var(--paper);
     color:var(--ink);
     font-family:'Noto Sans TC',sans-serif;
-    font-size:16px;
+    font-size:calc(16px*var(--fs,1));
     line-height:1.6;
     transition:background-color 0.8s ease-in-out;
     /* 整頁不允許橫向捲動：任何一個算錯寬度的元素都會讓整頁可以左右
@@ -250,7 +261,7 @@
   :focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-glow);transition:box-shadow 0.15s ease;}
   h1,h2,h3{margin:0;font-weight:700;}
   .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .small{font-size:14px;}
+  .small{font-size:calc(14px*var(--fs,1));}
 
   #app{display:flex;flex-direction:column;min-height:100vh;}
 
@@ -291,7 +302,7 @@
   .topbar-row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
   .topbar-actions{display:flex;align-items:center;gap:14px;}
   .btn-text-small{
-    background:none;border:none;padding:0;font:inherit;font-size:12px;color:var(--ink-soft);
+    background:none;border:none;padding:0;font:inherit;font-size:calc(12px*var(--fs,1));color:var(--ink-soft);
     text-decoration:underline;cursor:pointer;text-align:center;
   }
   .btn-text-small:hover{color:var(--ink);}
@@ -320,7 +331,7 @@
   /* 選單裡的按鈕統一用選單項目的外觀，不要保留原本行內連結的樣子 */
   .auth-area .btn-text,.auth-area .btn-ghost{
     display:block;width:100%;text-align:left;
-    padding:8px 14px;font-size:14px;text-decoration:none;
+    padding:8px 14px;font-size:calc(14px*var(--fs,1));text-decoration:none;
     background:none;border:none;color:var(--ink);cursor:pointer;
   }
   .auth-area .btn-text:hover,.auth-area .btn-ghost:hover{background:var(--hover-overlay);}
@@ -331,8 +342,8 @@
     background:var(--ink);color:var(--surface);border-radius:4px;padding:14px 16px;
     display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 18px rgba(0,0,0,0.25);
   }
-  .foreground-toast strong{font-size:14px;}
-  .foreground-toast span{font-size:13px;opacity:0.85;}
+  .foreground-toast strong{font-size:calc(14px*var(--fs,1));}
+  .foreground-toast span{font-size:calc(13px*var(--fs,1));opacity:0.85;}
   .foreground-toast.sync-notice{cursor:pointer;right:20px;bottom:84px;border:1px solid var(--gold);}
   .race-undo-toast{flex-direction:row;align-items:center;justify-content:space-between;gap:14px;max-width:360px;}
   .race-undo-toast span{opacity:1;}
@@ -341,23 +352,23 @@
   .storage-banner{
     position:fixed;bottom:0;left:0;right:0;z-index:200;
     display:flex;align-items:center;justify-content:center;gap:16px;
-    padding:10px 20px;font-size:14px;text-align:center;
+    padding:10px 20px;font-size:calc(14px*var(--fs,1));text-align:center;
     box-shadow:0 -2px 10px rgba(0,0,0,0.15);
   }
   .storage-banner.warning{background:var(--gold);color:#16231C;}
   .storage-banner.error{background:var(--flag);color:#FFF6F0;}
   .storage-banner button{
     flex-shrink:0;background:rgba(0,0,0,0.15);color:inherit;border:1px solid currentColor;
-    border-radius:3px;padding:3px 10px;font:inherit;font-size:13px;cursor:pointer;
+    border-radius:3px;padding:3px 10px;font:inherit;font-size:calc(13px*var(--fs,1));cursor:pointer;
   }
   .auth-user{display:flex;align-items:center;gap:6px;color:var(--ink-soft);}
   .auth-user img{width:22px;height:22px;border-radius:50%;display:block;}
-  .app-title{font-size:21px;letter-spacing:0.01em;}
-  .app-tagline{color:var(--stone);font-size:14px;margin:2px 0 0;}
+  .app-title{font-size:calc(21px*var(--fs,1));letter-spacing:0.01em;}
+  .app-tagline{color:var(--stone);font-size:calc(14px*var(--fs,1));margin:2px 0 0;}
   .topbar-row2{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:14px;}
   .cal-nav{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-  .cal-nav .btn-ghost{padding:6px 11px;font-size:16px;}
-  .cal-label{font-size:16px;min-width:92px;text-align:center;display:inline-block;}
+  .cal-nav .btn-ghost{padding:6px 11px;font-size:calc(16px*var(--fs,1));}
+  .cal-label{font-size:calc(16px*var(--fs,1));min-width:92px;text-align:center;display:inline-block;}
   #cal-view-toggle{padding:6px 9px!important;}
   #cal-view-toggle svg{width:17px;height:17px;display:block;}
   #cal-view-toggle.active{background:var(--ink);color:var(--surface);}
@@ -366,9 +377,9 @@
 
   /* ---------- Compact table view ---------- */
   .table-view-wrap{overflow-x:auto;margin-top:4px;}
-  .table-view{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}
+  .table-view{width:100%;border-collapse:collapse;font-size:calc(13px*var(--fs,1));white-space:nowrap;}
   .table-view th{
-    text-align:left;padding:7px 10px;color:var(--stone);font-weight:600;font-size:11px;
+    text-align:left;padding:7px 10px;color:var(--stone);font-weight:600;font-size:calc(11px*var(--fs,1));
     text-transform:uppercase;letter-spacing:0.03em;border-bottom:2px solid var(--rule);
     position:sticky;top:0;background:var(--paper);
   }
@@ -376,10 +387,10 @@
   .table-view td{padding:6px 10px;border-bottom:1px solid var(--rule);}
   .table-view-row{cursor:pointer;}
   .table-year-row{cursor:pointer;background:var(--paper);}
-  .table-year-row td{padding:9px 10px;border-bottom:1px solid var(--rule);color:var(--ink);font-size:14px;}
+  .table-year-row td{padding:9px 10px;border-bottom:1px solid var(--rule);color:var(--ink);font-size:calc(14px*var(--fs,1));}
   .table-year-row:hover td{background:var(--surface);}
   .table-year-chevron{display:inline-block;width:14px;color:var(--stone);}
-  .table-year-summary{color:var(--stone);font-size:12px;margin-left:10px;}
+  .table-year-summary{color:var(--stone);font-size:calc(12px*var(--fs,1));margin-left:10px;}
   .table-view-row:hover{background:var(--surface);}
   .table-view-row.selected{background:var(--ink);color:var(--surface);}
   .table-view-row.selected td{border-bottom-color:var(--ink-soft);}
@@ -445,9 +456,9 @@
     .photo-card::after{display:none;}
     .photo-card-info,.photo-card-pb{transform:none;}
   }
-  .photo-card-pb{align-self:flex-start;font-size:11px;color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:1px 8px;margin-bottom:2px;}
-  .photo-card-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .photo-card-date{font-size:12px;color:var(--stone);}
+  .photo-card-pb{align-self:flex-start;font-size:calc(11px*var(--fs,1));color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:1px 8px;margin-bottom:2px;}
+  .photo-card-name{font-size:calc(14px*var(--fs,1));font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .photo-card-date{font-size:calc(12px*var(--fs,1));color:var(--stone);}
   @media (max-width:640px){
     .photo-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
   }
@@ -458,13 +469,13 @@
   }
   .chips{display:flex;flex-wrap:wrap;gap:6px;}
   .chip{
-    font-size:14px;padding:4px 10px;border:1px solid var(--rule);border-radius:12px;
+    font-size:calc(14px*var(--fs,1));padding:4px 10px;border:1px solid var(--rule);border-radius:12px;
     background:none;cursor:pointer;color:var(--ink-soft);font-family:inherit;
   }
   .chip.active{background:var(--ink);color:var(--surface);border-color:var(--ink);}
   .chips-primary{display:flex;flex-wrap:wrap;gap:6px;}
   .chips-secondary{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule);}
-  .chip-secondary{font-size:12px;padding:3px 9px;opacity:0.88;}
+  .chip-secondary{font-size:calc(12px*var(--fs,1));padding:3px 9px;opacity:0.88;}
   .topbar-row3{display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap;}
   .app-version{color:var(--stone);margin-left:auto;}
 
@@ -474,7 +485,7 @@
   @media (prefers-reduced-motion:reduce){
     #detail.fade-in{animation:none;}
   }
-  .empty-hint{color:var(--stone);font-size:15px;padding:16px 8px;margin:0;}
+  .empty-hint{color:var(--stone);font-size:calc(15px*var(--fs,1));padding:16px 8px;margin:0;}
   .empty-hint-block{
     display:flex;flex-direction:column;align-items:center;gap:8px;
     padding:22px 8px;color:var(--stone);
@@ -510,7 +521,7 @@
   /* ---------- Calendar ---------- */
   #calendar{margin-bottom:8px;}
   .cal-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:6px;}
-  .cal-weekdays span{font-size:14px;color:var(--stone);text-align:center;padding:2px 0;}
+  .cal-weekdays span{font-size:calc(14px*var(--fs,1));color:var(--stone);text-align:center;padding:2px 0;}
   .cal-weekdays span.weekend{color:var(--ink-soft);font-weight:500;}
   .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;}
   .cal-cell{
@@ -524,7 +535,7 @@
   .cal-cell.muted .cal-daynum{color:var(--stone);}
   .cal-cell.today{border-color:var(--trail);border-width:1.5px;background:rgba(46,107,73,0.07);}
   [data-theme="dark"] .cal-cell.today{background:rgba(76,154,114,0.12);}
-  .cal-daynum{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--ink-soft);}
+  .cal-daynum{font-family:'IBM Plex Mono',monospace;font-size:calc(14px*var(--fs,1));color:var(--ink-soft);}
   .cal-cell.today .cal-daynum{
     color:#fff;font-weight:700;background:var(--trail);
     width:22px;height:22px;border-radius:50%;
@@ -535,7 +546,7 @@
     display:flex;align-items:flex-start;gap:5px;width:100%;text-align:left;border:none;border-left:3px solid currentColor;
     /* 底圖走 --chip-tint（由 markup 依運動別帶入），沒帶的話退回原本的淡灰 */
     background:var(--chip-tint,rgba(22,35,28,0.05));border-radius:3px;padding:3px 6px;font:inherit;
-    font-size:15px;font-weight:500;line-height:1.35;color:var(--ink);cursor:pointer;
+    font-size:calc(15px*var(--fs,1));font-weight:500;line-height:1.35;color:var(--ink);cursor:pointer;
     transition:transform 0.12s ease,box-shadow 0.12s ease;
   }
   .cal-chip:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.14);}
@@ -553,18 +564,18 @@
   /* 選取狀態要贏過運動別底圖：--chip-tint 是行內樣式帶進來的變數，
      這裡用 !important 蓋掉 background 才壓得住。 */
   .cal-chip.selected{background:var(--ink)!important;color:var(--surface)!important;border-left-color:var(--surface);}
-  .cal-more{font-size:13px;color:var(--stone);padding:1px 5px;}
+  .cal-more{font-size:calc(13px*var(--fs,1));color:var(--stone);padding:1px 5px;}
   .cal-chip+.cal-chip{margin-top:2px;}
 
   /* ---------- Calendar: mobile list view ---------- */
   .cal-list{display:none;}
   .cal-list-day{margin-bottom:14px;}
   .cal-list-date{
-    display:flex;align-items:baseline;gap:6px;font-size:18px;font-weight:600;
+    display:flex;align-items:baseline;gap:6px;font-size:calc(18px*var(--fs,1));font-weight:600;
     color:var(--ink-soft);margin-bottom:6px;padding-left:2px;
   }
   .cal-list-date.today{color:var(--trail);}
-  .cal-list-weekday{font-size:13px;color:var(--stone);font-weight:400;}
+  .cal-list-weekday{font-size:calc(13px*var(--fs,1));color:var(--stone);font-weight:400;}
   .cal-list-races{display:flex;flex-direction:column;gap:8px;}
   .cal-list-item{
     display:flex;align-items:center;gap:10px;width:100%;text-align:left;
@@ -579,9 +590,9 @@
   .swipe-row{position:relative;border-radius:4px;overflow:hidden;}
   .swipe-action-bg{
     position:absolute;inset:0;display:flex;align-items:center;
-    font-size:14px;font-weight:700;color:#fff;background:var(--rule);
+    font-size:calc(14px*var(--fs,1));font-weight:700;color:#fff;background:var(--rule);
   }
-  .swipe-action-bg .swipe-action-icon{font-size:18px;}
+  .swipe-action-bg .swipe-action-icon{font-size:calc(18px*var(--fs,1));}
   .swipe-bg-right{background:var(--trail);justify-content:flex-start;padding-left:20px;gap:8px;}
   .swipe-bg-left{background:var(--flag);justify-content:flex-end;padding-right:20px;gap:8px;flex-direction:row-reverse;}
   .swipe-card{margin:0;touch-action:pan-y;position:relative;z-index:1;}
@@ -592,8 +603,8 @@
   .cal-list-item.selected .stamp{filter:brightness(1.6);}
   .cal-list-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
   .cal-list-name-row{display:flex;align-items:center;gap:8px;min-width:0;}
-  .cal-list-name{font-size:15px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cal-list-meta{font-size:12px;color:var(--stone);}
+  .cal-list-name{font-size:calc(15px*var(--fs,1));color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cal-list-meta{font-size:calc(12px*var(--fs,1));color:var(--stone);}
 
   /* ---------- Career summary ---------- */
   .career-summary-wrap{display:flex;flex-direction:column;gap:16px;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--rule);}
@@ -601,7 +612,7 @@
     text-align:center;padding:22px 20px 24px;border-radius:10px;
     background:var(--surface);border:1px solid var(--rule);
   }
-  .honor-card-label{font-size:12px;color:var(--stone);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+  .honor-card-label{font-size:calc(12px*var(--fs,1));color:var(--stone);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
   .honor-card-value{font-size:56px;font-weight:700;color:var(--gold);line-height:1;letter-spacing:0.01em;}
   .time-colon{opacity:0.4;}
   /* ---- 長按 PB 數字解鎖生涯回顧：1.5 秒的三階段蓄力。
@@ -646,7 +657,7 @@
     from{transform:scale(1.02) translateX(-1px);}
     to{transform:scale(1.02) translateX(1px);}
   }
-  .honor-card-hint{font-size:11px;color:var(--stone);margin-top:10px;opacity:0.75;}
+  .honor-card-hint{font-size:calc(11px*var(--fs,1));color:var(--stone);margin-top:10px;opacity:0.75;}
   @media (prefers-reduced-motion:reduce){
     .honor-card.charging-2{animation:none;transform:scale(1.02);}
   }
@@ -674,7 +685,7 @@
   }
   .badge-unbox-icon{font-size:72px;line-height:1;margin-bottom:14px;filter:drop-shadow(0 4px 12px rgba(217,177,92,0.5));}
   .badge-unbox-label{color:var(--gold);text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin-bottom:6px;}
-  .badge-unbox-name{font-size:22px;font-weight:700;margin-bottom:8px;}
+  .badge-unbox-name{font-size:calc(22px*var(--fs,1));font-weight:700;margin-bottom:8px;}
   .badge-unbox-hint{color:var(--ink-soft);margin-bottom:22px;}
   .badge-unbox-actions{display:flex;gap:10px;justify-content:center;}
   .confetti-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;border-radius:14px;}
@@ -693,7 +704,7 @@
 
   /* ---------- 榮譽櫃 ---------- */
   .trophy-cabinet-wrap{border-top:1px solid var(--rule);padding-top:16px;margin-top:4px;}
-  .trophy-cabinet-summary{cursor:pointer;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center;list-style:none;}
+  .trophy-cabinet-summary{cursor:pointer;font-weight:600;font-size:calc(15px*var(--fs,1));display:flex;justify-content:space-between;align-items:center;list-style:none;}
   .trophy-cabinet-summary::-webkit-details-marker{display:none;}
   .trophy-cabinet-summary::after{content:'+';font-family:'IBM Plex Mono',monospace;color:var(--stone);font-weight:400;}
   .trophy-cabinet-wrap[open] .trophy-cabinet-summary::after{content:'\2013';}
@@ -712,23 +723,23 @@
     padding:10px 6px 8px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);
   }
   .trophy-badge.locked{filter:grayscale(100%);opacity:0.55;}
-  .trophy-badge-icon{font-size:26px;line-height:1;}
+  .trophy-badge-icon{font-size:calc(26px*var(--fs,1));line-height:1;}
   .trophy-badge-silhouette{
     width:26px;height:26px;border-radius:50%;background:var(--stone);color:var(--surface);
-    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:'IBM Plex Mono',monospace;
+    display:flex;align-items:center;justify-content:center;font-size:calc(13px*var(--fs,1));font-weight:700;font-family:'IBM Plex Mono',monospace;
   }
-  .trophy-badge-name{font-size:10.5px;line-height:1.3;color:var(--ink-soft);}
-  .trophy-badge-condition{font-size:9.5px;line-height:1.3;color:var(--stone);}
-  .trophy-badge-caption{font-size:9px;line-height:1.3;color:var(--stone);opacity:0.75;margin-top:1px;}
+  .trophy-badge-name{font-size:calc(10.5px*var(--fs,1));line-height:1.3;color:var(--ink-soft);}
+  .trophy-badge-condition{font-size:calc(9.5px*var(--fs,1));line-height:1.3;color:var(--stone);}
+  .trophy-badge-caption{font-size:calc(9px*var(--fs,1));line-height:1.3;color:var(--stone);opacity:0.75;margin-top:1px;}
   .trophy-badge-share-btn{
-    margin-top:5px;background:none;border:none;padding:0;font-size:9px;color:var(--trail);
+    margin-top:5px;background:none;border:none;padding:0;font-size:calc(9px*var(--fs,1));color:var(--trail);
     text-decoration:underline;cursor:pointer;font-family:inherit;
   }
   .trophy-badge.unlocked .trophy-badge-name{color:var(--ink);font-weight:600;}
   .trophy-badge-progress{width:100%;height:3px;border-radius:2px;background:var(--rule);overflow:hidden;margin-top:2px;}
   .trophy-badge-progress-fill{height:100%;background:var(--gold);border-radius:2px;}
   .trophy-badge-cat-tag{
-    position:absolute;top:4px;left:5px;font-size:8px;line-height:1;color:var(--stone);
+    position:absolute;top:4px;left:5px;font-size:calc(8px*var(--fs,1));line-height:1;color:var(--stone);
     text-transform:uppercase;letter-spacing:0.02em;
   }
   .trophy-filter-tabs{margin-bottom:12px;}
@@ -742,53 +753,53 @@
   .career-stat-icon{color:var(--trail);flex-shrink:0;opacity:0.85;}
   .career-stat-icon svg{width:22px;height:22px;display:block;}
   .career-stat-text{display:flex;flex-direction:column;gap:2px;}
-  .career-stat-value{font-size:23px;font-weight:700;}
-  .career-stat-label{font-size:12px;color:var(--stone);}
+  .career-stat-value{font-size:calc(23px*var(--fs,1));font-weight:700;}
+  .career-stat-label{font-size:calc(12px*var(--fs,1));color:var(--stone);}
   .yearly-chart-wrap{margin-left:auto;max-width:100%;overflow-x:auto;}
   .yearly-chart-title{color:var(--stone);margin-bottom:2px;}
   .year-in-review-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
   .year-in-review-label{color:var(--stone);}
   .year-in-review-select{
-    font-size:14px;padding:4px 8px;border:1px solid var(--rule);border-radius:12px;
+    font-size:calc(14px*var(--fs,1));padding:4px 8px;border:1px solid var(--rule);border-radius:12px;
     background:var(--surface);color:var(--ink);font-family:inherit;
   }
   .yearly-chart-svg{height:100px;display:block;}
-  .yearly-chart-count{font-size:11px;fill:var(--ink-soft);}
-  .yearly-chart-year{font-size:11px;fill:var(--stone);}
+  .yearly-chart-count{font-size:calc(11px*var(--fs,1));fill:var(--ink-soft);}
+  .yearly-chart-year{font-size:calc(11px*var(--fs,1));fill:var(--stone);}
   .elevation-trend-wrap{max-width:100%;overflow-x:auto;}
   .elevation-trend-svg{height:110px;display:block;}
-  .elevation-trend-label{font-size:10px;fill:var(--stone);}
+  .elevation-trend-label{font-size:calc(10px*var(--fs,1));fill:var(--stone);}
   .climate-chart-wrap{max-width:100%;}
   .climate-chart-svg{width:100%;height:220px;display:block;}
-  .climate-chart-axis-label{font-size:10px;fill:var(--stone);}
-  .climate-chart-axis-title{font-size:10px;fill:var(--ink-soft);font-weight:600;}
-  .climate-chart-sweetspot-label{font-size:9px;fill:var(--trail);font-weight:600;}
-  .climate-chart-legend-label{font-size:10px;fill:var(--ink-soft);}
+  .climate-chart-axis-label{font-size:calc(10px*var(--fs,1));fill:var(--stone);}
+  .climate-chart-axis-title{font-size:calc(10px*var(--fs,1));fill:var(--ink-soft);font-weight:600;}
+  .climate-chart-sweetspot-label{font-size:calc(9px*var(--fs,1));fill:var(--trail);font-weight:600;}
+  .climate-chart-legend-label{font-size:calc(10px*var(--fs,1));fill:var(--ink-soft);}
   .climate-chart-slope{color:var(--flag);margin-top:8px;}
   .climate-chart-weak-note{margin-top:4px;}
   .climate-chart-sweetspot{color:var(--trail);margin-top:2px;}
   .epp-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--rule);}
   .epp-coefficient-block p{color:var(--ink-soft);margin-bottom:4px;}
   .epp-waterfall-svg{width:100%;height:180px;display:block;margin:12px 0;}
-  .epp-waterfall-label{font-size:11px;fill:var(--ink);font-weight:600;}
-  .epp-waterfall-axis-label{font-size:11px;fill:var(--stone);text-anchor:middle;}
+  .epp-waterfall-label{font-size:calc(11px*var(--fs,1));fill:var(--ink);font-weight:600;}
+  .epp-waterfall-axis-label{font-size:calc(11px*var(--fs,1));fill:var(--stone);text-anchor:middle;}
   .epp-predicted-row{display:flex;align-items:baseline;gap:10px;padding:10px 12px;border:1px solid var(--rule);border-radius:5px;background:var(--paper);margin-bottom:8px;}
-  .epp-predicted-value{font-size:20px;font-weight:700;color:var(--gold);}
+  .epp-predicted-value{font-size:calc(20px*var(--fs,1));font-weight:700;color:var(--gold);}
   .epp-adopt-row{display:flex;gap:10px;flex-wrap:wrap;}
   .epp-segment-toggle-row{margin-top:10px;}
   .epp-segment-table-wrap{max-height:320px;overflow-y:auto;margin-top:10px;border:1px solid var(--rule);border-radius:6px;}
-  .epp-segment-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .epp-segment-table{width:100%;border-collapse:collapse;font-size:calc(13px*var(--fs,1));}
   .epp-segment-table th{position:sticky;top:0;background:var(--surface);text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);color:var(--ink-soft);font-weight:600;}
   .epp-segment-table td{padding:6px 10px;border-bottom:1px solid var(--rule);}
   .epp-segment-table tr:last-child td{border-bottom:none;}
   .heatmap-wrap{max-width:100%;overflow-x:auto;}
   .heatmap-row{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
-  .heatmap-year-label{width:36px;flex-shrink:0;font-size:11px;color:var(--stone);}
+  .heatmap-year-label{width:36px;flex-shrink:0;font-size:calc(11px*var(--fs,1));color:var(--stone);}
   .heatmap-cells{display:flex;gap:3px;}
   .heatmap-cell{width:18px;height:18px;border-radius:3px;background:var(--trail);flex-shrink:0;}
   .heatmap-cell-empty{background:var(--rule);}
   .heatmap-month-labels{display:flex;align-items:center;gap:8px;margin-top:2px;}
-  .heatmap-month-label{width:18px;text-align:center;font-size:9px;color:var(--stone);flex-shrink:0;}
+  .heatmap-month-label{width:18px;text-align:center;font-size:calc(9px*var(--fs,1));color:var(--stone);flex-shrink:0;}
   @media (max-width:640px){
     .yearly-chart-wrap{margin-left:0;width:100%;}
   }
@@ -801,41 +812,41 @@
   .results-dashboard.is-pb{border-color:var(--gold);}
   .results-dashboard-main{display:flex;align-items:baseline;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
   .results-big-time{font-size:44px;font-weight:700;letter-spacing:-0.01em;}
-  .pb-badge{display:inline-block;padding:3px 11px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
-  .taper-badge{display:inline-block;padding:3px 11px;color:var(--contour);background:var(--stamp-bg-contour);border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}
+  .pb-badge{display:inline-block;padding:3px 11px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:12px;font-size:calc(12px*var(--fs,1));font-weight:600;white-space:nowrap;}
+  .taper-badge{display:inline-block;padding:3px 11px;color:var(--contour);background:var(--stamp-bg-contour);border-radius:12px;font-size:calc(12px*var(--fs,1));font-weight:600;white-space:nowrap;}
   .results-badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:16px;}
   .results-badge{display:flex;flex-direction:column;gap:3px;padding:9px 11px;background:var(--paper);border-radius:3px;}
-  .results-badge-label{font-size:11px;color:var(--stone);}
-  .results-badge-value{font-size:16px;font-weight:600;}
+  .results-badge-label{font-size:calc(11px*var(--fs,1));color:var(--stone);}
+  .results-badge-value{font-size:calc(16px*var(--fs,1));font-weight:600;}
   /* 步頻震動體驗按鈕——平常是安靜的手掌圖示，體驗進行中的 5 秒內
      用淡入淡出的透明度變化暗示「正在跳動」，不用真的做逐拍閃爍動畫
      （那樣反而會讓人分心去對動畫跟震動兩件事，這裡只是一個輔助的
      視覺提示，不是這個功能的重點）。 */
   .cadence-feel-btn{
-    background:none;border:none;padding:2px 4px;margin-left:6px;font-size:15px;
+    background:none;border:none;padding:2px 4px;margin-left:6px;font-size:calc(15px*var(--fs,1));
     cursor:pointer;border-radius:4px;vertical-align:middle;
   }
   .cadence-feel-btn:hover{background:var(--rule);}
   .cadence-feel-btn.feeling{animation:cadence-feel-pulse 0.6s ease-in-out infinite;cursor:default;}
   @keyframes cadence-feel-pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
   .race-radar{margin:16px 0 4px;text-align:center;}
-  .race-radar-title{font-size:12px;color:var(--stone);letter-spacing:0.08em;margin:0 0 4px;font-weight:600;text-align:left;}
+  .race-radar-title{font-size:calc(12px*var(--fs,1));color:var(--stone);letter-spacing:0.08em;margin:0 0 4px;font-weight:600;text-align:left;}
   /* 用 CSS 指定顯示尺寸，實際繪圖解析度由 JS 依裝置像素比放大，
      不然在高解析度螢幕上線條會糊掉。 */
   .race-radar-canvas{width:100%;max-width:300px;height:300px;display:inline-block;}
   .race-radar-note{color:var(--stone);text-align:left;margin:2px 0 0;}
   .leg-breakdown{margin:14px 0 4px;}
-  .leg-breakdown-title{font-size:12px;color:var(--stone);letter-spacing:0.08em;margin:0 0 8px;font-weight:600;}
+  .leg-breakdown-title{font-size:calc(12px*var(--fs,1));color:var(--stone);letter-spacing:0.08em;margin:0 0 8px;font-weight:600;}
   .leg-list{display:flex;flex-direction:column;}
   .leg-row{
     display:flex;align-items:baseline;gap:10px;padding:9px 0;
     border-bottom:1px solid var(--rule);flex-wrap:wrap;
   }
   .leg-row:last-child{border-bottom:none;}
-  .leg-icon{flex-shrink:0;font-size:15px;}
-  .leg-name{min-width:56px;font-weight:600;font-size:14px;}
-  .leg-time{font-size:15px;font-weight:600;}
-  .leg-meta{flex:1;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;color:var(--ink-soft);font-size:13px;justify-content:flex-end;}
+  .leg-icon{flex-shrink:0;font-size:calc(15px*var(--fs,1));}
+  .leg-name{min-width:56px;font-weight:600;font-size:calc(14px*var(--fs,1));}
+  .leg-time{font-size:calc(15px*var(--fs,1));font-weight:600;}
+  .leg-meta{flex:1;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;color:var(--ink-soft);font-size:calc(13px*var(--fs,1));justify-content:flex-end;}
   /* 窄螢幕上四項數據擠在同一行會斷得很難看（數字跟單位被拆到兩行）。
      改成名稱與時間佔第一行，數據整組移到第二行靠左排。 */
   @media (max-width:640px){
@@ -850,15 +861,15 @@
 
   /* ---------- Split analysis ---------- */
   .split-analysis{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:4px;margin-bottom:18px;border:1px solid var(--rule);}
-  .split-analysis-label{font-size:13px;color:var(--ink-soft);}
-  .split-analysis-value{font-size:20px;font-weight:700;}
+  .split-analysis-label{font-size:calc(13px*var(--fs,1));color:var(--ink-soft);}
+  .split-analysis-value{font-size:calc(20px*var(--fs,1));font-weight:700;}
   .split-analysis.split-good{border-color:var(--trail);}
   .split-analysis.split-good .split-analysis-value{color:var(--trail);}
   .split-analysis.split-bad{border-color:var(--flag);}
   .split-analysis.split-bad .split-analysis-value{color:var(--flag);}
 
   /* ---------- HR zones & splits chart ---------- */
-  .hr-zone-tag{display:inline-block;font-size:10px;font-weight:700;color:#fff;padding:1px 5px;border-radius:8px;vertical-align:middle;}
+  .hr-zone-tag{display:inline-block;font-size:calc(10px*var(--fs,1));font-weight:700;color:#fff;padding:1px 5px;border-radius:8px;vertical-align:middle;}
   /* 42 公里的分段表有 42 列，一列 34px 就是 1,449px——整整 1.7 個手機
      螢幕全是表格，使用者得一路滑過去才能看到下面的內容。改成固定高度
      內部捲動：預設露出約 11 列，想看完整的就在表格內部滑。表頭本來就
@@ -878,10 +889,10 @@
      42 公里的表要滑 5,500px；改成單行之後只要三分之一。
      視覺上把「Excel 格子」的感覺拿掉：沒有直線、沒有每格外框，只留
      很淡的橫向分隔與斑馬底色，表頭黏在頂端捲動時不會不見。 */
-  .splits-chart-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .splits-chart-table{width:100%;border-collapse:collapse;font-size:calc(13px*var(--fs,1));}
   .splits-chart-table th{
     position:sticky;top:0;z-index:1;background:var(--paper);
-    text-align:left;padding:6px 8px 7px;color:var(--stone);font-size:10px;font-weight:600;
+    text-align:left;padding:6px 8px 7px;color:var(--stone);font-size:calc(10px*var(--fs,1));font-weight:600;
     letter-spacing:0.12em;text-transform:uppercase;border-bottom:1px solid var(--rule);
   }
   .splits-th-hint{font-weight:400;text-transform:none;letter-spacing:0;opacity:0.7;margin-left:4px;}
@@ -891,7 +902,7 @@
      而且比「一列淺一列深」更有意義——跑者本來就是以 5K 為單位在讀配速。 */
   .splits-chart-table tbody tr[data-milestone="1"] td{border-bottom-color:var(--rule);}
   .splits-chart-table tr:last-child td{border-bottom:none;}
-  .splits-dist{width:44px;color:var(--stone);font-size:12px;white-space:nowrap;}
+  .splits-dist{width:44px;color:var(--stone);font-size:calc(12px*var(--fs,1));white-space:nowrap;}
   .splits-hr{white-space:nowrap;width:78px;}
   /* 三維度游標聯動：滑鼠停在海拔剖面圖或地圖上時，對應的分段配速列
      用這個樣式標出來。淡金色跟海拔圖上的游標圓點、生命週期軌道
@@ -902,9 +913,9 @@
   .splits-chart-pace-cell{padding:0!important;}
 
   .splits-pace-line{display:flex;align-items:baseline;gap:5px;white-space:nowrap;line-height:1.2;}
-  .splits-gap-primary{color:var(--ink);font-weight:700;font-size:13px;}
-  .splits-gap-secondary{color:var(--stone);font-size:12px;}
-  .splits-gap-dot{color:var(--stone);opacity:0.5;font-size:12px;}
+  .splits-gap-primary{color:var(--ink);font-weight:700;font-size:calc(13px*var(--fs,1));}
+  .splits-gap-secondary{color:var(--stone);font-size:calc(12px*var(--fs,1));}
+  .splits-gap-dot{color:var(--stone);opacity:0.5;font-size:calc(12px*var(--fs,1));}
   /* 相對強度改用一條 3px 的細線，取代原本整格鋪滿的深綠底——資訊一樣
      （越長越快），但不再壓在文字底下、也不再讓整張表看起來又重又花。 */
   .splits-effort-track{height:3px;margin-top:4px;background:color-mix(in srgb,var(--rule) 70%,transparent);border-radius:2px;overflow:hidden;}
@@ -922,8 +933,8 @@
     background:var(--surface);border:1px solid var(--rule);border-radius:6px;
     padding:8px 12px;box-shadow:0 4px 14px rgba(0,0,0,0.25);white-space:nowrap;
   }
-  .elev-tooltip-dist{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;}
-  .elev-tooltip-row{display:flex;justify-content:space-between;gap:14px;font-size:12px;color:var(--ink-soft);}
+  .elev-tooltip-dist{font-size:calc(13px*var(--fs,1));font-weight:700;color:var(--gold);margin-bottom:3px;}
+  .elev-tooltip-row{display:flex;justify-content:space-between;gap:14px;font-size:calc(12px*var(--fs,1));color:var(--ink-soft);}
   .elev-tooltip-row span:last-child{color:var(--ink);}
   .elevation-legend{display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--stone);flex-wrap:wrap;}
   .elevation-legend-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
@@ -943,7 +954,7 @@
   .geo-photo-row-unmatched{opacity:0.6;}
   .geo-photo-info{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
   .geo-photo-thumb{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--rule);}
-  .geo-photo-thumb-empty{display:flex;align-items:center;justify-content:center;background:var(--paper);font-size:18px;}
+  .geo-photo-thumb-empty{display:flex;align-items:center;justify-content:center;background:var(--paper);font-size:calc(18px*var(--fs,1));}
   /* 地圖上的縮圖圖釘：圓形頭像框，跟現有路線的深紅色主題呼應一個
      細金色外框，在標準地圖跟地形地圖兩種底圖上都看得清楚 */
   .geo-photo-marker-wrap{background:transparent;border:none;}
@@ -953,7 +964,7 @@
     background:var(--surface);display:flex;align-items:center;justify-content:center;
   }
   .geo-photo-marker img{width:100%;height:100%;object-fit:cover;}
-  .geo-photo-marker-empty{font-size:18px;}
+  .geo-photo-marker-empty{font-size:calc(18px*var(--fs,1));}
   .geo-photo-popup{text-align:center;}
   /* 照片轉正之後直立照變高，原本只限寬度（180px），3:4 的直立照高度就
      變成 240px，加上數據那幾行超出地圖的 280px，整張卡被切掉。改成
@@ -1040,14 +1051,14 @@
   .focus-hero-content .focus-panel-label{
     background:rgba(255,255,255,0.14);color:#fff;border:1px solid rgba(255,255,255,0.45);
   }
-  .focus-hero-title{font-size:21px;font-weight:600;margin:12px 0 2px;text-shadow:0 2px 10px rgba(0,0,0,0.45);}
+  .focus-hero-title{font-size:calc(21px*var(--fs,1));font-weight:600;margin:12px 0 2px;text-shadow:0 2px 10px rgba(0,0,0,0.45);}
   .focus-hero-countdown-num{font-size:76px;font-weight:700;line-height:1;text-shadow:0 3px 14px rgba(0,0,0,0.5);}
-  .focus-hero-countdown-label{font-size:14px;opacity:0.92;margin-top:2px;text-shadow:0 1px 6px rgba(0,0,0,0.4);}
+  .focus-hero-countdown-label{font-size:calc(14px*var(--fs,1));opacity:0.92;margin-top:2px;text-shadow:0 1px 6px rgba(0,0,0,0.4);}
   .focus-hero-content .taper-badge{margin-top:10px;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.5);color:#fff;}
   .focus-hero-dismiss{
     position:absolute;top:12px;right:12px;z-index:2;
     background:rgba(0,0,0,0.35);color:#fff;border:none;border-radius:50%;
-    width:28px;height:28px;cursor:pointer;font-size:13px;line-height:1;
+    width:28px;height:28px;cursor:pointer;font-size:calc(13px*var(--fs,1));line-height:1;
   }
   .focus-hero-dismiss:hover{background:rgba(0,0,0,0.55);}
   @media (max-width:640px){
@@ -1060,15 +1071,15 @@
   .focus-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
   .focus-panel-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .focus-panel-label{
-    font-size:11px;font-weight:700;letter-spacing:0.04em;color:var(--gold);
+    font-size:calc(11px*var(--fs,1));font-weight:700;letter-spacing:0.04em;color:var(--gold);
     border:1px solid var(--gold);border-radius:10px;padding:2px 8px;text-transform:uppercase;
   }
-  .focus-panel-title h2{font-size:19px;}
-  .focus-panel-countdown{color:var(--ink-soft);font-size:14px;}
+  .focus-panel-title h2{font-size:calc(19px*var(--fs,1));}
+  .focus-panel-countdown{color:var(--ink-soft);font-size:calc(14px*var(--fs,1));}
   .focus-panel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px;}
   .focus-panel-card{border:1px solid var(--rule);border-radius:5px;padding:12px 14px;background:var(--paper);}
   .focus-panel-card-title{color:var(--stone);margin-bottom:8px;}
-  .focus-panel-card-value{font-size:20px;font-weight:700;margin-bottom:4px;}
+  .focus-panel-card-value{font-size:calc(20px*var(--fs,1));font-weight:700;margin-bottom:4px;}
   .focus-panel-card-note{color:var(--ink-soft);margin:0;}
   .focus-progress-bar{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;margin-bottom:6px;}
   .focus-progress-fill{height:100%;background:var(--trail);border-radius:3px;transition:width 0.3s;}
@@ -1076,8 +1087,8 @@
   .progress-ring-wrap{position:relative;width:64px;height:64px;margin-top:4px;}
   .progress-ring{display:block;}
   .progress-ring-fill{transition:stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1);}
-  .progress-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
-  .focus-weather-row{display:flex;gap:12px;flex-wrap:wrap;font-size:15px;font-weight:600;}
+  .progress-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(14px*var(--fs,1));font-weight:700;}
+  .focus-weather-row{display:flex;gap:12px;flex-wrap:wrap;font-size:calc(15px*var(--fs,1));font-weight:600;}
   .focus-weather-live-note{color:var(--stone);margin-top:4px;}
   .weather-action-row{margin:6px 0 10px;}
   .climate-avg-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:4px 0 10px;}
@@ -1117,7 +1128,7 @@
   .media-gallery-link{flex-direction:column;gap:8px;padding:10px;}
   .media-gallery-link-icon{color:var(--stone);}
   .media-gallery-link-icon svg{width:28px;height:28px;display:block;}
-  .media-gallery-link-domain{font-size:12px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+  .media-gallery-link-domain{font-size:calc(12px*var(--fs,1));text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
 
   /* ---------- Cover photo focal point picker ---------- */
   .focal-point-body{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin:14px 0;}
@@ -1154,7 +1165,7 @@
 
   /* ---------- Shoe management ---------- */
   .shoe-add-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-  .shoe-add-row input{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
+  .shoe-add-row input{font:inherit;font-size:calc(15px*var(--fs,1));padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
   .shoe-add-row input#new-shoe-name{flex:2;min-width:140px;}
   .shoe-add-row input#new-shoe-target{flex:1;min-width:100px;}
   .shoe-add-row input#new-shoe-stack,.shoe-add-row input#new-shoe-drop{flex:1;min-width:100px;}
@@ -1164,8 +1175,8 @@
   .shoe-row{position:relative;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1px solid var(--rule);border-radius:5px;overflow:hidden;}
   .shoe-row-retired{filter:grayscale(100%);opacity:0.6;}
   .shoe-row-top{display:flex;align-items:center;gap:10px;}
-  .shoe-row-name{flex:1;font-size:15px;font-weight:600;}
-  .shoe-retired-badge{display:inline-block;padding:2px 9px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .shoe-row-name{flex:1;font-size:calc(15px*var(--fs,1));font-weight:600;}
+  .shoe-retired-badge{display:inline-block;padding:2px 9px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:10px;font-size:calc(11px*var(--fs,1));font-weight:600;white-space:nowrap;}
   .shoe-health-row{display:flex;align-items:center;gap:10px;margin-top:2px;}
   .shoe-hp-bar{display:flex;gap:3px;flex:1;max-width:180px;}
   .shoe-hp-segment{flex:1;height:9px;border-radius:2px;background:var(--rule);}
@@ -1175,33 +1186,33 @@
   /* 鞋款一多（幾十雙）的時候，一眼掃過去最重要的是「里程還剩多少」
      跟「這雙鞋叫什麼」，規格、場次這些次要資訊故意調淡、調小，不會
      跟主要數字搶注意力；編輯按鈕平常也是淡淡的，滑過去才轉深色。 ---- */
-  .shoe-stat-headline{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;color:var(--ink);}
+  .shoe-stat-headline{display:flex;align-items:center;gap:6px;font-size:calc(15px*var(--fs,1));font-weight:600;color:var(--ink);}
   .shoe-stat-sub{color:var(--stone);}
-  .shoe-target-edit-btn{background:none;border:none;color:var(--stone);cursor:pointer;font-size:13px;padding:0 2px;opacity:0.6;}
+  .shoe-target-edit-btn{background:none;border:none;color:var(--stone);cursor:pointer;font-size:calc(13px*var(--fs,1));padding:0 2px;opacity:0.6;}
   .shoe-target-edit-btn:hover{opacity:1;color:var(--trail);}
   .shoe-edit-form{background:var(--stamp-bg-trail);border-radius:6px;padding:10px;margin-top:2px;}
   .shoe-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;}
   .shoe-edit-grid label{display:flex;flex-direction:column;gap:3px;}
   .shoe-edit-grid .small{color:var(--stone);}
-  .shoe-edit-input{width:100%;font:inherit;font-size:14px;padding:5px 7px;border:1px solid var(--trail);border-radius:3px;background:var(--surface);color:var(--ink);box-sizing:border-box;}
+  .shoe-edit-input{width:100%;font:inherit;font-size:calc(14px*var(--fs,1));padding:5px 7px;border:1px solid var(--trail);border-radius:3px;background:var(--surface);color:var(--ink);box-sizing:border-box;}
   .shoe-edit-actions{display:flex;gap:8px;margin-top:10px;}
-  .btn-small{padding:6px 12px;font-size:13px;}
+  .btn-small{padding:6px 12px;font-size:calc(13px*var(--fs,1));}
   .shoe-row-actions{display:flex;align-items:center;gap:12px;margin-top:2px;opacity:0.75;}
   .shoe-row-actions:hover{opacity:1;}
 
   /* ---------- 補給品資料庫（Nutrition dictionary） ---------- */
   .nutrition-dict-add-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-  .nutrition-dict-add-row input{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
+  .nutrition-dict-add-row input{font:inherit;font-size:calc(14px*var(--fs,1));padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
   .nutrition-dict-add-row input#new-dict-name,.nutrition-dict-add-row input#edit-dict-name{flex:2;min-width:140px;}
   .nutrition-dict-add-row input[id*="dict-carb"],.nutrition-dict-add-row input[id*="dict-sodium"],.nutrition-dict-add-row input[id*="dict-caffeine"]{flex:1;min-width:70px;}
   .nutrition-dict-add-row input[id*="dict-tags"]{flex:1.5;min-width:110px;}
   .nutrition-dict-list{display:flex;flex-direction:column;gap:8px;}
   .nutrition-dict-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--rule);border-radius:5px;}
   .nutrition-dict-row-main{flex:1;min-width:160px;display:flex;flex-direction:column;gap:2px;}
-  .nutrition-dict-name{font-size:14px;font-weight:600;}
+  .nutrition-dict-name{font-size:calc(14px*var(--fs,1));font-weight:600;}
   .nutrition-dict-stats{color:var(--stone);}
   .nutrition-dict-row-actions{display:flex;gap:12px;flex:0 0 auto;}
-  .nutrition-dict-row input{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
+  .nutrition-dict-row input{font:inherit;font-size:calc(13px*var(--fs,1));padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
   .nutrition-dict-row input#edit-dict-name-,.nutrition-dict-row input[id^="edit-dict-name-"]{flex:2;min-width:120px;}
   .nutrition-dict-row input[id^="edit-dict-carb-"],.nutrition-dict-row input[id^="edit-dict-sodium-"],.nutrition-dict-row input[id^="edit-dict-caffeine-"]{flex:1;min-width:60px;}
   .nutrition-dict-row input[id^="edit-dict-tags-"]{flex:1.5;min-width:100px;}
@@ -1214,44 +1225,44 @@
   .shoe-analysis{margin-top:4px;padding-top:12px;border-top:1px dashed var(--rule);display:flex;flex-direction:column;gap:12px;}
   .shoe-analysis-stats{display:flex;gap:24px;flex-wrap:wrap;}
   .shoe-analysis-stat{display:flex;flex-direction:column;gap:2px;}
-  .shoe-analysis-stat .mono{font-size:16px;font-weight:600;}
+  .shoe-analysis-stat .mono{font-size:calc(16px*var(--fs,1));font-weight:600;}
   .shoe-analysis-table{width:100%;border-collapse:collapse;}
   .shoe-analysis-table td{padding:5px 6px;border-bottom:1px solid var(--rule);}
   .shoe-analysis-table td.num{text-align:right;}
-  .shoe-pb-tag{display:inline-block;padding:1px 6px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:8px;font-size:10px;font-weight:700;}
+  .shoe-pb-tag{display:inline-block;padding:1px 6px;color:var(--gold);background:var(--stamp-bg-gold);border-radius:8px;font-size:calc(10px*var(--fs,1));font-weight:700;}
   .shoe-degrade-block{padding:12px;border:1px solid var(--rule);border-radius:5px;background:var(--paper);}
   .shoe-degrade-title{color:var(--stone);margin-bottom:10px;}
   .shoe-degrade-row{display:flex;gap:24px;}
   .shoe-degrade-col{display:flex;flex-direction:column;gap:2px;}
-  .shoe-degrade-value{font-size:18px;font-weight:700;}
+  .shoe-degrade-value{font-size:calc(18px*var(--fs,1));font-weight:700;}
   .shoe-degrade-delta{color:var(--ink-soft);margin:10px 0 0;padding-top:10px;border-top:1px dashed var(--rule);}
 
   /* ---------- 個人資訊面板 ---------- */
   .profile-tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--rule);margin-bottom:18px;}
   .profile-tab-btn{
     background:none;border:none;border-bottom:2px solid transparent;padding:8px 4px;margin-right:20px;
-    font:inherit;font-size:14px;font-weight:600;color:var(--stone);cursor:pointer;
+    font:inherit;font-size:calc(14px*var(--fs,1));font-weight:600;color:var(--stone);cursor:pointer;
   }
   .profile-tab-btn.active{color:var(--ink);border-bottom-color:var(--gold);}
   .profile-hr-sport{padding:14px 0;border-bottom:1px solid var(--rule);}
   .profile-hr-sport:last-child{border-bottom:none;}
-  .profile-hr-sport h3{font-size:15px;margin-bottom:10px;}
+  .profile-hr-sport h3{font-size:calc(15px*var(--fs,1));margin-bottom:10px;}
   .profile-hr-inputs{display:flex;gap:14px;margin-bottom:12px;}
   .profile-hr-inputs .field{flex:1;margin-bottom:0;}
   .profile-hr-zones{display:flex;flex-direction:column;gap:6px;}
-  .profile-hr-zone-row{display:flex;align-items:center;gap:10px;font-size:13px;}
-  .profile-hr-zone-tag{display:inline-block;width:28px;text-align:center;font-size:11px;font-weight:700;color:#fff;padding:2px 0;border-radius:4px;}
+  .profile-hr-zone-row{display:flex;align-items:center;gap:10px;font-size:calc(13px*var(--fs,1));}
+  .profile-hr-zone-tag{display:inline-block;width:28px;text-align:center;font-size:calc(11px*var(--fs,1));font-weight:700;color:#fff;padding:2px 0;border-radius:4px;}
   .profile-body-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   @media (max-width:520px){
     .profile-body-grid{grid-template-columns:1fr;}
     .profile-hr-inputs{flex-direction:column;gap:12px;}
   }
-  .btn-honor-retire{padding:5px 12px;font-size:13px;}
+  .btn-honor-retire{padding:5px 12px;font-size:calc(13px*var(--fs,1));}
   .shoe-row-stamping{pointer-events:none;}
   .shoe-stamp-overlay{
     position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
     background:rgba(22,35,28,0.06);
-    font-size:20px;font-weight:700;color:var(--gold);
+    font-size:calc(20px*var(--fs,1));font-weight:700;color:var(--gold);
     border:3px solid var(--gold);border-radius:6px;
     text-transform:uppercase;letter-spacing:0.05em;
     animation:shoe-stamp-in 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards;
@@ -1270,10 +1281,10 @@
 
   /* ---------- Data recovery ---------- */
   .recovery-section{margin-bottom:24px;}
-  .recovery-section h3{font-size:15px;margin-bottom:6px;}
+  .recovery-section h3{font-size:calc(15px*var(--fs,1));margin-bottom:6px;}
   .recovery-list{display:flex;flex-direction:column;gap:8px;}
   .recovery-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--rule);border-radius:3px;}
-  .recovery-row-name{flex:1;min-width:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .recovery-row-name{flex:1;min-width:0;font-size:calc(15px*var(--fs,1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .recovery-row-date{color:var(--stone);white-space:nowrap;}
   /* 手機上一列塞不下「名稱＋日期＋兩顆按鈕」，名稱會被擠到只剩一個字。
      改成上下兩段：名稱獨佔一行完整顯示，日期與按鈕排在下一行。 */
@@ -1339,8 +1350,55 @@
     .help-fab{transform:none!important;transition:none;}
     .help-fab::before{display:none;}
   }
+  /* 字級切換：分段按鈕，三個字本身大小遞增，一眼看得出是在調字級。
+     這三顆按鈕自己的字級「不」跟著 --fs 縮放——否則切到大，控制項自己也
+     變大，頂端列在手機上會被擠爆。 */
+  .font-scale{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:8px;overflow:hidden;height:34px;}
+  .font-scale-btn{
+    border:none;background:transparent;color:var(--ink-soft);cursor:pointer;
+    width:32px;height:100%;padding:0;display:flex;align-items:center;justify-content:center;
+    font-family:inherit;font-weight:600;line-height:1;
+  }
+  .font-scale-btn+.font-scale-btn{border-left:1px solid var(--rule);}
+  .font-scale-btn.fs-s{font-size:12px;} .font-scale-btn.fs-m{font-size:14px;} .font-scale-btn.fs-l{font-size:17px;}
+  .font-scale-btn[aria-pressed="true"]{background:var(--ink);color:var(--surface);}
+  .font-scale-btn:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
+  @media (max-width:640px){
+    .font-scale{height:30px;}
+    .font-scale-btn{width:28px;}
+  }
+  /* 意見回饋：疊在「有問題找我」正上方、水平置中對齊。刻意比說明按鈕小一號
+     （46 vs 60），主要入口仍然是說明，回饋是次要的。
+     右邊距用中心點回推：說明鈕中心在 right:20+30=50，回饋鈕半徑 23 → right:27。 */
+  .feedback-fab-wrap{
+    position:fixed;bottom:92px;right:27px;z-index:40;
+    display:flex;align-items:center;gap:10px;
+  }
+  /* 跟「有問題找我！」同一套外觀，但刻意不做上下浮動——兩句疊在一起
+     都在動會很吵。文字本身也點得到（比 46px 的圓鈕好按）。 */
+  .feedback-fab-caption{
+    background:var(--ink);color:var(--surface);font-size:calc(12px*var(--fs,1));font-weight:500;
+    padding:6px 12px;border-radius:14px;white-space:nowrap;cursor:pointer;
+    box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  }
+  .feedback-fab{
+    flex-shrink:0;
+    width:46px;height:46px;border-radius:50%;padding:0;
+    background:#F4F2EA;color:#16231C;border:1.5px solid var(--rule);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,0.28);
+    transition:transform 0.2s ease,box-shadow 0.2s ease;
+  }
+  .feedback-fab svg{width:24px;height:24px;}
+  /* 橘點＝Logo 折線末端那顆點。外圈描一圈底色，疊在對話框角上才看得出是「點」 */
+  .feedback-fab-dot{fill:#B8451F;stroke:#F4F2EA;stroke-width:1.4;}
+  @media (hover:hover) and (pointer:fine){
+    .feedback-fab:hover{transform:scale(1.07);box-shadow:0 6px 18px rgba(0,0,0,0.32);}
+  }
+  .feedback-fab:focus-visible{outline:2px solid var(--trail);outline-offset:3px;}
+  @media (prefers-reduced-motion:reduce){ .feedback-fab{transition:none;} }
   .help-fab-caption{
-    background:var(--ink);color:var(--surface);font-size:12px;font-weight:500;
+    background:var(--ink);color:var(--surface);font-size:calc(12px*var(--fs,1));font-weight:500;
     padding:6px 12px;border-radius:14px;white-space:nowrap;
     box-shadow:0 2px 8px rgba(0,0,0,0.2);
     animation:help-caption-bob 2.6s ease-in-out infinite;
@@ -1349,10 +1407,10 @@
     0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);}
   }
   .help-body{max-height:60vh;overflow-y:auto;padding-right:6px;}
-  .help-body h3{font-size:15px;margin:22px 0 8px;color:var(--ink);}
+  .help-body h3{font-size:calc(15px*var(--fs,1));margin:22px 0 8px;color:var(--ink);}
   .help-body h3:first-child{margin-top:0;}
-  .help-body p{margin:0 0 10px;color:var(--ink-soft);font-size:14px;line-height:1.7;}
-  .help-body ul{margin:0 0 10px;padding-left:20px;color:var(--ink-soft);font-size:14px;line-height:1.7;}
+  .help-body p{margin:0 0 10px;color:var(--ink-soft);font-size:calc(14px*var(--fs,1));line-height:1.7;}
+  .help-body ul{margin:0 0 10px;padding-left:20px;color:var(--ink-soft);font-size:calc(14px*var(--fs,1));line-height:1.7;}
   .help-body li{margin-bottom:5px;}
   .help-body strong{color:var(--ink);}
   .new-race-fab{
@@ -1364,15 +1422,21 @@
   @media (max-width:640px){
     .help-fab{width:52px;height:52px;}
     .help-fab-wrap{bottom:16px;right:16px;}
-    .help-fab-caption{font-size:11px;padding:5px 10px;}
+    .help-fab-caption{font-size:calc(11px*var(--fs,1));padding:5px 10px;}
     .new-race-fab{display:flex;width:52px;height:52px;bottom:82px;right:16px;}
+    /* 手機多一顆「新增賽事」在說明鈕上方（頂端 134px），回饋鈕要再往上疊，
+       不然會蓋住新增鈕。中心對齊：說明鈕中心 right:16+26=42，回饋半徑 21 → right:21 */
+    .feedback-fab-wrap{bottom:146px;right:21px;}
+    .feedback-fab{width:42px;height:42px;}
+    .feedback-fab-caption{font-size:calc(11px*var(--fs,1));padding:5px 10px;}
+    .feedback-fab svg{width:22px;height:22px;}
     .new-race-fab svg{width:24px;height:24px;}
     #btn-new{display:none;}
   }
 
   /* ---------- Progress block ---------- */
   .progress-block{margin:16px 0 22px;}
-  .progress-label{display:flex;justify-content:space-between;font-size:15px;color:var(--ink-soft);margin-bottom:6px;}
+  .progress-label{display:flex;justify-content:space-between;font-size:calc(15px*var(--fs,1));color:var(--ink-soft);margin-bottom:6px;}
   .progress-label .mono{color:var(--ink);}
   .progress-track{height:8px;border-radius:4px;background:var(--rule);overflow:hidden;}
   .progress-fill{height:100%;background:var(--trail);border-radius:4px;}
@@ -1387,10 +1451,10 @@
   }
   .lc-node-circle{
     width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:12px;font-weight:700;border:2px solid var(--rule);color:var(--ink-soft);
+    font-size:calc(12px*var(--fs,1));font-weight:700;border:2px solid var(--rule);color:var(--ink-soft);
     background:var(--surface);transition:transform 0.15s ease;
   }
-  .lc-node-label{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .lc-node-label{font-size:calc(11px*var(--fs,1));color:var(--ink-soft);white-space:nowrap;}
   .lc-node:hover .lc-node-circle{transform:scale(1.08);}
   .lc-node-done .lc-node-circle{background:var(--trail);border-color:var(--trail);color:#fff;}
   .lc-node-done .lc-node-label{color:var(--ink);}
@@ -1413,13 +1477,13 @@
   .lc-connector{flex:1;height:4px;background:var(--rule);margin:12px -2px 0;min-width:8px;}
   .lc-connector-done{background:var(--trail);}
   .lc-exception-row{display:flex;gap:14px;margin-top:6px;}
-  .lc-exception-link{background:none;border:none;padding:0;font-family:inherit;font-size:12px;color:var(--stone);text-decoration:underline;cursor:pointer;}
+  .lc-exception-link{background:none;border:none;padding:0;font-family:inherit;font-size:calc(12px*var(--fs,1));color:var(--stone);text-decoration:underline;cursor:pointer;}
   .lc-exception-link:hover{color:var(--flag);}
 
   /* ---------- Stamp badge ---------- */
   .stamp{
     display:inline-block;padding:2px 9px;border-radius:2px;
-    font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.02em;
+    font-family:'IBM Plex Mono',monospace;font-size:calc(13px*var(--fs,1));letter-spacing:0.02em;
     transform:rotate(-2deg);white-space:nowrap;
   }
   .stamp.status-registered,.stamp.status-completed{color:var(--trail);background:var(--stamp-bg-trail);}
@@ -1430,7 +1494,7 @@
   button{cursor:pointer;}
   .btn-primary{
     background:var(--ink);color:var(--surface);border:none;border-radius:3px;
-    padding:10px 16px;font:inherit;font-weight:500;font-size:15px;
+    padding:10px 16px;font:inherit;font-weight:500;font-size:calc(15px*var(--fs,1));
   }
   .btn-primary:hover{opacity:0.88;}
   /* 第一次使用時，引導視線去點「新增賽事」的呼吸光暈效果；使用者按過一次
@@ -1445,19 +1509,19 @@
   }
   .btn-ghost{
     background:none;border:1px solid var(--rule);color:var(--ink);border-radius:3px;
-    padding:6px 12px;font:inherit;font-size:14px;
+    padding:6px 12px;font:inherit;font-size:calc(14px*var(--fs,1));
   }
   .btn-ghost:hover{border-color:var(--ink);}
   .icon-btn{display:inline-flex;align-items:center;justify-content:center;padding:6px;width:34px;height:34px;}
   .icon-btn svg{width:18px;height:18px;display:block;}
   .lang-switcher{display:flex;flex-direction:column;gap:2px;align-items:flex-start;}
   .lang-switcher select{
-    font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--rule);border-radius:3px;
+    font:inherit;font-size:calc(13px*var(--fs,1));padding:5px 8px;border:1px solid var(--rule);border-radius:3px;
     background:var(--surface);color:var(--ink);
   }
   .btn-ghost.danger{color:var(--flag);border-color:var(--rule);}
   .btn-ghost.danger:hover{border-color:var(--flag);}
-  .btn-text{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:14px;padding:0;}
+  .btn-text{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:calc(14px*var(--fs,1));padding:0;}
   .btn-text.danger{color:var(--flag);}
 
   /* ---------- 下拉操作選單（把一排零散按鈕收成一個選單） ---------- */
@@ -1474,7 +1538,7 @@
   .action-menu-panel[hidden]{display:none;}
   .action-menu-item{
     display:block;width:100%;text-align:left;background:none;border:none;border-radius:5px;
-    padding:9px 10px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;white-space:nowrap;
+    padding:9px 10px;font:inherit;font-size:calc(14px*var(--fs,1));color:var(--ink);cursor:pointer;white-space:nowrap;
   }
   .action-menu-item:hover{background:var(--hover-overlay);}
   .action-menu-item.danger{color:var(--flag);}
@@ -1499,7 +1563,7 @@
   .quick-nav::-webkit-scrollbar{display:none;}
   .quick-nav a{
     flex-shrink:0;padding:5px 13px;border:1px solid var(--rule);border-radius:14px;
-    font-size:13px;color:var(--ink-soft);text-decoration:none;background:var(--surface);
+    font-size:calc(13px*var(--fs,1));color:var(--ink-soft);text-decoration:none;background:var(--surface);
     white-space:nowrap;
   }
   .quick-nav a:hover{border-color:var(--trail);color:var(--ink);}
@@ -1528,7 +1592,7 @@
   .dh-badges{display:flex;align-items:center;gap:12px;}
   .dh-actions{display:flex;align-items:center;gap:8px;}
   .save-status{
-    font-size:12px;color:var(--stone);display:flex;align-items:center;gap:5px;
+    font-size:calc(12px*var(--fs,1));color:var(--stone);display:flex;align-items:center;gap:5px;
     opacity:0;transition:opacity 0.25s;white-space:nowrap;
   }
   .save-status[data-state="saving"],.save-status[data-state="saved"]{opacity:1;}
@@ -1539,9 +1603,9 @@
   .sport-icon-wrap{display:inline-flex;color:var(--trail);}
   .sport-icon{display:block;}
   .detail-header h1{font-size:30px;line-height:1.3;}
-  .detail-header h1 .alias{font-weight:400;color:var(--ink-soft);font-size:18px;}
+  .detail-header h1 .alias{font-weight:400;color:var(--ink-soft);font-size:calc(18px*var(--fs,1));}
   .dh-meta{color:var(--ink-soft);}
-  .dh-gcal-quicklink{display:block;margin-top:4px;font-size:13px;}
+  .dh-gcal-quicklink{display:block;margin-top:4px;font-size:calc(13px*var(--fs,1));}
 
   details.section{
     background:var(--surface);border-radius:8px;
@@ -1559,7 +1623,7 @@
   details.section>.subsection:last-child>*:last-child{margin-bottom:0;}
   [data-theme="dark"] details.section{box-shadow:0 2px 10px rgba(0,0,0,0.3);}
   details.section summary{
-    cursor:pointer;font-weight:600;font-size:17px;padding:16px 0;
+    cursor:pointer;font-weight:600;font-size:calc(17px*var(--fs,1));padding:16px 0;
     list-style:none;display:flex;align-items:center;justify-content:space-between;
     transition:color 0.15s ease;
   }
@@ -1580,7 +1644,7 @@
   .section-body .field{flex:1 1 200px;min-width:170px;margin-bottom:0;}
   .section-body .field.wide{flex-basis:100%;}
 
-  .field{display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--ink-soft);margin-bottom:16px;}
+  .field{display:flex;flex-direction:column;gap:6px;font-size:calc(15px*var(--fs,1));color:var(--ink-soft);margin-bottom:16px;}
   /* 無感智慧預設：欄位被自動填好時的提示動畫——淡出的背景色塊，讓
      使用者一眼看出「這裡剛被系統動過」，不是毫無感覺地被默默改掉。
      用 padding／margin 負值抵銷，動畫播完（2.5 秒）之後 class 會被
@@ -1595,10 +1659,10 @@
     100%{background:transparent;}
   }
 
-  .field span{font-size:14px;color:var(--stone);}
+  .field span{font-size:calc(14px*var(--fs,1));color:var(--stone);}
   .field span i{font-style:normal;color:var(--stone);margin-left:3px;}
   .field input,.field select,.field textarea{
-    font:inherit;font-size:15px;
+    font:inherit;font-size:calc(15px*var(--fs,1));
     padding:8px 10px;border:1px solid var(--rule);border-radius:3px;
     background:var(--surface);color:var(--ink);width:100%;
     transition:border-color 0.15s ease;
@@ -1615,7 +1679,7 @@
     .nutrition-dict-add-row input,.nutrition-dict-row input,
     .report-prompt-fallback-textarea,
     #cmdk-input,#new-shoe-name,#paste-json-input{
-      font-size:16px;
+      font-size:calc(16px*var(--fs,1));
     }
   }
   /* 單位後綴：疊在輸入框右緣，輸入框右側留出對應的內距避免數字被壓到。
@@ -1629,7 +1693,7 @@
     background:color-mix(in srgb,var(--surface) 35%,transparent);
   }
   .field-group-title{
-    font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+    font-size:calc(11px*var(--fs,1));font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
     color:var(--stone);margin:0 0 12px;
   }
   /* 路面比例堆疊長條 */
@@ -1642,7 +1706,7 @@
   .surface-seg-paved{background:var(--stone);}
   .surface-seg-trail{background:var(--trail);}
   .surface-seg-stairs{background:var(--gold);}
-  .surface-mix-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-soft);align-items:center;}
+  .surface-mix-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:calc(12px*var(--fs,1));color:var(--ink-soft);align-items:center;}
   .surface-key{display:inline-flex;align-items:center;gap:5px;}
   .surface-dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
   .surface-mix-warn{color:var(--flag);font-weight:600;}
@@ -1650,12 +1714,12 @@
   .field-input-wrap.has-unit input{padding-right:42px;}
   .field-unit{
     position:absolute;right:10px;top:50%;transform:translateY(-50%);
-    font-size:13px;color:var(--stone);pointer-events:none;
+    font-size:calc(13px*var(--fs,1));color:var(--stone);pointer-events:none;
     font-family:'IBM Plex Mono',monospace;
   }
   /* 補充說明：字級壓小、顏色壓淡，讓它明顯屬於「附註」而不是欄位本身 */
-  .field-hint{font-size:12px;color:var(--stone);line-height:1.5;margin-top:-1px;}
-  .field-hint-live{font-size:12px;line-height:1.5;margin-top:2px;color:var(--stone);}
+  .field-hint{font-size:calc(12px*var(--fs,1));color:var(--stone);line-height:1.5;margin-top:-1px;}
+  .field-hint-live{font-size:calc(12px*var(--fs,1));line-height:1.5;margin-top:2px;color:var(--stone);}
   .field-hint-live.is-error{color:var(--flag);}
   .field input[data-kind="duration"][aria-invalid="true"]{border-color:var(--flag);box-shadow:0 0 0 3px var(--stamp-bg-flag);}
   /* 對焦狀態：除了邊框變色，再加一圈很淡的光暈。原本只有邊框換色，
@@ -1677,7 +1741,7 @@
   .subsection{padding:6px 2px 22px;}
   .subsection-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
   .subsection-head-actions{display:flex;align-items:center;gap:8px;}
-  .subsection h3{font-size:15px;font-weight:600;color:var(--ink-soft);}
+  .subsection h3{font-size:calc(15px*var(--fs,1));font-weight:600;color:var(--ink-soft);}
 
   /* ---------- 裝備佈署看板（Kanban） ---------- */
   .kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;}
@@ -1702,10 +1766,10 @@
   .kanban-card-drag{flex:0 0 auto;color:var(--stone);width:16px;height:16px;}
   .kanban-card-drag svg{width:100%;height:100%;}
   .kanban-card-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
-  .kanban-card-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .kanban-card-mandatory-tag{font-size:10px;color:var(--flag);font-weight:600;}
+  .kanban-card-name{font-size:calc(13px*var(--fs,1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .kanban-card-mandatory-tag{font-size:calc(10px*var(--fs,1));color:var(--flag);font-weight:600;}
   .kanban-card-packed{flex:0 0 auto;display:flex;}
-  .kanban-card-move{flex:0 0 auto;max-width:34px;font-size:10px;padding:2px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--stone);}
+  .kanban-card-move{flex:0 0 auto;max-width:34px;font-size:calc(10px*var(--fs,1));padding:2px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--stone);}
 
   .gear-weight-dash{
     display:flex;flex-direction:column;gap:8px;padding:16px;margin-bottom:14px;
@@ -1713,10 +1777,10 @@
   }
   .gear-weight-dash-title{color:var(--stone);}
   .gear-weight-dash-row{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
-  .gear-weight-donut-total{font-size:15px;font-weight:700;fill:var(--ink);}
+  .gear-weight-donut-total{font-size:calc(15px*var(--fs,1));font-weight:700;fill:var(--ink);}
   .gear-weight-donut-unit{fill:var(--stone);}
   .gear-weight-dash-stats{display:flex;flex-direction:column;gap:8px;}
-  .gear-weight-stat{display:flex;align-items:center;gap:8px;font-size:14px;}
+  .gear-weight-stat{display:flex;align-items:center;gap:8px;font-size:calc(14px*var(--fs,1));}
   .gear-weight-stat .mono{margin-left:auto;padding-left:16px;color:var(--ink);}
   .gear-weight-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
   .gear-weight-note{color:var(--stone);margin:0;}
@@ -1724,7 +1788,7 @@
     display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding-top:10px;margin-top:2px;
     border-top:1px dashed var(--rule);
   }
-  .gear-weight-body-pct{font-size:18px;font-weight:700;color:var(--gold);}
+  .gear-weight-body-pct{font-size:calc(18px*var(--fs,1));font-weight:700;color:var(--gold);}
   .gear-weight-body-detail{color:var(--stone);margin-left:auto;}
 
   .repeat-rows .empty-hint{padding:0 0 8px;}
@@ -1754,17 +1818,17 @@
   .repeat-row.drag-over-bottom{box-shadow:inset 0 -3px 0 0 var(--trail);}
   .row-remove{
     position:absolute;top:6px;right:8px;width:22px;height:22px;border:none;
-    background:none;color:var(--stone);font-size:19px;line-height:1;
+    background:none;color:var(--stone);font-size:calc(19px*var(--fs,1));line-height:1;
   }
   .row-remove:hover{color:var(--flag);}
 
   .tier-label{
     display:flex;align-items:center;justify-content:center;width:28px;height:28px;
-    border:1.5px solid var(--ink);border-radius:50%;font-size:15px;flex-shrink:0;margin-top:4px;
+    border:1.5px solid var(--ink);border-radius:50%;font-size:calc(15px*var(--fs,1));flex-shrink:0;margin-top:4px;
   }
 
   .create-form{max-width:420px;}
-  .create-form h1{font-size:24px;margin-bottom:20px;}
+  .create-form h1{font-size:calc(24px*var(--fs,1));margin-bottom:20px;}
   .create-actions{display:flex;gap:10px;margin-top:8px;}
   /* 說明文字跟上面的按鈕之間要留白：貼太近會看起來像按鈕的一部分，
      也會跟下面那顆「匯入賽事主視覺」擠在一起分不出層次。 */
@@ -1773,8 +1837,8 @@
   .create-grid .field{min-width:0;}
   @media (max-width:640px){ .create-grid{grid-template-columns:1fr;} }
   .create-import-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
-  .create-staged-ok{color:var(--trail);font-size:13px;}
-  .create-staged-err{color:var(--flag);font-size:13px;}
+  .create-staged-ok{color:var(--trail);font-size:calc(13px*var(--fs,1));}
+  .create-staged-err{color:var(--flag);font-size:calc(13px*var(--fs,1));}
   .create-staged-thumb{width:32px;height:32px;border-radius:5px;object-fit:cover;}
 
   @media (max-width:860px){
@@ -1789,8 +1853,8 @@
     #topbar.topbar-compact .app-tagline{opacity:0;max-height:0;margin:0;}
     #topbar.topbar-compact .topbar-row1{gap:6px;}
     .cal-cell{min-height:64px;padding:4px 4px 3px;}
-    .cal-weekdays span{font-size:12px;}
-    .cal-chip{font-size:13px;padding:2px 5px;}
+    .cal-weekdays span{font-size:calc(12px*var(--fs,1));}
+    .cal-chip{font-size:calc(13px*var(--fs,1));padding:2px 5px;}
     .detail-header.has-cover{padding:16px 16px 20px;}
   }
   @media (max-width:640px){
@@ -1799,7 +1863,7 @@
   }
   @media (max-width:520px){
     .cal-cell{min-height:auto;}
-    .cal-daynum{font-size:13px;}
+    .cal-daynum{font-size:calc(13px*var(--fs,1));}
     .topbar-actions{flex-wrap:wrap;gap:10px;}
     .auth-user{max-width:110px;}
   }
@@ -1864,7 +1928,7 @@
     text-align:center;max-width:360px;pointer-events:none;
   }
   .global-dropzone-icon{font-size:48px;margin-bottom:12px;}
-  .global-dropzone-title{color:var(--ink);font-size:22px;margin:0 0 8px;}
+  .global-dropzone-title{color:var(--ink);font-size:calc(22px*var(--fs,1));margin:0 0 8px;}
   .global-dropzone-hint{color:var(--ink-soft);margin:0;}
 
   /* ---- 全域指令控制台（Cmd/Ctrl+K）：背景故意跟「動態回顧輪播」一樣
@@ -1895,7 +1959,7 @@
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:16px 20px;border-bottom:1px solid var(--rule);flex-shrink:0;
   }
-  .drawer-header h3{font-size:17px;margin:0;}
+  .drawer-header h3{font-size:calc(17px*var(--fs,1));margin:0;}
   .drawer-body{overflow-y:auto;padding:16px 20px 28px;flex:1;}
   /* 抽屜頂端已經有標題了，如果區塊自己那個標題跟抽屜標題重複就藏
      起來（例如裝備清單抽屜裡不用再寫一次「裝備清單」）。但「預算與
@@ -1937,18 +2001,18 @@
   .dash-card:active{transform:scale(0.995);}
   .dash-card-main{flex:1;min-width:0;}
   .dash-card-title{font-weight:600;margin-bottom:3px;}
-  .dash-card-sub2{display:block;font-size:13px;color:var(--stone);margin-top:3px;line-height:1.5;}
+  .dash-card-sub2{display:block;font-size:calc(13px*var(--fs,1));color:var(--stone);margin-top:3px;line-height:1.5;}
   .dash-card-warn{color:var(--flag);}
-  .dash-card-sub{color:var(--stone);font-size:13px;}
-  .dash-card-chevron{color:var(--stone);font-size:18px;flex-shrink:0;}
+  .dash-card-sub{color:var(--stone);font-size:calc(13px*var(--fs,1));}
+  .dash-card-chevron{color:var(--stone);font-size:calc(18px*var(--fs,1));flex-shrink:0;}
   /* 空抽屜：淡化、虛線框、標題與「尚未填寫」收成同一行，高度約剩一半。
      hover／focus 時回到全亮，不然找不到要點哪裡。 */
   .dash-card.is-empty{opacity:0.58;border-style:dashed;padding:9px 16px;margin:10px 0;}
   .dash-card.is-empty:hover,.dash-card.is-empty:focus-visible{opacity:1;}
   .dash-card.is-empty .dash-card-main{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
-  .dash-card.is-empty .dash-card-title{font-weight:500;font-size:14px;margin-bottom:0;}
-  .dash-card.is-empty .dash-card-sub{font-size:12px;}
-  .dash-card.is-empty .dash-card-chevron{font-size:15px;}
+  .dash-card.is-empty .dash-card-title{font-weight:500;font-size:calc(14px*var(--fs,1));margin-bottom:0;}
+  .dash-card.is-empty .dash-card-sub{font-size:calc(12px*var(--fs,1));}
+  .dash-card.is-empty .dash-card-chevron{font-size:calc(15px*var(--fs,1));}
   /* 填了的卡片緊接著空卡片時，不要讓兩個 margin 疊出一大段空白 */
   .dash-card.is-empty + .dash-card.is-empty{margin-top:6px;}
   .cmdk-overlay{
@@ -1963,18 +2027,18 @@
   }
   .cmdk-input{
     width:100%;border:none;border-bottom:1px solid var(--rule);padding:18px 20px;
-    font-size:17px;font-family:inherit;background:transparent;color:var(--ink);outline:none;
+    font-size:calc(17px*var(--fs,1));font-family:inherit;background:transparent;color:var(--ink);outline:none;
   }
   .cmdk-results{overflow-y:auto;padding:6px;}
   .cmdk-row{
     display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;
   }
-  .cmdk-row-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+  .cmdk-row-icon{font-size:calc(16px*var(--fs,1));width:20px;text-align:center;flex-shrink:0;}
   .cmdk-row-label{flex:1;color:var(--ink);}
-  .cmdk-row-meta{color:var(--stone);font-size:12px;}
+  .cmdk-row-meta{color:var(--stone);font-size:calc(12px*var(--fs,1));}
   .cmdk-row.active{background:var(--stamp-bg-gold);}
-  .cmdk-empty{padding:20px;text-align:center;color:var(--stone);font-size:14px;}
-  .cmdk-group-label{padding:8px 12px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--stone);}
+  .cmdk-empty{padding:20px;text-align:center;color:var(--stone);font-size:calc(14px*var(--fs,1));}
+  .cmdk-group-label{padding:8px 12px 4px;font-size:calc(11px*var(--fs,1));text-transform:uppercase;letter-spacing:0.04em;color:var(--stone);}
 
   /* ---- 動態回顧輪播（Story Mode）：故意用寫死的深色，不跟著淺色/深色
      主題變動，理由跟徽章成就圖卡一樣——這是沉浸式的相片瀏覽畫面，不是
@@ -1993,10 +2057,10 @@
   .hof-close{
     position:fixed;top:16px;right:16px;z-index:2;
     background:rgba(255,255,255,0.1);color:#EDEEE9;border:none;
-    width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;
+    width:40px;height:40px;border-radius:50%;font-size:calc(18px*var(--fs,1));cursor:pointer;
   }
   .hof-close:hover{background:rgba(255,255,255,0.2);}
-  .hof-title{font-size:13px;letter-spacing:0.18em;text-transform:uppercase;
+  .hof-title{font-size:calc(13px*var(--fs,1));letter-spacing:0.18em;text-transform:uppercase;
     color:rgba(237,238,233,0.55);text-align:center;margin-bottom:26px;}
   /* 英雄卡：沿用獎牌牆那套 3D 傾斜的做法，變數由同一個引擎寫入 */
   .hof-hero{
@@ -2006,20 +2070,20 @@
     box-shadow:0 18px 50px rgba(0,0,0,0.5);
     margin-bottom:30px;overflow:hidden;
   }
-  .hof-hero-label{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;
+  .hof-hero-label{font-size:calc(12px*var(--fs,1));letter-spacing:0.14em;text-transform:uppercase;
     color:rgba(var(--gold-rgb),0.85);margin-bottom:10px;}
   .hof-hero-value{font-size:58px;font-weight:700;color:var(--gold);line-height:1;}
-  .hof-hero-race{margin-top:12px;font-size:15px;color:rgba(237,238,233,0.8);}
-  .hof-hero-date{margin-top:4px;font-size:13px;color:rgba(237,238,233,0.5);}
+  .hof-hero-race{margin-top:12px;font-size:calc(15px*var(--fs,1));color:rgba(237,238,233,0.8);}
+  .hof-hero-date{margin-top:4px;font-size:calc(13px*var(--fs,1));color:rgba(237,238,233,0.5);}
   .hof-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:30px;}
   .hof-tile{
     background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
     border-radius:12px;padding:18px 16px;
   }
   .hof-tile-wide{grid-column:1/-1;}
-  .hof-tile-value{font-size:26px;font-weight:700;color:#EDEEE9;line-height:1.1;}
-  .hof-tile-label{font-size:12px;color:rgba(237,238,233,0.55);margin-top:6px;}
-  .hof-section-title{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;
+  .hof-tile-value{font-size:calc(26px*var(--fs,1));font-weight:700;color:#EDEEE9;line-height:1.1;}
+  .hof-tile-label{font-size:calc(12px*var(--fs,1));color:rgba(237,238,233,0.55);margin-top:6px;}
+  .hof-section-title{font-size:calc(12px*var(--fs,1));letter-spacing:0.14em;text-transform:uppercase;
     color:rgba(237,238,233,0.5);margin:0 0 12px;}
   /* ---- 軌跡畫廊：橫向捲動，每張卡片對齊停靠。
      用原生的 scroll-snap 而不是自己寫 touch 事件——原生捲動本來就
@@ -2040,14 +2104,14 @@
   .hof-track-svg{width:100%;height:auto;display:block;}
   .hof-track-meta{padding:0 4px;}
   .hof-track-name{
-    font-size:13px;color:#EDEEE9;margin-bottom:3px;
+    font-size:calc(13px*var(--fs,1));color:#EDEEE9;margin-bottom:3px;
     /* 賽事名稱長度差很多，統一截成一行，不然卡片高度會參差不齊 */
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .hof-track-stats{font-size:11px;color:rgba(237,238,233,0.5);}
+  .hof-track-stats{font-size:calc(11px*var(--fs,1));color:rgba(237,238,233,0.5);}
   .hof-track-badge{
     position:absolute;top:10px;right:10px;
-    background:var(--gold);color:#0B0E0D;font-size:10px;font-weight:700;
+    background:var(--gold);color:#0B0E0D;font-size:calc(10px*var(--fs,1));font-weight:700;
     padding:2px 7px;border-radius:8px;letter-spacing:0.04em;
   }
   .hof-download-row{display:flex;justify-content:center;margin:-4px 0 18px;}
@@ -2067,9 +2131,9 @@
     border-bottom:1px solid rgba(255,255,255,0.07);
   }
   .hof-shoe-row:last-child{border-bottom:none;}
-  .hof-shoe-name{flex:1;font-size:14px;color:#EDEEE9;}
-  .hof-shoe-stat{font-size:13px;color:rgba(237,238,233,0.6);white-space:nowrap;}
-  .hof-empty{color:rgba(237,238,233,0.45);font-size:13px;}
+  .hof-shoe-name{flex:1;font-size:calc(14px*var(--fs,1));color:#EDEEE9;}
+  .hof-shoe-stat{font-size:calc(13px*var(--fs,1));color:rgba(237,238,233,0.6);white-space:nowrap;}
+  .hof-empty{color:rgba(237,238,233,0.45);font-size:calc(13px*var(--fs,1));}
   /* ---- 能量補給區：用流體漸層當底，呼應「燃料艙」的意象。
      漸層是靜態的（沒有動畫）——這張卡片已經有彩帶、霓虹軌跡、
      3D 傾斜好幾個動態元素，再加一個會動的背景只會讓畫面更吵。 ---- */
@@ -2082,7 +2146,7 @@
     border:1px solid rgba(255,255,255,0.08);border-bottom:none;
   }
   .hof-fuel-total{font-size:34px;font-weight:700;color:#EDEEE9;line-height:1;}
-  .hof-fuel-total-label{font-size:12px;color:rgba(237,238,233,0.6);}
+  .hof-fuel-total-label{font-size:calc(12px*var(--fs,1));color:rgba(237,238,233,0.6);}
   .hof-fuel-chips{
     display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px 14px;
     background:rgba(255,255,255,0.02);
@@ -2092,8 +2156,8 @@
     display:flex;flex-direction:column;gap:2px;
     background:rgba(0,0,0,0.3);border-radius:8px;padding:8px 12px;min-width:76px;
   }
-  .hof-fuel-chip-value{font-size:15px;font-weight:600;color:#EDEEE9;}
-  .hof-fuel-chip-label{font-size:11px;color:rgba(237,238,233,0.5);}
+  .hof-fuel-chip-value{font-size:calc(15px*var(--fs,1));font-weight:600;color:#EDEEE9;}
+  .hof-fuel-chip-label{font-size:calc(11px*var(--fs,1));color:rgba(237,238,233,0.5);}
   .hof-fuel-list{
     padding:4px 18px 8px;border:1px solid rgba(255,255,255,0.08);border-top:none;
     border-radius:0 0 12px 12px;margin-bottom:10px;
@@ -2125,17 +2189,17 @@
   .story-slide-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
   .story-slide-gradient{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.8) 100%);}
   .story-slide-content{position:absolute;left:0;right:0;bottom:0;padding:28px 24px 46px;color:#fff;z-index:2;}
-  .story-slide-name{font-size:23px;font-weight:700;margin-bottom:6px;line-height:1.3;}
-  .story-slide-date{font-size:14px;opacity:0.8;margin-bottom:16px;}
+  .story-slide-name{font-size:calc(23px*var(--fs,1));font-weight:700;margin-bottom:6px;line-height:1.3;}
+  .story-slide-date{font-size:calc(14px*var(--fs,1));opacity:0.8;margin-bottom:16px;}
   .story-slide-stats{display:flex;gap:20px;flex-wrap:wrap;}
-  .story-slide-stat-label{font-size:11px;opacity:0.7;margin-bottom:2px;}
-  .story-slide-stat-value{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;}
+  .story-slide-stat-label{font-size:calc(11px*var(--fs,1));opacity:0.7;margin-bottom:2px;}
+  .story-slide-stat-value{font-family:'IBM Plex Mono',monospace;font-size:calc(16px*var(--fs,1));font-weight:600;}
   .story-title-slide{
     position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;color:#fff;background:#0D1013;padding:0 30px;
   }
   .story-title-year{font-family:'IBM Plex Mono',monospace;font-size:64px;font-weight:700;color:#D9B15C;}
-  .story-title-sub{font-size:16px;opacity:0.75;margin-top:14px;}
+  .story-title-sub{font-size:calc(16px*var(--fs,1));opacity:0.75;margin-top:14px;}
 
   /* ---- 疲勞模式：純黑背景省 OLED 電、字級刻意放到極大，整個畫面就是
      一個大手勢感應區，不追求精緻排版，追求「隨便滑都滑得到」。 ---- */
@@ -2148,24 +2212,24 @@
   .fatigue-exit-bar{display:flex;justify-content:space-between;align-items:center;padding:18px 16px;flex:0 0 auto;}
   .fatigue-undo-btn,.fatigue-exit-btn{
     background:transparent;border:1px solid #3A3A3A;color:#999;padding:10px 16px;
-    border-radius:8px;font-size:15px;font-family:inherit;
+    border-radius:8px;font-size:calc(15px*var(--fs,1));font-family:inherit;
   }
   .fatigue-panel{
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:24px;text-align:center;min-height:0;
   }
   .fatigue-panel-top{border-bottom:1px solid #1A1A1A;}
-  .fatigue-panel-label{font-size:18px;color:#777;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;}
+  .fatigue-panel-label{font-size:calc(18px*var(--fs,1));color:#777;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;}
   .fatigue-panel-value{
     font-size:44px;font-weight:800;color:#D9B15C;line-height:1.25;
     margin-bottom:18px;word-break:break-word;max-width:100%;
   }
-  .fatigue-panel-hint{font-size:15px;color:#555;}
+  .fatigue-panel-hint{font-size:calc(15px*var(--fs,1));color:#555;}
   /* ---- 強光／色盲適配：工具列、心率區間對照卡 ---- */
   .fatigue-tools-row{display:flex;gap:10px;padding:0 16px 14px;flex:0 0 auto;}
   .fatigue-tool-btn{
     flex:1;background:transparent;border:1.5px solid #3A3A3A;color:#999;padding:12px 8px;
-    border-radius:8px;font-size:14px;font-family:inherit;
+    border-radius:8px;font-size:calc(14px*var(--fs,1));font-family:inherit;
   }
   .fatigue-tool-btn.is-active{border-color:#D9B15C;color:#D9B15C;}
   .fatigue-zone-card{flex:1;display:flex;flex-direction:column;justify-content:center;padding:20px 24px;min-height:0;overflow-y:auto;}
@@ -2173,9 +2237,9 @@
   .fatigue-zone-rows{display:flex;flex-direction:column;gap:14px;}
   .fatigue-zone-row{display:flex;align-items:center;gap:14px;padding:8px 0;border-bottom:1px solid #1A1A1A;}
   .fatigue-zone-row .hr-zone-bars{width:26px;height:18px;flex-shrink:0;}
-  .fatigue-zone-label{font-size:22px;font-weight:800;width:44px;flex-shrink:0;}
-  .fatigue-zone-range{font-size:22px;color:#ccc;}
-  .fatigue-zone-note,.fatigue-zone-empty{font-size:14px;color:#666;margin-top:18px;text-align:center;line-height:1.6;}
+  .fatigue-zone-label{font-size:calc(22px*var(--fs,1));font-weight:800;width:44px;flex-shrink:0;}
+  .fatigue-zone-range{font-size:calc(22px*var(--fs,1));color:#ccc;}
+  .fatigue-zone-note,.fatigue-zone-empty{font-size:calc(14px*var(--fs,1));color:#666;margin-top:18px;text-align:center;line-height:1.6;}
   /* 電子紙高對比模式：反轉成近乎純黑字配暖白底，強光下靠反射閱讀，
      不靠螢幕自體發光跟環境光搶對比——所有原本偏灰、偏暗的次要文字
      顏色都要跟著提高對比，不然「暗底淺灰字」直接對調成「淺底淺灰字」
@@ -2218,12 +2282,12 @@
       background:var(--rule);margin:0 auto 16px;
     }
   }
-  .report-prompt-fallback-textarea{width:100%;min-height:260px;font:inherit;font-size:13px;padding:10px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink);resize:vertical;margin-bottom:14px;}
-  .modal-panel h2{font-size:20px;margin-bottom:10px;}
+  .report-prompt-fallback-textarea{width:100%;min-height:260px;font:inherit;font-size:calc(13px*var(--fs,1));padding:10px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink);resize:vertical;margin-bottom:14px;}
+  .modal-panel h2{font-size:calc(20px*var(--fs,1));margin-bottom:10px;}
   /* 同步診斷的對照表：本機 vs 雲端並排，數字對不上的那一列標出來。 */
-  .sync-diag-table{width:100%;border-collapse:collapse;margin:14px 0 16px;font-size:14px;}
+  .sync-diag-table{width:100%;border-collapse:collapse;margin:14px 0 16px;font-size:calc(14px*var(--fs,1));}
   .sync-diag-table th{
-    text-align:left;font-weight:600;font-size:12px;color:var(--stone);
+    text-align:left;font-weight:600;font-size:calc(12px*var(--fs,1));color:var(--stone);
     padding:0 8px 6px 0;border-bottom:1px solid var(--rule);
   }
   .sync-diag-table th:not(:first-child),
@@ -2231,36 +2295,36 @@
   .sync-diag-table td{padding:8px 8px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top;}
   .sync-diag-table tr:last-child td{border-bottom:none;}
   .sync-diag-dim{color:var(--stone);}
-  .sync-diag-nosync{color:var(--stone);font-size:12px;}
+  .sync-diag-nosync{color:var(--stone);font-size:calc(12px*var(--fs,1));}
   /* 數字對不上＝這正是開這個畫面要找的線索，用警示色標出來 */
   .sync-diag-mismatch td{color:var(--flag);}
   .sync-diag-mismatch td:first-child{font-weight:600;}
   .storage-usage-warn{color:var(--flag);font-weight:600;}
   .sync-diag-note{color:var(--stone);line-height:1.6;margin-top:4px;}
-  .gpx-overwrite-note{display:block;font-size:12px;color:var(--flag);margin-top:2px;}
+  .gpx-overwrite-note{display:block;font-size:calc(12px*var(--fs,1));color:var(--flag);margin-top:2px;}
   .geo-photo-skipped{border-left:3px solid var(--flag);background:var(--paper);border-radius:6px;padding:8px 12px;margin:10px 0;display:flex;flex-direction:column;gap:3px;}
   .geo-photo-skipped .small{color:var(--ink-soft);}
   /* 分享圖設定：格式切換沿用篩選 chip 的外觀，勾選列用一般 label */
   .share-format-row{display:flex;gap:8px;margin:4px 0 12px;}
   .share-opt-unavailable{opacity:0.55;cursor:not-allowed;}
   .share-opt-unavailable input{cursor:not-allowed;}
-  .share-opt-why{color:var(--stone);font-size:12px;margin-left:4px;}
+  .share-opt-why{color:var(--stone);font-size:calc(12px*var(--fs,1));margin-left:4px;}
   .climate-chart-curve{color:var(--stone);margin-top:4px;}
   .share-public-block{border-top:1px solid var(--rule);margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:8px;}
   .share-public-row{display:flex;gap:8px;}
-  .share-public-url{flex:1;min-width:0;font-size:13px;padding:8px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);}
+  .share-public-url{flex:1;min-width:0;font-size:calc(13px*var(--fs,1));padding:8px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);}
   .share-public-hint{color:var(--stone);margin:0;}
   /* 公開唯讀頁：獨立的一頁，不依賴 App 版面 */
   .pubview{max-width:720px;margin:0 auto;padding:36px 20px 60px;display:flex;flex-direction:column;gap:18px;}
-  .pubview-brand{color:var(--trail);font-size:14px;letter-spacing:0.08em;margin-bottom:10px;}
+  .pubview-brand{color:var(--trail);font-size:calc(14px*var(--fs,1));letter-spacing:0.08em;margin-bottom:10px;}
   .pubview h1{margin:0 0 6px;font-size:30px;line-height:1.25;}
-  .pubview-meta{color:var(--stone);font-size:13px;}
+  .pubview-meta{color:var(--stone);font-size:calc(13px*var(--fs,1));}
   .pubview-time{font-size:64px;font-weight:700;color:var(--gold);letter-spacing:0.02em;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
-  .pubview-pb{font-size:15px;color:var(--gold);border:1.5px solid var(--gold);border-radius:6px;padding:3px 10px;}
+  .pubview-pb{font-size:calc(15px*var(--fs,1));color:var(--gold);border:1.5px solid var(--gold);border-radius:6px;padding:3px 10px;}
   .pubview-stats{display:flex;flex-wrap:wrap;gap:18px 28px;}
   .pubview-stats div{display:flex;flex-direction:column;gap:2px;}
   .pubview-stats .small{color:var(--stone);}
-  .pubview-stats strong{font-size:19px;}
+  .pubview-stats strong{font-size:calc(19px*var(--fs,1));}
   .pubview-cover{width:100%;border-radius:10px;display:block;}
   .pubview-track{width:100%;height:auto;background:var(--surface);border:1px solid var(--rule);border-radius:10px;}
   .pubview-gear{color:var(--ink-soft);}
@@ -2281,9 +2345,9 @@
      一定有一顆「稍後」讓人關掉。同時間最多一條，後來的蓋掉前面的。 */
   .app-banner{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
     z-index:120;max-width:min(560px,calc(100vw - 32px));background:var(--ink);color:var(--surface);
-    border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,0.35);font-size:14px;}
+    border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,0.35);font-size:calc(14px*var(--fs,1));}
   .app-banner-actions{display:flex;gap:8px;flex-wrap:wrap;}
-  .app-banner-actions button{font:inherit;font-size:13px;border-radius:6px;padding:6px 12px;cursor:pointer;border:1px solid rgba(255,255,255,0.28);background:transparent;color:inherit;}
+  .app-banner-actions button{font:inherit;font-size:calc(13px*var(--fs,1));border-radius:6px;padding:6px 12px;cursor:pointer;border:1px solid rgba(255,255,255,0.28);background:transparent;color:inherit;}
   .app-banner-actions button.primary{background:var(--surface);color:var(--ink);border-color:var(--surface);}
   .app-banner.is-warn{border-left:4px solid var(--flag);}
   .storage-cleanup-list{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto;margin:8px 0 12px;}
@@ -2291,7 +2355,7 @@
   .storage-cleanup-row img{width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--rule);}
   .storage-cleanup-main{flex:1;min-width:0;}
   .storage-cleanup-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .storage-cleanup-meta{font-size:12px;color:var(--stone);}
+  .storage-cleanup-meta{font-size:calc(12px*var(--fs,1));color:var(--stone);}
   .storage-cleanup-row .btn-ghost.is-confirming{border-color:var(--flag);color:var(--flag);}
   .paste-note-preview{white-space:pre-wrap;max-height:160px;overflow:auto;background:var(--paper);
     border:1px solid var(--rule);border-radius:8px;padding:10px 12px;margin:8px 0 14px;line-height:1.6;}
@@ -2301,42 +2365,42 @@
   .paste-note-fact{display:flex;gap:10px;align-items:flex-start;}
   .paste-note-fact span{display:flex;flex-direction:column;gap:2px;}
   .paste-note-snippet{color:var(--stone);}
-  .paste-note-overwrite{color:var(--flag);font-style:normal;font-size:12px;}
+  .paste-note-overwrite{color:var(--flag);font-style:normal;font-size:calc(12px*var(--fs,1));}
   .paste-transport-entry{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}
   .paste-transport-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;}
   .paste-transport-grid label{display:flex;flex-direction:column;gap:3px;}
-  .paste-transport-grid input,.paste-transport-grid select{font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);min-width:0;}
+  .paste-transport-grid input,.paste-transport-grid select{font:inherit;font-size:calc(14px*var(--fs,1));padding:7px 9px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);min-width:0;}
   .paste-transport-wide{grid-column:1/-1;}
   .paste-url-preview{word-break:break-all;max-height:none;}
   .paste-url-dup{color:var(--flag);}
   @media (max-width:600px){ .paste-transport-grid{grid-template-columns:1fr;} }
-  .race-context-actions .action-menu-item{font-size:16px;padding:12px 10px;}
-  .share-options-row{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:12px;font-size:14px;color:var(--ink);}
+  .race-context-actions .action-menu-item{font-size:calc(16px*var(--fs,1));padding:12px 10px;}
+  .share-options-row{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:12px;font-size:calc(14px*var(--fs,1));color:var(--ink);}
   .share-options-row label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;}
   .share-options-row input{width:16px;height:16px;accent-color:var(--trail);}
   .share-preview-wrap{background:var(--paper);border-radius:8px;padding:10px;display:flex;justify-content:center;margin-bottom:14px;}
   .share-preview-wrap img{max-width:100%;max-height:52vh;border-radius:4px;display:block;}
   .share-preview-wrap.is-story img{max-height:60vh;}
-  .modal-hint{color:var(--ink-soft);font-size:15px;margin-bottom:16px;}
+  .modal-hint{color:var(--ink-soft);font-size:calc(15px*var(--fs,1));margin-bottom:16px;}
   .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
   .modal-actions-top{margin-top:0;margin-bottom:14px;}
   .sheet-checks{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;padding:4px 0;}
-  .sheet-check{display:flex;align-items:center;gap:8px;font-size:15px;}
+  .sheet-check{display:flex;align-items:center;gap:8px;font-size:calc(15px*var(--fs,1));}
   .import-table-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;}
-  .import-table{border-collapse:collapse;width:100%;font-size:14px;}
+  .import-table{border-collapse:collapse;width:100%;font-size:calc(14px*var(--fs,1));}
   .import-table th{text-align:left;padding:8px 8px;border-bottom:1px solid var(--rule);background:var(--paper);white-space:nowrap;position:sticky;top:0;}
   .import-table td{padding:5px 8px;border-bottom:1px solid var(--rule);vertical-align:middle;}
   .import-table input[type="text"],.import-table input[type="date"],.import-table select{
-    font:inherit;font-size:14px;padding:5px 6px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);width:100%;min-width:90px;
+    font:inherit;font-size:calc(14px*var(--fs,1));padding:5px 6px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);width:100%;min-width:90px;
   }
   .import-table input.narrow{min-width:60px;width:74px;}
   .import-table td:first-child{width:28px;}
 
   /* ---------- Series comparison ---------- */
-  .series-best{font-size:15px;margin:0 0 12px;}
+  .series-best{font-size:calc(15px*var(--fs,1));margin:0 0 12px;}
   .series-table-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;}
   .series-table-wrap.scroll-fade{-webkit-mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 3%,black 97%,transparent 100%);}
-  .series-table{border-collapse:collapse;width:100%;font-size:14px;}
+  .series-table{border-collapse:collapse;width:100%;font-size:calc(14px*var(--fs,1));}
   .series-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);background:var(--paper);white-space:nowrap;}
   .series-table td{padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;}
   .series-table tr.current{background:rgba(46,107,73,0.08);}
@@ -2360,7 +2424,7 @@
     background:color-mix(in srgb,var(--surface) 70%,transparent);
   }
   .table-view tbody tr:last-child td,.series-table tbody tr:last-child td,.shoe-analysis-table tbody tr:last-child td{border-bottom:none;}
-  .series-table th,.import-table th,.epp-segment-table th{font-size:11px;font-weight:600;color:var(--stone);letter-spacing:0.04em;}
+  .series-table th,.import-table th,.epp-segment-table th{font-size:calc(11px*var(--fs,1));font-weight:600;color:var(--stone);letter-spacing:0.04em;}
   /* 選取列的深色底要蓋過斑馬底 */
   .table-view-row.selected td{background:var(--ink)!important;}
   .table-view-row:hover td{background:var(--surface)!important;}
@@ -2368,22 +2432,22 @@
   /* ---------- Equipment templates ---------- */
   .template-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
   .template-bar select{
-    font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);
+    font:inherit;font-size:calc(14px*var(--fs,1));padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);
   }
   .template-save-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
   .template-save-row input{
-    flex:1 1 200px;font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);
+    flex:1 1 200px;font:inherit;font-size:calc(15px*var(--fs,1));padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);
   }
 
   /* ---------- GPX/TCX import & paste quick-fill ---------- */
   .gpx-import-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:2px 2px 16px;}
-  .gpx-summary{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:6px;font-size:15px;}
+  .gpx-summary{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:6px;font-size:calc(15px*var(--fs,1));}
   .gpx-summary li{display:flex;justify-content:space-between;border-bottom:1px solid var(--rule);padding:5px 2px;}
   #paste-json-input{
-    width:100%;font-family:'IBM Plex Mono',monospace;font-size:13px;padding:10px 12px;border:1px solid var(--rule);
+    width:100%;font-family:'IBM Plex Mono',monospace;font-size:calc(13px*var(--fs,1));padding:10px 12px;border:1px solid var(--rule);
     border-radius:3px;background:var(--surface);color:var(--ink);resize:vertical;margin-bottom:8px;
   }
-  .paste-error{color:var(--flag);font-size:13px;min-height:18px;margin:0 0 8px;}
+  .paste-error{color:var(--flag);font-size:calc(13px*var(--fs,1));min-height:18px;margin:0 0 8px;}
 </style>
 </head>
 <body>
@@ -2396,6 +2460,11 @@
         <p class="app-tagline" data-i18n="ui.appTagline">從報名到終點的完整紀錄</p>
       </div>
       <div class="topbar-actions">
+        <div class="font-scale" role="group" aria-label="字體大小">
+          <button type="button" class="font-scale-btn fs-s" data-font-scale="small" aria-pressed="false" title="字體：小" aria-label="字體：小" data-i18n-title="ui.fontSmallTitle">小</button>
+          <button type="button" class="font-scale-btn fs-m" data-font-scale="medium" aria-pressed="true" title="字體：中" aria-label="字體：中" data-i18n-title="ui.fontMediumTitle">中</button>
+          <button type="button" class="font-scale-btn fs-l" data-font-scale="large" aria-pressed="false" title="字體：大" aria-label="字體：大" data-i18n-title="ui.fontLargeTitle">大</button>
+        </div>
         <button id="btn-theme-toggle" class="btn-ghost icon-btn" aria-label="切換深色模式" title="切換深色模式"></button>
         <div class="lang-switcher">
           <select id="lang-select" aria-label="Language / 語言 / 言語">
@@ -2511,6 +2580,16 @@
 <div id="help-modal" class="modal-overlay" hidden></div>
 <div id="recovery-modal" class="modal-overlay" hidden></div>
 <div id="focal-point-modal" class="modal-overlay" hidden></div>
+<div class="feedback-fab-wrap">
+<span id="feedback-fab-caption" class="feedback-fab-caption" aria-hidden="true" data-i18n="ui.feedbackCaption">說說你的想法</span>
+<button id="btn-feedback" class="feedback-fab" type="button" aria-label="意見回饋" title="意見回饋" data-i18n-title="ui.feedbackTitle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h9A2.5 2.5 0 0 1 18 5.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 3.5V15h0.5A2.5 2.5 0 0 1 4 12.5z"/>
+    <path d="M8 7.5h6M8 10.5h3.5"/>
+    <circle class="feedback-fab-dot" cx="19" cy="4.5" r="2.6"/>
+  </svg>
+</button>
+</div>
 <div class="help-fab-wrap">
   <span id="help-fab-caption" class="help-fab-caption" data-i18n="ui.helpCaption">有問題找我！</span>
   <button id="btn-help" class="help-fab" aria-label="使用說明" title="使用說明"></button>
@@ -3191,7 +3270,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.73.0';
+const APP_VERSION='v3.75.0';
 
 /* ============================================================
    多語系（i18n）
@@ -3544,7 +3623,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.climateAvgLabel':'例年平均','ui.climateAvgBasis':'{a} 年 × 前後 {b} 日','ui.climateAvgSamples':'、計 {n} 件','ui.climateAvgYearsOnly':'{n} 年分の同日データ','ui.weatherNeedsGpsHistory':'GPS 軌跡がないため当日の過去天気を自動取得できません。下の項目に手動入力できます','ui.weatherTooEarly':'リアルタイム予報はレース 7 日前から取得できます','ui.logiFee':'エントリー','ui.logiDeposit':'デポジット','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'参加費が未払い','ui.logiWarnStayGap':'宿泊がレース当日をカバーしていません','ui.logiWarnLateArrival':'往路の到着がスタート時刻より後','ui.logiWarnNoTransport':'海外レースの交通が未手配','ui.hofYearsHint':'{a}－{b}、うち {c} 年に出走','ui.careerShareButton':'生涯サマリーを保存','ui.careerShareTitle':'生涯サマリーを保存','ui.careerOptHero':'フルマラソン PB','ui.careerOptTiles':'生涯データ','ui.careerMissingHero':'フルマラソンの記録がありません','ui.careerMissingTracks':'GPS 軌跡の記録がありません','ui.careerMissingShoes':'シューズを登録した完走記録がありません','ui.careerMissingFuel':'補給の記録がありません','ui.careerShareFilename':'生涯サマリー.png','ui.careerShareFailed':'画像の生成に失敗しました。もう一度お試しください','ui.shareMissingHr':'心拍データなし','ui.shareMissingShoe':'シューズ未登録','ui.shareMissingShoeSport':'この種目では表示しません','ui.shareMissingFuel':'補給の記録なし','ui.shareMissingTrack':'GPX 軌跡なし','ui.resultDistance':'距離','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.feedbackCaption':'ご意見をどうぞ','ui.fontSmallTitle':'文字サイズ：小','ui.fontMediumTitle':'文字サイズ：中','ui.fontLargeTitle':'文字サイズ：大','ui.feedbackTitle':'フィードバック','ui.feedbackNotReady':'フィードバックフォームは準備中です','ui.climateAvgLabel':'例年平均','ui.climateAvgBasis':'{a} 年 × 前後 {b} 日','ui.climateAvgSamples':'、計 {n} 件','ui.climateAvgYearsOnly':'{n} 年分の同日データ','ui.weatherNeedsGpsHistory':'GPS 軌跡がないため当日の過去天気を自動取得できません。下の項目に手動入力できます','ui.weatherTooEarly':'リアルタイム予報はレース 7 日前から取得できます','ui.logiFee':'エントリー','ui.logiDeposit':'デポジット','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'参加費が未払い','ui.logiWarnStayGap':'宿泊がレース当日をカバーしていません','ui.logiWarnLateArrival':'往路の到着がスタート時刻より後','ui.logiWarnNoTransport':'海外レースの交通が未手配','ui.hofYearsHint':'{a}－{b}、うち {c} 年に出走','ui.careerShareButton':'生涯サマリーを保存','ui.careerShareTitle':'生涯サマリーを保存','ui.careerOptHero':'フルマラソン PB','ui.careerOptTiles':'生涯データ','ui.careerMissingHero':'フルマラソンの記録がありません','ui.careerMissingTracks':'GPS 軌跡の記録がありません','ui.careerMissingShoes':'シューズを登録した完走記録がありません','ui.careerMissingFuel':'補給の記録がありません','ui.careerShareFilename':'生涯サマリー.png','ui.careerShareFailed':'画像の生成に失敗しました。もう一度お試しください','ui.shareMissingHr':'心拍データなし','ui.shareMissingShoe':'シューズ未登録','ui.shareMissingShoeSport':'この種目では表示しません','ui.shareMissingFuel':'補給の記録なし','ui.shareMissingTrack':'GPX 軌跡なし','ui.resultDistance':'距離','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：Safari の共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -4028,7 +4107,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.climateAvgLabel':'Climate average','ui.climateAvgBasis':'{a} years × ±{b} days','ui.climateAvgSamples':', {n} samples','ui.climateAvgYearsOnly':'{n} years, same date','ui.weatherNeedsGpsHistory':'No GPS track, so race-day historical weather cannot be fetched automatically; you can fill the fields below manually','ui.weatherTooEarly':'Live forecast becomes available 7 days before the race','ui.logiFee':'Entry','ui.logiDeposit':'Deposit','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'entry fee unpaid','ui.logiWarnStayGap':'stay does not cover race day','ui.logiWarnLateArrival':'outbound trip departs after the start','ui.logiWarnNoTransport':'overseas race with no transport planned','ui.hofYearsHint':'{a}–{b}, raced in {c} of them','ui.careerShareButton':'Save career summary','ui.careerShareTitle':'Save career summary','ui.careerOptHero':'Marathon PB','ui.careerOptTiles':'Career stats','ui.careerMissingHero':'no marathon result yet','ui.careerMissingTracks':'no GPS tracks imported','ui.careerMissingShoes':'no finishes with a shoe linked','ui.careerMissingFuel':'no fuel logged as consumed','ui.careerShareFilename':'career-summary.png','ui.careerShareFailed':'Could not generate the image; please try again','ui.shareMissingHr':'no heart-rate data','ui.shareMissingShoe':'no shoe linked','ui.shareMissingShoeSport':'not shown for this sport','ui.shareMissingFuel':'nothing marked as consumed','ui.shareMissingTrack':'no GPX track','ui.resultDistance':'Distance','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.feedbackCaption':'Tell me what you think','ui.fontSmallTitle':'Text size: small','ui.fontMediumTitle':'Text size: medium','ui.fontLargeTitle':'Text size: large','ui.feedbackTitle':'Send feedback','ui.feedbackNotReady':'The feedback form is coming soon','ui.climateAvgLabel':'Climate average','ui.climateAvgBasis':'{a} years × ±{b} days','ui.climateAvgSamples':', {n} samples','ui.climateAvgYearsOnly':'{n} years, same date','ui.weatherNeedsGpsHistory':'No GPS track, so race-day historical weather cannot be fetched automatically; you can fill the fields below manually','ui.weatherTooEarly':'Live forecast becomes available 7 days before the race','ui.logiFee':'Entry','ui.logiDeposit':'Deposit','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'entry fee unpaid','ui.logiWarnStayGap':'stay does not cover race day','ui.logiWarnLateArrival':'outbound trip departs after the start','ui.logiWarnNoTransport':'overseas race with no transport planned','ui.hofYearsHint':'{a}–{b}, raced in {c} of them','ui.careerShareButton':'Save career summary','ui.careerShareTitle':'Save career summary','ui.careerOptHero':'Marathon PB','ui.careerOptTiles':'Career stats','ui.careerMissingHero':'no marathon result yet','ui.careerMissingTracks':'no GPS tracks imported','ui.careerMissingShoes':'no finishes with a shoe linked','ui.careerMissingFuel':'no fuel logged as consumed','ui.careerShareFilename':'career-summary.png','ui.careerShareFailed':'Could not generate the image; please try again','ui.shareMissingHr':'no heart-rate data','ui.shareMissingShoe':'no shoe linked','ui.shareMissingShoeSport':'not shown for this sport','ui.shareMissingFuel':'nothing marked as consumed','ui.shareMissingTrack':'no GPX track','ui.resultDistance':'Distance','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'To add to home screen: tap Share in Safari → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -14111,6 +14190,100 @@ function raceDayWeatherBlockHtml(race){
   }
   return parts.join('');
 }
+/* ============================================================
+   意見回饋按鈕 → Google 表單（預先填入版本／裝置／當下畫面）。
+   只帶這三樣，不帶任何賽事資料——回饋表單是公開的收件匣，使用者
+   按下去之前沒有機會檢查會送出什麼，所以只放「除錯需要、又不涉及
+   隱私」的東西。
+   設定方式：
+   1) FEEDBACK_FORM_URL 填表單網址（…/viewform）
+   2) 表單右上 ⋮ →「取得預先填入的連結」，三個欄位隨便填個值，按
+      「取得連結」，網址裡會出現 entry.123456789=... 這種參數，把
+      對應的 entry.xxx 填進 FEEDBACK_PREFILL。沒填的欄位就不帶。
+   ============================================================ */
+const FEEDBACK_FORM_URL='';
+const FEEDBACK_PREFILL={version:'',device:'',page:''};
+function feedbackDeviceLabel(){
+  const ua=navigator.userAgent||'';
+  const kind=/iPad|Tablet/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)?'平板'
+    :/Mobi|iPhone|Android/i.test(ua)?'手機':'電腦';
+  const os=/iPhone|iPad|iOS/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)?'iOS'
+    :/Android/.test(ua)?'Android':/Windows/.test(ua)?'Windows':/Mac OS X/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'';
+  const browser=/Edg\//.test(ua)?'Edge':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox\//.test(ua)?'Firefox'
+    :/Safari\//.test(ua)?'Safari':'';
+  // 裝成 App 開（PWA）跟在瀏覽器分頁裡開，很多問題的重現方式不一樣
+  const standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)
+    ||navigator.standalone===true;
+  return [kind,os,browser,standalone?'已安裝 App':''].filter(Boolean).join(' / ');
+}
+function feedbackPageLabel(){
+  const hof=document.getElementById('hof-overlay');
+  if(hof&&!hof.hidden) return '生涯回顧';
+  if(state.creating) return '新增賽事';
+  if(state.selectedId) return '賽事詳情';
+  return '首頁';
+}
+function buildFeedbackUrl(){
+  if(!FEEDBACK_FORM_URL) return '';
+  let u;
+  try{ u=new URL(FEEDBACK_FORM_URL); }catch(e){ return ''; }
+  const values={version:APP_VERSION,device:feedbackDeviceLabel(),page:feedbackPageLabel()};
+  let any=false;
+  Object.keys(FEEDBACK_PREFILL).forEach(k=>{
+    const entry=(FEEDBACK_PREFILL[k]||'').trim();
+    if(!entry) return;
+    u.searchParams.set(entry.startsWith('entry.')?entry:'entry.'+entry,values[k]);
+    any=true;
+  });
+  // usp=pp_url 是 Google 表單「預先填入」的開關，沒有它 entry 參數會被忽略
+  if(any) u.searchParams.set('usp','pp_url');
+  return u.toString();
+}
+document.getElementById('feedback-fab-caption').addEventListener('click',()=>{
+  document.getElementById('btn-feedback').click();
+});
+document.getElementById('btn-feedback').addEventListener('click',()=>{
+  const url=buildFeedbackUrl();
+  if(!url){
+    // 還沒設定表單網址時不要做成死按鈕：講清楚，而不是按了沒反應
+    showToast(t('ui.feedbackNotReady','回饋表單準備中，敬請期待'));
+    return;
+  }
+  window.open(url,'_blank','noopener');
+  logFeatureUse('open_feedback');
+});
+/* 字級切換（小／中／大）。實際縮放全靠 CSS 變數 --fs，這裡只負責
+   切換 <html data-font>、記住選擇、同步三顆按鈕的按下狀態。
+   「中」是預設值，所以存的時候不寫 data-font 屬性（跟沒設定一樣）。 */
+const FONT_SCALES=['small','medium','large'];
+function currentFontScale(){
+  const v=document.documentElement.getAttribute('data-font');
+  return FONT_SCALES.includes(v)?v:'medium';
+}
+function syncFontScaleButtons(){
+  const cur=currentFontScale();
+  document.querySelectorAll('[data-font-scale]').forEach(b=>{
+    b.setAttribute('aria-pressed',String(b.dataset.fontScale===cur));
+  });
+}
+function applyFontScale(scale){
+  if(!FONT_SCALES.includes(scale)) scale='medium';
+  if(scale==='medium') document.documentElement.removeAttribute('data-font');
+  else document.documentElement.setAttribute('data-font',scale);
+  try{
+    if(scale==='medium') localStorage.removeItem('font-scale-v1');
+    else localStorage.setItem('font-scale-v1',scale);
+  }catch(e){}
+  syncFontScaleButtons();
+  // 行事曆格子與圖表的高度跟字級有關，改完字級要重畫一次才對得齊
+  if(typeof renderCalendar==='function') renderCalendar();
+  if(typeof redrawThemeDependentCanvases==='function') redrawThemeDependentCanvases();
+  logFeatureUse('font_scale_'+scale);
+}
+document.querySelectorAll('[data-font-scale]').forEach(b=>{
+  b.addEventListener('click',()=>applyFontScale(b.dataset.fontScale));
+});
+syncFontScaleButtons();
 function hallOfFameHtml(){
   const d=computeHallOfFameData();
   const hero=d.marathonPB!=null?`<div class="hof-hero" id="hof-hero">
