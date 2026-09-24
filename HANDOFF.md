@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.93.0
+> 貼到新對話開頭即可接續。最後更新：v3.95.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（374 項檢查，20 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`、`journey`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（377 項檢查，20 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`、`journey`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash

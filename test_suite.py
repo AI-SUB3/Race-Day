@@ -1314,6 +1314,50 @@ class Journey(Group):
             window.L=realL;
             return opened && calls.join()==='map,tile,line65,pin,pin,fit,remove' && !document.getElementById('journey-map-overlay');
         }''' % SETUP)
+        # 陸地與海面要分得出來：淺色模式至少 1.5 倍（v3.94 前 1.12）、深色模式至少 1.7 倍（v3.95 前 1.43）
+        c['journey_land_contrast'] = page.evaluate('''async()=>{ %s
+            const r=mk('2026 台東超級鐵人三項','台東','台灣','train'); await view(r.id);
+            const lum=rgb=>{ const m=rgb.match(/\\d+/g).map(Number).slice(0,3).map(v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);}); return 0.2126*m[0]+0.7152*m[1]+0.0722*m[2]; };
+            const ratio=()=>{ const a=lum(getComputedStyle(document.querySelector('.jr-sea')).fill), b=lum(getComputedStyle(document.querySelector('.jr-land')).fill);
+              return (Math.max(a,b)+0.05)/(Math.min(a,b)+0.05); };
+            const root=document.documentElement, prev=root.getAttribute('data-theme');
+            root.setAttribute('data-theme','light'); const light=ratio();
+            root.setAttribute('data-theme','dark'); const dark=ratio();   // v3.95 前只有 1.43
+            root.setAttribute('data-theme',prev||'light');
+            return light>=1.5 && dark>=1.7;
+        }''' % SETUP)
+        # ---- 年度回顧長圖：選擇性加入「今年的賽事旅程」（v3.95.0） ----
+        c['year_review_journey_toggle'] = page.evaluate('''async()=>{ %s
+            const r=mk('2026 台東超級鐵人三項','台東','台灣','train'); r.status='completed'; r.results.chipTimeSeconds=36000; r.schedule.raceDate='2026-03-01';
+            localStorage.removeItem('year-review-journey-v1');
+            const d=document.createElement('div');
+            userProfile.homeCounty=''; d.innerHTML=yearInReviewPickerHtml();
+            const disabledNoHome=d.querySelector('#year-in-review-journey').disabled;
+            userProfile.homeCounty='新北市'; d.innerHTML=yearInReviewPickerHtml(); document.body.appendChild(d);
+            const cb=d.querySelector('#year-in-review-journey'); const offByDefault=!cb.checked&&!cb.disabled;
+            cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true}));
+            d.innerHTML=yearInReviewPickerHtml(); const remembered=d.querySelector('#year-in-review-journey').checked;
+            d.remove(); localStorage.removeItem('year-review-journey-v1');
+            return disabledNoHome && offByDefault && remembered;
+        }''' % SETUP)
+        c['year_review_journey_block'] = page.evaluate('''async()=>{ %s
+            state.races=[];
+            const done=(name,city,country,date)=>{ const r=mk(name,city,country,null); r.status='completed'; r.schedule.raceDate=date;
+              r.route.distanceKm=42.195; r.results.chipTimeSeconds=12000; return r; };
+            done('2026 台東超級鐵人三項','台東','台灣','2026-11-01'); done('大阪マラソン 2026','大阪','日本','2026-02-22');
+            done('新北市萬金石馬拉松','新北市','台灣','2026-03-22'); done('柏林馬拉松','Berlin','德國','2026-09-27');
+            done('神秘山路跑','某個不存在的地方','某國','2026-05-01');
+            const jb=await yearJourneyData(state.races);
+            const spy=[]; const proto=CanvasRenderingContext2D.prototype, orig=proto.fillText;
+            proto.fillText=function(x){ spy.push(String(x)); return orig.apply(this,arguments); };
+            try{ await buildYearInReviewCanvas('2026',{journey:true}); } finally{}
+            const on=spy.splice(0); await buildYearInReviewCanvas('2026',{journey:false}); const off=spy.splice(0);
+            proto.fillText=orig;
+            // 往返直線：台東 253×2＋大阪 1,726×2＋柏林 8,955×2；萬金石同縣市不算距離；查不到的另外註明
+            return jb.places===4 && Math.abs(jb.totalKm-2*(253+1726+8955))<30 && jb.far.name==='Berlin' && jb.unlocated===1
+                && on.includes('今年的賽事旅程') && on.includes('新北市') && on.some(x=>x.includes('東亞以外')&&x.includes('無法定位'))
+                && !off.includes('今年的賽事旅程');
+        }''' % SETUP)
         # iPhone 安全：旅程卡片與地圖視窗的樣式不可以有 filter／blend／backdrop
         import pathlib as _pl, re as _re
         _css=_re.search(r'<style[^>]*>(.*?)</style>',_pl.Path(APP).read_text(encoding='utf-8'),_re.S).group(1)
