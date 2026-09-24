@@ -1199,6 +1199,128 @@ FAKE_CLOUD_JS = r'''window.__makeFakeCloud=function(initialRaces,initialTraining
 };
 '''
 
+class Journey(Group):
+    """賽事旅程卡片（v3.93.0）：從家到賽場的動畫地圖＋真實地圖按鈕。"""
+
+    def body(self, page):
+        c = self.checks
+        SETUP = '''const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const geoCalls=[]; if(!window.__realFetch) window.__realFetch=window.fetch;
+            window.fetch=async(u,o)=>{ const s=String(u); if(s.includes('geocoding-api.open-meteo.com')){
+                const q=decodeURIComponent(s.split('name=')[1]); geoCalls.push(q);
+                const db={'大阪':{name:'大阪市',latitude:34.69,longitude:135.50,country:'日本'},'Berlin':{name:'柏林',latitude:52.52,longitude:13.40,country:'德國'}};
+                return new Response(JSON.stringify({results:db[q]?[db[q]]:[]})); }
+              return window.__realFetch(u,o); };
+            const mk=(name,city,country,mode)=>{ const r=emptyRace(name,'road_running','registered','2026-11-01');
+              r.location.city=city; r.location.country=country;
+              if(mode) r.transportation=[{direction:'outbound',mode,departureTime:'',pickupLocation:'',cost:null,notes:''}];
+              state.races.push(r); return r; };
+            const view=async id=>{ selectRace(id,{scroll:false}); await wait(450); return document.querySelector('.journey-card'); };
+            userProfile=userProfile||emptyUserProfile(); userProfile.homeCounty='新北市'; state.races=[];
+            journeyGeoCache={}; await saveJson('journey-geo-v1',{});'''
+        c['journey_county_matching'] = page.evaluate('''()=>{
+            const n=x=>(twCountyFromText(x)||{}).name||null;
+            return n('台東')==='臺東縣' && n('2026 台東超級鐵人三項')==='臺東縣' && n('新竹市')==='新竹市'
+                && n('新竹縣竹北')==='新竹縣' && n('新北市萬金石馬拉松')==='新北市' && n('臺北馬拉松')==='臺北市' && n('Osaka')===null;
+        }''')
+        c['journey_needs_home_then_profile_sets_it'] = page.evaluate('''async()=>{ %s
+            userProfile.homeCounty='';
+            const r=mk('2026 台東超級鐵人三項','台東','台灣','train');
+            let card=await view(r.id);
+            const prompt=!!card.querySelector('[data-action="journey-set-home"]');
+            card.querySelector('[data-action="journey-set-home"]').click(); await wait(200);
+            const sel=document.querySelector('[data-profile-path="homeCounty"]');
+            sel.value='新北市'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(300);
+            const btn=document.querySelector('[data-action="close-profile-modal"]'); if(btn) btn.click();
+            card=await view(r.id);
+            return prompt && userProfile.homeCounty==='新北市' && !!card.querySelector('svg.jr-map');
+        }''' % SETUP)
+        c['journey_domestic_uses_taiwan_map'] = page.evaluate('''async()=>{ %s
+            const r=mk('2026 台東超級鐵人三項','台東','台灣','train');
+            const card=await view(r.id);
+            return card.querySelector('.jr-foot b').textContent==='253' && card.querySelector('.jr-mover-icon').textContent==='🚆'
+                && !!card.querySelector('.jr-land') && !card.querySelector('.jr-land-far') && !!card.querySelector('[data-action="journey-open-map"]');
+        }''' % SETUP)
+        c['journey_overseas_geocodes_once'] = page.evaluate('''async()=>{ %s
+            const r=mk('大阪マラソン 2027','大阪','日本','flight');
+            await view(r.id); await wait(400);
+            const card=await view(r.id);
+            await view(r.id); await view(r.id);
+            // 東亞地圖、飛機、只查詢一次；有一端在台灣時整個台灣都在範圍內
+            const svg=card.querySelector('svg.jr-map');
+            return !!card.querySelector('.jr-land-far') && card.querySelector('.jr-mover-icon').textContent==='✈️'
+                && card.querySelector('.jr-foot b').textContent==='1,726' && geoCalls.filter(q=>q==='大阪').length===1;
+        }''' % SETUP)
+        # 查到的座標只存這台裝置，不寫進賽事（寫進去會讓每場都被判定有變更、重新上傳雲端）
+        c['journey_geocode_not_written_to_race'] = page.evaluate('''async()=>{ %s
+            const r=mk('大阪マラソン 2027','大阪','日本','flight'); const before=JSON.stringify(r);
+            await view(r.id); await wait(400);
+            const cache=await loadJson('journey-geo-v1',{});
+            return JSON.stringify(state.races.find(x=>x.id===r.id))===before && cache[r.id] && cache[r.id].lat===34.69;
+        }''' % SETUP)
+        c['journey_far_race_uses_line'] = page.evaluate('''async()=>{ %s
+            const r=mk('柏林馬拉松','Berlin','德國',null);
+            await view(r.id); await wait(400); const card=await view(r.id);
+            return !!card.querySelector('.jr-line') && card.querySelector('.jr-mover-icon').textContent==='✈️'
+                && card.querySelector('.jr-chip.is-muted')!==null;
+        }''' % SETUP)
+        # 同一個縣市：不顯示「離家 1 公里」這種沒意義的距離
+        c['journey_same_county_no_fake_distance'] = page.evaluate('''async()=>{ %s
+            const r=mk('新北市萬金石馬拉松','新北市','台灣','bus');
+            const card=await view(r.id);
+            const txt=card.textContent;
+            return txt.includes('同一個縣市') && !/\\d+\\s*公里/.test(txt) && !card.querySelector('svg.jr-map');
+        }''' % SETUP)
+        # 查不到的地點：顯示找不到，而且不可以一直重查（重畫卡片不會再觸發查詢）
+        c['journey_not_found_no_loop'] = page.evaluate('''async()=>{ %s
+            const r=mk('神秘山路跑','某個不存在的地方','某國',null);
+            await view(r.id); await wait(500);
+            // 數「查詢函式被呼叫幾次」而不是連網次數：迴圈時每一圈都會先在快取找到
+            // 「查過了」，根本不會連網，只數連網次數抓不到
+            let invoked=0; const real=window.geocodeJourneyRace;
+            window.geocodeJourneyRace=function(){ invoked++; return real.apply(this,arguments); };
+            const card=await view(r.id); await view(r.id); await wait(600);
+            window.geocodeJourneyRace=real;
+            return card.textContent.includes('找不到') && geoCalls.filter(q=>q==='某個不存在的地方').length===1 && invoked===0;
+        }''' % SETUP)
+        c['journey_animation_reaches_arrival'] = page.evaluate('''async()=>{ %s
+            const r=mk('2026 台東超級鐵人三項','台東','台灣','train');
+            const card=await view(r.id); const svg=card.querySelector('svg.jr-map');
+            playJourney(svg); await wait(1200);
+            const mid=svg.querySelector('.jr-trail').getAttribute('d').length>0 && !svg.classList.contains('is-arrived');
+            await wait(1500);
+            return mid && svg.classList.contains('is-arrived') && svg.querySelector('.jr-mover').style.display==='none';
+        }''' % SETUP)
+        page.emulate_media(reduced_motion='reduce')
+        c['journey_reduced_motion_shows_arrival'] = page.evaluate('''async()=>{ %s
+            const r=mk('2026 台東超級鐵人三項','台東','台灣','train');
+            const card=await view(r.id); const svg=card.querySelector('svg.jr-map');
+            playJourney(svg); await wait(50);
+            return svg.classList.contains('is-arrived');
+        }''' % SETUP)
+        page.emulate_media(reduced_motion='no-preference')
+        # 方案 B：真實地圖（測試環境連不到 unpkg，用假的 Leaflet 看它做了什麼）
+        c['journey_real_map_button'] = page.evaluate('''async()=>{ %s
+            const r=mk('2026 台東超級鐵人三項','台東','台灣','train');
+            const card=await view(r.id);
+            const calls=[]; const chain={addTo(){return chain;},bindTooltip(){return chain;}};
+            const realL=window.L;
+            window.L={map:()=>{calls.push('map');return {fitBounds:()=>calls.push('fit'),remove:()=>calls.push('remove')};},
+              tileLayer:u=>{calls.push('tile');return chain;},polyline:p=>{calls.push('line'+p.length);return chain;},
+              circleMarker:()=>{calls.push('pin');return chain;},latLngBounds:x=>x};
+            card.querySelector('[data-action="journey-open-map"]').click(); await wait(250);
+            const opened=!!document.getElementById('journey-map-overlay');
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await wait(80);
+            window.L=realL;
+            return opened && calls.join()==='map,tile,line65,pin,pin,fit,remove' && !document.getElementById('journey-map-overlay');
+        }''' % SETUP)
+        # iPhone 安全：旅程卡片與地圖視窗的樣式不可以有 filter／blend／backdrop
+        import pathlib as _pl, re as _re
+        _css=_re.search(r'<style[^>]*>(.*?)</style>',_pl.Path(APP).read_text(encoding='utf-8'),_re.S).group(1)
+        _rules=[m.group(0) for m in _re.finditer(r'\.(?:jr-|journey-)[^{}]*\{[^{}]*\}',_css)]
+        c['journey_css_ios_safe'] = len(_rules)>=15 and not any(_re.search(r'(?<![-\w])filter\s*:|backdrop-filter|mix-blend-mode',r) for r in _rules)
+        page.evaluate("()=>{ if(window.__realFetch) window.fetch=window.__realFetch; }")
+
 class Sync(Group):
     """雲端合併規則：本機優先，永不覆蓋本機已有值。"""
 
@@ -4229,6 +4351,7 @@ GROUPS = {
     'feedback':   lambda: FeedbackConfigured('feedback'),
     'training':   lambda: Training('training'),
     'radar':      lambda: Radar('radar'),
+    'journey':    lambda: Journey('journey'),
 }
 
 
