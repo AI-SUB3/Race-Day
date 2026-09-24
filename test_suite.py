@@ -501,16 +501,34 @@ class Drawers(Group):
             return urls.length===1 && urls[0].includes('2024-02-26') && urls[0].includes('2024-03-03');
         }''')
         # ---- 意見回饋按鈕 ----
-        c['feedback_not_configured_shows_notice'] = page.evaluate('''async()=>{
+        # ---- 意見回饋按鈕 ----
+        # 正式版（v3.92 起已設定使用者的表單）：按下去要開表單，版本／裝置／畫面都帶入
+        c['feedback_opens_real_form_prefilled'] = page.evaluate('''async()=>{
+            let url=null; const real=window.open; window.open=(u)=>{ url=u; return null; };
+            document.getElementById('btn-feedback').click();
+            await new Promise(s=>setTimeout(s,200));
+            window.open=real;
+            if(!url) return false;
+            const u=new URL(url);
+            return u.pathname==='/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform'
+                && u.searchParams.get('usp')==='pp_url' && u.searchParams.get('entry.1727311429')===APP_VERSION
+                && !!u.searchParams.get('entry.1690470865') && !!u.searchParams.get('entry.1958998644');
+        }''')
+        # 沒設定表單網址時的保護：不可以是死按鈕，要說明（用清空網址的副本驗證）
+        import pathlib as _pl, re as _re
+        _src=_re.sub(r"const FEEDBACK_FORM_URL='[^']*';","const FEEDBACK_FORM_URL='';",_pl.Path(APP).read_text(encoding='utf-8'),count=1)
+        _tmp=_pl.Path('/tmp/_feedback_unconfigured.html'); _tmp.write_text(_src,encoding='utf-8')
+        _pg=page.context.new_page(); _pg.goto('file://'+str(_tmp)); _pg.wait_for_timeout(900)
+        c['feedback_not_configured_shows_notice'] = _pg.evaluate('''async()=>{
             document.querySelectorAll('.foreground-toast').forEach(n=>n.remove());
             let opened=false; const real=window.open; window.open=()=>{opened=true;};
             document.getElementById('btn-feedback').click();
             await new Promise(s=>setTimeout(s,200));
             window.open=real;
             const toast=[...document.querySelectorAll('.foreground-toast')].map(n=>n.textContent).join('');
-            // 還沒設定表單網址：不可以是死按鈕，要說明
             return opened===false && toast.includes('準備中') && buildFeedbackUrl()==='';
         }''')
+        _pg.close()
         c['empty_drawer_cards_muted_filled_cards_not'] = page.evaluate('''async()=>{
             const r=emptyRace('卡片','road_running','registered','2026-11-01');
             r.location.city='臺北市'; r.route.distanceKm=42.195;
@@ -3639,10 +3657,12 @@ class FeedbackConfigured(Group):
     def setup_page(self, page):
         import pathlib
         src=pathlib.Path(APP).read_text(encoding='utf-8')
-        src=src.replace("const FEEDBACK_FORM_URL='';",
-                        "const FEEDBACK_FORM_URL='https://docs.google.com/forms/d/e/TESTFORM/viewform';",1)
-        src=src.replace("const FEEDBACK_PREFILL={version:'',device:'',page:''};",
-                        "const FEEDBACK_PREFILL={version:'entry.111',device:'222',page:'entry.333'};",1)
+        # 不管正式版填了什麼（v3.92 起已填入使用者的表單），都換成測試用的表單
+        import re as _re
+        src=_re.sub(r"const FEEDBACK_FORM_URL='[^']*';",
+                    "const FEEDBACK_FORM_URL='https://docs.google.com/forms/d/e/TESTFORM/viewform';",src,count=1)
+        src=_re.sub(r"const FEEDBACK_PREFILL=\{[^}]*\};",
+                    "const FEEDBACK_PREFILL={version:'entry.111',device:'222',page:'entry.333'};",src,count=1)
         tmp=pathlib.Path('/tmp/_feedback_cfg.html'); tmp.write_text(src,encoding='utf-8')
         page.goto('file://'+str(tmp)); page.wait_for_timeout(900)
 
@@ -3736,6 +3756,10 @@ class FeedbackConfigured(Group):
             closeTrainingOverlay();
             return open;
         }''')
+        import pathlib as _pl
+        _real=_pl.Path(APP).read_text(encoding='utf-8')
+        c['feedback_form_configured'] = ("const FEEDBACK_FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform';" in _real
+            and "const FEEDBACK_PREFILL={version:'entry.1727311429',device:'entry.1690470865',page:'entry.1958998644'};" in _real)
         c['feedback_prefill_builds_google_form_url'] = page.evaluate('''()=>{
             const u=new URL(buildFeedbackUrl());
             return u.pathname.endsWith('/viewform') && u.searchParams.get('usp')==='pp_url'

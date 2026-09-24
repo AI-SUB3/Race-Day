@@ -3508,7 +3508,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.91.0';
+const APP_VERSION='v3.92.0';
 
 /* ============================================================
    多語系（i18n）
@@ -15101,8 +15101,9 @@ function raceDayWeatherBlockHtml(race){
       「取得連結」，網址裡會出現 entry.123456789=... 這種參數，把
       對應的 entry.xxx 填進 FEEDBACK_PREFILL。沒填的欄位就不帶。
    ============================================================ */
-const FEEDBACK_FORM_URL='';
-const FEEDBACK_PREFILL={version:'',device:'',page:''};
+const FEEDBACK_FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform';
+// App 版本／裝置／當下畫面（v3.92.0 設定；表單編輯頁與回覆試算表的網址記在 HANDOFF.md）
+const FEEDBACK_PREFILL={version:'entry.1727311429',device:'entry.1690470865',page:'entry.1958998644'};
 function feedbackDeviceLabel(){
   const ua=navigator.userAgent||'';
   const kind=/iPad|Tablet/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)?'平板'
