@@ -1199,6 +1199,34 @@ FAKE_CLOUD_JS = r'''window.__makeFakeCloud=function(initialRaces,initialTraining
 };
 '''
 
+# 年度旅程的測試資料：接近使用者實際的組合（國內多場、日本多場、柏林、只有 GPX 沒填城市、場地欄位寫雜事）
+YEAR_JOURNEY_SEED_JS = r'''window.__seedYear=async function(){
+  const realFetch=window.__rf||(window.__rf=window.fetch);
+  window.fetch=async(u,o)=>{ const s=String(u); if(s.includes('geocoding-api')){ const q=decodeURIComponent(s.split('name=')[1]);
+    const db={'福井':{latitude:35.49,longitude:135.75,country:'日本'},'大阪':{latitude:34.69,longitude:135.50,country:'日本'},'名古屋':{latitude:35.18,longitude:136.91,country:'日本'},'柏林':{latitude:52.52,longitude:13.40,country:'德國'},'(繳費) 忘記龍哥給我錢':{latitude:31.2,longitude:112.0,country:'中國'}};
+    return new Response(JSON.stringify({results:db[q]?[Object.assign({name:q},db[q])]:[]})); } return realFetch(u,o); };
+  userProfile=userProfile||emptyUserProfile(); userProfile.homeCounty='新北市'; journeyGeoCache={}; await saveJson('journey-geo-v1',{});
+  state.races=[];
+  const track=(lat,lon,shape)=>[...Array(60)].map((_,i)=>({lat:lat+Math.sin(i/9*shape)*0.02+i*0.0008,lon:lon+Math.cos(i/7)*0.02+i*0.0006}));
+  const mk=(name,city,venue,country,date,gps)=>{ const r=emptyRace(name,'road_running','completed',date); r.location.city=city; r.location.venueName=venue; r.location.country=country;
+    r.route.distanceKm=42.195; r.results.chipTimeSeconds=12000; if(gps) r.route.trackPoints=track(gps[0],gps[1],gps[2]); state.races.push(r); };
+  mk('新北市萬金石馬拉松','新北市','','台灣','2026-03-22',[25.2,121.6,1]);
+  mk('日月潭環湖','南投','','台灣','2026-04-10',null);
+  mk('2026 台東超級鐵人三項','台東','','台灣','2026-11-01',[22.75,121.15,2]);
+  mk('花蓮太魯閣馬拉松','花蓮','','台灣','2026-11-08',[24.15,121.6,3]);
+  mk('台中馬拉松','台中','','台灣','2026-12-06',null);
+  mk('宜蘭國際馬拉松','宜蘭','','台灣','2026-10-18',[24.7,121.8,4]);
+  mk('冬山河路跑','宜蘭','','台灣','2026-05-17',null);
+  mk('高雄富邦馬拉松','高雄','','台灣','2026-02-15',[22.6,120.3,5]);
+  mk('若狭路トレイルラン','福井','','日本','2026-09-27',null);
+  mk('大阪マラソン 2026','大阪','','日本','2026-02-22',[34.69,135.50,6]);
+  mk('名古屋ウィメンズ','名古屋','','日本','2026-03-08',null);
+  mk('富士五湖ウルトラ','','','',"2026-04-19",[35.5,138.76,7]);
+  mk('柏林馬拉松','柏林','','德國','2026-09-27',null);
+  mk('某某路跑','','(繳費) 忘記龍哥給我錢','','2026-06-01',null);
+};
+'''
+
 class Journey(Group):
     """賽事旅程卡片（v3.93.0）：從家到賽場的動畫地圖＋真實地圖按鈕。"""
 
@@ -1355,9 +1383,35 @@ class Journey(Group):
             proto.fillText=orig;
             // 往返直線：台東 253×2＋大阪 1,726×2＋柏林 8,955×2；萬金石同縣市不算距離；查不到的另外註明
             return jb.places===4 && Math.abs(jb.totalKm-2*(253+1726+8955))<30 && jb.far.name==='Berlin' && jb.unlocated===1
-                && on.includes('今年的賽事旅程') && on.includes('新北市') && on.some(x=>x.includes('東亞以外')&&x.includes('無法定位'))
+                && on.includes('今年的賽事旅程') && on.some(x=>x.includes('新北市')&&x.includes('出發')) && on.some(x=>x.includes('東亞以外')&&x.includes('無法定位'))
                 && !off.includes('今年的賽事旅程');
         }''' % SETUP)
+        # ---- v3.96.0：使用者回報「地圖擠在一起、原本的路線拼貼不見了」 ----
+        page.add_script_tag(content=YEAR_JOURNEY_SEED_JS)
+        # 旅程接在最下面、長圖加長；原本的版面（含路線拼貼）一個像素都不能變
+        c['year_journey_appended_layout_untouched'] = page.evaluate('''async()=>{ await __seedYear();
+            const on=await buildYearInReviewCanvas('2026',{journey:true}), off=await buildYearInReviewCanvas('2026',{journey:false});
+            const a=on.getContext('2d').getImageData(0,0,1080,1780).data, b=off.getContext('2d').getImageData(0,0,1080,1780).data;
+            let diff=0; for(let i=0;i<a.length;i+=4) if(a[i]!==b[i]||a[i+1]!==b[i+1]||a[i+2]!==b[i+2]) diff++;
+            return off.height===1920 && on.height>2800 && diff===0;
+        }''')
+        # 地名：不像地名的文字不拿去查（原本查到中國某地、畫出錯的點）；沒填城市用賽事名稱，不用「賽場」；
+        # 同縣市的 GPX 賽事算在地；同名又近的地點合併；台灣一律用縣市名稱
+        c['year_journey_places_clean'] = page.evaluate('''async()=>{ await __seedYear();
+            const jb=await yearJourneyData(state.races);
+            const names=yearJourneyPlaces(jb).map(x=>x.name+(x.count>1?'×'+x.count:'')+(x.local?'(在地)':''));
+            const junk=state.races.find(r=>r.location.venueName.startsWith('(繳費)'));
+            return !names.some(n=>n.includes('繳費')||n.includes('賽場')) && journeyRaceGeo(junk)===null && jb.unlocated===1
+                && names.includes('富士五湖ウルトラ') && names.includes('新北(在地)') && names.includes('宜蘭×2')
+                && names.includes('臺東') && names.includes('臺中') && !names.includes('台東') && jb.far.name==='柏林';
+        }''')
+        # 國內、海外分成兩張地圖（同一張東亞地圖時台灣只佔一小塊，國內的點全疊在一起）
+        c['year_journey_split_panels'] = page.evaluate('''async()=>{ await __seedYear();
+            const spy=[]; const proto=CanvasRenderingContext2D.prototype, orig=proto.fillText;
+            proto.fillText=function(x){ spy.push(String(x)); return orig.apply(this,arguments); };
+            try{ await buildYearInReviewCanvas('2026',{journey:true}); } finally{ proto.fillText=orig; }
+            return spy.includes('國內') && spy.includes('海外') && spy.some(x=>x.includes('從 新北市 出發'));
+        }''')
         # iPhone 安全：旅程卡片與地圖視窗的樣式不可以有 filter／blend／backdrop
         import pathlib as _pl, re as _re
         _css=_re.search(r'<style[^>]*>(.*?)</style>',_pl.Path(APP).read_text(encoding='utf-8'),_re.S).group(1)

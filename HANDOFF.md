@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.95.0
+> 貼到新對話開頭即可接續。最後更新：v3.96.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（377 項檢查，20 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`、`journey`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（380 項檢查，20 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`、`journey`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -133,6 +133,8 @@ APP=/path/to/index.html python3 test_suite.py
 | 預報不可以佔用「實際值」欄位 | 回填一律只填空欄位。預報先填了 `raceDayWeather.feelsLikeTempC`，賽後歷史天氣就補不進真正的實測值。預報只填 `climateForecast.*` |
 | 多項運動分段推算只是退路 | FIT 有多個 session 一律用 `buildRaceLegs()`（手錶記的、精確）；只有 1 個 session 才推算：二鐵 `inferRunBikeRunLegs()`、三鐵 `inferSwimBikeRunLegs()`，共用 `analyzeSpeedProfile()`，依 `sportType` 選用。推算的分段標 `inferred:true`；推算的游泳距離一律 null |
 | 貼齊畫面頂端的東西要讓出狀態列 | 用 `var(--sat)`（`env(safe-area-inset-top)`）。新增全螢幕視窗或固定在頂端的按鈕都要加；覆寫位置的規則放樣式表最後，不然會被原本的規則蓋掉 |
+| 年度回顧長圖的版面不能被新區塊擠掉 | 選擇性區塊一律接在最下面、長圖加長（`drawYearJourneySection` 從 y=1880 開始），不要塞進中間。有逐像素測試 |
+| 賽事旅程的地名 | `looksLikePlace()`：有括號或超過 20 字不拿去查（使用者的場地欄位會寫備註）。同縣市一律在地（`journeyRaceCounty`）。沒有地名用賽事名稱，不用「賽場」 |
 | 賽事旅程的地點快取不能寫進賽事 | `journey-geo-v1`（IndexedDB，這台裝置自己的）。寫進 race 會讓每場都被判定有變更、重新上傳雲端。地圖輪廓是 Natural Earth 簡化後內建的 `JOURNEY_TW`／`JOURNEY_EA`（整數編碼，×1000／×100）；要加範圍就重新產生，不要直接放原始 GeoJSON |
 | 意見回饋表單 | 填寫網址與三個 entry ID 在 `FEEDBACK_FORM_URL`／`FEEDBACK_PREFILL`（版本 1727311429、裝置 1690470865、當下畫面 1958998644），有測試鎖住。表單編輯頁：https://docs.google.com/forms/d/13QA_csP1fQNmuX2cyGZwLEt1xnXFepBm8bekPHKNNHw/edit；回覆試算表：https://docs.google.com/spreadsheets/d/1IN94KHlkWqfNdJOLSNtn_ogsD7qv2iWQr5rIzv6XiEo/edit（兩者都要表單擁有者的帳號才能開）。改了表單欄位要重新取得預先填入連結、更新 entry ID 與測試 |
 | **第一次完整下載一定要分批** | `fullSyncRacesInPages()`：一次 5 場、每批存游標、可續傳；同處崩潰兩次改逐筆。一次抓全部（`fetchAll`）在 iPhone 會撐爆分頁，只留給「同步診斷」這種使用者主動按的功能 |
