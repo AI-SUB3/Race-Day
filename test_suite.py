@@ -566,11 +566,12 @@ class Drawers(Group):
             await new Promise(s=>setTimeout(s,300));
             const hero=document.querySelector('.hero-results'), nav=document.querySelector('.quick-nav');
             const header=document.querySelector('.detail-header');
-            // v3.34.0：順序是 header → 區段導覽列 → 儀表板 → 各區段
+            // v3.99.0：順序是 區段導覽列（含返回鍵，放最上面）→ header → 儀表板 → 各區段
+            // （v3.34.0 原本是 header → 導覽列 → 儀表板）
             const firstSection=document.querySelector('details.section');
             const order=hero&&nav&&header&&firstSection
-                && (header.compareDocumentPosition(nav)&Node.DOCUMENT_POSITION_FOLLOWING)
-                && (nav.compareDocumentPosition(hero)&Node.DOCUMENT_POSITION_FOLLOWING)
+                && (nav.compareDocumentPosition(header)&Node.DOCUMENT_POSITION_FOLLOWING)
+                && (header.compareDocumentPosition(hero)&Node.DOCUMENT_POSITION_FOLLOWING)
                 && (hero.compareDocumentPosition(firstSection)&Node.DOCUMENT_POSITION_FOLLOWING);
             return !!order && document.querySelectorAll('.results-dashboard').length===1
                 && !document.querySelector('#section-post .results-dashboard');
@@ -4491,7 +4492,7 @@ class Simple(Group):
         page.evaluate('async()=>{ await __simpleSeed(); selectRace("rich",{scroll:false}); }')
         page.wait_for_timeout(500)
         ADV = """()=>{ const q=s=>!!document.querySelector('#detail '+s);
-            return {radar:q('.race-radar'),qnav:q('.quick-nav'),logi:q('#section-logistics'),splitsChart:q('.splits-chart-block'),
+            return {radar:q('.race-radar'),qnav:q('.quick-nav a'),logi:q('#section-logistics'),splitsChart:q('.splits-chart-block'),
               splitAna:q('.split-analysis'),elev:q('.elevation-profile'),series:!!document.querySelector('#detail > details.section:not([id])'),
               cp:q('[data-section="checkpoints"]'),weather:q('[data-section="weather"]'),nutri:q('[data-section="nutritionPlan"]'),
               tplan:q('[data-section="trainingPlan"]'),epp:q('.epp-section'),pacing:q('[data-action="open-pacing-modal"]'),
@@ -4681,6 +4682,304 @@ class SimplePhone(Group):
         return self.checks, self.errors
 
 
+
+# 107 場、2015–2025，接近使用者實際的資料量（固定亂數種子，每次一樣）
+UX_SEED_JS = r"""window.__seed107=async function(){
+  const cities=['台北市','新北市','台中市','高雄市','花蓮縣','台東縣','宜蘭縣','南投縣','嘉義縣','大阪','東京','福井','柏林'];
+  const kinds=[['road_running',42.195,'馬拉松'],['road_running',21.0975,'半程馬拉松'],['trail_running',35,'越野賽'],['triathlon',51.5,'鐵人三項'],['road_running',10,'10K 路跑'],['cycling',100,'單車挑戰']];
+  let seed=11; const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+  const out=[];
+  for(let i=0;i<107;i++){
+    const y=2015+Math.floor(i/10); const m=1+Math.floor(rnd()*12); const d=1+Math.floor(rnd()*27);
+    const k=kinds[Math.floor(rnd()*kinds.length)]; const city=cities[Math.floor(rnd()*cities.length)];
+    const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const st=rnd()<0.93?'completed':(rnd()<0.5?'dnf':'dns');
+    const r=emptyRace(`${y} ${city}${k[2]}`,k[0],st,date);
+    r.route.distanceKm=k[1]; r.location.city=city;
+    if(st==='completed'){ r.results.chipTimeSeconds=Math.round(k[1]*300); r.results.overallRank=100+i; }
+    out.push(r);
+  }
+  state.races=out; state.selectedId=null; state.filterStatus='all'; state.searchQuery='';
+  document.getElementById('search-input').value='';
+  state.calendarYear=2026; state.calendarMonth=8; state.viewMode='calendar';
+  await persist(); renderAll();
+};
+"""
+
+
+class UxFixes(Group):
+    """v3.98.0 使用者體驗修正：跨月份搜尋／篩選、未定日期、空月份跳轉、
+    編輯後不收起區段不跳走、頁首海拔小圖。"""
+
+    def body(self, page):
+        c = self.checks
+        page.add_script_tag(content=UX_SEED_JS)
+        page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        page.evaluate('__seed107()')
+        page.wait_for_timeout(400)
+        # ---- 搜尋：列出所有月份，不是只找這個月 ----
+        page.fill('#search-input', '大阪')
+        page.wait_for_timeout(400)
+        c['search_lists_matches_from_all_months'] = page.evaluate("""()=>{
+            const n=state.races.filter(r=>r.location.city==='大阪').length;
+            const rows=[...document.querySelectorAll('#calendar .cal-results .cal-list-item')];
+            const res=document.querySelector('#calendar .cal-results');
+            return n>=5 && rows.length===n && rows.every(b=>state.races.find(r=>r.id===b.dataset.id).location.city==='大阪')
+              && document.querySelector('.cal-results-title').textContent==='搜尋「大阪」：'+n+' 場'
+              && !document.querySelector('#calendar .cal-grid') && !document.querySelector('.career-summary-wrap')
+              && res.getBoundingClientRect().top+scrollY<500 && document.querySelector('.cal-nav').classList.contains('is-results'); }""")
+        c['search_results_grouped_by_year_newest_first'] = page.evaluate("""()=>{
+            const years=[...document.querySelectorAll('.cal-results-group-title')].map(h=>h.childNodes[0].textContent.trim());
+            const dates=[...document.querySelectorAll('.cal-results .cal-list-item')].map(b=>state.races.find(r=>r.id===b.dataset.id).schedule.raceDate);
+            return years.length>1 && years.every((y,i)=>i===0||y<years[i-1]) && dates.every((d,i)=>i===0||d<=dates[i-1]); }""")
+        page.click('.cal-results .cal-list-item')
+        page.wait_for_timeout(500)
+        c['result_row_opens_race'] = page.evaluate("()=>!!currentRace && currentRace.location.city==='大阪'")
+        # v3.99 起賽事頁是獨立畫面：先返回結果清單，再清除
+        page.click('#detail .qn-back')
+        page.wait_for_timeout(500)
+        page.evaluate('scrollTo(0,0)')
+        page.click('[data-action="clear-cal-results"]')
+        page.wait_for_timeout(300)
+        c['clear_button_returns_to_month'] = page.evaluate("""()=>state.searchQuery==='' && document.getElementById('search-input').value===''
+            && state.filterStatus==='all' && !!document.querySelector('#calendar .cal-grid') && !document.querySelector('.cal-results')
+            && !document.querySelector('.cal-nav').classList.contains('is-results')""")
+        # ---- 篩選：數字跟畫面一致 ----
+        page.evaluate("()=>{ [...document.querySelectorAll('#filter-chips .chip')].find(b=>b.dataset.status==='history').click(); }")
+        page.wait_for_timeout(300)
+        c['filter_chip_count_matches_list'] = page.evaluate("""()=>{
+            const chip=[...document.querySelectorAll('#filter-chips .chip')].find(b=>b.dataset.status==='history');
+            const n=Number((chip.textContent.match(/\\((\\d+)\\)/)||[])[1]);
+            return n===107 && document.querySelectorAll('.cal-results .cal-list-item').length===n
+              && document.querySelector('.cal-results-title').textContent==='「歷史紀錄」：107 場'; }""")
+        page.click('#cal-prev')
+        page.wait_for_timeout(300)
+        c['month_arrow_leaves_results_to_month'] = page.evaluate("""()=>!document.querySelector('.cal-results') && state.filterStatus==='all'
+            && state.calendarMonth===7 && state.calendarYear===2026 && !!document.querySelector('#calendar .cal-grid')""")
+        c['upcoming_group_ascending'] = page.evaluate("""async()=>{
+            const a=emptyRace('遠的','road_running','registered','2027-03-01'), b=emptyRace('近的','road_running','registered','2026-11-01');
+            state.races.push(a,b); await persist();
+            [...document.querySelectorAll('#filter-chips .chip')].find(x=>x.dataset.status==='upcoming').click();
+            await new Promise(s=>setTimeout(s,300));
+            const g=document.querySelector('.cal-results-group'); const names=[...g.querySelectorAll('.cal-list-name')].map(x=>x.textContent);
+            const title=g.querySelector('.cal-results-group-title').childNodes[0].textContent.trim();
+            const dates=[...g.querySelectorAll('.cal-results-date')].map(x=>x.textContent);
+            document.querySelector('[data-action="clear-cal-results"]').click();
+            return title==='即將到來' && names.join()==='近的,遠的' && dates.join()==='2026-11-01,2027-03-01'; }""")
+        # ---- 沒填日期的賽事 ----
+        page.evaluate("()=>{ document.getElementById('btn-new').click(); }")
+        page.wait_for_timeout(300)
+        page.fill('#new-name', '想參加的超馬')
+        page.click('[data-action="confirm-create"]')
+        page.wait_for_timeout(500)
+        c['undated_race_shown_under_month'] = page.evaluate("""async()=>{
+            state.selectedId=null; renderAll(); await new Promise(s=>setTimeout(s,200));
+            const u=document.querySelector('#calendar .cal-undated');
+            return !!u && u.textContent.includes('未定日期') && u.textContent.includes('想參加的超馬')
+              && !!u.querySelector('.cal-results-row.no-date'); }""")
+        page.fill('#search-input', '超馬')
+        page.wait_for_timeout(400)
+        c['undated_race_found_by_search'] = page.evaluate("""()=>{
+            const g=[...document.querySelectorAll('.cal-results-group')].find(x=>x.classList.contains('cal-undated'));
+            return !!g && g.textContent.includes('想參加的超馬') && g.querySelector('.cal-results-date').textContent==='—'; }""")
+        page.fill('#search-input', '')
+        page.wait_for_timeout(300)
+        c['undated_race_visible_in_simple_mode'] = page.evaluate("""async()=>{
+            setUiMode('simple',{silent:true}); await new Promise(s=>setTimeout(s,200));
+            const ok=!!document.querySelector('#calendar .cal-undated') && document.querySelector('#calendar .cal-undated').textContent.includes('想參加的超馬');
+            setUiMode('full',{silent:true}); await new Promise(s=>setTimeout(s,200)); return ok; }""")
+        # ---- 空月份：上一場／下一場直接跳過去 ----
+        c['empty_month_offers_prev_next'] = page.evaluate("""async()=>{
+            // 第一場之前的月份：只有「下一場」
+            state.calendarYear=2014; state.calendarMonth=5; renderCalendar();
+            const before=document.querySelector('#calendar .cal-month-empty');
+            const onlyNext=!!before && !before.querySelector('.cal-jump-prev') && !!before.querySelector('.cal-jump-next');
+            if(!onlyNext) return false;
+            // 找一個 2016–2025 之間沒有比賽的月份（前後都有比賽）
+            let y=2016,m=0,found=false;
+            for(;y<=2025&&!found;y++) for(m=0;m<12;m++){ const k=`${y}-${String(m+1).padStart(2,'0')}`;
+              if(!state.races.some(r=>(r.schedule.raceDate||'').startsWith(k))){ found=true; break; } }
+            y--; state.calendarYear=y; state.calendarMonth=m; renderCalendar();
+            const box=document.querySelector('#calendar .cal-month-empty');
+            const prev=box&&box.querySelector('.cal-jump-prev'), next=box&&box.querySelector('.cal-jump-next');
+            if(!found||!prev||!next) return false;
+            const target=next.dataset.ym; next.click(); await new Promise(s=>setTimeout(s,200));
+            const [ty,tm]=target.split('-').map(Number);
+            return state.calendarYear===ty && state.calendarMonth===tm-1 && !document.querySelector('#calendar .cal-month-empty')
+              && document.querySelectorAll('#calendar .cal-chip').length>0 && box.textContent.includes('這個月沒有賽事'); }""")
+        # ---- 編輯後：區段不收起、畫面不跳、游標留在下一格 ----
+        page.evaluate("""()=>{ const r=state.races.filter(x=>x.status==='completed').slice(-2)[0]; selectRace(r.id,{scroll:true}); }""")
+        page.wait_for_timeout(700)
+        page.evaluate("()=>document.querySelector('#section-post>summary').click()")
+        page.wait_for_timeout(200)
+        page.evaluate("""()=>{ const c=document.querySelector('#section-post [data-section="results"]'); scrollTo(0,c.getBoundingClientRect().top+scrollY-300); }""")
+        page.wait_for_timeout(200)
+        y0 = page.evaluate('Math.round(scrollY)')
+        page.click('#section-post [data-section="results"]')
+        page.wait_for_timeout(500)
+        page.fill('#drawer-content [data-path="results.overallRank"]', '321')
+        page.press('#drawer-content [data-path="results.overallRank"]', 'Tab')
+        page.wait_for_timeout(500)
+        c['drawer_edit_keeps_focus_on_next_field'] = page.evaluate("""()=>document.activeElement && document.activeElement.dataset.path==='results.overallParticipants'
+            && currentRace.results.overallRank===321 && document.getElementById('section-post').open""")
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(600)
+        c['closing_drawer_keeps_section_and_scroll'] = page.evaluate("""(y0)=>document.getElementById('section-post').open
+            && Math.abs(scrollY-y0)<=2 && document.getElementById('global-drawer').hidden
+            && document.querySelector('.hero-results').textContent.includes('321')""", y0)
+        c['simple_toggle_keeps_open_sections'] = page.evaluate("""async()=>{
+            document.getElementById('btn-mode-toggle').click(); await new Promise(s=>setTimeout(s,250));
+            const a=document.getElementById('section-post').open;
+            document.getElementById('btn-mode-toggle').click(); await new Promise(s=>setTimeout(s,250));
+            return a && document.getElementById('section-post').open; }""")
+        c['switching_race_still_starts_collapsed'] = page.evaluate("""async()=>{
+            const other=state.races.filter(x=>x.status==='completed').slice(-5)[0]; selectRace(other.id,{scroll:false});
+            await new Promise(s=>setTimeout(s,300));
+            return [...document.querySelectorAll('#detail details.section[id]')].every(d=>!d.open); }""")
+        # ---- 頁首海拔小圖 ----
+        c['header_spark_is_small_and_labelled'] = page.evaluate("""async()=>{
+            document.getElementById('btn-sample-data').click(); await new Promise(s=>setTimeout(s,400));
+            selectRace('example-alishan-trail',{scroll:false}); await new Promise(s=>setTimeout(s,300));
+            const e=document.querySelector('#detail .detail-header .spark'); if(!e) return false;
+            const b=e.getBoundingClientRect();
+            return Math.round(b.width)===140 && Math.round(b.height)===22 && /^海拔 \\d+–\\d+ m$/.test(e.getAttribute('aria-label'))
+              && e.closest('.dh-spark').textContent.trim()===e.getAttribute('aria-label'); }""")
+        # ---- 語言 ----
+        c['i18n_results_and_empty_month'] = page.evaluate("""async()=>{
+            state.selectedId=null; renderAll();
+            setLang('en'); state.searchQuery='大阪'; renderCalendar();
+            const en=document.querySelector('.cal-results-title').textContent;
+            setLang('ja'); renderCalendar(); const ja=document.querySelector('.cal-results-title').textContent;
+            exitCalendarResults(); state.calendarYear=2030; state.calendarMonth=0; renderCalendar();
+            const jaEmpty=document.querySelector('.cal-month-empty').textContent;
+            setLang('zh'); state.calendarYear=2026; state.calendarMonth=8; renderCalendar();
+            return /^“大阪”: \\d+ races$/.test(en) && /^「大阪」の検索結果：\\d+ 件$/.test(ja) && jaEmpty.includes('今月の大会はありません') && jaEmpty.includes('前の大会'); }""")
+        # 獎牌牆、表格檢視本來就是跨月份的，搜尋時維持原本的畫面
+        c['grid_and_table_views_unchanged_by_search'] = page.evaluate("""async()=>{
+            state.searchQuery='大阪'; state.viewMode='grid'; renderCalendar(); const g=!document.querySelector('.cal-results');
+            state.viewMode='table'; renderCalendar(); const tb=!document.querySelector('.cal-results') && !!document.querySelector('.table-view-wrap');
+            state.viewMode='calendar'; state.searchQuery=''; renderCalendar(); return g && tb; }""")
+        # ================= v3.99.0：賽事頁是獨立畫面、網址帶賽事 =================
+        page.evaluate('async()=>{ await __seed107(); scrollTo(0,0); }')
+        page.wait_for_timeout(300)
+        page.fill('#search-input', '大阪')
+        page.wait_for_timeout(400)
+        page.evaluate("()=>{ const e=document.querySelectorAll('.cal-results .cal-list-item')[4]; scrollTo(0,e.getBoundingClientRect().top+scrollY-300); }")
+        page.wait_for_timeout(200)
+        y_list = page.evaluate('Math.round(scrollY)')
+        page.evaluate("()=>document.querySelectorAll('.cal-results .cal-list-item')[4].click()")
+        page.wait_for_timeout(600)
+        rid = page.evaluate('state.selectedId')
+        c['entering_race_sets_url_and_shows_only_detail'] = page.evaluate("""(id)=>{
+            const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';
+            const first=document.getElementById('detail').firstElementChild;
+            return !!id && location.hash==='#race='+encodeURIComponent(id) && hidden('#calendar') && hidden('.topbar-row2')
+              && hidden('.topbar-row3') && hidden('#focus-panel-slot') && scrollY===0
+              && first.classList.contains('quick-nav') && first.firstElementChild.classList.contains('qn-back')
+              && first.querySelectorAll('a').length===5 && history.state && history.state.appNav===true; }""", rid)
+        c['detail_nav_stays_reachable_when_scrolled'] = page.evaluate("""async()=>{
+            const d=document.getElementById('section-post'); d.open=true; scrollTo(0,d.getBoundingClientRect().top+scrollY-60);
+            await new Promise(s=>setTimeout(s,200));
+            const n=document.querySelector('#detail .qn-back').getBoundingClientRect();
+            const hit=document.elementFromPoint(n.left+n.width/2,n.top+n.height/2);
+            return n.top>=0 && n.bottom<innerHeight/3 && !!(hit&&hit.closest('.qn-back')); }""")
+        page.go_back()
+        page.wait_for_timeout(600)
+        c['browser_back_returns_to_list_at_same_place'] = page.evaluate("""(y)=>location.hash==='' && state.selectedId===null
+            && !!document.querySelector('.cal-results') && state.searchQuery==='大阪' && Math.abs(scrollY-y)<=2
+            && getComputedStyle(document.getElementById('calendar')).display!=='none'""", y_list)
+        page.go_forward()
+        page.wait_for_timeout(600)
+        c['browser_forward_reopens_race'] = page.evaluate("(id)=>state.selectedId===id && scrollY===0", rid)
+        page.reload()
+        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=15000)
+        page.wait_for_timeout(300)
+        page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        c['reload_reopens_same_race'] = page.evaluate("""(id)=>state.selectedId===id && !!currentRace
+            && getComputedStyle(document.getElementById('calendar')).display==='none'""", rid)
+        c['back_button_goes_to_list'] = page.evaluate("""async()=>{
+            document.querySelector('#detail .qn-back').click(); await new Promise(s=>setTimeout(s,500));
+            return state.selectedId===null && location.hash==='' && getComputedStyle(document.getElementById('calendar')).display!=='none'; }""")
+        c['drawer_back_closes_drawer_then_leaves'] = page.evaluate("""async(id)=>{
+            const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            selectRace(id); await wait(300); openDrawer('basicInfo'); await wait(200);
+            history.back(); await wait(400);
+            const a=document.getElementById('global-drawer').hidden && state.selectedId===id && location.hash.startsWith('#race=');
+            history.back(); await wait(400);
+            return a && state.selectedId===null && location.hash===''; }""", rid)
+        c['create_flow_routes'] = page.evaluate("""async()=>{
+            const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            startCreate(); await wait(200); const h1=location.hash;
+            const bar=!!document.querySelector('#detail .quick-nav.is-back-only .qn-back');
+            document.querySelector('[data-action="cancel-create"]').click(); await wait(400); const h2=location.hash;
+            startCreate(); await wait(200); document.getElementById('new-name').value='路由測試';
+            document.querySelector('[data-action="confirm-create"]').click(); await wait(400);
+            const id=state.selectedId, h3=location.hash;
+            history.back(); await wait(400);
+            return h1==='#new' && bar && h2==='' && !!id && h3==='#race='+encodeURIComponent(id)
+              && location.hash==='' && !state.creating && state.selectedId===null; }""")
+        c['delete_race_leaves_detail_and_url'] = page.evaluate("""async(id)=>{
+            const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const other=state.races.find(r=>r.id!==id&&!r.deletedAt&&r.status==='completed');
+            selectRace(other.id); await wait(300);
+            document.querySelector('[data-action="delete-race"]').click(); await wait(500);
+            return state.selectedId===null && location.hash==='' && getComputedStyle(document.getElementById('calendar')).display!=='none'; }""", rid)
+        c['simple_mode_detail_has_back_only'] = page.evaluate("""async(id)=>{
+            setUiMode('simple',{silent:true}); selectRace(id); await new Promise(s=>setTimeout(s,300));
+            const nav=document.querySelector('#detail .quick-nav');
+            const ok=!!nav && nav.classList.contains('is-back-only') && !!nav.querySelector('.qn-back') && !nav.querySelector('a');
+            setUiMode('full',{silent:true}); history.back(); await new Promise(s=>setTimeout(s,400)); return ok; }""", rid)
+        # 網址指向本機還沒有的賽事（新裝置、等雲端）：先記著，資料來了再打開
+        base = page.evaluate("location.href.split('#')[0]")
+        page.goto(base + '#race=from-cloud')
+        page.reload()   # 只改 # 的 goto 是同一份文件的跳轉；重新載入才會走到 init()
+        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=15000)
+        page.wait_for_timeout(300)
+        c['unknown_race_in_url_waits_for_cloud'] = page.evaluate("""async()=>{
+            const waiting=pendingRouteRaceId==='from-cloud' && state.selectedId===null && location.hash==='#race=from-cloud';
+            const r=Object.assign(emptyRace('雲端來的','road_running','completed','2024-05-05'),{id:'from-cloud'});
+            state.races.push(r); resolvePendingRoute(); await new Promise(s=>setTimeout(s,300));
+            return waiting && state.selectedId==='from-cloud' && location.hash==='#race=from-cloud' && pendingRouteRaceId===null; }""")
+        # 直接開網址進來（沒有上一筆可以退）：按返回回到清單，不會離開網站
+        page.goto(base + '#race=' + rid)
+        page.reload()   # 只改 # 的 goto 是同一份文件的跳轉；重新載入才會走到 init()
+        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=15000)
+        page.wait_for_timeout(300)
+        page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        opened = page.evaluate("(id)=>state.selectedId===id && !(history.state&&history.state.appNav)", rid)
+        page.click('#detail .qn-back')
+        page.wait_for_timeout(600)
+        c['direct_url_back_button_stays_in_app'] = opened and page.evaluate("""()=>typeof state!=='undefined' && state.selectedId===null
+            && location.hash==='' && getComputedStyle(document.getElementById('calendar')).display!=='none'""")
+        # 選著的賽事被移除（同步刪掉、清空資料）：回到清單，網址也清掉
+        c['stale_selection_returns_to_list'] = page.evaluate("""async(id)=>{
+            selectRace(id); await new Promise(s=>setTimeout(s,300));
+            state.races=state.races.filter(r=>r.id!==id); renderAll(); await new Promise(s=>setTimeout(s,400));
+            return state.selectedId===null && !location.hash.includes(encodeURIComponent(id))
+              && getComputedStyle(document.getElementById('calendar')).display!=='none'; }""", rid)
+        # 手機：頂列捲下去會收合，返回清單時不能因此差了一截（v3.99.0 實測差 38px）
+        pctx = full_mode_context(page.context.browser, viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
+        pp = pctx.new_page()
+        pp.goto(APP_URL)
+        pp.wait_for_timeout(900)
+        pp.add_script_tag(content=UX_SEED_JS)
+        pp.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        pp.evaluate('__seed107()')
+        pp.wait_for_timeout(300)
+        pp.fill('#search-input', '大阪')
+        pp.wait_for_timeout(400)
+        pp.evaluate("()=>{ const e=document.querySelectorAll('.cal-results .cal-list-item')[4]; scrollTo(0,e.getBoundingClientRect().top+scrollY-420); }")
+        pp.wait_for_timeout(500)
+        before = pp.evaluate("()=>Math.round(document.querySelectorAll('.cal-results .cal-list-item')[4].getBoundingClientRect().top)")
+        pp.evaluate("()=>document.querySelectorAll('.cal-results .cal-list-item')[4].click()")
+        pp.wait_for_timeout(600)
+        pp.go_back()
+        pp.wait_for_timeout(800)
+        after = pp.evaluate("()=>Math.round(document.querySelectorAll('.cal-results .cal-list-item')[4].getBoundingClientRect().top)")
+        c['phone_back_puts_card_back_in_place'] = abs(before - after) <= 2
+        pctx.close()
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -4704,6 +5003,7 @@ GROUPS = {
     'journey':    lambda: Journey('journey'),
     'simple':     lambda: Simple('simple'),
     'simple_phone': lambda: SimplePhone('simple_phone'),
+    'ux':         lambda: UxFixes('ux'),
 }
 
 

@@ -629,6 +629,45 @@
   .cal-list-name{font-size:calc(15px*var(--fs,1));color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cal-list-meta{font-size:calc(12px*var(--fs,1));color:var(--stone);}
 
+  /* ---------- 跨月份搜尋／篩選結果、未定日期、空月份（v3.98.0） ----------
+     這幾塊桌機、手機都顯示（.cal-list 只在手機顯示，所以不能放進去） */
+  .cal-results{margin-top:4px;}
+  .cal-results-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    padding:4px 0 14px;margin-bottom:16px;border-bottom:1px solid var(--rule);
+  }
+  .cal-results-title{font-size:calc(18px*var(--fs,1));font-weight:700;color:var(--ink);}
+  .cal-results-hint{color:var(--stone);margin-top:2px;}
+  .cal-results-clear{flex-shrink:0;}
+  .cal-results-group{margin-bottom:22px;}
+  .cal-results-group-title{display:flex;align-items:baseline;gap:8px;margin:0 0 10px;font-size:calc(15px*var(--fs,1));font-weight:700;color:var(--ink-soft);}
+  .cal-results-count{font-size:calc(13px*var(--fs,1));font-weight:400;color:var(--stone);}
+  .cal-results-rows{display:flex;flex-direction:column;gap:8px;}
+  .cal-results-row{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:12px;}
+  .cal-results-date{font-size:calc(14px*var(--fs,1));color:var(--ink-soft);}
+  .cal-results-row.no-date{grid-template-columns:minmax(0,1fr);}
+  .cal-undated{margin-top:22px;}
+  @media (max-width:640px){
+    .cal-results-row{display:block;}
+    .cal-results-date{display:block;margin:0 0 4px 2px;font-size:calc(13px*var(--fs,1));}
+    .cal-results-date:empty{display:none;}
+  }
+  .cal-month-empty{margin:16px 0 4px;padding:14px 16px;border:1px dashed var(--rule);border-radius:10px;}
+  .cal-month-empty-text{margin:0 0 10px;color:var(--ink-soft);}
+  .cal-jumps{display:flex;gap:10px;flex-wrap:wrap;}
+  .cal-jump{
+    display:inline-flex;align-items:center;gap:8px;min-height:44px;max-width:100%;padding:8px 14px;box-sizing:border-box;
+    border:1px solid var(--rule);border-radius:8px;background:var(--surface);color:var(--ink);
+    font:inherit;font-size:calc(14px*var(--fs,1));text-align:left;cursor:pointer;
+  }
+  .cal-jump:hover{border-color:var(--ink-soft);}
+  .cal-jump:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .cal-jump-label{color:var(--stone);font-size:calc(12px*var(--fs,1));white-space:nowrap;}
+  .cal-jump-date{white-space:nowrap;}
+  .cal-jump-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:16em;}
+  /* 結果清單是跨月份的：月份標籤變淡，表示現在不是在看這個月 */
+  .cal-nav.is-results #cal-label{opacity:.45;}
+
   /* ---------- Career summary ---------- */
   .career-summary-wrap{display:flex;flex-direction:column;gap:16px;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--rule);}
   .honor-card{
@@ -1846,6 +1885,27 @@
   }
   .quick-nav a:hover{border-color:var(--trail);color:var(--ink);}
   .quick-nav a.active{background:var(--ink);color:var(--surface);border-color:var(--ink);}
+  /* 返回鍵（v3.99.0）：導覽列最前面，實心、比區段按鈕醒目，後面一條分隔 */
+  .qn-back{
+    flex-shrink:0;display:inline-flex;align-items:center;min-height:34px;padding:5px 14px 5px 11px;margin-right:6px;box-sizing:border-box;
+    border:1px solid var(--ink);border-radius:17px;background:var(--ink);color:var(--surface);cursor:pointer;
+    font:inherit;font-size:calc(14px*var(--fs,1));font-weight:600;white-space:nowrap;
+  }
+  .qn-back:hover{opacity:.88;}
+  .qn-back:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .quick-nav{align-items:center;}
+  .quick-nav:not(.is-back-only) .qn-back{position:relative;margin-right:14px;}
+  .quick-nav:not(.is-back-only) .qn-back::after{content:'';position:absolute;right:-9px;top:6px;bottom:6px;width:1px;background:var(--rule);}
+  @media (max-width:640px){ .qn-back{min-height:38px;} }
+  /* 賽事頁是獨立的畫面（v3.99.0）：月曆、搜尋篩選列、焦點卡、資料管理那一排
+     在看賽事時都收起來。原本賽事頁接在月曆下面（筆電上從 1,779px 才開始），
+     而且月曆搜尋列一直固定在上面、還把區段導覽列蓋住 */
+  body.viewing-detail #focus-panel-slot,
+  body.viewing-detail #calendar,
+  body.viewing-detail .topbar-row2,
+  body.viewing-detail .topbar-row3{display:none!important;}
+  /* 賽事頁單獨出現時，不需要跟上面月曆隔開的那條線與留白 */
+  body.viewing-detail #detail{margin-top:0;padding-top:0;border-top:none;}
   .detail-header{position:relative;padding-bottom:22px;margin-bottom:6px;border-bottom:3px solid var(--ink);transition:border-color 0.2s;}
   .detail-ambient-glow{
     position:absolute;top:-70px;left:20%;right:20%;height:180px;
@@ -1884,6 +1944,11 @@
   .detail-header h1 .alias{font-weight:400;color:var(--ink-soft);font-size:calc(18px*var(--fs,1));}
   .dh-meta{color:var(--ink-soft);}
   .dh-gcal-quicklink{display:block;margin-top:4px;font-size:calc(13px*var(--fs,1));}
+  /* 頁首的海拔小圖（依 CP 海拔畫的迷你折線）。v3.98.0 以前完全沒有樣式，
+     SVG 沒給寬高就被撐成整欄寬、150px 以上高，看起來像一條很粗的黑線。 */
+  .dh-spark{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--ink-soft);font-size:calc(12px*var(--fs,1));}
+  .dh-spark .spark{display:block;width:140px;height:22px;flex:none;color:var(--trail);overflow:visible;}
+  .dh-spark .spark polyline{vector-effect:non-scaling-stroke;}
 
   details.section{
     background:var(--surface);border-radius:8px;
@@ -4044,7 +4109,8 @@ function sparklineSvg(race){
   const sx=x=>maxX===minX?w/2:pad+(x-minX)/(maxX-minX)*(w-2*pad);
   const sy=y=>maxY===minY?h/2:h-pad-(y-minY)/(maxY-minY)*(h-2*pad);
   const points=pts.map(p=>sx(p.distanceKm).toFixed(1)+','+sy(p.elevationM).toFixed(1)).join(' ');
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;
+  const label=tf2('ui.sparkLabel','海拔 {a}–{b} m',Math.round(minY),Math.round(maxY));
+  return `<div class="dh-spark"><svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="mono">${escapeHtml(label)}</span></div>`;
 }
 function emptyRace(name,sportType,status,raceDate){
   const now=new Date().toISOString();
@@ -4090,7 +4156,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.97.0';
+const APP_VERSION='v3.99.0';
 
 /* ============================================================
    多語系（i18n）
@@ -4151,6 +4217,12 @@ const JA={
   'ui.simpleHidSplits':'ラップ（{n} 区間）','ui.simpleHidRadar':'レース能力レーダー','ui.simpleHidSeries':'シリーズ比較','ui.simpleHidElevation':'高低図',
   'ui.simpleHidCheckpoints':'CP／エイド {n} 件','ui.simpleHidGeoPhotos':'コース写真 {n} 枚','ui.simpleHidWeather':'気象の記録','ui.simpleHidNutrition':'補給設定',
   'ui.simpleHidNutritionSchedule':'補給スケジュール {n} 件','ui.simpleHidTraining':'トレーニング計画','ui.simpleHidLogistics':'予算と旅程','ui.simpleHidShoe':'レースシューズ',
+  // v3.98.0
+  'ui.sparkLabel':'標高 {a}–{b} m',
+  'ui.navBack':'‹ 戻る',
+  'ui.calNoRacesThisMonth':'今月の大会はありません','ui.calPrevRace':'前の大会','ui.calNextRace':'次の大会',
+  'ui.calResultsSearch':'「{q}」の検索結果：{n} 件','ui.calResultsFilter':'「{f}」：{n} 件','ui.calResultsBoth':'「{f}」で「{q}」を検索：{n} 件',
+  'ui.calResultsNone':'該当する大会はありません','ui.calResultsClear':'検索と絞り込みを解除','ui.calUndated':'日付未定','ui.calResultsHint':'すべての月から表示しています',
   'ui.showAllFields':'すべての項目を表示（あと {n} 項目）','ui.showAllFieldsFilled':'すべての項目を表示（あと {a} 項目、うち {b} 項目は入力済み）','ui.showCommonFields':'よく使う項目だけ表示',
   'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'カバー写真付きの完走レースがまだありません。完走したらぜひ写真を追加して、メダル棚を育てましょう！',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
@@ -4509,12 +4581,12 @@ const JA={
       <ul>
         <li>上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え、「今日」で当月に戻ります。スマートフォンでは自動的に当月のレース一覧表示になります。</li>
         <li>フィルターは2段階：まず「すべて／今後の予定／過去の記録」を選択し、「今後の予定」または「過去の記録」を選ぶと詳細ステータスが展開されます（ボタンが一度に多く表示されすぎないように）。</li>
-        <li>検索欄でレース名や都市名で絞り込みできます。5件以上記録するとキャリアデータ（完走数、フルマラソン自己ベスト、年間走行距離）が表示されます。</li>
+        <li>検索欄でレース名や都市名で絞り込みできます。検索や絞り込み中はすべての月の結果が一覧で表示されます。日付未定の大会はカレンダー下の「日付未定」にあります。5件以上記録するとキャリアデータ（完走数、フルマラソン自己ベスト、年間走行距離）が表示されます。</li>
         <li>「今日」ボタンの隣のグリッドアイコンで「メダル棚」表示に切り替えられます。カバー写真付きの完走レースをカード形式で表示します。</li>
       </ul>
       <h3>レースの追加と管理</h3>
       <ul>
-        <li>右上の「+ 大会を追加」で作成。カレンダーや一覧のレースをクリックすると詳細画面が開き、編集内容は自動保存されます。</li>
+        <li>右上の「+ 大会を追加」で作成。カレンダーや一覧のレースをクリックすると詳細画面が開き、編集内容は自動保存されます。詳細画面の上の「‹ 戻る」やスマホの戻る操作で元の一覧の位置に戻ります。URL に大会が含まれるので、再読み込みやブックマークでも同じ大会が開きます。</li>
         <li>新規作成時に公式サイトのURLを直接貼り付けたり、アクティビティファイル（GPX/TCX/FIT）や大会ビジュアルを先に読み込んでおくと、作成時に自動で反映されます。</li>
         <li>詳細画面の「大会を削除」は誤操作防止のため2回クリックが必要です。「大会を複製」は場所・コース・装備などを引き継いで新しい大会を作成でき、年次シリーズ大会に便利です。</li>
       </ul>
@@ -4656,6 +4728,12 @@ const EN={
   'ui.simpleHidSplits':'splits ({n})','ui.simpleHidRadar':'performance radar','ui.simpleHidSeries':'series comparison','ui.simpleHidElevation':'elevation profile',
   'ui.simpleHidCheckpoints':'{n} checkpoints','ui.simpleHidGeoPhotos':'{n} course photos','ui.simpleHidWeather':'weather notes','ui.simpleHidNutrition':'fueling plan',
   'ui.simpleHidNutritionSchedule':'{n} fueling items','ui.simpleHidTraining':'training plan','ui.simpleHidLogistics':'budget & travel','ui.simpleHidShoe':'race shoes',
+  // v3.98.0
+  'ui.sparkLabel':'Elevation {a}–{b} m',
+  'ui.navBack':'‹ Back',
+  'ui.calNoRacesThisMonth':'No races this month','ui.calPrevRace':'Previous','ui.calNextRace':'Next',
+  'ui.calResultsSearch':'“{q}”: {n} races','ui.calResultsFilter':'{f}: {n} races','ui.calResultsBoth':'“{q}” in {f}: {n} races',
+  'ui.calResultsNone':'No matching races','ui.calResultsClear':'Clear search & filter','ui.calUndated':'No date yet','ui.calResultsHint':'Showing all months',
   'ui.showAllFields':'Show all fields ({n} more)','ui.showAllFieldsFilled':'Show all fields ({a} more, {b} filled in)','ui.showCommonFields':'Show common fields only',
   'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No completed races with cover photos yet. Add a photo once you finish one and start building your trophy wall!',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
@@ -5002,12 +5080,12 @@ const EN={
       <ul>
         <li>Use <span class="mono">‹ Year Month ›</span> at the top to change months, and "Today" to jump back to the current month. On mobile it automatically switches to a list of this month's races.</li>
         <li>Filters have two levels: pick "All / Upcoming / History" first — tapping "Upcoming" or "History" reveals the more specific statuses underneath, so the bar isn't crowded with options at once.</li>
-        <li>The search box filters by race name or city. Once you've logged 5+ races, a career stats strip appears (races finished, marathon PB, distance this year).</li>
+        <li>The search box filters by race name or city; searching or picking a filter lists matches from every month. Races without a date are listed under “No date yet” below the calendar. Once you've logged 5+ races, a career stats strip appears (races finished, marathon PB, distance this year).</li>
         <li>The grid icon next to "Today" switches to a "trophy wall" view — a photo-card grid of completed races that have a cover photo.</li>
       </ul>
       <h3>Creating & Managing Races</h3>
       <ul>
-        <li>Use "+ New Race" in the top right to create one. Click a race on the calendar or list to open its detail page — edits save automatically.</li>
+        <li>Use "+ New Race" in the top right to create one. Click a race on the calendar or list to open its detail page — edits save automatically. “‹ Back” at the top (or your phone’s back gesture) returns you to the same spot in the list; the URL includes the race, so refreshing or bookmarking opens the same race.</li>
         <li>While creating a race, you can paste the official website URL directly, or import an activity file (GPX/TCX/FIT) or a race cover image first — both get applied automatically once the race is created.</li>
         <li>"Delete race" on the detail page needs two clicks to confirm, to avoid accidental deletion. "Duplicate Race" carries over location, course, and gear into a new race — handy for annual series races.</li>
       </ul>
@@ -6242,6 +6320,7 @@ async function handleAuthChange(user){
       await cloudSyncAllRaces();   // 只上傳本機比較新或雲端沒有的
       if(localChanged) renderAll();
       maybeLeaveAutoSimple(localCountAtSignIn);
+      resolvePendingRoute();
       if(pendingSyncOverwriteNotice>0) showSyncOverwriteNotice(pendingSyncOverwriteNotice);
     }catch(err){
       console.error('雲端資料讀取失敗',err);
@@ -8957,8 +9036,15 @@ const QUICK_NAV_SECTIONS=[
   ['section-logistics','ui.navLogistics','預算'],
   ['section-post','ui.navPost','賽後'],
 ];
-function quickNavHtml(){
-  return `<nav class="quick-nav">${QUICK_NAV_SECTIONS.map(([id,key,fallback])=>`<a href="#${id}" data-target="${id}">${t(key,fallback)}</a>`).join('')}</nav>`;
+/* 賽事頁最上面那排固定的導覽列（v3.99.0）：最前面一顆「‹ 返回」，後面才是
+   各區段。放在頁首「上面」而不是頁首與成績之間：它是 sticky 的，放最上面
+   一打開就看得到，捲到哪裡都按得到返回。簡易版區段少、不需要區段按鈕，
+   只留返回（backOnly）。 */
+function quickNavHtml(opts){
+  const backOnly=!!(opts&&opts.backOnly);
+  const back=`<button type="button" class="qn-back" data-action="back-to-list">${t('ui.navBack','‹ 返回')}</button>`;
+  const chips=backOnly?'':QUICK_NAV_SECTIONS.map(([id,key,fallback])=>`<a href="#${id}" data-target="${id}">${t(key,fallback)}</a>`).join('');
+  return `<nav class="quick-nav${backOnly?' is-back-only':''}">${back}${chips}</nav>`;
 }
 /* ============================================================
    賽事詳情頁的區塊改成手風琴（Accordion）：預設全部收合，同一時間
@@ -16963,11 +17049,118 @@ function renderTableView(){
     <tbody>${rows}</tbody>
   </table></div>`;
 }
+/* ============================================================
+   行事曆：跨月份的搜尋／篩選結果、未定日期、空月份（v3.98.0）
+   原本搜尋和篩選只作用在「畫面上這個月」：搜「大阪」（9 場）得到「這個
+   月沒有符合條件的賽事」，篩選鈕寫「歷史紀錄 (107)」畫面卻是空的；沒
+   填日期的賽事則在月曆、獎牌牆、搜尋都不會出現。現在：
+   - 有搜尋字或選了篩選 → 列出所有月份的結果（即將到來、各年份、未定日期）
+   - 沒有搜尋也沒篩選 → 照舊顯示這個月；月曆下面多一區「未定日期」
+   - 這個月沒有賽事 → 給「上一場／下一場」直接跳過去
+   ============================================================ */
+function calendarResultsMode(){ return !!state.searchQuery.trim()||state.filterStatus!=='all'; }
+function calendarFilterLabel(fs){
+  const primary=FILTER_PRIMARY.find(f=>f.value===fs);
+  if(primary) return t(primary.labelKey,primary.label);
+  if(fs==='overseas') return t('ui.filterOverseas','海外賽事');
+  if(fs.indexOf('country:')===0) return fs.slice(8);
+  return t('opt.status.'+fs,STATUS_CHIP_LABELS[fs]||fs);
+}
+function calendarRaceRowHtml(r){
+  return `<div class="swipe-row" data-id="${r.id}">
+    <div class="swipe-action-bg"></div>
+    <button type="button" class="cal-list-item swipe-card status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
+      ${r.coverImage?`<img class="cal-list-thumb" src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" loading="lazy" decoding="async" style="${focalPointStyle(r)}">`:`<span class="cal-list-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}
+      <span class="cal-list-text">
+        <span class="cal-list-name-row">
+          <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
+          <span class="cal-list-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span>
+        </span>
+        ${raceTerrainMetaHtml(r)}
+      </span>
+    </button>
+  </div>`;
+}
+// dateFmt 為 null：不留日期欄（月曆下面的「未定日期」單獨一區，不用對齊）
+function calendarResultRowsHtml(races,dateFmt){
+  return `<div class="cal-results-rows">${races.map(r=>`<div class="cal-results-row${dateFmt?'':' no-date'}">
+    ${dateFmt?`<span class="cal-results-date mono">${escapeHtml(dateFmt(r))}</span>`:''}
+    <div class="cal-results-card">${calendarRaceRowHtml(r)}</div>
+  </div>`).join('')}</div>`;
+}
+function calendarGroupHtml(title,races,dateFmt,extraClass){
+  return `<section class="cal-results-group${extraClass?' '+extraClass:''}">
+    <h3 class="cal-results-group-title">${escapeHtml(title)}<span class="cal-results-count mono">${races.length}</span></h3>
+    ${calendarResultRowsHtml(races,dateFmt)}
+  </section>`;
+}
+// inResults：在跨月份結果清單裡，日期欄放「—」跟上面各年份對齊
+function calendarUndatedHtml(races,inResults){
+  const undated=races.filter(r=>!(r.schedule&&r.schedule.raceDate));
+  if(!undated.length) return '';
+  return calendarGroupHtml(t('ui.calUndated','未定日期'),undated,inResults?(()=>'—'):null,'cal-undated');
+}
+function calendarResultsHtml(){
+  const races=filteredRaces();
+  const today=todayISO();
+  const q=state.searchQuery.trim();
+  const f=state.filterStatus;
+  const fmt=(key,fallback)=>t(key,fallback).replace('{q}',q).replace('{f}',calendarFilterLabel(f)).replace('{n}',races.length);
+  const title=q&&f!=='all'?fmt('ui.calResultsBoth','在「{f}」中搜尋「{q}」：{n} 場')
+    :q?fmt('ui.calResultsSearch','搜尋「{q}」：{n} 場'):fmt('ui.calResultsFilter','「{f}」：{n} 場');
+  const dated=races.filter(r=>r.schedule&&r.schedule.raceDate);
+  const upcoming=dated.filter(r=>r.schedule.raceDate>=today).sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
+  const past=dated.filter(r=>r.schedule.raceDate<today).sort((a,b)=>b.schedule.raceDate.localeCompare(a.schedule.raceDate));
+  const byYear=[];
+  past.forEach(r=>{
+    const y=r.schedule.raceDate.slice(0,4);
+    let g=byYear[byYear.length-1];
+    if(!g||g.year!==y){ g={year:y,races:[]}; byYear.push(g); }
+    g.races.push(r);
+  });
+  const groups=[
+    upcoming.length?calendarGroupHtml(t('ui.filterUpcoming','即將到來'),upcoming,r=>r.schedule.raceDate):'',
+    ...byYear.map(g=>calendarGroupHtml(g.year,g.races,r=>r.schedule.raceDate.slice(5).replace('-','/'))),
+    calendarUndatedHtml(races,true),
+  ].join('');
+  return `<div class="cal-results">
+    <div class="cal-results-head">
+      <div><div class="cal-results-title">${escapeHtml(title)}</div>
+        <div class="cal-results-hint small">${escapeHtml(t('ui.calResultsHint','顯示所有月份的結果'))}</div></div>
+      <button type="button" class="btn-ghost cal-results-clear" data-action="clear-cal-results">${escapeHtml(t('ui.calResultsClear','清除搜尋與篩選'))}</button>
+    </div>
+    ${races.length?groups:`<p class="empty-hint">${escapeHtml(t('ui.calResultsNone','沒有符合的賽事'))}</p>`}
+  </div>`;
+}
+// 這個月沒有賽事時：上一場、下一場各一個按鈕，按了直接跳到那個月
+function calendarMonthEmptyHtml(y,m){
+  const first=`${y}-${String(m+1).padStart(2,'0')}-01`;
+  const next=`${m===11?y+1:y}-${String(m===11?1:m+2).padStart(2,'0')}-01`;
+  const dated=state.races.filter(r=>!r.deletedAt&&r.schedule&&r.schedule.raceDate);
+  const prev=dated.filter(r=>r.schedule.raceDate<first).sort((a,b)=>b.schedule.raceDate.localeCompare(a.schedule.raceDate))[0];
+  const nxt=dated.filter(r=>r.schedule.raceDate>=next).sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate))[0];
+  const btn=(r,dir)=>{
+    const d=r.schedule.raceDate;
+    const lab=dir<0?t('ui.calPrevRace','上一場'):t('ui.calNextRace','下一場');
+    return `<button type="button" class="cal-jump cal-jump-${dir<0?'prev':'next'}" data-action="cal-jump" data-ym="${d.slice(0,7)}">
+      ${dir<0?'<span aria-hidden="true">‹</span>':''}<span class="cal-jump-label">${escapeHtml(lab)}</span>
+      <span class="cal-jump-date mono">${escapeHtml(d.slice(0,4)===String(y)?d.slice(5).replace('-','/'):d.replace(/-/g,'/'))}</span>
+      <span class="cal-jump-name">${escapeHtml(r.name||t('ui.unnamedRace','(未命名賽事)'))}</span>${dir>0?'<span aria-hidden="true">›</span>':''}
+    </button>`;
+  };
+  return `<div class="cal-month-empty">
+    <p class="cal-month-empty-text">${escapeHtml(t('ui.calNoRacesThisMonth','這個月沒有賽事'))}</p>
+    ${prev||nxt?`<div class="cal-jumps">${prev?btn(prev,-1):''}${nxt?btn(nxt,1):''}</div>`:''}
+  </div>`;
+}
+function exitCalendarResults(){
+  state.searchQuery=''; if(searchInputEl) searchInputEl.value='';
+  state.filterStatus='all';
+}
 function renderCalendar(){
   const y=state.calendarYear,m=state.calendarMonth;
   calLabelEl.textContent=monthLabel(y,m);
   renderFilterChips();
-  renderFocusPanel();
   const viewToggleBtn=document.getElementById('cal-view-toggle');
   if(viewToggleBtn) viewToggleBtn.classList.toggle('active',state.viewMode==='grid');
   const tableToggleBtn=document.getElementById('cal-table-toggle');
@@ -16975,6 +17168,17 @@ function renderCalendar(){
   // 簡易版沒有表格檢視的按鈕：原本停在表格檢視的話，先顯示行事曆，不然會
   // 卡在一個切不出來的畫面。不改 state.viewMode，切回完整版還是表格。
   const viewMode=(state.viewMode==='table'&&isSimpleMode())?'calendar':state.viewMode;
+  // 搜尋或篩選中：直接列出所有月份的結果。生涯數據和「下一場」焦點卡先
+  // 不畫——不然結果被擠到 1,000px 以下，看起來像什麼都沒找到。
+  const resultsMode=viewMode==='calendar'&&calendarResultsMode();
+  const calNav=document.querySelector('.cal-nav');
+  if(calNav) calNav.classList.toggle('is-results',resultsMode);
+  if(resultsMode){
+    const slot=document.getElementById('focus-panel-slot'); if(slot) slot.innerHTML='';
+    calendarEl.innerHTML=calendarResultsHtml();
+    return;
+  }
+  renderFocusPanel();
   if(viewMode==='grid'){
     calendarEl.innerHTML=`${renderCareerSummary()}${renderPhotoGrid()}`;
     animateCareerTickers();
@@ -17017,19 +17221,7 @@ function renderCalendar(){
       listRows.push(`<div class="cal-list-day">
         <div class="cal-list-date mono${isToday?' today':''}">${cellD}<span class="cal-list-weekday">${weekdayLabels()[new Date(cellY,cellM,cellD).getDay()]}</span></div>
         <div class="cal-list-races">
-          ${dayRaces.map(r=>`<div class="swipe-row" data-id="${r.id}">
-            <div class="swipe-action-bg"></div>
-            <button type="button" class="cal-list-item swipe-card status-${r.status}${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
-              ${r.coverImage?`<img class="cal-list-thumb" src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" loading="lazy" decoding="async" style="${focalPointStyle(r)}">`:`<span class="cal-list-sport-dot" style="background:${sportColorVar(r.sportType)}"></span>`}
-              <span class="cal-list-text">
-                <span class="cal-list-name-row">
-                  <span class="stamp status-${r.status}">${statusLabel(r.status)}</span>
-                  <span class="cal-list-name">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span>
-                </span>
-                ${raceTerrainMetaHtml(r)}
-              </span>
-            </button>
-          </div>`).join('')}
+          ${dayRaces.map(calendarRaceRowHtml).join('')}
         </div>
       </div>`);
     }
@@ -17039,7 +17231,9 @@ function renderCalendar(){
     ${renderCareerSummary()}
     <div class="cal-weekdays">${weekdayLabels().map((w,i)=>`<span${(i===0||i===6)?' class="weekend"':''}>${w}</span>`).join('')}</div>
     <div class="cal-grid">${cells.join('')}</div>
-    <div class="cal-list">${listRows.length?listRows.join(''):`<p class="empty-hint">這個月沒有符合條件的賽事</p>`}</div>
+    <div class="cal-list">${listRows.join('')}</div>
+    ${listRows.length?'':calendarMonthEmptyHtml(y,m)}
+    ${calendarUndatedHtml(filteredRaces())}
   `;
   animateCareerTickers();
 }
@@ -17150,6 +17344,14 @@ function detailHeaderHtml(race){
   </header>`;
 }
 function renderDetail(){
+  // 同一場賽事重畫（改了欄位、關掉抽屜、切換簡易版…）時，保留使用者打開
+  // 的區段和捲動位置（v3.98.0）。原本每次重畫五個區段全部收起來、頁面
+  // 變短、瀏覽器把捲動位置往上拉——改一個名次，畫面就跳走將近 900px。
+  // 換到另一場賽事時照舊全部收起。
+  const prevRenderedId=detailEl.dataset.raceId||null;
+  const keepOpenIds=[...detailEl.querySelectorAll('details.section[open]')].map(d=>d.id).filter(Boolean);
+  const keepScrollY=window.scrollY;
+  delete detailEl.dataset.raceId;
   if(state.creating){
     destroyRouteMap();detailEl.innerHTML=renderCreateForm();
     applyAmbientTint(createStagedCover?createStagedCover.accentColor:null);
@@ -17171,8 +17373,8 @@ function renderDetail(){
   // 資料一個都沒動，頁尾的提示會列出這一場被收起來、而且真的有填的東西。
   const S=isSimpleMode();
   detailEl.innerHTML=`
+    ${quickNavHtml({backOnly:S})}
     ${detailHeaderHtml(race)}
-    ${S?'':quickNavHtml()}
     ${heroDashboard?`<div class="hero-results">${heroDashboard}</div>`:''}
     ${S?'':renderSeriesComparison(race)}
     <details class="section" id="section-basic">
@@ -17232,6 +17434,11 @@ function renderDetail(){
     </details>
     ${S?simpleHiddenNoteHtml(race):''}
   `;
+  // 緊接在換內容之後、任何讀版面的程式之前把區段打開回去：中間只要有
+  // 一次版面計算，頁面就已經變短、捲動位置已經被夾掉了
+  const sameRace=prevRenderedId===race.id;
+  detailEl.dataset.raceId=race.id;
+  if(sameRace) keepOpenIds.forEach(id=>{ const el=document.getElementById(id); if(el&&el.tagName==='DETAILS') el.open=true; });
   destroyRouteMap();
   renderRouteMapIfNeeded(race);
   setupElevationScrubbing(race);
@@ -17248,8 +17455,22 @@ function renderDetail(){
   // renderDetail() 的地方、也不會有漏改的風險。
   if(drawerOpenSection&&DRAWER_SECTIONS[drawerOpenSection]){
     const dc=document.getElementById('drawer-content');
-    if(dc) dc.innerHTML=DRAWER_SECTIONS[drawerOpenSection].body(race);
+    if(dc){
+      // 抽屜內容整個換掉會丟失游標：改完成績按 Tab 跳到下一格，存檔後重畫，
+      // 游標就不見了。記下原本在哪一格、抽屜捲到哪，換完再放回去。
+      const ae=document.activeElement;
+      const focusPath=(ae&&dc.contains(ae)&&ae.dataset&&ae.dataset.path)||null;
+      const scroller=dc.scrollHeight>dc.clientHeight?dc:dc.parentElement;
+      const drawerScroll=scroller?scroller.scrollTop:0;
+      dc.innerHTML=DRAWER_SECTIONS[drawerOpenSection].body(race);
+      if(scroller) scroller.scrollTop=drawerScroll;
+      if(focusPath){
+        const el=[...dc.querySelectorAll('[data-path]')].find(x=>x.dataset.path===focusPath);
+        if(el){ try{ el.focus({preventScroll:true}); }catch(err){ el.focus(); } }
+      }
+    }
   }
+  if(sameRace&&Math.abs(window.scrollY-keepScrollY)>1) window.scrollTo(0,keepScrollY);
   // 這裡有兩種情況都需要（重新）抓取：完全沒有快取過（第一次），或者
   // 快取是在某些欄位還沒加進抓取範圍之前存下來的舊資料（缺了整個欄位，
   // 不是陣列裡的值剛好是 null）——這種舊快取沒辦法靠回填補齊，因為
@@ -17333,7 +17554,7 @@ function updateCreateStagingUI(){
   if(c) c.innerHTML=createCoverLineHtml();
 }
 function renderCreateForm(){
-  return `<div class="create-form">
+  return `${quickNavHtml({backOnly:true})}<div class="create-form">
     <h1>${t('ui.createRace','新增賽事')}</h1>
     <div class="create-grid">
       <label class="field" for="new-name"><span>${t('ui.newRaceName','賽事名稱')}</span><input type="text" id="new-name" placeholder="${t('ui.newRaceNamePlaceholder','如：2026 臺北馬拉松')}"></label>
@@ -17363,21 +17584,145 @@ function renderCreateForm(){
 }
 
 function renderAll(){
+  // 選著的賽事已經不在了（被同步刪掉、清空資料、永久刪除…）：當作沒選，
+  // 不然會停在一個只有空白提示的賽事頁、月曆又被收起來
+  if(state.selectedId&&!state.races.some(r=>r.id===state.selectedId&&!r.deletedAt)){ state.selectedId=null; currentRace=null; }
+  // 先同步網址：要在畫面換掉「之前」記下清單捲到哪裡（換成賽事頁後頁面
+  // 變短，捲動位置就被瀏覽器夾掉了）
+  syncRouteWithState();
   document.body.classList.toggle('viewing-detail',!!(state.selectedId||state.creating));
   renderCalendar();renderDetail();renderRecoveryButton();
 }
+// 賽事頁是獨立的畫面（v3.99.0），進去一律從最上面開始
 function scrollDetailIntoView(){
-  if(typeof detailEl.scrollIntoView==='function') detailEl.scrollIntoView({behavior:'smooth',block:'start'});
+  window.scrollTo(0,0);
 }
 function selectRace(id,{scroll}={scroll:true}){
+  const changed=state.selectedId!==id||state.creating;
+  pendingRouteRaceId=null;
   state.selectedId=id;state.creating=false;
   renderAll();
   detailEl.classList.remove('fade-in');
   void detailEl.offsetWidth; // 強制觸發 reflow 讓動畫可以重新播放
   detailEl.classList.add('fade-in');
-  if(scroll) scrollDetailIntoView();
+  if(changed||scroll) scrollDetailIntoView();
   checkRaceForBadgeUnboxing(id);
 }
+/* ============================================================
+   賽事頁的網址（v3.99.0）
+   原本點進賽事網址不會變：手機的返回手勢直接離開網站、重新整理回不到
+   原本那一場。現在：
+   - 清單 → 賽事：推一筆 #race=<id>；返回鍵回到清單，而且回到原本捲到的
+     位置（清單那一筆記著 scrollY）
+   - 賽事 A → 賽事 B（指令面板、複製賽事…）：也推一筆，返回回到 A
+   - 新增賽事：#new；建立完成用「取代」換成 #race=<id>，返回不會回到空白表單
+   - 刪除、取消新增這類「離開賽事頁」：如果這一筆是從清單推進來的就退一步，
+     不然返回鍵要多按一次才離開同一個清單
+   - 重新整理或直接開 #race=<id>：打開那一場；本機還沒有（新裝置還在等雲端
+     下載）就先記著，下載完再打開
+   抽屜原本就會推一筆（網址不變），返回鍵先收抽屜，這裡不受影響。
+   ============================================================ */
+let routeSyncPaused=false, routeBackPending=false, pendingRouteRaceId=null;
+function routeOfState(){ return state.creating?'new':(state.selectedId?'race='+state.selectedId:''); }
+function routeOfLocation(){
+  let h=(location.hash||'').replace(/^#/,'');
+  try{ h=decodeURIComponent(h); }catch(e){}
+  if(h==='new') return 'new';
+  return /^race=./.test(h)?h:'';
+}
+function urlForRoute(route){
+  const base=location.pathname+location.search;
+  if(!route) return base;
+  return base+'#'+(route.indexOf('race=')===0?'race='+encodeURIComponent(route.slice(5)):route);
+}
+function syncRouteWithState(){
+  if(routeSyncPaused) return;
+  const want=routeOfState(), have=routeOfLocation();
+  if(want===have) return;
+  // 網址指向一場本機還沒有的賽事、正在等雲端：先別把網址清掉
+  if(!want&&pendingRouteRaceId&&have==='race='+pendingRouteRaceId) return;
+  const st=history.state||{};
+  try{
+    if(!want){
+      if(st.appNav&&st.fromList){ routeBackPending=true; history.back(); return; }
+      history.replaceState({},'',urlForRoute(''));
+      return;
+    }
+    if(have==='new'){
+      history.replaceState({appNav:!!st.appNav,fromList:!!st.fromList},'',urlForRoute(want));
+      return;
+    }
+    history.replaceState(Object.assign({},st,{scrollY:window.scrollY}),'');
+    history.pushState({appNav:true,fromList:!have},'',urlForRoute(want));
+  }catch(e){}
+}
+// 依網址決定要看哪一場；回傳畫面是否需要換
+function applyRouteFromLocation(){
+  const before=routeOfState();
+  const route=routeOfLocation();
+  pendingRouteRaceId=null;
+  if(route==='new'){
+    if(!state.creating){ resetCreateStaging(); state.creating=true; state.selectedId=null; }
+  }else if(route.indexOf('race=')===0){
+    const id=route.slice(5);
+    const race=state.races.find(r=>r.id===id);
+    if(race&&!race.deletedAt){ state.selectedId=id; state.creating=false; }
+    else{
+      if(!race) pendingRouteRaceId=id;   // 完全沒看過的：可能在雲端
+      state.selectedId=null; state.creating=false;
+    }
+  }else{
+    if(state.creating) resetCreateStaging();
+    state.selectedId=null; state.creating=false;
+  }
+  return routeOfState()!==before;
+}
+// 雲端下載完之後：網址要的那一場來了就打開（用取代，不多推一筆）
+function resolvePendingRoute(){
+  if(!pendingRouteRaceId) return;
+  const id=pendingRouteRaceId;
+  const race=state.races.find(r=>r.id===id&&!r.deletedAt);
+  if(!race||state.selectedId||state.creating) return;
+  pendingRouteRaceId=null;
+  state.selectedId=id; renderAll(); scrollDetailIntoView();
+}
+function goBackFromDetail(){
+  const st=history.state||{};
+  if(st.appNav){ history.back(); return; }
+  // 直接開網址或重新整理進來的：沒有上一筆可以退，直接回清單
+  if(state.creating) resetCreateStaging();
+  state.selectedId=null; state.creating=false; currentRace=null;
+  renderAll(); window.scrollTo(0,0);
+}
+window.addEventListener('popstate',e=>{
+  const wasBack=routeBackPending; routeBackPending=false;
+  let changed=false;
+  routeSyncPaused=true;
+  try{ changed=applyRouteFromLocation(); if(changed) renderAll(); }
+  finally{ routeSyncPaused=false; }
+  // 網址指向已刪除的賽事（例如往前一頁回到剛刪掉的那場）：清掉網址
+  if(!routeOfState()&&routeOfLocation()&&!pendingRouteRaceId) syncRouteWithState();
+  if(changed||wasBack) restoreScrollY((e.state&&typeof e.state.scrollY==='number')?e.state.scrollY:0);
+});
+/* 回到清單時放回原本的捲動位置。手機的頂列捲下去會收合（tagline 用 0.15 秒
+   的動畫收起來），從賽事頁最上面直接跳回 670px，頂列在跳過去「之後」才開始
+   收，瀏覽器的捲動錨定跟著把畫面往上帶 38px——剛剛點的那張卡片就不在原位了。
+   動畫跑完再補一次；使用者這時已經自己開始捲就不動他。 */
+function restoreScrollY(y){
+  window.scrollTo(0,y);
+  if(!y) return;
+  let userMoved=false;
+  const stop=()=>{ userMoved=true; };
+  const evs=['wheel','touchstart','keydown','mousedown'];
+  evs.forEach(ev=>window.addEventListener(ev,stop,{passive:true,once:true}));
+  setTimeout(()=>{
+    evs.forEach(ev=>window.removeEventListener(ev,stop));
+    if(!userMoved&&Math.abs(window.scrollY-y)>1) window.scrollTo(0,y);
+  },260);
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest&&e.target.closest('[data-action="back-to-list"]')) goBackFromDetail();
+});
 
 /* ============================================================
    事件處理
@@ -17427,7 +17772,7 @@ function dismissFirstUseGlow(){
   try{ localStorage.setItem(FIRST_USE_GLOW_KEY,'1'); }catch(err){}
   document.querySelectorAll('.cta-glow').forEach(el=>el.classList.remove('cta-glow'));
 }
-function startCreate(){resetCreateStaging();state.creating=true;state.selectedId=null;renderAll();scrollDetailIntoView();logFeatureUse('race_create');dismissFirstUseGlow();}
+function startCreate(){resetCreateStaging();pendingRouteRaceId=null;state.creating=true;state.selectedId=null;renderAll();scrollDetailIntoView();logFeatureUse('race_create');dismissFirstUseGlow();}
 /* startCreateFromPaste(info)：開新增表單並把抓到的欄位填好。
    刻意停在表單、不直接建立賽事——名稱與日期是猜的，讓使用者看過一眼
    再按「建立賽事」，跟其他幾種貼上一樣都是「先預覽再落地」。
@@ -17641,12 +17986,20 @@ calendarEl.addEventListener('touchend',()=>{
   }
 });
 calendarEl.addEventListener('click',e=>{
+  if(e.target.closest('[data-action="clear-cal-results"]')){ exitCalendarResults(); renderCalendar(); return; }
+  const jump=e.target.closest('[data-action="cal-jump"]');
+  if(jump){
+    const [yy,mm]=jump.dataset.ym.split('-').map(Number);
+    state.calendarYear=yy; state.calendarMonth=mm-1; renderCalendar(); return;
+  }
   const chip=e.target.closest('.cal-chip,.cal-list-item');if(!chip) return;
   if(recentlySwipedId===chip.dataset.id){ recentlySwipedId=null; return; }
   selectRace(chip.dataset.id);
 });
 
 function shiftCalendarMonth(delta){
+  // 在跨月份的結果清單裡按 ‹ ›：使用者要的是回到月曆翻月份
+  if(calendarResultsMode()&&state.viewMode!=='grid'&&(state.viewMode!=='table'||isSimpleMode())) exitCalendarResults();
   let m=state.calendarMonth+delta,y=state.calendarYear;
   if(m<0){m=11;y--;} else if(m>11){m=0;y++;}
   state.calendarMonth=m;state.calendarYear=y;
@@ -17695,6 +18048,7 @@ calNavEl.addEventListener('touchend',e=>{
 document.getElementById('cal-prev').addEventListener('click',()=>shiftCalendarMonth(-1));
 document.getElementById('cal-next').addEventListener('click',()=>shiftCalendarMonth(1));
 document.getElementById('cal-today').addEventListener('click',()=>{
+  if(calendarResultsMode()&&state.viewMode!=='grid'&&(state.viewMode!=='table'||isSimpleMode())) exitCalendarResults();
   const t=new Date();
   state.calendarYear=t.getFullYear();state.calendarMonth=t.getMonth();
   renderCalendar();
@@ -18522,7 +18876,14 @@ async function handleDetailChange(e){
       smartFilledHighlightPaths=new Set(smartFilled);
       setTimeout(()=>{ smartFilledHighlightPaths=new Set(); },2500);
     }
-    if(needsFullRerender){renderDetail();}else{updateDetailHeaderBits();}
+    if(needsFullRerender){
+      // 在抽屜裡改完按 Tab：change 事件發生在焦點移到下一格「之前」。這時候
+      // 同步重畫抽屜，下一格被換掉、游標掉到 body 上（本機儲存是同步的
+      // localStorage 退路時一定會發生）。等這一輪事件跑完、游標已經在下一格
+      // 了再重畫，renderDetail() 會把游標放回同一格（v3.98.0）。
+      if(drawerEl.contains(t)) setTimeout(()=>{ if(currentRace) renderDetail(); },0);
+      else renderDetail();
+    }else{updateDetailHeaderBits();}
     showSaveStatus('saved');
     if(templateApplied){
       const el=document.createElement('div');
@@ -20499,12 +20860,12 @@ function helpModalHtml(){
       <ul>
         <li>上方 <span class="mono">‹ 年 月 ›</span> 切換月份，「今天」跳回當月；手機（寬度較窄）會自動改成當月賽事清單，方便點按。</li>
         <li>篩選分兩層：先選「全部／即將到來／歷史紀錄」，點「即將到來」或「歷史紀錄」後才會展開細分狀態，避免按鈕一次擠太多。</li>
-        <li>搜尋框可用賽事名稱或城市過濾；累積 5 場以上會出現生涯數據（總完賽場次、全馬 PB、當年里程）。</li>
+        <li>搜尋框可用賽事名稱或城市過濾，搜尋或點篩選鈕時會列出所有月份的結果；沒填日期的賽事列在月曆下方的「未定日期」。累積 5 場以上會出現生涯數據（總完賽場次、全馬 PB、當年里程）。</li>
         <li>「今天」旁邊的方格圖示可切換「獎牌牆」檢視，以相片卡片呈現已完賽且有封面照片的賽事。</li>
       </ul>
       <h3>新增與管理賽事</h3>
       <ul>
-        <li>右上角「+ 新增賽事」建立；點月曆或清單上的賽事開啟詳情頁編輯，欄位修改即時自動儲存。</li>
+        <li>右上角「+ 新增賽事」建立；點月曆或清單上的賽事開啟詳情頁編輯，欄位修改即時自動儲存。賽事頁最上面的「‹ 返回」或手機的返回手勢回到原本的清單位置；網址會帶上賽事，重新整理或加書籤都會打開同一場。</li>
         <li>新增賽事時可直接貼上官方網站連結，也可以先匯入運動紀錄檔（GPX/TCX/FIT）或賽事主視覺，建立時會一併套用。</li>
         <li>詳情頁「刪除賽事」需連按兩次確認；「複製賽事」可保留地點、路線、裝備等欄位建立新的一場，適合同系列跨年賽事。</li>
       </ul>
@@ -21943,6 +22304,11 @@ async function init(){
   checkAndRecordBadgeUnlocks();
   // 要在第一次 renderAll 之前決定：新裝置沒有資料 → 簡易版（v3.97.0）
   resolveInitialUiMode();
+  // 網址帶著 #race=<id>（重新整理、書籤）就直接打開那一場（v3.99.0）。
+  // 捲動位置自己管：瀏覽器自動還原的是「換頁前」的版面，對單頁 App 不準
+  try{ if('scrollRestoration' in history) history.scrollRestoration='manual'; }catch(e){}
+  routeSyncPaused=true;
+  try{ applyRouteFromLocation(); }finally{ routeSyncPaused=false; }
   renderAll();
   updateTopbarHeightVar();
   checkAndShowFirstUseGlow();

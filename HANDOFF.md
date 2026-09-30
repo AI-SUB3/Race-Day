@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.97.0
+> 貼到新對話開頭即可接續。最後更新：v3.99.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（416 項檢查，22 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`、`journey`、`simple simple_phone`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（448 項檢查，23 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`、`journey`、`simple simple_phone`、`ux`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -57,7 +57,7 @@ python3 test_suite.py --list          # 列出群組
 APP=/path/to/index.html python3 test_suite.py
 ```
 
-群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate` `publink` `pubview` `paste` `feedback` `training` `radar` `journey` `simple`（不預設完整版，測新裝置的預設）`simple_phone`（360／390 × 簡易／完整 × 中英日）
+群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate` `publink` `pubview` `paste` `feedback` `training` `radar` `journey` `simple`（不預設完整版，測新裝置的預設）`simple_phone`（360／390 × 簡易／完整 × 中英日）`ux`（v3.98 起的使用者體驗修正，107 場固定種子資料）
 
 離開碼：0 通過 / 1 有失敗 / 2 參數錯誤（可直接接 CI）。
 已用「故意注入 XSS 漏洞」驗證過它真的抓得到回歸，不是只會印綠勾。
@@ -70,7 +70,8 @@ APP=/path/to/index.html python3 test_suite.py
 ## 已完成（v3.x 重點）
 
 ### 架構
-- **詳情頁順序：header → 區段導覽列 → 成績儀表板（完賽才有）→ 各區段**（v3.30.0 儀表板移出賽後區段；v3.34.0 導覽列提到儀表板上方）
+- **詳情頁順序：區段導覽列（最前面是「‹ 返回」）→ header → 成績儀表板（完賽才有）→ 各區段**（v3.30.0 儀表板移出賽後區段；v3.34.0 導覽列提到儀表板上方；v3.99.0 導覽列移到最上面、加返回鍵）
+- **賽事頁是獨立畫面（v3.99.0）**：`body.viewing-detail` 時月曆、搜尋篩選列、焦點卡、資料管理列都 `display:none`。網址 `#race=<id>`／`#new`，由 `renderAll()` 開頭的 `syncRouteWithState()` 統一處理
 - **詳情頁五個區段**（v3.42.0 合併、v3.43.0 對調順序）：基本資訊與時間／路線與氣象（子標題：官方路線、當日氣象）／裝備補給與戰略／預算與行程規劃／賽後紀錄與個人數據。`section-weather` 這個 id 已不存在；改區段順序時 `QUICK_NAV_SECTIONS` 要一起改，測試會比對兩者；空抽屜卡片帶 `is-empty`，由各卡片自行判斷
 - **抽屜面板化**：13 個抽屜（equipment / results / review / basicInfo / schedule / weather / checkpoints / mediaLinks / nutritionPlan / trainingPlan / goals / route / logistics），詳情頁全部變成「摘要卡片 + 點開編輯」
 - **雲端同步六種資料**：賽事、鞋款、補給品資料庫、個人資料、裝備範本、徽章解鎖。合併規則「本機優先」，不覆蓋本機已有值
@@ -140,6 +141,9 @@ APP=/path/to/index.html python3 test_suite.py
 | 簡易版只改顯示、不碰資料（v3.97.0） | `isSimpleMode()`（`<html data-mode="simple">`）。賽事頁、首頁的進階區塊在 JS 產生畫面時就直接不產生（`renderDetail` 裡的 `S?'':…`），**不要**改成產生了再用 CSS 藏：手機少畫很多東西，公開分享頁也不會被誤傷。CSS 只藏固定在頁面上的入口（訓練、表格檢視、匯出 CSV／ipynb）。新增一個進階區塊時，記得在 `renderDetail` 加 `S?'':`，有資料的話也加進 `simpleHiddenItems()` 讓頁尾提示列得出來 |
 | 簡易版的偏好與預設 | `ui-mode-v1`（`simple`／`full`，這台裝置、不上雲端）＋ `ui-mode-auto-v1`（自動選的）。沒選過時 `resolveInitialUiMode()` 在第一次 `renderAll` 前決定：沒有賽事也沒有訓練 → 簡易，其他 → 完整（也寫進去，之後刪光也不會被當新使用者）。自動選的簡易版在「登入前本機 0 場、雲端載回賽事」時換成完整版（`maybeLeaveAutoSimple`）；使用者自己切過就清掉自動旗標 |
 | 簡易版抽屜的常用欄位 | `SIMPLE_FIELD_PATHS`（基本 6、時間 3、成績 5、心得 1），經 `drawerFieldsHtml()`。「已填」計數用 `fieldHasValue()`，跟 `emptyRace()` 預設值一樣的不算 |
+| 搜尋與篩選一律跨月份（v3.98.0） | 行事曆檢視下只要有搜尋字或篩選不是「全部」（`calendarResultsMode()`），就改畫 `calendarResultsHtml()`：即將到來／各年份／未定日期，不畫生涯數據與焦點卡。**不要**再讓搜尋只作用在當月——那會讓人以為資料不見。沒日期的賽事一定要有地方出現（`calendarUndatedHtml()`），新增表單的日期是選填的 |
+| 同一場賽事重畫要保留區段與捲動（v3.98.0） | `renderDetail()` 用 `detailEl.dataset.raceId` 判斷是不是同一場；是的話換完 innerHTML **立刻**把 `details.section` 打開回去，再讀版面、最後補回 `scrollY`。從抽屜 change 觸發的完整重畫延到 `setTimeout(0)`，游標才已經移到下一格、可以放回去 |
+| 賽事頁的網址與返回（v3.99.0） | 不要在各個入口自己 pushState：`renderAll()` 一開頭 `syncRouteWithState()` 比對「狀態該有的網址」與現在的網址——清單→賽事、賽事→賽事用 push（先把目前這筆 replace 成帶 `scrollY`）；`#new`→賽事用 replace；離開賽事頁時，這筆是從清單推進來的就 `history.back()`，否則 replace。`popstate` 用 `applyRouteFromLocation()` 反推狀態，期間 `routeSyncPaused` 避免又推一筆。抽屜自己推的那筆（網址不變）不受影響。捲動位置 App 自己管（`scrollRestoration='manual'`），回清單用 `restoreScrollY()`（手機頂列收合動畫跑完要再補一次） |
 | **第一次完整下載一定要分批** | `fullSyncRacesInPages()`：一次 5 場、每批存游標、可續傳；同處崩潰兩次改逐筆。一次抓全部（`fetchAll`）在 iPhone 會撐爆分頁，只留給「同步診斷」這種使用者主動按的功能 |
 | 已登入就崩潰時的出口 | `?nosync=1`（本分頁不同步）、`?nosync=0` 恢復 |
 | **雲端同步是增量的，不要改回整份** | `cloudKnown`（雲端每場的 updatedAt，存 IndexedDB `cloud-sync-state-v1`）。上傳只傳版本不同的（`upsertRaces`），打開網站只抓 `updatedAt > since－1天`（`fetchChangedSince`）。**`replaceAll` 已經不用**：它會先下載全部再整份上傳，iPhone 會崩潰 |
@@ -226,6 +230,8 @@ APP=/path/to/index.html python3 test_suite.py
 - **CHANGELOG 版本號曾重複**，新增前先確認號碼未被使用
 - **測試一律先設成完整版**（v3.97.0）：新裝置沒有資料會進簡易版，而大部分群組是「先開空白頁、再塞資料」。`Group.run` 與其他自建的 context 都加了 `PRESET_FULL_MODE_JS`；只有 `simple`／`simple_phone` 不加（`preset_full_mode = False`）。自己新增 context 時用 `full_mode_context()`
 - **「畫面出來前」不能用 DOMContentLoaded 驗**：module 腳本會拖慢它，`init()` 可能已經跑完。`simple` 群組改用 MutationObserver 記錄 `#app` 剛被解析出來那一刻的 `data-mode`
+- **沙盒裡 idb-keyval 的 CDN 連不到，`saveJson` 退回同步的 localStorage**：`await persist()` 之後的程式在同一個微任務就跑了，時序跟正式環境（IndexedDB，真正非同步）不一樣。v3.98 的「Tab 後游標消失」就是這樣才在測試裡重現；修的時候兩種時序都要成立
+- **Playwright 的 `goto` 只改 `#` 是同一份文件的跳轉**，不會重新跑 `init()`；要測「直接開網址」得再 `reload()`（v3.99 的反例驗證抓到的）
 - **選賽事可能跳出徽章解鎖動畫蓋住整頁**（`.badge-unbox-overlay`），測試要點頁面上的按鈕前先收掉
 - **升級 xlsx / idb-keyval 時必須同時換 `integrity` 雜湊**，只改版號會被瀏覽器擋掉。作法：`npm pack <套件>@<版本>` 解開後 `openssl dgst -sha384 -binary <檔案> | openssl base64 -A`
 
