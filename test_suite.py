@@ -140,13 +140,17 @@ class Core(Group):
                 r.route.distanceKm=42.195; r.results.chipTimeSeconds=10771+i*60;
                 state.races.push(r);
             }
+            // v4.0 起生涯數據（含榮譽櫃）在首頁的「生涯數據」分頁
+            state.homeTab='career';
             renderAll();
             selectRace(null); await new Promise(s=>setTimeout(s,300));
             const el=document.querySelector('.trophy-cabinet-summary');
             if(el) el.click();
             await new Promise(s=>setTimeout(s,250));
             const body=document.getElementById('trophy-cabinet-body');
-            return !!(body && body.innerHTML.length);
+            const ok=!!(body && body.innerHTML.length);
+            state.homeTab='races'; renderAll();
+            return ok;
         }''')
         c['badge_definitions_unique'] = page.evaluate(
             '''()=>new Set(BADGE_DEFINITIONS.map(b=>b.id)).size===BADGE_DEFINITIONS.length''')
@@ -1735,17 +1739,17 @@ class Mobile(Group):
 
     def body(self, page):
         c = self.checks
-        # 手機多一顆「新增賽事」懸浮鈕在說明鈕上方——回饋鈕要疊到它上面，三顆互不重疊
-        c['feedback_fab_stacks_above_new_race_on_phone'] = page.evaluate('''()=>{
-            const box=id=>{ const el=document.getElementById(id);
-              if(!el||getComputedStyle(el).display==='none') return null;
-              return el.getBoundingClientRect(); };
-            const fb=box('btn-feedback'), nw=box('btn-new-fab'), help=box('btn-help');
-            const overlap=(a,b)=>a&&b&&!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
-            return !!fb && !!nw && !!help
-                && !overlap(fb,nw) && !overlap(fb,help)
-                && fb.bottom<=nw.top && nw.bottom<=help.top
-                && Math.abs((fb.left+fb.width/2)-(help.left+help.width/2))<1;
+        # 右下角只剩「＋」一顆（v4.0）：說明、回饋收進頭像選單，不再有文字泡泡
+        c['phone_only_new_race_fab_bottom_right'] = page.evaluate('''()=>{
+            const nw=document.getElementById('btn-new-fab').getBoundingClientRect();
+            const fixed=[...document.querySelectorAll('body *')].filter(el=>{
+              const cs=getComputedStyle(el); if(cs.position!=='fixed'||cs.display==='none'||cs.visibility==='hidden') return false;
+              const r=el.getBoundingClientRect(); return r.width>0&&r.height>0&&r.right>innerWidth-80&&r.bottom>innerHeight-160; });
+            return nw.width>0 && Math.round(innerWidth-nw.right)===16 && Math.round(innerHeight-nw.bottom)===16
+                && fixed.length===1 && fixed[0].id==='btn-new-fab'
+                && !document.querySelector('.help-fab,.feedback-fab,#help-fab-caption,#feedback-fab-caption')
+                && !!document.getElementById('btn-help').closest('#account-menu-panel')
+                && !!document.getElementById('btn-feedback').closest('#account-menu-panel');
         }''')
         # ---- 字級切換（手機）：手機禁止雙指縮放，這是唯一放大字的方式 ----
         c['font_scale_changes_text_size'] = page.evaluate('''async()=>{
@@ -1792,12 +1796,15 @@ class Mobile(Group):
         }''')
         page.set_viewport_size({'width':390,'height':844})
         page.wait_for_timeout(250)
-        # 手機頂端列沒有「＋ 新增賽事」，訓練鈕排在最後面，而且要保留文字
-        c['training_button_visible_with_label_on_phone'] = page.evaluate('''()=>{
+        # 訓練是首頁的第三個分頁（v4.0），手機上三個分頁平分寬度、都看得到字
+        c['training_tab_visible_with_label_on_phone'] = page.evaluate('''()=>{
+            selectRace(null);   // 上一個檢查停在賽事頁（賽事頁不顯示首頁分頁）
             const tr=document.getElementById('btn-training');
-            const r=tr.getBoundingClientRect(), span=tr.querySelector('span');
-            return !!tr.closest('.topbar-actions') && r.width>0 && r.right<=window.innerWidth
-                && getComputedStyle(span).display!=='none' && span.textContent.trim()==='訓練';
+            const r=tr.getBoundingClientRect();
+            const tabs=[...document.querySelectorAll('.home-tabs .home-tab')].map(b=>b.getBoundingClientRect());
+            return !!tr.closest('.home-tabs') && !tr.closest('.topbar-actions') && r.width>0 && r.right<=window.innerWidth
+                && tr.textContent.trim()==='訓練' && tabs.length===3 && tabs.every(x=>Math.abs(x.top-r.top)<1)
+                && Math.max(...tabs.map(x=>x.width))-Math.min(...tabs.map(x=>x.width))<2;
         }''')
         # ---- iPhone 分頁崩潰（「重複發生問題」）：觸控裝置不可以有大面積合成效果（v3.88.0） ----
         br = page.context.browser
@@ -1918,7 +1925,8 @@ class Mobile(Group):
             return on && off;
         }''')
         c['fab_stays_fixed_during_overlay'] = page.evaluate('''async()=>{
-            const fab=document.getElementById('btn-help');
+            const fab=document.getElementById('btn-new-fab');
+            if(!fab.getBoundingClientRect().width) return false;
             const before=fab.getBoundingClientRect();
             openShoeModal(); await new Promise(s=>setTimeout(s,250));
             const during=fab.getBoundingClientRect();
@@ -2029,10 +2037,16 @@ class I18n(Group):
 
     def body(self, page):
         c = self.checks
+        # 語言選單在頭像選單裡（v4.0）：先打開選單再選
         for lang in ('zh', 'ja', 'en'):
             if lang != 'zh':
+                if page.evaluate("()=>document.getElementById('account-menu-panel').hidden"):
+                    page.click('#btn-account-menu')
+                    page.wait_for_timeout(200)
                 page.select_option('#lang-select', lang)
                 page.wait_for_timeout(300)
+                c[f'{lang}_menu_stays_open_after_language_change'] = page.evaluate(
+                    "()=>!document.getElementById('account-menu-panel').hidden")
             leaked = page.evaluate('''()=>{
                 const legs=['swimming','cycling','running','transition']
                     .map(s=>legSportLabel({sport:s}));
@@ -2441,8 +2455,11 @@ class Data(Group):
                 && await size(small.coverThumb)===240
                 && firstRound===1 && secondRound===0;
         }''')
+        # 牆在畫面下半部看不到時（矮視窗＋上面有「下一場」焦點卡）：切換後自動捲過去
+        page.set_viewport_size({'width': 1100, 'height': 560})
         c['photo_wall_scrolls_into_view_on_toggle'] = page.evaluate('''async()=>{
             state.races=[];
+            const up=emptyRace('下一場','road_running','registered',addDaysStr(todayISO(),6)); state.races.push(up);
             for(let i=0;i<6;i++){
                 const r=emptyRace('Wall '+i,'road_running','completed','2026-0'+(i+1)+'-15');
                 r.results.chipTimeSeconds=10771; r.route.distanceKm=42.195;
@@ -2459,15 +2476,28 @@ class Data(Group):
             const wrap=document.querySelector('.photo-grid-wrap');
             if(!wrap) return false;
             const top=wrap.getBoundingClientRect().top;
-            // 牆進到可視範圍內（不再是捲動前的一個半螢幕之外）
-            return window.scrollY>0 && top>-40 && top<window.innerHeight*0.6;
+            // 有捲動、牆在可視範圍內，而且沒被固定在上面的頂列、搜尋篩選列蓋住
+            const row2=document.querySelector('.topbar-row2').getBoundingClientRect();
+            return window.scrollY>0 && top>=row2.bottom-1 && top<window.innerHeight*0.6;
         }''')
-        # 牆的位置沒有被搬到榮譽櫃上方——只是捲過去，版面順序不變
-        c['photo_wall_stays_below_trophy_cabinet'] = page.evaluate('''()=>{
+        page.set_viewport_size(DESKTOP)
+        page.wait_for_timeout(200)
+        # v4.0：生涯數據、榮譽櫃搬到「生涯數據」分頁——賽事分頁的獎牌牆上面不再有它們
+        c['photo_wall_not_under_career_summary'] = page.evaluate('''()=>{
             const wrap=document.querySelector('.photo-grid-wrap');
-            const cabinet=document.querySelector('.trophy-cabinet-summary');
-            if(!wrap||!cabinet) return false;
-            return cabinet.compareDocumentPosition(wrap)&Node.DOCUMENT_POSITION_FOLLOWING;
+            return !!wrap && !document.querySelector('#calendar .career-summary-wrap')
+                && !document.querySelector('#calendar .trophy-cabinet-summary');
+        }''')
+        # 已經看得到牆的時候不要捲（v4.0）：切換鈕就在牆的正上方
+        c['photo_wall_toggle_does_not_scroll_when_visible'] = page.evaluate('''async()=>{
+            state.races=state.races.filter(r=>r.status==='completed');
+            state.viewMode='calendar'; renderAll(); window.scrollTo(0,0);
+            await new Promise(s=>setTimeout(s,150));
+            document.getElementById('cal-view-toggle').click();
+            await new Promise(s=>setTimeout(s,700));
+            const ok=window.scrollY===0 && !!document.querySelector('.photo-grid-wrap');
+            state.viewMode='calendar'; renderAll();
+            return ok;
         }''')
         # 匯入紀錄檔一律覆蓋，成績時間是最容易被偷偷保留的那一格：
         # 一旦又加回「已有值就不覆蓋」的保護，使用者會再次遇到
@@ -3041,6 +3071,7 @@ class Climate(Group):
 
     SEED = """()=>{
         state.races=[];
+        state.homeTab='career';   // v4.0：氣候與表現圖在「生涯數據」分頁
         const add=(name,sport,km,sec,feels,avg,elev,splits)=>{
           const r=emptyRace(name,sport,'completed','2026-0'+(1+state.races.length%9)+'-1'+(state.races.length%9));
           r.route.distanceKm=km; r.results.chipTimeSeconds=sec;
@@ -3905,27 +3936,32 @@ class FeedbackConfigured(Group):
     def body(self, page):
         c = self.checks
         self.setup_page(page)
-        c['feedback_fab_stacks_without_overlap_desktop'] = page.evaluate('''()=>{
-            const box=id=>{ const el=document.getElementById(id);
-              if(!el||getComputedStyle(el).display==='none') return null;
-              return el.getBoundingClientRect(); };
-            const fb=box('btn-feedback'), help=box('btn-help');
-            const overlap=(a,b)=>a&&b&&!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
-            const cxA=fb.left+fb.width/2, cxB=help.left+help.width/2;
-            const hit=document.elementFromPoint(cxA,fb.top+fb.height/2);
-            return !overlap(fb,help) && fb.bottom<=help.top          // 在說明鈕上方
-                && Math.abs(cxA-cxB)<1                               // 水平置中對齊
-                && fb.width<help.width                               // 次要入口，小一號
-                && !!(hit&&hit.closest('#btn-feedback'));
+        # 使用說明、意見回饋（v4.0）：不再是右下角的懸浮鈕，收在頭像選單最後一組；
+        # 選單打開時兩個都點得到（不被其他東西蓋住）
+        c['help_and_feedback_in_avatar_menu'] = page.evaluate('''async()=>{
+            const panel=document.getElementById('account-menu-panel');
+            const fb=document.getElementById('btn-feedback'), help=document.getElementById('btn-help');
+            const closedHidden=panel.hidden && !fb.getBoundingClientRect().width;
+            document.getElementById('btn-account-menu').click(); await new Promise(s=>setTimeout(s,150));
+            const hit=el=>{ const r=el.getBoundingClientRect(); const h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); return !!(h&&h.closest('#'+el.id)); };
+            const ok=closedHidden && !panel.hidden && hit(help) && hit(fb) && help.compareDocumentPosition(fb)&Node.DOCUMENT_POSITION_FOLLOWING
+                && help.querySelector('img').getAttribute('src')==='icons/help-avatar.png'
+                && !document.querySelector('.help-fab,.feedback-fab,.help-fab-wrap,.feedback-fab-wrap');
+            document.getElementById('btn-account-menu').click();
+            return ok && panel.hidden;
         }''')
-        # ---- 字級切換（桌機）：位置、記憶、按下狀態 ----
-        c['font_scale_control_left_of_theme_toggle'] = page.evaluate('''()=>{
+        # ---- 字級、深色模式、語言（v4.0 收進頭像選單的「顯示」）：記憶、按下狀態 ----
+        c['display_settings_in_avatar_menu'] = page.evaluate('''()=>{
+            const panel=document.getElementById('account-menu-panel');
             const group=document.querySelector('.font-scale');
             const theme=document.getElementById('btn-theme-toggle');
-            if(!group||!theme) return false;
-            const g=group.getBoundingClientRect(), t2=theme.getBoundingClientRect();
+            const lang=document.getElementById('lang-select');
+            if(!group||!theme||!lang) return false;
             const labels=[...group.querySelectorAll('[data-font-scale]')].map(b=>b.textContent.trim()).join('');
-            return g.right<=t2.left && labels==='小中大'
+            const inPanel=[group,theme,lang].every(el=>panel.contains(el));
+            const order=group.compareDocumentPosition(theme)&Node.DOCUMENT_POSITION_FOLLOWING && theme.compareDocumentPosition(lang)&Node.DOCUMENT_POSITION_FOLLOWING;
+            const topbarLoose=[...document.querySelectorAll('.topbar-actions > *')].every(el=>!el.matches('.font-scale,.lang-switcher,#btn-theme-toggle'));
+            return inPanel && order && topbarLoose && labels==='小中大' && theme.getAttribute('role')==='switch'
                 && group.querySelector('[data-font-scale="medium"]').getAttribute('aria-pressed')==='true';
         }''')
         c['font_scale_persists_and_syncs'] = page.evaluate('''async()=>{
@@ -3951,36 +3987,25 @@ class FeedbackConfigured(Group):
             applyFontScale('medium');
             return before===after;
         }''')
-        # ---- 回饋按鈕旁的文字 ----
-        c['feedback_caption_left_of_button_and_static'] = page.evaluate('''()=>{
-            const cap=document.getElementById('feedback-fab-caption');
-            const btn=document.getElementById('btn-feedback');
-            const a=cap.getBoundingClientRect(), b=btn.getBoundingClientRect();
-            const midA=a.top+a.height/2, midB=b.top+b.height/2;
-            return a.right<=b.left && Math.abs(midA-midB)<2
-                && cap.textContent.trim()==='說說你的想法'
-                && getComputedStyle(cap).animationName==='none';   // 不跟說明鈕一起浮動
+        # ---- 訓練是首頁的第三個分頁（v4.0；原本是頂列「＋ 新增賽事」下面的小按鈕） ----
+        c['training_is_home_tab'] = page.evaluate('''()=>{
+            const tr=document.getElementById('btn-training');
+            const tabs=[...document.querySelectorAll('.home-tabs .home-tab')];
+            return !!tr.closest('.home-tabs') && !tr.closest('#topbar') && tabs[tabs.length-1]===tr
+                && tabs.every(b=>Math.abs(b.getBoundingClientRect().top-tr.getBoundingClientRect().top)<1);
         }''')
-        # ---- 訓練入口在頂端列「＋ 新增賽事」正下方（v3.78.0） ----
-        c['training_button_below_new_race'] = page.evaluate('''()=>{
-            const tr=document.getElementById('btn-training'), nw=document.getElementById('btn-new');
-            const a=tr.getBoundingClientRect(), b=nw.getBoundingClientRect();
-            return !!tr.closest('.topbar-actions') && !tr.closest('.cal-nav')
-                && a.top>=b.bottom && Math.abs(a.left-b.left)<1 && Math.abs(a.width-b.width)<1   // 正下方、同寬
-                && a.height<b.height;                                                             // 小一點
-        }''')
-        # 其他控制項要對齊「＋ 新增賽事」，不是對齊兩顆按鈕疊起來的中間；訓練鈕不可以超出頂端列
-        c['top_bar_controls_align_with_new_race'] = page.evaluate('''async()=>{
+        # 頂列只剩三樣：簡易版、＋ 新增賽事、頭像——三種字級都排成一行、垂直置中對齊
+        c['topbar_three_controls_aligned'] = page.evaluate('''async()=>{
             const out=[];
             for(const sc of ['small','medium','large']){
               applyFontScale(sc); await new Promise(s=>setTimeout(s,150));
+              const shown=[...document.querySelectorAll('.topbar-actions > *')].filter(el=>el.getBoundingClientRect().width>0);
+              const ids=shown.map(el=>el.id||el.className).join('|');
               const mid=el=>{const r=el.getBoundingClientRect(); return r.top+r.height/2;};
               const nb=document.getElementById('btn-new');
-              const off=Math.max(...['.font-scale','#btn-theme-toggle','.lang-switcher']
-                .map(q=>Math.abs(mid(document.querySelector(q))-mid(nb))));
-              const inside=document.getElementById('btn-training').getBoundingClientRect().bottom
-                <=document.querySelector('header').getBoundingClientRect().bottom;
-              out.push(off<1.5 && inside);
+              const off=Math.max(...['#btn-mode-toggle','#btn-account-menu'].map(q=>Math.abs(mid(document.querySelector(q))-mid(nb))));
+              out.push(ids==='btn-mode-toggle|btn-new|action-menu account-menu' && off<1.5
+                && document.querySelector('header').getBoundingClientRect().height<110);
             }
             applyFontScale('medium');
             return out.every(Boolean);
@@ -4014,13 +4039,16 @@ class FeedbackConfigured(Group):
             return !url.includes('私密賽事名稱XYZ') && !url.includes('003150')
                 && !url.includes('2:59:34') && url.includes('賽事詳情');
         }''')
-        # 點文字等同按回饋鈕
-        c['feedback_caption_is_clickable'] = page.evaluate('''async()=>{
+        # 從頭像選單按「意見回饋」：開表單，選單收起來
+        c['feedback_menu_item_opens_form_and_closes_menu'] = page.evaluate('''async()=>{
+            selectRace(null); await new Promise(s=>setTimeout(s,200));
             let args=null; const real=window.open; window.open=(...a)=>{ args=a; };
-            document.getElementById('feedback-fab-caption').click();
+            document.getElementById('btn-account-menu').click(); await new Promise(s=>setTimeout(s,150));
+            const opened=!document.getElementById('account-menu-panel').hidden;
+            document.getElementById('btn-feedback').click();
             await new Promise(s=>setTimeout(s,150));
             window.open=real;
-            return !!args && args[0].includes('TESTFORM');
+            return opened && !!args && args[0].includes('TESTFORM') && document.getElementById('account-menu-panel').hidden;
         }''')
         c['feedback_opens_new_tab'] = page.evaluate('''async()=>{
             let args=null; const real=window.open; window.open=(...a)=>{ args=a; };
@@ -4591,11 +4619,13 @@ class Simple(Group):
         # 首頁（五場以上才有生涯區）：簡易版收起榮譽櫃、氣溫與配速圖；留 PB 卡與年度回顧長圖卡
         c['home_trims_trophy_and_charts'] = page.evaluate("""async()=>{
             const extra=[1,2,3].map(i=>{ const r=emptyRace('馬拉松'+i,'road_running','completed','2023-0'+i+'-10'); r.route.distanceKm=42.195; r.results.chipTimeSeconds=13000+i; return r; });
-            state.races.push(...extra); state.selectedId=null; renderAll(); await new Promise(s=>setTimeout(s,300));
+            state.races.push(...extra); state.selectedId=null; state.homeTab='career'; renderAll(); await new Promise(s=>setTimeout(s,300));
             const q=s=>!!document.querySelector('#calendar '+s);
             const full=q('.trophy-cabinet-wrap') && q('.climate-chart-wrap') && q('.honor-card') && q('.year-in-review-row');
             document.getElementById('btn-mode-toggle').click(); await new Promise(s=>setTimeout(s,300));
-            const simple=!q('.trophy-cabinet-wrap') && !q('.climate-chart-wrap') && q('.honor-card') && q('.year-in-review-row');
+            const simple=!q('.trophy-cabinet-wrap') && !q('.climate-chart-wrap') && q('.honor-card') && q('.year-in-review-row')
+              && q('[data-action="open-hof"]');
+            state.homeTab='races'; renderAll();
             return full && simple && document.documentElement.getAttribute('data-mode')==='simple'; }""")
         c['i18n_switch_and_section_labels'] = page.evaluate("""async()=>{
             selectRace('rich',{scroll:false}); await new Promise(s=>setTimeout(s,200));
@@ -4653,7 +4683,8 @@ class Simple(Group):
 
 
 class SimplePhone(Group):
-    """簡易版開關在手機：標題列右上角、不壓到標題、不撐出橫向捲軸。"""
+    """手機頂列（v4.0 起只有一行）：標題｜簡易版開關｜頭像。開關緊貼在頭像左邊、
+    跟標題同一行、不壓到標題、不撐出橫向捲軸；簡易版沒有「訓練」分頁。"""
     preset_full_mode = False
 
     def run(self, browser):
@@ -4668,14 +4699,17 @@ class SimplePhone(Group):
                 for lang in ('zh', 'en', 'ja'):
                     r = page.evaluate("""(lang)=>{ setLang(lang);
                         const b=document.getElementById('btn-mode-toggle').getBoundingClientRect();
+                        const av=document.getElementById('btn-account-menu').getBoundingClientRect();
                         const h=document.querySelector('.app-title'); const rg=document.createRange(); rg.selectNodeContents(h);
                         const tr=rg.getBoundingClientRect();
-                        return {right:innerWidth-b.right, top:b.top, titleBottom:tr.bottom, gap:b.left-tr.right, w:b.width,
-                          scroll:document.documentElement.scrollWidth, vw:innerWidth,
+                        return {right:innerWidth-av.right, avGap:av.left-b.right, top:b.top, titleBottom:tr.bottom, gap:b.left-tr.right, w:b.width,
+                          avTop:av.top, scroll:document.documentElement.scrollWidth, vw:innerWidth,
+                          newBtn:getComputedStyle(document.getElementById('btn-new')).display,
                           training:getComputedStyle(document.getElementById('btn-training')).display}; }""", lang)
-                    ok = (r['w'] > 0 and 10 <= r['right'] <= 24 and r['top'] < r['titleBottom'] and r['gap'] >= 8
+                    ok = (r['w'] > 0 and 10 <= r['right'] <= 24 and 0 <= r['avGap'] <= 12 and r['top'] < r['titleBottom']
+                          and r['avTop'] < r['titleBottom'] and r['gap'] >= 8 and r['newBtn'] == 'none'
                           and r['scroll'] <= r['vw'] and ((r['training'] == 'none') == (m == 'simple')))
-                    self.checks[f'phone{w}_{m}_{lang}_switch_top_right_no_overlap'] = ok
+                    self.checks[f'phone{w}_{m}_{lang}_one_row_topbar_no_overlap'] = ok
                     if not ok:
                         print(f'   ⚠ phone{w}_{m}_{lang}: {r}')
                 ctx.close()
@@ -4874,7 +4908,7 @@ class UxFixes(Group):
             const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';
             const first=document.getElementById('detail').firstElementChild;
             return !!id && location.hash==='#race='+encodeURIComponent(id) && hidden('#calendar') && hidden('.topbar-row2')
-              && hidden('.topbar-row3') && hidden('#focus-panel-slot') && scrollY===0
+              && hidden('.home-tabs') && hidden('#focus-panel-slot') && scrollY===0
               && first.classList.contains('quick-nav') && first.firstElementChild.classList.contains('qn-back')
               && first.querySelectorAll('a').length===5 && history.state && history.state.appNav===true; }""", rid)
         c['detail_nav_stays_reachable_when_scrolled'] = page.evaluate("""async()=>{
@@ -4892,7 +4926,7 @@ class UxFixes(Group):
         page.wait_for_timeout(600)
         c['browser_forward_reopens_race'] = page.evaluate("(id)=>state.selectedId===id && scrollY===0", rid)
         page.reload()
-        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=15000)
+        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=30000)
         page.wait_for_timeout(300)
         page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
         c['reload_reopens_same_race'] = page.evaluate("""(id)=>state.selectedId===id && !!currentRace
@@ -4933,7 +4967,7 @@ class UxFixes(Group):
         base = page.evaluate("location.href.split('#')[0]")
         page.goto(base + '#race=from-cloud')
         page.reload()   # 只改 # 的 goto 是同一份文件的跳轉；重新載入才會走到 init()
-        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=15000)
+        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=30000)
         page.wait_for_timeout(300)
         c['unknown_race_in_url_waits_for_cloud'] = page.evaluate("""async()=>{
             const waiting=pendingRouteRaceId==='from-cloud' && state.selectedId===null && location.hash==='#race=from-cloud';
@@ -4943,7 +4977,7 @@ class UxFixes(Group):
         # 直接開網址進來（沒有上一筆可以退）：按返回回到清單，不會離開網站
         page.goto(base + '#race=' + rid)
         page.reload()   # 只改 # 的 goto 是同一份文件的跳轉；重新載入才會走到 init()
-        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=15000)
+        page.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0 && document.body.classList.contains('viewing-detail')===!!(state.selectedId||state.creating)", timeout=30000)
         page.wait_for_timeout(300)
         page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
         opened = page.evaluate("(id)=>state.selectedId===id && !(history.state&&history.state.appNav)", rid)
@@ -4980,6 +5014,351 @@ class UxFixes(Group):
         pctx.close()
 
 
+# v4.0：在 107 場之外補三場還沒比的、一場沒日期的（日期相對今天，每天跑都成立）
+V4_EXTRA_JS = """async()=>{ await __seed107();
+    const up=(n,st,d)=>{ const r=emptyRace(n,'road_running',st,addDaysStr(todayISO(),d)); r.route.distanceKm=42.195; r.location.city='台北市'; return r; };
+    state.races.push(up('近的比賽','registered',9),up('遠的比賽','considering',120),up('抽籤的比賽','lottery_pending',45));
+    state.races.push(emptyRace('沒日期的比賽','trail_running','considering',''));
+    await persist(); renderAll(); window.scrollTo(0,0); }"""
+
+
+class V4Layout(Group):
+    """v4.0 版面：頂列只剩三樣、頭像選單（顯示／資料／說明）、首頁分頁（賽事／生涯數據／訓練）、
+    手機預設清單、右下角只剩「＋」、賽事頁頁首精簡、第一次打開的歡迎卡、頁尾版本號。"""
+
+    def body(self, page):
+        c = self.checks
+        page.add_script_tag(content=UX_SEED_JS)
+        page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        # ================= 第一次打開：還沒有任何賽事 =================
+        c['first_run_shows_welcome_card'] = page.evaluate("""()=>{
+            const card=document.querySelector('#calendar .welcome-card');
+            const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';
+            return state.races.length===0 && !!card && card.querySelectorAll('button').length===3
+              && !!card.querySelector('.welcome-main[data-action="start-create"]')
+              && !!card.querySelector('[data-action="welcome-import"]') && !!card.querySelector('[data-action="welcome-sample"]')
+              && hidden('.topbar-row2') && document.getElementById('detail').children.length===0
+              && !card.querySelector('.welcome-hint'); }""")   # 沒設定雲端同步：不提登入
+        c['first_run_sign_in_hint_only_when_signed_out'] = page.evaluate("""()=>{
+            const real=window.cloudEnabled; window.cloudEnabled=()=>true; state.user=null; renderCalendar();
+            const a=!!document.querySelector('.welcome-card .welcome-hint');
+            state.user={uid:'u',displayName:'Aaron'}; renderCalendar();
+            const b=!document.querySelector('.welcome-card .welcome-hint');
+            window.cloudEnabled=real; state.user=null; renderCalendar(); return a && b; }""")
+        c['first_run_glow_only_on_welcome_button'] = page.evaluate("""()=>{
+            try{ localStorage.removeItem(FIRST_USE_GLOW_KEY); }catch(e){}
+            renderCalendar();
+            return document.querySelector('.welcome-main').classList.contains('cta-glow')
+              && !document.getElementById('btn-new').classList.contains('cta-glow'); }""")
+        c['welcome_new_button_opens_create_form'] = page.evaluate("""async()=>{
+            document.querySelector('.welcome-card .welcome-main').click(); await new Promise(s=>setTimeout(s,300));
+            const ok=state.creating && !!document.querySelector('#detail .create-form') && location.hash==='#new';
+            document.querySelector('[data-action="cancel-create"]').click(); await new Promise(s=>setTimeout(s,400));
+            return ok && !state.creating && !!document.querySelector('.welcome-card'); }""")
+        c['welcome_import_button_opens_file_picker'] = page.evaluate("""()=>{
+            const inp=document.getElementById('import-file-input'); let clicked=false; const real=inp.click;
+            inp.click=()=>{ clicked=true; };
+            document.querySelector('[data-action="welcome-import"]').click(); inp.click=real; return clicked; }""")
+        # 「先看範例資料」：載入範例、直接打開第一場（看得到一場完整的紀錄長什麼樣子）；
+        # 返回首頁後歡迎卡就不見了，清掉範例又回來
+        c['welcome_sample_loads_samples_then_card_goes_away'] = page.evaluate("""async()=>{
+            document.querySelector('[data-action="welcome-sample"]').click(); await new Promise(s=>setTimeout(s,500));
+            const loaded=state.races.filter(r=>EXAMPLE_RACE_IDS.includes(r.id)).length===5 && EXAMPLE_RACE_IDS.includes(state.selectedId);
+            document.querySelector('#detail .qn-back').click(); await new Promise(s=>setTimeout(s,500));
+            const gone=!state.selectedId && !document.querySelector('.welcome-card')
+              && getComputedStyle(document.querySelector('.topbar-row2')).display!=='none' && !document.body.classList.contains('is-first-run');
+            document.getElementById('btn-sample-data').click(); await new Promise(s=>setTimeout(s,500));
+            return loaded && gone && !!document.querySelector('.welcome-card') && document.body.classList.contains('is-first-run'); }""")
+        page.evaluate(V4_EXTRA_JS)
+        page.wait_for_timeout(300)
+        # ================= 頂列、頁尾 =================
+        c['topbar_three_controls_no_row3'] = page.evaluate("""()=>{
+            const shown=[...document.querySelectorAll('.topbar-actions > *')].filter(el=>el.getBoundingClientRect().width>0);
+            return shown.map(el=>el.id||el.className).join('|')==='btn-mode-toggle|btn-new|action-menu account-menu'
+              && !document.querySelector('.topbar-row3') && !document.getElementById('data-mgmt-menu')
+              && document.querySelector('header').getBoundingClientRect().height<100; }""")
+        c['footer_version_and_copyright_last_in_main'] = page.evaluate("""()=>{
+            const main=document.getElementById('main-content'), f=main.querySelector(':scope > .app-footer');
+            const v=document.getElementById('app-version'), cp=document.getElementById('app-copyright');
+            return !!f && main.lastElementChild===f && f.contains(v) && f.contains(cp) && v.textContent.includes(APP_VERSION)
+              && cp.textContent.includes('2026') && f.getBoundingClientRect().top>document.getElementById('calendar').getBoundingClientRect().bottom; }""")
+        # ================= 首頁分頁 =================
+        c['races_tab_default_order_no_career_strip'] = page.evaluate("""()=>{
+            const kids=[...document.getElementById('main-content').children].map(e=>e.id||e.className.split(' ')[0]);
+            const cur=document.querySelector('.home-tab[aria-current="page"]');
+            return !!cur && cur.dataset.homeTab==='races' && state.homeTab==='races' && document.body.dataset.homeTab==='races'
+              && kids.join()==='home-tabs,focus-panel-slot,topbar-row2,calendar,detail,app-footer'
+              && !!document.querySelector('#focus-panel-slot .focus-panel') && !!document.querySelector('#calendar .cal-grid')
+              && !document.querySelector('#calendar .career-summary-wrap')
+              && document.querySelectorAll('.home-tab[aria-current]').length===1; }""")
+        c['career_tab_has_stats_and_no_calendar_tools'] = page.evaluate("""async()=>{
+            document.querySelector('.home-tab[data-home-tab="career"]').click(); await new Promise(s=>setTimeout(s,300));
+            const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';
+            return state.homeTab==='career' && document.body.dataset.homeTab==='career'
+              && document.querySelector('.home-tab[aria-current="page"]').dataset.homeTab==='career'
+              && !!document.querySelector('#calendar .career-summary-wrap .honor-card') && !!document.querySelector('#calendar .trophy-cabinet-wrap')
+              && !document.querySelector('#calendar .cal-grid') && hidden('.topbar-row2') && hidden('#focus-panel-slot')
+              && document.querySelector('#focus-panel-slot').innerHTML===''; }""")
+        c['career_hof_button_opens_review_without_press_charge'] = page.evaluate("""async()=>{
+            const b=document.querySelector('.honor-card [data-action="open-hof"]'); if(!b) return false;
+            b.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}));
+            const charging=document.querySelector('.honor-card').classList.contains('pressing');
+            document.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));
+            b.click(); await new Promise(s=>setTimeout(s,200));
+            const open=!document.getElementById('hof-overlay').hidden;
+            closeHallOfFame(); return open && !charging; }""")
+        c['career_hof_button_without_marathon_pb'] = page.evaluate("""()=>{
+            const keep=state.races; state.races=keep.filter(r=>!(r.route.distanceKm>42&&r.route.distanceKm<42.3)); renderCalendar();
+            const ok=!document.querySelector('#calendar .honor-card') && !!document.querySelector('#calendar .career-hof-row [data-action="open-hof"]');
+            state.races=keep; renderCalendar(); return ok; }""")
+        c['career_tab_empty_message_under_five'] = page.evaluate("""()=>{
+            const keep=state.races; state.races=keep.slice(0,3); renderCalendar();
+            const e=document.querySelector('#calendar .career-empty'); const ok=!!e && e.textContent.includes('目前 3 場');
+            state.races=keep; renderCalendar(); return ok && !document.querySelector('#calendar .career-empty'); }""")
+        c['career_tab_survives_race_round_trip'] = page.evaluate("""async()=>{
+            const r=state.races.find(x=>x.status==='completed'); selectRace(r.id); await new Promise(s=>setTimeout(s,300));
+            const tabsHidden=getComputedStyle(document.querySelector('.home-tabs')).display==='none';
+            document.querySelector('#detail .qn-back').click(); await new Promise(s=>setTimeout(s,500));
+            return tabsHidden && state.homeTab==='career' && !!document.querySelector('#calendar .career-summary-wrap')
+              && getComputedStyle(document.querySelector('.home-tabs')).display!=='none'; }""")
+        c['training_tab_opens_overlay_keeps_current_tab'] = page.evaluate("""async()=>{
+            document.getElementById('btn-training').click(); await new Promise(s=>setTimeout(s,200));
+            const open=!document.getElementById('training-overlay').hidden; closeTrainingOverlay();
+            return open && state.homeTab==='career' && !document.getElementById('btn-training').hasAttribute('aria-current'); }""")
+        c['races_tab_returns_calendar'] = page.evaluate("""async()=>{
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await new Promise(s=>setTimeout(s,300));
+            return state.homeTab==='races' && !!document.querySelector('#calendar .cal-grid')
+              && !document.querySelector('#calendar .career-summary-wrap') && !!document.querySelector('#focus-panel-slot .focus-panel'); }""")
+        # ================= 頭像選單 =================
+        c['avatar_menu_holds_everything_in_order'] = page.evaluate("""()=>{
+            const p=document.getElementById('account-menu-panel');
+            const ids=['auth-area','btn-open-profile','lang-select','menu-group-import','btn-import','btn-import-json','menu-group-export',
+              'btn-export','btn-export-csv','btn-export-notebook','btn-export-ics','btn-recovery','btn-sample-data','btn-clear','btn-help','btn-feedback','auth-signout'];
+            const els=ids.map(id=>document.getElementById(id));
+            return els.every(e=>e&&p.contains(e)) && els.every((e,i)=>i===0||els[i-1].compareDocumentPosition(e)&Node.DOCUMENT_POSITION_FOLLOWING)
+              && p.lastElementChild===document.getElementById('auth-signout')
+              && ['menu-group-import','menu-group-export'].every(id=>{ const d=document.getElementById(id); return d.tagName==='DETAILS' && !d.open; }); }""")
+        page.click('#btn-account-menu')
+        page.wait_for_timeout(200)
+        c['menu_font_scale_keeps_menu_open_inside_viewport'] = page.evaluate("""async()=>{
+            const p=document.getElementById('account-menu-panel');
+            document.querySelector('[data-font-scale="large"]').click(); await new Promise(s=>setTimeout(s,200));
+            const r=p.getBoundingClientRect();
+            const ok=!p.hidden && document.documentElement.getAttribute('data-font')==='large' && r.right<=innerWidth-7 && r.left>=7;
+            document.querySelector('[data-font-scale="medium"]').click(); await new Promise(s=>setTimeout(s,200));
+            return ok && !p.hidden; }""")
+        c['menu_dark_mode_switch'] = page.evaluate("""async()=>{
+            const b=document.getElementById('btn-theme-toggle'), p=document.getElementById('account-menu-panel');
+            b.click(); await new Promise(s=>setTimeout(s,150));
+            const on=document.documentElement.getAttribute('data-theme')==='dark' && b.getAttribute('aria-checked')==='true' && !p.hidden
+              && localStorage.getItem('theme-pref-v1')==='dark';
+            b.click(); await new Promise(s=>setTimeout(s,150));
+            return on && document.documentElement.getAttribute('data-theme')==='light' && b.getAttribute('aria-checked')==='false' && !p.hidden; }""")
+        c['menu_export_group_expands_menu_stays'] = page.evaluate("""async()=>{
+            const d=document.getElementById('menu-group-export'), p=document.getElementById('account-menu-panel');
+            d.querySelector('summary').click(); await new Promise(s=>setTimeout(s,150));
+            const ok=d.open && !p.hidden && document.getElementById('btn-export-ics').getBoundingClientRect().height>0;
+            d.querySelector('summary').click(); await new Promise(s=>setTimeout(s,150));
+            return ok && !d.open && !p.hidden; }""")
+        c['menu_escape_closes_and_refocuses_avatar'] = page.evaluate("""async()=>{
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await new Promise(s=>setTimeout(s,100));
+            const t=document.getElementById('btn-account-menu');
+            return document.getElementById('account-menu-panel').hidden && document.activeElement===t && t.getAttribute('aria-expanded')==='false'; }""")
+        c['menu_help_opens_help_and_closes_menu'] = page.evaluate("""async()=>{
+            document.getElementById('btn-account-menu').click(); await new Promise(s=>setTimeout(s,150));
+            document.getElementById('btn-help').click(); await new Promise(s=>setTimeout(s,200));
+            const ok=!document.getElementById('help-modal').hidden && document.getElementById('account-menu-panel').hidden
+              && document.querySelector('#help-modal .help-body').textContent.includes('頭像選單')
+              && !document.querySelector('#help-modal .help-body').textContent.includes('左下角');
+            document.querySelector('#help-modal [data-action="close-help"]').click(); return ok; }""")
+        c['menu_import_item_closes_menu'] = page.evaluate("""async()=>{
+            const inp=document.getElementById('import-file-input'); let clicked=false; const real=inp.click; inp.click=()=>{ clicked=true; };
+            document.getElementById('btn-account-menu').click(); await new Promise(s=>setTimeout(s,150));
+            document.querySelector('#menu-group-import summary').click(); await new Promise(s=>setTimeout(s,100));
+            document.getElementById('btn-import').click(); await new Promise(s=>setTimeout(s,100));
+            inp.click=real; document.getElementById('menu-group-import').open=false;
+            return clicked && document.getElementById('account-menu-panel').hidden; }""")
+        c['signed_in_header_count_and_signout_last'] = page.evaluate("""()=>{
+            const real=window.cloudEnabled; window.cloudEnabled=()=>true; state.user={uid:'u1',displayName:'Aaron',email:'',photoURL:''};
+            renderAuthArea();
+            const n=state.races.filter(r=>!r.deletedAt).length;
+            const q=s=>document.querySelector('#auth-area '+s);
+            const out=document.getElementById('auth-signout');
+            const a=q('.auth-user-name').textContent==='Aaron' && q('.auth-initial').textContent==='A'
+              && q('.auth-user-sub').textContent.includes(n+' 場') && !out.hidden && out.lastElementChild.id==='btn-signout'
+              && !q('#btn-signout') && !!q('#btn-sync-diag');
+            state.races.push(emptyRace('計數用','road_running','considering','')); renderAll();
+            const b=q('.auth-user-sub').textContent.includes((n+1)+' 場');
+            state.races.pop(); state.user=null; window.cloudEnabled=real; renderAuthArea(); renderAll();
+            return a && b && document.getElementById('auth-signout').hidden && !document.getElementById('btn-signout'); }""")
+        c['v4_strings_translated'] = page.evaluate("""()=>{
+            const read=()=>[document.querySelector('.home-tab[data-home-tab="races"]').textContent,
+              document.querySelector('.home-tab[data-home-tab="career"]').textContent,
+              document.querySelector('[data-i18n="ui.menuDisplay"]').textContent,
+              document.querySelector('.view-seg [data-phone-view="list"]').textContent,
+              document.querySelector('[data-i18n="ui.menuExport"]').textContent];
+            setLang('ja'); const ja=read(); const selJa=document.getElementById('lang-select').value;
+            setLang('en'); const en=read(); setLang('zh'); const zh=read();
+            return selJa==='ja' && document.getElementById('lang-select').value==='zh'
+              && ja.slice(0,4).join('|')==='大会|キャリア|表示|リスト' && en.slice(0,4).join('|')==='Races|Career|Display|List'
+              && zh.join('|')==='賽事|生涯數據|顯示|清單|匯出與備份（JSON／CSV／行事曆）'
+              && document.querySelector('.home-tabs').getAttribute('aria-label')==='首頁'; }""")
+        # ================= 賽事頁頁首 =================
+        c['completed_header_compact'] = page.evaluate("""async()=>{
+            const r=state.races.find(x=>x.status==='completed'&&x.location.city); selectRace(r.id); await new Promise(s=>setTimeout(s,300));
+            const h=document.querySelector('#detail .detail-header');
+            const btn=h.querySelector('.dh-status-btn');
+            return !h.querySelector('.lifecycle-stepper') && !h.querySelector('.cover-upload') && !h.querySelector('.dh-gcal-quicklink')
+              && h.querySelector('.dh-meta').textContent.trim()===r.schedule.raceDate+' ・ '+r.location.city
+              && btn.getAttribute('aria-haspopup')==='true' && btn.textContent.trim()===statusLabel('completed'); }""")
+        c['status_menu_six_states_current_checked_left_aligned'] = page.evaluate("""async()=>{
+            document.querySelector('.dh-status-btn').click(); await new Promise(s=>setTimeout(s,150));
+            const p=document.getElementById('dh-status-menu'); const items=[...p.querySelectorAll('[data-action="lc-set-status"]')];
+            const checked=items.filter(i=>i.getAttribute('aria-checked')==='true').map(i=>i.dataset.status);
+            const b=document.querySelector('.dh-status-btn').getBoundingClientRect(), pr=p.getBoundingClientRect();
+            return !p.hidden && items.map(i=>i.dataset.status).join()==='considering,lottery_pending,registered,completed,dns,dnf'
+              && checked.join()==='completed' && Math.abs(pr.left-Math.max(8,b.left))<2 && pr.top>=b.bottom; }""")
+        c['status_menu_marks_dnf'] = page.evaluate("""async()=>{
+            const id=state.selectedId;
+            document.querySelector('#dh-status-menu [data-status="dnf"]').click(); await new Promise(s=>setTimeout(s,500));
+            const r=state.races.find(x=>x.id===id);
+            const ok=r.status==='dnf' && document.getElementById('dh-status-menu').hidden
+              && document.querySelector('.dh-status-btn').classList.contains('status-dnf') && !document.querySelector('#detail .lifecycle-stepper');
+            r.status='completed'; renderAll(); return ok; }""")
+        c['upcoming_header_keeps_stepper_without_dns_row'] = page.evaluate("""async()=>{
+            const r=state.races.find(x=>x.name==='近的比賽'); selectRace(r.id); await new Promise(s=>setTimeout(s,300));
+            const h=document.querySelector('#detail .detail-header');
+            return !!h.querySelector('.lifecycle-stepper') && !h.querySelector('.lc-exception-row') && !!h.querySelector('.progress-block')
+              && h.querySelector('.dh-meta').textContent.trim()===r.schedule.raceDate+' ・ 台北市'; }""")
+        c['cover_actions_in_more_menu'] = page.evaluate("""()=>{
+            const m=()=>document.getElementById('dh-more-menu');
+            const noCover=!!m().querySelector('[data-action="open-cover-picker"]') && !m().querySelector('[data-action="remove-cover"]');
+            currentRace.coverImage='data:image/gif;base64,R0lGODlhAQABAAAAACw='; renderDetail();
+            const withCover=['open-cover-picker','open-focal-point','remove-cover'].every(a=>!!m().querySelector('[data-action="'+a+'"]'))
+              && !document.querySelector('#detail .detail-header .cover-upload');
+            currentRace.coverImage=''; renderDetail(); return noCover && withCover; }""")
+        page.evaluate("()=>{ document.querySelector('#detail .qn-back').click(); }")
+        page.wait_for_timeout(400)
+
+        # ================= 手機 =================
+        pctx = full_mode_context(page.context.browser, viewport=PHONE, is_mobile=True, has_touch=True)
+        pp = pctx.new_page()
+        pp.on('pageerror', lambda e: self.errors.append(str(e)))
+        pp.goto(APP_URL)
+        pp.wait_for_timeout(900)
+        pp.add_script_tag(content=UX_SEED_JS)
+        pp.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        pp.evaluate(V4_EXTRA_JS)
+        pp.wait_for_timeout(300)
+        c['phone_topbar_one_row'] = pp.evaluate("""()=>{
+            const r=q=>document.querySelector(q).getBoundingClientRect();
+            const t=r('.app-title'), sw=r('#btn-mode-toggle'), av=r('#btn-account-menu');
+            return sw.top<t.bottom && av.top<t.bottom && sw.right<=av.left && innerWidth-av.right<=24
+              && r('#topbar').height<90 && getComputedStyle(document.getElementById('btn-new')).display==='none'
+              && document.documentElement.scrollWidth<=innerWidth; }""")
+        c['phone_default_list_view'] = pp.evaluate("""()=>{
+            const seg=document.querySelector('.view-seg');
+            const pressed=[...seg.querySelectorAll('[aria-pressed="true"]')].map(b=>b.dataset.phoneView);
+            const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';
+            const groups=[...document.querySelectorAll('#calendar .cal-phone-list > .cal-results-group')]
+              .map(g=>g.querySelector('.cal-results-group-title').childNodes[0].textContent.trim());
+            return getComputedStyle(seg).display!=='none' && pressed.join()==='list' && state.phoneView==='list'
+              && hidden('.cal-month-nav') && hidden('.cal-tools')
+              && groups.join()==='即將到來,最近的賽事,未定日期' && !document.querySelector('#calendar .cal-grid'); }""")
+        c['phone_list_upcoming_ascending_recent_five'] = pp.evaluate("""()=>{
+            const gs=[...document.querySelectorAll('#calendar .cal-phone-list > .cal-results-group')];
+            const dates=g=>[...g.querySelectorAll('.cal-list-item')].map(b=>state.races.find(r=>r.id===b.dataset.id).schedule.raceDate);
+            const up=dates(gs[0]), recent=dates(gs[1]), today=todayISO();
+            const past=state.races.filter(r=>!r.deletedAt&&r.schedule.raceDate&&r.schedule.raceDate<today).map(r=>r.schedule.raceDate).sort().reverse();
+            return up.length===3 && up.every((d,i)=>d>=today&&(i===0||d>=up[i-1]))
+              && recent.length===5 && recent.join()===past.slice(0,5).join()
+              && gs[2].textContent.includes('沒日期的比賽'); }""")
+        c['phone_focus_panel_kept_above_list'] = pp.evaluate("""()=>{
+            const fp=document.querySelector('#focus-panel-slot .focus-panel'), seg=document.querySelector('.view-seg');
+            return !!fp && fp.getBoundingClientRect().bottom<=seg.getBoundingClientRect().top
+              && document.querySelector('.home-tabs').getBoundingClientRect().bottom<=fp.getBoundingClientRect().top; }""")
+        c['phone_see_all_matches_history_chip'] = pp.evaluate("""async()=>{
+            const btn=document.querySelector('[data-action="list-see-all-history"]');
+            const chip=[...document.querySelectorAll('#filter-chips .chip')].find(b=>b.dataset.status==='history');
+            const n=Number((chip.textContent.match(/\\((\\d+)\\)/)||[])[1]);
+            const label=btn.textContent.includes(String(n));
+            btn.click(); await new Promise(s=>setTimeout(s,300));
+            const ok=label && state.filterStatus==='history' && document.querySelectorAll('.cal-results .cal-list-item').length===n;
+            document.querySelector('[data-action="clear-cal-results"]').click(); await new Promise(s=>setTimeout(s,200));
+            return ok && !!document.querySelector('#calendar .cal-phone-list'); }""")
+        c['phone_list_row_opens_race_and_back_keeps_list'] = pp.evaluate("""async()=>{
+            document.querySelector('#calendar .cal-phone-list .cal-list-item').click(); await new Promise(s=>setTimeout(s,400));
+            const opened=!!state.selectedId;
+            document.querySelector('#detail .qn-back').click(); await new Promise(s=>setTimeout(s,500));
+            return opened && !state.selectedId && state.phoneView==='list' && !!document.querySelector('#calendar .cal-phone-list'); }""")
+        c['phone_calendar_segment_has_month_nav'] = pp.evaluate("""async()=>{
+            document.querySelector('.view-seg [data-phone-view="calendar"]').click(); await new Promise(s=>setTimeout(s,200));
+            return state.phoneView==='calendar' && getComputedStyle(document.querySelector('.cal-month-nav')).display!=='none'
+              && !!document.querySelector('#calendar .cal-list') && !document.querySelector('#calendar .cal-phone-list')
+              && document.querySelector('.view-seg [aria-pressed="true"]').dataset.phoneView==='calendar'
+              && document.documentElement.scrollWidth<=innerWidth; }""")
+        c['phone_grid_segment_is_photo_wall'] = pp.evaluate("""async()=>{
+            document.querySelector('.view-seg [data-phone-view="grid"]').click(); await new Promise(s=>setTimeout(s,200));
+            const ok=state.phoneView==='grid' && !!document.querySelector('#calendar .photo-grid-wrap')
+              && getComputedStyle(document.querySelector('.cal-month-nav')).display==='none' && state.viewMode==='calendar';
+            document.querySelector('.view-seg [data-phone-view="list"]').click(); await new Promise(s=>setTimeout(s,200));
+            return ok && !!document.querySelector('#calendar .cal-phone-list'); }""")
+        c['phone_nav_swipe_ignored_outside_calendar'] = pp.evaluate("""()=>{
+            const nav=document.querySelector('.cal-nav'), m0=state.calendarMonth;
+            const mk=(type,x)=>{ const t=new Touch({identifier:1,target:nav,clientX:x,clientY:200});
+              return new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==='touchend'?[]:[t],changedTouches:[t]}); };
+            nav.dispatchEvent(mk('touchstart',300)); nav.dispatchEvent(mk('touchmove',200)); nav.dispatchEvent(mk('touchend',120));
+            return state.calendarMonth===m0 && !!document.querySelector('#calendar .cal-phone-list'); }""")
+        pp.set_viewport_size({'width': 1100, 'height': 844})
+        pp.wait_for_timeout(300)
+        c['crossing_640_switches_to_desktop_views'] = pp.evaluate("""()=>!!document.querySelector('#calendar .cal-grid')
+            && !document.querySelector('#calendar .cal-phone-list') && getComputedStyle(document.querySelector('.view-seg')).display==='none'
+            && getComputedStyle(document.querySelector('.cal-tools')).display!=='none'""")
+        pp.set_viewport_size(PHONE)
+        pp.wait_for_timeout(300)
+        c['crossing_back_to_phone_list'] = pp.evaluate("()=>!!document.querySelector('#calendar .cal-phone-list')")
+        c['phone_only_plus_fab'] = pp.evaluate("""()=>{
+            const nw=document.getElementById('btn-new-fab').getBoundingClientRect();
+            return nw.width===52 && Math.round(innerWidth-nw.right)===16 && Math.round(innerHeight-nw.bottom)===16
+              && !document.querySelector('.help-fab,.feedback-fab,#help-fab-caption,#feedback-fab-caption'); }""")
+        pp.set_viewport_size({'width': 390, 'height': 600})
+        pp.wait_for_timeout(200)
+        pp.click('#btn-account-menu')
+        pp.wait_for_timeout(200)
+        pp.click('#menu-group-export > summary')
+        pp.wait_for_timeout(250)
+        c['phone_menu_wide_scrolls_and_sits_above_fab'] = pp.evaluate("""()=>{
+            const p=document.getElementById('account-menu-panel'), r=p.getBoundingClientRect();
+            const fab=document.getElementById('btn-new-fab').getBoundingClientRect();
+            const hit=document.elementFromPoint(fab.left+fab.width/2,fab.top+fab.height/2);
+            return !p.hidden && r.width>=innerWidth-25 && r.bottom<=innerHeight-7 && p.scrollHeight>p.clientHeight
+              && !!(hit&&hit.closest('#account-menu-panel')); }""")
+        c['phone_menu_scroll_kept_when_group_toggles'] = pp.evaluate("""async()=>{
+            const p=document.getElementById('account-menu-panel'); p.scrollTop=p.scrollHeight;
+            await new Promise(s=>setTimeout(s,50)); const before=p.scrollTop;
+            document.querySelector('#menu-group-import > summary').click(); await new Promise(s=>setTimeout(s,200));
+            return before>0 && p.scrollTop>0 && !p.hidden; }""")
+        pp.keyboard.press('Escape')
+        pp.set_viewport_size(PHONE)
+        pp.wait_for_timeout(200)
+        c['phone_completed_header_short'] = pp.evaluate("""async()=>{
+            const r=state.races.find(x=>x.status==='completed'&&x.location.city); selectRace(r.id); await new Promise(s=>setTimeout(s,400));
+            const h=document.querySelector('#detail .detail-header').getBoundingClientRect();
+            return h.height<200 && !!document.querySelector('#detail .hero-results'); }""")
+        pctx.close()
+        # 新裝置（沒有任何資料、沒有預設完整版）：簡易版的歡迎卡，沒有「訓練」分頁
+        sctx = page.context.browser.new_context(viewport=PHONE, is_mobile=True, has_touch=True)
+        sp = sctx.new_page()
+        sp.on('pageerror', lambda e: self.errors.append(str(e)))
+        sp.goto(APP_URL)
+        sp.wait_for_timeout(900)
+        c['new_device_simple_welcome_without_training_tab'] = sp.evaluate("""()=>document.documentElement.getAttribute('data-mode')==='simple'
+            && !!document.querySelector('#calendar .welcome-card') && getComputedStyle(document.getElementById('btn-training')).display==='none'
+            && [...document.querySelectorAll('.home-tab')].filter(b=>getComputedStyle(b).display!=='none').length===2
+            && getComputedStyle(document.querySelector('.topbar-row2')).display==='none'""")
+        sctx.close()
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -5004,6 +5383,7 @@ GROUPS = {
     'simple':     lambda: Simple('simple'),
     'simple_phone': lambda: SimplePhone('simple_phone'),
     'ux':         lambda: UxFixes('ux'),
+    'v4':         lambda: V4Layout('v4'),
 }
 
 

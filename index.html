@@ -255,7 +255,6 @@
      光暈才都看得出效果，不是只有深色模式才有用。 */
   [data-theme="dark"] #ambient-glow{mix-blend-mode:screen;}
   [data-ambient="1"] #ambient-glow{opacity:0.14;}
-  [data-theme="dark"] .empty-state-icons,
   [data-theme="dark"] .sport-icon-wrap{color:var(--trail);}
   [data-theme="dark"] .row-remove{color:var(--stone);}
   *{box-sizing:border-box;}
@@ -287,29 +286,32 @@
 
   /* ---------- Topbar ---------- */
   #topbar{
-    position:sticky;top:0;z-index:10;background:var(--paper-glass);
+    position:sticky;top:0;z-index:45;background:var(--paper-glass);
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     border-bottom:1px solid var(--rule);padding:18px 32px 14px;
   }
   /* topbar-row2（行事曆月份切換＋搜尋＋篩選）不放在 #topbar 裡面，而是
-     放在 #main-content 最前面，這樣桌機版才能讓它正確吸頂（sticky 定位
+     放在 #main-content 裡面，這樣桌機版才能讓它正確吸頂（sticky 定位
      只能在「自己的父層還沒捲出畫面」的範圍內生效，放在矮矮的 #topbar
-     裡面捲一下就會被一起帶走）。row3（匯入匯出這排按鈕、版本號、
-     版權宣告）不需要固定，跟著內容正常捲動即可。 */
+     裡面捲一下就會被一起帶走）。v4.0 起它排在首頁分頁和「下一場」焦點卡
+     下面；原本的 row3（資料管理、版本號、版權宣告）拆掉了——資料管理進
+     頭像選單，版本號和版權搬到頁尾。 */
   .topbar-row2{
     position:sticky;top:var(--topbar-height,90px);z-index:9;
     background:var(--paper-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     border-bottom:1px solid var(--rule);
     margin:0 -32px 14px;padding:14px 32px;
   }
-  .topbar-row3{padding-bottom:6px;}
   /* 手機寬度下，不管是看行事曆列表還是單一賽事詳情，頂部導覽列整個
      都不固定，一律跟著內容正常捲走——手機螢幕小，同時要固定標題、
      語言、登入、月份切換、搜尋、篩選這些東西，不管怎麼精簡都還是佔
      掉一大塊畫面，實測即使只精簡到月份列還是有這個問題。改成完全
      不固定，需要搜尋或篩選時捲回最上面即可找到。 */
+  /* 頂列的 z-index 要比右下角的「＋」（41）高：頭像選單長在頂列裡，選單一
+     拉長，下半截會被「＋」蓋住（v4.0）。手機的頂列不固定，改用 relative
+     讓 z-index 生效，版面跟 static 一樣。 */
   @media (max-width:640px){
-    #topbar{position:static;}
+    #topbar{position:relative;}
     .topbar-row2{position:static;margin:0 0 14px;padding:14px 0;}
     body.viewing-detail .quick-nav{top:0;}
   }
@@ -319,8 +321,10 @@
   @media (min-width:641px) and (max-width:860px){
     .topbar-row2{margin:0 -18px 14px;padding:14px 18px;}
   }
-  .topbar-row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
-  .topbar-actions{display:flex;align-items:center;gap:14px;}
+  /* v4.0：頂列一行到底——左邊品牌，右邊「簡易版／＋ 新增賽事／頭像」 */
+  .topbar-row1{display:flex;justify-content:space-between;align-items:center;gap:16px;}
+  .topbar-brand{min-width:0;}
+  .topbar-actions{display:flex;align-items:center;gap:12px;flex-shrink:0;}
   .btn-text-small{
     background:none;border:none;padding:0;font:inherit;font-size:calc(12px*var(--fs,1));color:var(--ink-soft);
     text-decoration:underline;cursor:pointer;text-align:center;
@@ -338,20 +342,50 @@
   .account-trigger img{width:100%;height:100%;object-fit:cover;display:block;}
   .account-trigger.has-photo{border-color:var(--trail);}
   .account-menu .action-menu-panel{min-width:210px;padding-top:4px;}
+  /* 頭像選單（v4.0）：帳號之外，字體／深色模式／語言（設一次就不動的偏好）、
+     資料管理、使用說明、意見回饋都收在這裡。選單變長，放不下時在選單裡面
+     捲動——高度由 positionActionMenuPanel 依畫面剩下的空間設定。 */
+  .account-menu .account-panel{width:300px;max-width:calc(100vw - 16px);box-sizing:border-box;padding:6px;overflow-y:auto;overscroll-behavior:contain;}
+  .account-panel .action-menu-item{white-space:normal;}
+  @media (max-width:640px){ .account-menu .account-panel{width:calc(100vw - 24px);max-width:400px;} }
+  .menu-section-label{padding:8px 10px 4px;font-size:calc(12px*var(--fs,1));font-weight:600;letter-spacing:.04em;color:var(--stone);}
+  .menu-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 10px;min-height:40px;box-sizing:border-box;}
+  .menu-row-label{font-size:calc(14px*var(--fs,1));color:var(--ink);}
+  .menu-row .font-scale{height:32px;}
+  .menu-row .lang-switcher select{min-height:32px;}
+  .menu-switch{position:relative;flex:none;width:40px;height:24px;border-radius:999px;border:none;padding:0;background:var(--rule);cursor:pointer;transition:background .2s ease;}
+  .menu-switch-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s ease;}
+  .menu-switch[aria-checked="true"]{background:var(--trail);}
+  .menu-switch[aria-checked="true"] .menu-switch-thumb{transform:translateX(16px);}
+  .menu-switch:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  @media (prefers-reduced-motion:reduce){ .menu-switch,.menu-switch-thumb{transition:none;} }
+  .menu-group>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .menu-group>summary::-webkit-details-marker{display:none;}
+  .menu-group>summary::after{content:'';flex:none;width:7px;height:7px;margin:0 4px 3px 0;border-right:1.6px solid var(--stone);border-bottom:1.6px solid var(--stone);transform:rotate(45deg);transition:transform .15s ease;}
+  .menu-group[open]>summary::after{transform:rotate(-135deg);margin-bottom:-3px;}
+  .menu-group-items{display:flex;flex-direction:column;gap:1px;margin:0 0 4px 12px;padding-left:6px;border-left:1px solid var(--rule);}
+  .account-panel .menu-help-item{display:flex;align-items:center;gap:8px;}
+  .menu-help-avatar{width:24px;height:24px;border-radius:50%;object-fit:contain;background:#F4F2EA;flex:none;}
+  .auth-signout{display:flex;flex-direction:column;gap:1px;}
+  .auth-signout[hidden]{display:none;}
   /* 選單裡改成直向堆疊——原本這一排是橫向擠在標題列上，收進選單後
      每一項各佔一行才讀得清楚。 */
   .auth-area{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:2px 0;}
   .auth-area .auth-user{
-    display:flex;align-items:center;gap:8px;padding:6px 14px 8px;
+    display:flex;align-items:center;gap:10px;padding:8px 10px 10px;
     color:var(--ink);
   }
-  .auth-area .auth-user img{width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;}
-  .auth-area .auth-hint{padding:6px 14px 8px;color:var(--stone);}
-  .auth-area .auth-error{padding:2px 14px 6px;}
+  .auth-area .auth-user img,.auth-initial{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+  .auth-initial{display:flex;align-items:center;justify-content:center;background:var(--trail);color:#fff;font-weight:700;font-size:15px;}
+  .auth-user-text{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .auth-user-name{font-weight:600;font-size:calc(14px*var(--fs,1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .auth-user-sub{color:var(--stone);}
+  .auth-area .auth-hint{padding:6px 10px 8px;color:var(--stone);}
+  .auth-area .auth-error{padding:2px 10px 6px;}
   /* 選單裡的按鈕統一用選單項目的外觀，不要保留原本行內連結的樣子 */
   .auth-area .btn-text,.auth-area .btn-ghost{
-    display:block;width:100%;text-align:left;
-    padding:8px 14px;font-size:calc(14px*var(--fs,1));text-decoration:none;
+    display:block;width:100%;text-align:left;border-radius:5px;
+    padding:9px 10px;font-size:calc(14px*var(--fs,1));text-decoration:none;
     background:none;border:none;color:var(--ink);cursor:pointer;
   }
   .auth-area .btn-text:hover,.auth-area .btn-ghost:hover{background:var(--hover-overlay);}
@@ -499,8 +533,9 @@
   .chips-primary{display:flex;flex-wrap:wrap;gap:6px;}
   .chips-secondary{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule);}
   .chip-secondary{font-size:calc(12px*var(--fs,1));padding:3px 9px;opacity:0.88;}
-  .topbar-row3{display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap;}
-  .app-version{color:var(--stone);margin-left:auto;}
+  .app-version{color:var(--stone);}
+  /* 頁尾（v4.0）：版本號與版權宣告從首頁頂端搬下來 */
+  .app-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 16px;margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);}
 
   #main-content{flex:1;padding:24px 32px 100px;max-width:1120px;width:100%;margin:0 auto;}
   #detail.fade-in{animation:detail-fade-in 150ms ease;}
@@ -1385,77 +1420,7 @@
   .pacing-inputs{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px;}
   .pacing-inputs .field{flex:1 1 150px;}
 
-  /* ---------- Help FAB + modal ---------- */
-  .help-fab-wrap{
-    position:fixed;bottom:20px;right:20px;z-index:40;
-    display:flex;align-items:center;gap:10px;
-  }
-  .help-fab{
-    width:60px;height:60px;border-radius:50%;flex-shrink:0;padding:4px;
-    background:#F4F2EA;color:var(--ink);overflow:hidden;
-    display:flex;align-items:center;justify-content:center;
-    border:1.5px solid var(--rule);cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.28);
-  }
-  .help-fab img{width:100%;height:100%;object-fit:contain;display:block;}
-  /* ---- 磁性吸附與動態反光：只套用在有滑鼠的裝置上。
-     這個 App 右下角其實有兩顆懸浮按鈕，但「新增賽事」那顆是
-     display:none、只在手機版（≤640px）才出現——手機沒有游標，
-     磁性吸附無從觸發，所以磁性效果做在桌機版一定看得到的
-     「使用說明」這顆上。
-     位移用 --mag-x／--mag-y 兩個變數傳遞，原本的 :hover 放大則
-     改用 --mag-scale，兩者合併寫在同一個 transform 裡——CSS 的
-     transform 同一個元素只能有一個值，如果 :hover 另外寫一條
-     transform:scale()，會把 JS 寫進來的位移整個覆蓋掉。 ---- */
-  @media (hover:hover) and (pointer:fine){
-    .help-fab{
-      transform:translate(var(--mag-x,0px),var(--mag-y,0px)) scale(var(--mag-scale,1));
-      /* 放開時的回彈曲線帶有一點過衝，模擬實體彈簧的慣性；跟隨
-         游標的當下則由 JS 加上 .magnet-active 把過渡關掉，不然
-         會有拖泥帶水的延遲感。 */
-      transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
-      position:relative;
-    }
-    .help-fab.magnet-active{transition:none;}
-    .help-fab:hover{--mag-scale:1.05;}
-    /* 追光層：疊在按鈕上的放射狀高光，圓心跟著游標跑。按鈕本身
-       已經有 overflow:hidden，光斑不會溢出圓形邊界。 */
-    .help-fab::before{
-      content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
-      border-radius:50%;opacity:0;transition:opacity 0.25s ease;
-      background:radial-gradient(circle at var(--glare-x,50%) var(--glare-y,50%),
-        rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.25) 35%, transparent 65%);
-    }
-    .help-fab:hover::before{opacity:1;}
-  }
-  /* 沒有滑鼠、或使用者開了「減少動態效果」時，維持原本單純的放大回饋 */
-  @media not all and (hover:hover){
-    .help-fab:hover{transform:scale(1.05);}
-  }
-  @media (prefers-reduced-motion:reduce){
-    .help-fab{transform:none!important;transition:none;}
-    .help-fab::before{display:none;}
-  }
   /* ---- 訓練紀錄（v3.76.0） ---- */
-  /* 頂端列：「＋ 新增賽事」與「訓練」疊成一欄、同寬。訓練是次要動作，
-     用外框樣式、矮一點、字小一點，一眼看得出主從關係。 */
-  .topbar-primary-stack{display:flex;flex-direction:column;align-items:stretch;gap:6px;}
-  .training-entry{
-    display:inline-flex;align-items:center;justify-content:center;gap:5px;
-    font:inherit;font-size:calc(12.5px*var(--fs,1));font-weight:500;line-height:1;
-    padding:6px 12px;border-radius:6px;cursor:pointer;
-    background:transparent;color:var(--ink);border:1px solid var(--rule);
-  }
-  .training-entry:hover{border-color:var(--ink-soft);}
-  .training-entry:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
-  .training-entry svg{width:15px;height:15px;display:block;flex-shrink:0;}
-  /* 桌機：訓練鈕往下「掛」在新增賽事下面，不參與整排的垂直置中——不然
-     小中大、深淺色、語言、頭像會對齊兩顆按鈕疊起來的中間，看起來比
-     「＋ 新增賽事」低半截。頂端列底部補上同樣的高度，才不會蓋到下面。 */
-  @media (min-width:641px){
-    .topbar-primary-stack{position:relative;}
-    .topbar-primary-stack .training-entry{position:absolute;left:0;right:0;top:calc(100% + 6px);height:30px;box-sizing:border-box;}
-    .topbar-row1{padding-bottom:36px;}
-  }
   .training-overlay{position:fixed;inset:0;z-index:208;overflow-y:auto;background:var(--bg,#0F1316);color:var(--ink);}
   .training-overlay[hidden]{display:none;}
   .training-inner{max-width:720px;margin:0 auto;padding:22px 18px 120px;}
@@ -1525,14 +1490,6 @@
   .buildup-drill-head{color:var(--stone);margin-bottom:4px;}
   .buildup-drill-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:calc(13px*var(--fs,1));padding:3px 0;}
   .buildup-drill-row .mono{color:var(--ink-soft);}
-  /* 手機：行事曆工具列本來就很擠（上一月／月份／下一月／兩個檢視切換），
-     加了「訓練」之後在「大」字級會超出螢幕 19px（測試抓到的）。把按鈕左右
-     留白與月份標籤的最小寬度收窄，360px 的小螢幕在「大」字級也放得下。 */
-  /* 手機的頂端列沒有「＋ 新增賽事」（改成右下角的浮動按鈕），訓練鈕就
-     單獨排在這一列最後面，保留文字——只剩圖示的話太容易被忽略。 */
-  @media (max-width:640px){
-    .training-entry{padding:7px 10px;}
-  }
   /* ---- 觸控裝置（手機、平板）關掉大面積的合成效果（v3.88.0）----
      使用者回報 iPhone Safari 開網站就「重複發生問題」（分頁一直崩潰）。
      v3.46 查到的原因：iOS Safari 遇到「要把整片內容先畫成一張大圖才能處理」
@@ -1658,11 +1615,9 @@
   .mode-switch[aria-checked="true"] .mode-switch-track{background:var(--trail);}
   .mode-switch[aria-checked="true"] .mode-switch-thumb{transform:translateX(12px);}
   @media (prefers-reduced-motion:reduce){ .mode-switch-track,.mode-switch-thumb{transition:none;} }
+  /* v4.0：手機的頂列也只剩一行（品牌、簡易版、頭像），開關不用再絕對定位 */
   @media (max-width:860px){
-    .topbar-row1{position:relative;}
-    .mode-switch{position:absolute;top:2px;right:0;height:30px;}
-    /* 日文、英文的標題比較長，留出開關的位置，不要壓在一起 */
-    .topbar-brand .app-title{padding-right:120px;}
+    .mode-switch{height:30px;padding:0 6px 0 10px;}
   }
   /* 簡易版只在這裡藏「固定在頁面上」的入口。賽事頁、首頁的內容（雷達、
      分段、預算…）是在 JS 產生畫面時就直接不產生，不是產生了再藏——手機
@@ -1671,8 +1626,6 @@
   html[data-mode="simple"] #cal-table-toggle,
   html[data-mode="simple"] #btn-export-csv,
   html[data-mode="simple"] #btn-export-notebook{display:none!important;}
-  /* 桌機頂端列底部原本替「訓練」鈕留了高度，訓練鈕收起來就不用留 */
-  @media (min-width:641px){ html[data-mode="simple"] .topbar-row1{padding-bottom:0;} }
   .simple-hidden-note{
     margin:18px 0 8px;padding:14px 16px;border:1px dashed var(--rule);border-radius:12px;background:var(--surface);
     color:var(--ink-soft);font-size:calc(13px*var(--fs,1));line-height:1.65;
@@ -1684,45 +1637,6 @@
   }
   .simple-fields-toggle{display:block;margin:4px 0 8px;font-size:calc(13px*var(--fs,1));text-align:left;}
   .simple-hidden-note-btn:focus-visible,.simple-fields-toggle:focus-visible{outline:2px solid var(--trail);outline-offset:2px;border-radius:3px;}
-  /* 意見回饋：疊在「有問題找我」正上方、水平置中對齊。刻意比說明按鈕小一號
-     （46 vs 60），主要入口仍然是說明，回饋是次要的。
-     右邊距用中心點回推：說明鈕中心在 right:20+30=50，回饋鈕半徑 23 → right:27。 */
-  .feedback-fab-wrap{
-    position:fixed;bottom:92px;right:27px;z-index:40;
-    display:flex;align-items:center;gap:10px;
-  }
-  /* 跟「有問題找我！」同一套外觀，但刻意不做上下浮動——兩句疊在一起
-     都在動會很吵。文字本身也點得到（比 46px 的圓鈕好按）。 */
-  .feedback-fab-caption{
-    background:var(--ink);color:var(--surface);font-size:calc(12px*var(--fs,1));font-weight:500;
-    padding:6px 12px;border-radius:14px;white-space:nowrap;cursor:pointer;
-    box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  }
-  .feedback-fab{
-    flex-shrink:0;
-    width:46px;height:46px;border-radius:50%;padding:0;
-    background:#F4F2EA;color:#16231C;border:1.5px solid var(--rule);
-    display:flex;align-items:center;justify-content:center;cursor:pointer;
-    box-shadow:0 4px 14px rgba(0,0,0,0.28);
-    transition:transform 0.2s ease,box-shadow 0.2s ease;
-  }
-  .feedback-fab svg{width:24px;height:24px;}
-  /* 橘點＝Logo 折線末端那顆點。外圈描一圈底色，疊在對話框角上才看得出是「點」 */
-  .feedback-fab-dot{fill:#B8451F;stroke:#F4F2EA;stroke-width:1.4;}
-  @media (hover:hover) and (pointer:fine){
-    .feedback-fab:hover{transform:scale(1.07);box-shadow:0 6px 18px rgba(0,0,0,0.32);}
-  }
-  .feedback-fab:focus-visible{outline:2px solid var(--trail);outline-offset:3px;}
-  @media (prefers-reduced-motion:reduce){ .feedback-fab{transition:none;} }
-  .help-fab-caption{
-    background:var(--ink);color:var(--surface);font-size:calc(12px*var(--fs,1));font-weight:500;
-    padding:6px 12px;border-radius:14px;white-space:nowrap;
-    box-shadow:0 2px 8px rgba(0,0,0,0.2);
-    animation:help-caption-bob 2.6s ease-in-out infinite;
-  }
-  @keyframes help-caption-bob{
-    0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);}
-  }
   .help-body{max-height:60vh;overflow-y:auto;padding-right:6px;}
   .help-body h3{font-size:calc(15px*var(--fs,1));margin:22px 0 8px;color:var(--ink);}
   .help-body h3:first-child{margin-top:0;}
@@ -1736,17 +1650,10 @@
     align-items:center;justify-content:center;cursor:pointer;
     box-shadow:0 4px 14px rgba(0,0,0,0.28);
   }
+  /* 手機右下角只剩「＋」一顆（v4.0）：使用說明、意見回饋收進頭像選單，
+     右下角不再疊三顆按鈕和兩個文字泡泡蓋住清單卡片的右側。 */
   @media (max-width:640px){
-    .help-fab{width:52px;height:52px;}
-    .help-fab-wrap{bottom:16px;right:16px;}
-    .help-fab-caption{font-size:calc(11px*var(--fs,1));padding:5px 10px;}
-    .new-race-fab{display:flex;width:52px;height:52px;bottom:82px;right:16px;}
-    /* 手機多一顆「新增賽事」在說明鈕上方（頂端 134px），回饋鈕要再往上疊，
-       不然會蓋住新增鈕。中心對齊：說明鈕中心 right:16+26=42，回饋半徑 21 → right:21 */
-    .feedback-fab-wrap{bottom:146px;right:21px;}
-    .feedback-fab{width:42px;height:42px;}
-    .feedback-fab-caption{font-size:calc(11px*var(--fs,1));padding:5px 10px;}
-    .feedback-fab svg{width:22px;height:22px;}
+    .new-race-fab{display:flex;width:52px;height:52px;bottom:calc(16px + env(safe-area-inset-bottom,0px));right:16px;}
     .new-race-fab svg{width:24px;height:24px;}
     #btn-new{display:none;}
   }
@@ -1867,9 +1774,6 @@
   /* ---------- Detail ---------- */
   #detail{padding-top:32px;border-top:1px solid var(--rule);margin-top:28px;}
   #detail:empty{display:none;}
-  .empty-state{padding:40px 0;color:var(--ink-soft);}
-  .empty-state p{margin-bottom:16px;}
-  .empty-state-icons{display:flex;gap:26px;margin-bottom:22px;color:var(--stone);}
 
   .quick-nav{
     display:flex;gap:8px;overflow-x:auto;padding:10px 2px;margin-bottom:14px;
@@ -1897,13 +1801,81 @@
   .quick-nav:not(.is-back-only) .qn-back{position:relative;margin-right:14px;}
   .quick-nav:not(.is-back-only) .qn-back::after{content:'';position:absolute;right:-9px;top:6px;bottom:6px;width:1px;background:var(--rule);}
   @media (max-width:640px){ .qn-back{min-height:38px;} }
-  /* 賽事頁是獨立的畫面（v3.99.0）：月曆、搜尋篩選列、焦點卡、資料管理那一排
-     在看賽事時都收起來。原本賽事頁接在月曆下面（筆電上從 1,779px 才開始），
-     而且月曆搜尋列一直固定在上面、還把區段導覽列蓋住 */
+  /* 賽事頁是獨立的畫面（v3.99.0）：首頁分頁列（v4.0）、月曆、搜尋篩選列、
+     焦點卡在看賽事時都收起來。原本賽事頁接在月曆下面（筆電上從 1,779px 才
+     開始），而且月曆搜尋列一直固定在上面、還把區段導覽列蓋住 */
   body.viewing-detail #focus-panel-slot,
   body.viewing-detail #calendar,
   body.viewing-detail .topbar-row2,
-  body.viewing-detail .topbar-row3{display:none!important;}
+  body.viewing-detail .home-tabs{display:none!important;}
+  /* ==== 首頁分頁（v4.0）：賽事／生涯數據／訓練 ==== */
+  .home-tabs{display:flex;gap:4px;border-bottom:1px solid var(--rule);margin:-6px 0 18px;}
+  .home-tab{
+    border:none;background:none;font:inherit;font-size:calc(15px*var(--fs,1));font-weight:600;color:var(--stone);
+    padding:10px 16px 12px;border-bottom:3px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap;
+  }
+  .home-tab:hover{color:var(--ink-soft);}
+  .home-tab[aria-current="page"]{color:var(--ink);border-bottom-color:var(--ink);}
+  .home-tab:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;border-radius:4px;}
+  @media (max-width:640px){
+    .home-tabs{margin:-4px -18px 14px;padding:0 10px;}
+    .home-tab{flex:1;padding:10px 6px 12px;}
+  }
+  /* 生涯數據分頁沒有月曆：搜尋篩選列和「下一場」焦點卡都收起來 */
+  body[data-home-tab="career"] #focus-panel-slot,
+  body[data-home-tab="career"] .topbar-row2{display:none!important;}
+  /* 第一次打開、還沒有任何賽事：搜尋篩選列不需要，只留歡迎卡 */
+  body.is-first-run:not(.viewing-detail) .topbar-row2{display:none!important;}
+  .welcome-card{
+    max-width:640px;margin:4px auto 24px;box-sizing:border-box;padding:28px 22px 24px;text-align:center;
+    border:1px solid var(--rule);border-radius:14px;background:var(--surface);
+  }
+  .welcome-card h2{font-size:calc(20px*var(--fs,1));margin:0 0 6px;color:var(--ink);}
+  .welcome-card>p{color:var(--ink-soft);margin:0 0 18px;font-size:calc(14px*var(--fs,1));line-height:1.6;}
+  .welcome-main{width:100%;max-width:320px;min-height:48px;font-size:calc(16px*var(--fs,1));}
+  .welcome-alt{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
+  .welcome-alt .btn-ghost{min-height:42px;}
+  .welcome-card .welcome-hint{font-size:calc(12px*var(--fs,1));color:var(--stone);margin:18px 0 0;line-height:1.6;}
+  /* 生涯數據分頁：PB 卡上多一顆「打開生涯回顧」——原本只能長按 1.5 秒，很少人發現 */
+  .career-hof-open{
+    display:inline-flex;align-items:center;gap:4px;margin-top:14px;min-height:36px;box-sizing:border-box;
+    border:1px solid var(--gold);color:var(--gold);background:none;border-radius:999px;padding:6px 16px;
+    font:inherit;font-size:calc(13px*var(--fs,1));font-weight:600;cursor:pointer;
+  }
+  .career-hof-open:hover{background:rgba(var(--gold-rgb),.1);}
+  .career-hof-open:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  .career-hof-row{display:flex;justify-content:center;margin:-4px 0 4px;}
+  .career-hof-row .career-hof-open{margin-top:0;}
+  .career-empty{margin:8px 0 4px;padding:18px 18px;border:1px dashed var(--rule);border-radius:12px;color:var(--ink-soft);font-size:calc(14px*var(--fs,1));line-height:1.65;}
+  /* ==== 手機的檢視切換（v4.0）：清單／月曆／獎牌牆 ==== */
+  .view-seg{display:none;flex:none;height:34px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;}
+  .view-seg button{
+    border:none;background:var(--surface);color:var(--ink-soft);cursor:pointer;
+    font:inherit;font-size:calc(14px*var(--fs,1));padding:0 14px;white-space:nowrap;
+  }
+  .view-seg button+button{border-left:1px solid var(--rule);}
+  .view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);}
+  .view-seg button:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
+  .cal-month-nav{display:inline-flex;align-items:center;gap:6px;}
+  @media (max-width:640px){
+    .view-seg{display:inline-flex;}
+    .cal-tools{display:none!important;}
+    /* 月份切換只在「月曆」用得到；清單和獎牌牆都是跨月份的 */
+    .cal-nav:not([data-phone-view="calendar"]) .cal-month-nav{display:none;}
+  }
+  .list-see-all{
+    display:inline-flex;align-items:center;min-height:40px;margin:-12px 0 22px;padding:0;
+    border:none;background:none;color:var(--trail);cursor:pointer;
+    font:inherit;font-size:calc(14px*var(--fs,1));font-weight:600;
+  }
+  .list-see-all:focus-visible{outline:2px solid var(--trail);outline-offset:2px;border-radius:3px;}
+  /* 賽事頁頁首的狀態章（v4.0）：點了跳出六個狀態，DNS／DNF 也在這裡 */
+  .dh-status-btn{border:none;font-family:'IBM Plex Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+  .dh-status-btn:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .dh-status-btn .action-menu-chevron{width:11px;height:11px;}
+  .dh-status-menu .action-menu-item{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .dh-status-menu .action-menu-item[aria-checked="true"]{font-weight:700;color:var(--trail);}
+  .dh-status-menu .action-menu-item[aria-checked="true"]::after{content:'✓';}
   /* 賽事頁單獨出現時，不需要跟上面月曆隔開的那條線與留白 */
   body.viewing-detail #detail{margin-top:0;padding-top:0;border-top:none;}
   .detail-header{position:relative;padding-bottom:22px;margin-bottom:6px;border-bottom:3px solid var(--ink);transition:border-color 0.2s;}
@@ -2187,14 +2159,17 @@
   @media (max-width:860px){
     #topbar{padding:16px 18px 12px;transition:padding 0.2s ease;}
     #main-content{padding:18px 18px 80px;}
-    .topbar-row1{flex-direction:column;align-items:stretch;gap:12px;}
-    .topbar-actions{justify-content:space-between;}
-    .auth-user{max-width:140px;}
-    .auth-user .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .topbar-actions{gap:8px;}
     .app-tagline{transition:opacity 0.15s ease,max-height 0.15s ease,margin 0.15s ease;max-height:20px;overflow:hidden;}
     #topbar.topbar-compact{padding-top:10px;padding-bottom:8px;}
     #topbar.topbar-compact .app-tagline{opacity:0;max-height:0;margin:0;}
-    #topbar.topbar-compact .topbar-row1{gap:6px;}
+    /* v4.0 手機頂列一行：標題跟「簡易版／頭像」同一行，副標題獨佔下面一整行
+       ——跟按鈕擠同一欄的話，日文、英文的副標題會被切掉一半 */
+    .topbar-row1{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title actions" "tagline tagline";gap:0 12px;}
+    .topbar-brand{display:contents;}
+    .topbar-brand .app-title{grid-area:title;min-width:0;}
+    .topbar-brand .app-tagline{grid-area:tagline;white-space:nowrap;text-overflow:ellipsis;}
+    .topbar-actions{grid-area:actions;}
     .cal-cell{min-height:64px;padding:4px 4px 3px;}
     .cal-weekdays span{font-size:calc(12px*var(--fs,1));}
     .cal-chip{font-size:calc(13px*var(--fs,1));padding:2px 5px;}
@@ -2207,8 +2182,6 @@
   @media (max-width:520px){
     .cal-cell{min-height:auto;}
     .cal-daynum{font-size:calc(13px*var(--fs,1));}
-    .topbar-actions{flex-wrap:wrap;gap:10px;}
-    .auth-user{max-width:110px;}
   }
 
   /* ---------- Import modal ---------- */
@@ -2833,57 +2806,110 @@
         <p class="app-tagline" data-i18n="ui.appTagline">從報名到終點的完整紀錄</p>
       </div>
       <div class="topbar-actions">
-        <!-- 簡易版開關（v3.97.0）：電腦版排在工具列最前面；手機版（≤860px）
-             用絕對定位掛到標題列右上角——那個角落原本是空的。 -->
+        <!-- 簡易版開關（v3.97.0）。v4.0 起頂列只剩三樣東西：簡易版、新增賽事、
+             頭像；字體、深色模式、語言、資料管理、使用說明、意見回饋都收進頭像
+             選單——這些是設一次就不動、或偶爾才用的東西，不該每一頁都佔著頂列。 -->
         <button type="button" id="btn-mode-toggle" class="mode-switch" role="switch" aria-checked="false"
           data-i18n-title="ui.modeSwitchTitle" title="切換簡易版／完整版">
           <span class="mode-switch-label" data-i18n="ui.modeSimple">簡易版</span>
           <span class="mode-switch-track" aria-hidden="true"><span class="mode-switch-thumb"></span></span>
         </button>
-        <div class="font-scale" role="group" aria-label="字體大小">
-          <button type="button" class="font-scale-btn fs-s" data-font-scale="small" aria-pressed="false" title="字體：小" aria-label="字體：小" data-i18n-title="ui.fontSmallTitle">小</button>
-          <button type="button" class="font-scale-btn fs-m" data-font-scale="medium" aria-pressed="true" title="字體：中" aria-label="字體：中" data-i18n-title="ui.fontMediumTitle">中</button>
-          <button type="button" class="font-scale-btn fs-l" data-font-scale="large" aria-pressed="false" title="字體：大" aria-label="字體：大" data-i18n-title="ui.fontLargeTitle">大</button>
-        </div>
-        <button id="btn-theme-toggle" class="btn-ghost icon-btn" aria-label="切換深色模式" title="切換深色模式"></button>
-        <div class="lang-switcher">
-          <select id="lang-select" aria-label="Language / 語言 / 言語">
-            <option value="zh">繁體中文</option>
-            <option value="ja">日本語</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-        <!-- 帳號與次要動作全部收進這個選單：原本這一列平鋪了頭像、
-             使用者名稱、同步診斷、登出、建立個人資訊、範例資料六項，
-             手機上會擠成三四行。沿用既有的 data-menu-trigger 選單機制，
-             不另外造一套。 -->
+        <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
         <div class="action-menu account-menu">
           <button type="button" id="btn-account-menu" class="account-trigger" data-menu-trigger="account-menu-panel"
-            aria-haspopup="true" aria-expanded="false" aria-label="帳號與設定"></button>
-          <div id="account-menu-panel" class="action-menu-panel" hidden>
+            aria-haspopup="true" aria-expanded="false" aria-label="帳號與設定" data-i18n-title="ui.accountMenuTitle" title="帳號與設定"></button>
+          <div id="account-menu-panel" class="action-menu-panel account-panel" hidden>
             <div id="auth-area" class="auth-area"></div>
-            <div class="action-menu-divider"></div>
             <button id="btn-open-profile" type="button" class="action-menu-item" data-action="open-profile-modal" data-i18n="ui.createProfile">建立個人資訊</button>
+            <div class="action-menu-divider"></div>
+            <div class="menu-section-label" data-i18n="ui.menuDisplay">顯示</div>
+            <!-- 這三列點了之後選單要留著：調完字體大小，馬上就想看看其他字的效果 -->
+            <div class="menu-row" data-keep-menu-open>
+              <span class="menu-row-label" data-i18n="ui.menuFontSize">字體大小</span>
+              <div class="font-scale" role="group" aria-label="字體大小" data-i18n-aria="ui.menuFontSize">
+                <button type="button" class="font-scale-btn fs-s" data-font-scale="small" aria-pressed="false" title="字體：小" aria-label="字體：小" data-i18n-title="ui.fontSmallTitle">小</button>
+                <button type="button" class="font-scale-btn fs-m" data-font-scale="medium" aria-pressed="true" title="字體：中" aria-label="字體：中" data-i18n-title="ui.fontMediumTitle">中</button>
+                <button type="button" class="font-scale-btn fs-l" data-font-scale="large" aria-pressed="false" title="字體：大" aria-label="字體：大" data-i18n-title="ui.fontLargeTitle">大</button>
+              </div>
+            </div>
+            <div class="menu-row" data-keep-menu-open>
+              <span class="menu-row-label" id="theme-row-label" data-i18n="ui.menuDarkMode">深色模式</span>
+              <button id="btn-theme-toggle" type="button" class="menu-switch" role="switch" aria-checked="false" aria-labelledby="theme-row-label">
+                <span class="menu-switch-thumb" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="menu-row" data-keep-menu-open>
+              <label class="menu-row-label" for="lang-select" data-i18n="ui.menuLanguage">語言</label>
+              <div class="lang-switcher">
+                <select id="lang-select" aria-label="Language / 語言 / 言語">
+                  <option value="zh">繁體中文</option>
+                  <option value="ja">日本語</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+            <div class="action-menu-divider"></div>
+            <div class="menu-section-label" data-i18n="ui.menuData">資料</div>
+            <!-- 匯入、匯出各收成一組，點開才展開——原本「資料管理」選單平鋪了
+                 十個項目，大部分人一年用不到幾次。 -->
+            <details class="menu-group" id="menu-group-import">
+              <summary class="action-menu-item menu-group-summary" data-keep-menu-open><span data-i18n="ui.menuImport">匯入（Excel／JSON）</span></summary>
+              <div class="menu-group-items">
+                <button id="btn-import" type="button" class="action-menu-item" data-i18n="ui.importExcel">匯入 Excel</button>
+                <button id="btn-import-json" type="button" class="action-menu-item" data-i18n="ui.importJson">匯入 JSON</button>
+              </div>
+            </details>
+            <details class="menu-group" id="menu-group-export">
+              <summary class="action-menu-item menu-group-summary" data-keep-menu-open><span data-i18n="ui.menuExport">匯出與備份（JSON／CSV／行事曆）</span></summary>
+              <div class="menu-group-items">
+                <button id="btn-export" type="button" class="action-menu-item" data-i18n="ui.exportJson">匯出 JSON</button>
+                <button id="btn-export-csv" type="button" class="action-menu-item" data-i18n="ui.exportCsv" title="扁平化多表 CSV，適合 SQL／Python／Excel VBA 自動化">匯出 CSV（扁平化）</button>
+                <button id="btn-export-notebook" type="button" class="action-menu-item" data-i18n="ui.exportNotebook" title="下載可直接執行的 Jupyter Notebook 分析範本，搭配上面的 CSV 使用">下載 Python 分析套件（.ipynb）</button>
+                <button id="btn-export-ics" type="button" class="action-menu-item" data-i18n="ui.exportIcs">匯出行事曆提醒（.ics檔）</button>
+              </div>
+            </details>
+            <button id="btn-recovery" type="button" class="action-menu-item" data-action="open-recovery"></button>
             <button id="btn-sample-data" type="button" class="action-menu-item" data-i18n="ui.sampleData">範例資料</button>
+            <button id="btn-clear" type="button" class="action-menu-item danger" data-i18n="ui.clearAll" data-keep-menu-open>清除全部資料</button>
+            <div class="action-menu-divider"></div>
+            <!-- 使用說明、意見回饋原本是右下角的兩顆懸浮鈕＋兩個一直顯示的文字
+                 泡泡，會蓋住清單卡片的右側（v4.0 收進這裡）。 -->
+            <button id="btn-help" type="button" class="action-menu-item menu-help-item">
+              <img class="menu-help-avatar" src="icons/help-avatar.png" alt="" aria-hidden="true">
+              <span data-i18n="ui.helpTitle">使用說明</span>
+            </button>
+            <button id="btn-feedback" type="button" class="action-menu-item" data-i18n="ui.feedbackTitle">意見回饋</button>
+            <div id="auth-signout" class="auth-signout" hidden></div>
           </div>
-        </div>
-        <div class="topbar-primary-stack">
-          <button id="btn-new" class="btn-primary" data-i18n="ui.newRace">+ 新增賽事</button>
-          <button id="btn-training" class="training-entry" type="button" data-i18n-title="ui.trainingTitle" title="訓練紀錄" aria-label="訓練紀錄">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
-            <span data-i18n="ui.trainingShort">訓練</span>
-          </button>
         </div>
       </div>
     </div>
   </header>
   <main id="main-content">
+    <!-- 首頁分頁（v4.0）：賽事／生涯數據／訓練。原本生涯數據整片堆在月曆上面，
+         月曆要捲過 1,500px 才看得到；訓練原本是頂列的一顆按鈕。
+         「訓練」點了是打開訓練紀錄的全螢幕頁，不是切換分頁，所以用一般按鈕
+         （aria-current 標目前所在的分頁），不套 tablist 的語意。 -->
+    <nav class="home-tabs" aria-label="首頁" data-i18n-aria="ui.homeTabsLabel">
+      <button type="button" class="home-tab" data-home-tab="races" aria-current="page" data-i18n="ui.tabRaces">賽事</button>
+      <button type="button" class="home-tab" data-home-tab="career" data-i18n="ui.tabCareer">生涯數據</button>
+      <button type="button" id="btn-training" class="home-tab home-tab-training" data-i18n="ui.trainingShort">訓練</button>
+    </nav>
+    <section id="focus-panel-slot"></section>
     <div class="topbar-row2">
       <div class="cal-nav">
+        <!-- 手機（≤640px）用這組切換：清單／月曆／獎牌牆；電腦用右邊的兩顆圖示 -->
+        <div class="view-seg" role="group" aria-label="檢視方式" data-i18n-aria="ui.viewSegLabel">
+          <button type="button" data-phone-view="list" aria-pressed="true" data-i18n="ui.viewList">清單</button>
+          <button type="button" data-phone-view="calendar" aria-pressed="false" data-i18n="ui.viewCalendar">月曆</button>
+          <button type="button" data-phone-view="grid" aria-pressed="false" data-i18n="ui.viewPhotoWall">獎牌牆</button>
+        </div>
+        <span class="cal-month-nav">
         <button id="cal-prev" class="btn-ghost" data-i18n-title="ui.calPrev" aria-label="上個月">‹</button>
         <span id="cal-label" class="cal-label mono"></span>
         <button id="cal-next" class="btn-ghost" data-i18n-title="ui.calNext" aria-label="下個月">›</button>
         <button id="cal-today" class="btn-ghost" data-i18n="ui.today">今天</button>
+        </span>
         <span class="cal-tools">
         <button id="cal-view-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.gridViewToggle" title="切換檢視" aria-label="切換為獎牌牆檢視">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -2896,30 +2922,13 @@
       <input id="search-input" type="search" data-i18n-placeholder="ui.searchPlaceholder" placeholder="搜尋賽事名稱、城市…">
       <div id="filter-chips" class="chips"></div>
     </div>
-    <div class="topbar-row3">
-      <div class="action-menu">
-        <button type="button" class="btn-text action-menu-trigger" data-menu-trigger="data-mgmt-menu" data-i18n="ui.dataManagement" aria-haspopup="true" aria-expanded="false">資料管理
-          <svg class="action-menu-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div id="data-mgmt-menu" class="action-menu-panel" hidden>
-          <button id="btn-import" type="button" class="action-menu-item" data-i18n="ui.importExcel">匯入 Excel</button>
-          <button id="btn-import-json" type="button" class="action-menu-item" data-i18n="ui.importJson">匯入 JSON</button>
-          <div class="action-menu-divider"></div>
-          <button id="btn-export" type="button" class="action-menu-item" data-i18n="ui.exportJson">匯出 JSON</button>
-          <button id="btn-export-csv" type="button" class="action-menu-item" data-i18n="ui.exportCsv" title="扁平化多表 CSV，適合 SQL／Python／Excel VBA 自動化">匯出 CSV（扁平化）</button>
-          <button id="btn-export-notebook" type="button" class="action-menu-item" data-i18n="ui.exportNotebook" title="下載可直接執行的 Jupyter Notebook 分析範本，搭配上面的 CSV 使用">下載 Python 分析套件（.ipynb）</button>
-          <button id="btn-export-ics" type="button" class="action-menu-item" data-i18n="ui.exportIcs">匯出行事曆提醒（.ics檔）</button>
-          <div class="action-menu-divider"></div>
-          <button id="btn-recovery" type="button" class="action-menu-item" data-action="open-recovery"></button>
-          <button id="btn-clear" type="button" class="action-menu-item danger" data-i18n="ui.clearAll" data-keep-menu-open>清除全部資料</button>
-        </div>
-      </div>
-      <span id="app-version" class="app-version small mono"></span>
-      <span id="app-copyright" class="app-version small mono">© 2026 劉恩龍 LIU EN LUNG</span>
-    </div>
-    <section id="focus-panel-slot"></section>
     <section id="calendar"></section>
     <section id="detail"></section>
+    <!-- 版本號與版權宣告（v4.0 從首頁頂端的工具列搬到頁尾） -->
+    <footer class="app-footer">
+      <span id="app-version" class="app-version small mono"></span>
+      <span id="app-copyright" class="app-version small mono">© 2026 劉恩龍 LIU EN LUNG</span>
+    </footer>
   </main>
 </div>
 <input type="file" id="import-file-input" accept=".xlsx,.xls" style="display:none">
@@ -2971,20 +2980,6 @@
 <div id="help-modal" class="modal-overlay" hidden></div>
 <div id="recovery-modal" class="modal-overlay" hidden></div>
 <div id="focal-point-modal" class="modal-overlay" hidden></div>
-<div class="feedback-fab-wrap">
-<span id="feedback-fab-caption" class="feedback-fab-caption" aria-hidden="true" data-i18n="ui.feedbackCaption">說說你的想法</span>
-<button id="btn-feedback" class="feedback-fab" type="button" aria-label="意見回饋" title="意見回饋" data-i18n-title="ui.feedbackTitle">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h9A2.5 2.5 0 0 1 18 5.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 3.5V15h0.5A2.5 2.5 0 0 1 4 12.5z"/>
-    <path d="M8 7.5h6M8 10.5h3.5"/>
-    <circle class="feedback-fab-dot" cx="19" cy="4.5" r="2.6"/>
-  </svg>
-</button>
-</div>
-<div class="help-fab-wrap">
-  <span id="help-fab-caption" class="help-fab-caption" data-i18n="ui.helpCaption">有問題找我！</span>
-  <button id="btn-help" class="help-fab" aria-label="使用說明" title="使用說明"></button>
-</div>
 <button id="btn-new-fab" class="new-race-fab" data-action="start-create" aria-label="新增賽事" title="新增賽事">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
 </button>
@@ -4154,9 +4149,12 @@ function emptyRace(name,sportType,status,raceDate){
 const today0=new Date();
 const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQuery:'',
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
-  viewMode:'calendar',focusDismissedId:null,user:null};
+  viewMode:'calendar',focusDismissedId:null,user:null,
+  // v4.0：首頁分頁（races／career）與手機的檢視方式（list／calendar／grid）。
+  // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／獎牌牆／表格，手機預設清單。
+  homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v3.99.0';
+const APP_VERSION='v4.0.0';
 
 /* ============================================================
    多語系（i18n）
@@ -4178,6 +4176,8 @@ function t(key,fallback){
 function setLang(lang){
   currentLang=lang;
   try{ localStorage.setItem(LANG_KEY,lang); }catch(e){}
+  // 語言選單在頭像選單裡（v4.0）；從別的地方切語言時，選單上顯示的也要跟著換
+  const sel=document.getElementById('lang-select'); if(sel&&sel.value!==lang) sel.value=lang;
   document.documentElement.setAttribute('lang',lang==='ja'?'ja':lang==='en'?'en':'zh-Hant');
   document.documentElement.setAttribute('data-lang',lang);
   applyStaticTranslations();
@@ -4200,6 +4200,12 @@ function applyStaticTranslations(){
     if(el.hasAttribute('aria-label')) el.setAttribute('aria-label',v);
     el.setAttribute('title',v);
   });
+  // 只翻 aria-label、不加 title（v4.0）：分頁列、檢視切換這種整組的容器，
+  // 加了 title 滑鼠停在空白處也會跳提示框
+  document.querySelectorAll('[data-i18n-aria]').forEach(el=>{
+    if(el.dataset.zhAria==null) el.dataset.zhAria=el.getAttribute('aria-label')||'';
+    el.setAttribute('aria-label', t(el.dataset.i18nAria, el.dataset.zhAria));
+  });
 }
 
 const JA={
@@ -4217,6 +4223,18 @@ const JA={
   'ui.simpleHidSplits':'ラップ（{n} 区間）','ui.simpleHidRadar':'レース能力レーダー','ui.simpleHidSeries':'シリーズ比較','ui.simpleHidElevation':'高低図',
   'ui.simpleHidCheckpoints':'CP／エイド {n} 件','ui.simpleHidGeoPhotos':'コース写真 {n} 枚','ui.simpleHidWeather':'気象の記録','ui.simpleHidNutrition':'補給設定',
   'ui.simpleHidNutritionSchedule':'補給スケジュール {n} 件','ui.simpleHidTraining':'トレーニング計画','ui.simpleHidLogistics':'予算と旅程','ui.simpleHidShoe':'レースシューズ',
+  // v4.0
+  'ui.tabRaces':'大会','ui.tabCareer':'キャリア','ui.homeTabsLabel':'ホームのタブ',
+  'ui.viewList':'リスト','ui.viewCalendar':'カレンダー','ui.viewPhotoWall':'メダル棚','ui.viewSegLabel':'表示方法',
+  'ui.listRecent':'最近の大会','ui.listSeeAllHistory':'過去の記録をすべて見る（{n} 件）›',
+  'ui.menuDisplay':'表示','ui.menuFontSize':'文字サイズ','ui.menuDarkMode':'ダークモード','ui.menuLanguage':'言語',
+  'ui.menuData':'データ','ui.menuImport':'読み込み（Excel／JSON）','ui.menuExport':'書き出しとバックアップ（JSON／CSV／カレンダー）',
+  'ui.accountMenuTitle':'アカウントと設定','ui.accountSub':'Google でログイン中 · {n} 件',
+  'ui.careerOpenHof':'キャリア総括を開く','ui.careerEmpty':'大会を 5 件以上記録すると、ここにキャリアのデータ（フルマラソン自己ベスト、年ごとの完走数、累積獲得標高）が表示されます。現在 {n} 件。',
+  'ui.welcomeTitle':'最初の大会を記録しましょう','ui.welcomeBody':'エントリー、準備、完走記録と感想をひとつの場所に。',
+  'ui.welcomeNew':'＋ 最初の大会を追加','ui.welcomeImport':'Excel の大会表を読み込む','ui.welcomeSample':'サンプルデータを見る',
+  'ui.welcomeSignIn':'他の端末で使っていましたか？右上のアイコンから Google にログインすると、データが自動でダウンロードされます。',
+  'ui.statusMenuLabel':'ステータスを変更',
   // v3.98.0
   'ui.sparkLabel':'標高 {a}–{b} m',
   'ui.navBack':'‹ 戻る',
@@ -4577,22 +4595,24 @@ const JA={
   'ui.recoveryOverwriteEmpty':'同期の上書き履歴はありません',
   'ui.helpVersionLine':'バージョン {n} ・ より詳しい使い方やクラウド同期／プッシュ通知の設定手順はリポジトリの USAGE.md をご覧ください',
   'ui.helpBodyHtml':`
-      <h3>カレンダーとフィルター</h3>
+      <h3>ホーム：大会／キャリア／トレーニング</h3>
       <ul>
-        <li>上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え、「今日」で当月に戻ります。スマートフォンでは自動的に当月のレース一覧表示になります。</li>
+        <li>ホームは3つのタブに分かれています。「大会」は「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。</li>
+        <li>パソコン：上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え、「今日」で当月に戻ります。隣のグリッドアイコンで「メダル棚」（カバー写真付きの完走レース）、表アイコンでコンパクトな表に切り替えます。</li>
+        <li>スマートフォン：最初は「リスト」表示——今後の予定、最近の5件、日付未定。「過去の記録をすべて見る」で過去の大会を一覧できます。上の「リスト／カレンダー／メダル棚」で表示を切り替えます。</li>
         <li>フィルターは2段階：まず「すべて／今後の予定／過去の記録」を選択し、「今後の予定」または「過去の記録」を選ぶと詳細ステータスが展開されます（ボタンが一度に多く表示されすぎないように）。</li>
-        <li>検索欄でレース名や都市名で絞り込みできます。検索や絞り込み中はすべての月の結果が一覧で表示されます。日付未定の大会はカレンダー下の「日付未定」にあります。5件以上記録するとキャリアデータ（完走数、フルマラソン自己ベスト、年間走行距離）が表示されます。</li>
-        <li>「今日」ボタンの隣のグリッドアイコンで「メダル棚」表示に切り替えられます。カバー写真付きの完走レースをカード形式で表示します。</li>
+        <li>検索欄でレース名や都市名で絞り込みできます。検索や絞り込み中はすべての月の結果が一覧で表示されます。日付未定の大会は「日付未定」にあります。</li>
       </ul>
       <h3>レースの追加と管理</h3>
       <ul>
-        <li>右上の「+ 大会を追加」で作成。カレンダーや一覧のレースをクリックすると詳細画面が開き、編集内容は自動保存されます。詳細画面の上の「‹ 戻る」やスマホの戻る操作で元の一覧の位置に戻ります。URL に大会が含まれるので、再読み込みやブックマークでも同じ大会が開きます。</li>
+        <li>右上の「+ 大会を追加」（スマホは右下の「＋」）で作成。カレンダーや一覧のレースをクリックすると詳細画面が開き、編集内容は自動保存されます。詳細画面の上の「‹ 戻る」やスマホの戻る操作で元の一覧の位置に戻ります。URL に大会が含まれるので、再読み込みやブックマークでも同じ大会が開きます。</li>
         <li>新規作成時に公式サイトのURLを直接貼り付けたり、アクティビティファイル（GPX/TCX/FIT）や大会ビジュアルを先に読み込んでおくと、作成時に自動で反映されます。</li>
         <li>詳細画面の「大会を削除」は誤操作防止のため2回クリックが必要です。「大会を複製」は場所・コース・装備などを引き継いで新しい大会を作成でき、年次シリーズ大会に便利です。</li>
       </ul>
       <h3>レース詳細の項目</h3>
       <ul>
-        <li><strong>カバー写真</strong>：タイトル下から写真をアップロードでき、タイトル部分の淡いブランド背景になります（縦長の写真は自動的に高さを調整し、潰れないようにします）。同じ写真がカレンダーのマスやスマホの一覧にも小さなサムネイルとして表示されます。</li>
+        <li><strong>ステータス</strong>：タイトル上のステータス印（例：「エントリー済み ▾」）をタップすると変更できます。未出走（DNS）・途中棄権（DNF）もここにあります。レース前の大会は、タイトル下のステータスバーも直接タップできます。</li>
+        <li><strong>カバー写真</strong>：詳細画面の「その他の操作」→「カバー写真を追加」からアップロードでき、タイトル部分の淡いブランド背景になります（縦長の写真は自動的に高さを調整し、潰れないようにします）。同じ写真がカレンダーのマスやスマホの一覧にも小さなサムネイルとして表示されます。</li>
         <li><strong>基本情報</strong>：大会名、シリーズ（同じ名前なら自動で年別比較）、ステータス、日程、抽選情報。</li>
         <li><strong>コースと地形</strong>：距離、標高、標高変化グラフ、CP詳細、ITRA/UTMBポイント（要手動入力）。</li>
         <li><strong>装備・補給・戦略</strong>：装備リスト（ロード／トレイル／トライアスロン標準装備テンプレート対応）、補給計画、ペース計算＆リストバンド作成。</li>
@@ -4600,28 +4620,28 @@ const JA={
       </ul>
       <h3>データの読み込み</h3>
       <ul>
-        <li><strong>Excelを読み込む</strong>：レース計画表を読み込み、シートを選択して1件ずつ確認してから取り込めます。</li>
+        <li><strong>Excelを読み込む</strong>（右上のアイコンメニュー →「読み込み」）：レース計画表を読み込み、シートを選択して1件ずつ確認してから取り込めます。</li>
         <li><strong>アクティビティファイル（GPX/TCX/FIT）</strong>：Garmin/COROS/Strava から書き出したファイルに対応、距離・標高・心拍数・スプリットを自動取得。</li>
         <li><strong>データを貼り付けて入力</strong>：大会サイト・要項・完走証の内容をAIにJSON化してもらい貼り付けると、該当項目だけ反映されます。</li>
       </ul>
       <h3>リマインダーと通知</h3>
       <ul>
-        <li><strong>カレンダーリマインダー</strong>：詳細画面の「カレンダーに追加」または左下の「カレンダーリマインダーを書き出す」で .ics ファイルをダウンロードし、スマホのカレンダーに追加。1ヶ月前・1週間前の通知が内蔵されています。</li>
-        <li><strong>プッシュ通知</strong>（オプション、Cloud Functionsの追加デプロイが必要）：クラウド同期でログイン後、右上の「プッシュ通知を有効にする」。デプロイ手順は USAGE.md 参照。</li>
+        <li><strong>カレンダーリマインダー</strong>：詳細画面の「その他の操作」→「カレンダーリマインダーを書き出す」（この大会）、またはアイコンメニュー →「書き出しとバックアップ」→「カレンダーリマインダーを書き出す」（すべて）で .ics ファイルをダウンロードし、スマホのカレンダーに追加。1ヶ月前・1週間前の通知が内蔵されています。</li>
+        <li><strong>プッシュ通知</strong>（オプション、Cloud Functionsの追加デプロイが必要）：クラウド同期でログイン後、アイコンメニューの「プッシュ通知を有効にする」。デプロイ手順は USAGE.md 参照。</li>
       </ul>
       <h3>クラウド同期とデータの安全性</h3>
       <ul>
-        <li>右上の「Googleでログインして同期」でデバイス間同期（Firebaseの設定が必要、USAGE.md参照）。ログインしなくても通常利用には影響ありません。</li>
+        <li>右上のアイコンメニューの「Googleでログインして同期」でデバイス間同期（Firebaseの設定が必要、USAGE.md参照）。ログインしなくても通常利用には影響ありません。</li>
         <li>ローカル保存が常にメインのデータソースです。ログイン後に追加でクラウド同期されます。初回ログイン時はクラウドとローカルのデータを自動でマージし、データが失われることはありません。</li>
-        <li>「JSONを書き出す」でいつでも全データをバックアップ可能。「すべてのデータを削除」は2回クリックで確認します。</li>
-        <li>大会を削除すると30日間ゴミ箱に保存され、「削除した大会」から復元できます。複数端末の同期で競合が検出された場合も、古いバージョンは同じ場所に保存され、黙って消えることはありません。</li>
+        <li>アイコンメニュー →「書き出しとバックアップ」→「JSONを書き出す」でいつでも全データをバックアップ可能。「すべてのデータを削除」は2回クリックで確認します。</li>
+        <li>大会を削除すると30日間ゴミ箱に保存され、アイコンメニューの「削除した大会」から復元できます。複数端末の同期で競合が検出された場合も、古いバージョンは同じ場所に保存され、黙って消えることはありません。</li>
         <li>ブラウザの保存容量には上限があります。上限に近づいた場合や保存に失敗した場合は、画面上部に通知が表示されます（保存失敗の通知は自動的には消えません）。</li>
       </ul>
       <h3>その他</h3>
       <ul>
         <li>右上の「シンプル」スイッチをオンにすると、よく使う項目と画面（記録・感想・写真・装備リスト）だけになり、分析グラフ・予算・トレーニング計画はしまわれます（データは消えません）。オフでフル表示に戻ります。この端末に記憶されます。</li>
-        <li>右上の月／太陽アイコンでダークモード切り替え、選択内容は記憶されます。</li>
-        <li>右上の言語メニューで繁体字中国語／日本語／英語に対応しています。</li>
+        <li>文字サイズ、ダークモード、言語（繁体字中国語／日本語／英語）は右上のアイコンメニューの「表示」にあり、選択内容は記憶されます。</li>
+        <li>使い方（このページ）とフィードバックもアイコンメニューにあります。バージョン番号はページの一番下です。</li>
         <li>スマートフォンのブラウザでサイトを開き「ホーム画面に追加」を選ぶと、専用アイコンでアプリのように使えます。</li>
         <li>サイト全体の機能一覧は <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">サイトマップ</a> をご覧ください。</li>
       </ul>`,
@@ -4728,6 +4748,18 @@ const EN={
   'ui.simpleHidSplits':'splits ({n})','ui.simpleHidRadar':'performance radar','ui.simpleHidSeries':'series comparison','ui.simpleHidElevation':'elevation profile',
   'ui.simpleHidCheckpoints':'{n} checkpoints','ui.simpleHidGeoPhotos':'{n} course photos','ui.simpleHidWeather':'weather notes','ui.simpleHidNutrition':'fueling plan',
   'ui.simpleHidNutritionSchedule':'{n} fueling items','ui.simpleHidTraining':'training plan','ui.simpleHidLogistics':'budget & travel','ui.simpleHidShoe':'race shoes',
+  // v4.0
+  'ui.tabRaces':'Races','ui.tabCareer':'Career','ui.homeTabsLabel':'Home sections',
+  'ui.viewList':'List','ui.viewCalendar':'Calendar','ui.viewPhotoWall':'Trophy wall','ui.viewSegLabel':'View',
+  'ui.listRecent':'Recent races','ui.listSeeAllHistory':'See all {n} past races ›',
+  'ui.menuDisplay':'Display','ui.menuFontSize':'Text size','ui.menuDarkMode':'Dark mode','ui.menuLanguage':'Language',
+  'ui.menuData':'Data','ui.menuImport':'Import (Excel / JSON)','ui.menuExport':'Export & backup (JSON / CSV / calendar)',
+  'ui.accountMenuTitle':'Account & settings','ui.accountSub':'Signed in with Google · {n} races',
+  'ui.careerOpenHof':'Open career review','ui.careerEmpty':'Once you have 5 or more races, your career stats show up here: marathon PB, races finished per year, total elevation. You have {n} so far.',
+  'ui.welcomeTitle':'Record your first race','ui.welcomeBody':'Registration, prep, results and reflections — all in one place.',
+  'ui.welcomeNew':'+ Add your first race','ui.welcomeImport':'Import an Excel race sheet','ui.welcomeSample':'Explore sample data',
+  'ui.welcomeSignIn':'Used this on another device? Sign in with Google from the avatar at the top right and your data will download automatically.',
+  'ui.statusMenuLabel':'Change status',
   // v3.98.0
   'ui.sparkLabel':'Elevation {a}–{b} m',
   'ui.navBack':'‹ Back',
@@ -5076,22 +5108,24 @@ const EN={
   'ui.recoveryOverwriteEmpty':'No sync overwrite history',
   'ui.helpVersionLine':'Version {n} ・ For the full guide and cloud-sync/push-notification setup steps, see USAGE.md in the repo',
   'ui.helpBodyHtml':`
-      <h3>Calendar & Filters</h3>
+      <h3>Home: Races / Career / Training</h3>
       <ul>
-        <li>Use <span class="mono">‹ Year Month ›</span> at the top to change months, and "Today" to jump back to the current month. On mobile it automatically switches to a list of this month's races.</li>
+        <li>The home page has three tabs. “Races” holds the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log.</li>
+        <li>On a computer, use <span class="mono">‹ Year Month ›</span> to change months and "Today" to jump back. The grid icon next to it switches to the “trophy wall” (completed races with a cover photo); the table icon switches to a compact table.</li>
+        <li>On a phone, you start in “List”: upcoming races, your 5 most recent, and undated ones — “See all past races” lists everything before today. The “List / Calendar / Trophy wall” switch at the top changes the view.</li>
         <li>Filters have two levels: pick "All / Upcoming / History" first — tapping "Upcoming" or "History" reveals the more specific statuses underneath, so the bar isn't crowded with options at once.</li>
-        <li>The search box filters by race name or city; searching or picking a filter lists matches from every month. Races without a date are listed under “No date yet” below the calendar. Once you've logged 5+ races, a career stats strip appears (races finished, marathon PB, distance this year).</li>
-        <li>The grid icon next to "Today" switches to a "trophy wall" view — a photo-card grid of completed races that have a cover photo.</li>
+        <li>The search box filters by race name or city; searching or picking a filter lists matches from every month. Races without a date are listed under “No date yet”.</li>
       </ul>
       <h3>Creating & Managing Races</h3>
       <ul>
-        <li>Use "+ New Race" in the top right to create one. Click a race on the calendar or list to open its detail page — edits save automatically. “‹ Back” at the top (or your phone’s back gesture) returns you to the same spot in the list; the URL includes the race, so refreshing or bookmarking opens the same race.</li>
+        <li>Use "+ New Race" in the top right (on a phone, the “+” at the bottom right) to create one. Click a race on the calendar or list to open its detail page — edits save automatically. “‹ Back” at the top (or your phone’s back gesture) returns you to the same spot in the list; the URL includes the race, so refreshing or bookmarking opens the same race.</li>
         <li>While creating a race, you can paste the official website URL directly, or import an activity file (GPX/TCX/FIT) or a race cover image first — both get applied automatically once the race is created.</li>
         <li>"Delete race" on the detail page needs two clicks to confirm, to avoid accidental deletion. "Duplicate Race" carries over location, course, and gear into a new race — handy for annual series races.</li>
       </ul>
       <h3>Race Detail Fields</h3>
       <ul>
-        <li><strong>Cover Photo</strong>: upload a photo below the title — it becomes a faded background for the title block (portrait photos automatically get a taller block so they aren't squeezed thin), and the same photo shows as a small thumbnail on the calendar and mobile list too.</li>
+        <li><strong>Status</strong>: tap the status stamp above the title (e.g. “Registered ▾”) to change it — DNS and DNF are in there too. For races that haven't happened yet, you can also tap the status track under the title.</li>
+        <li><strong>Cover Photo</strong>: upload one from “More Actions” → “+ Add Cover Photo” on the race page — it becomes a faded background for the title block (portrait photos automatically get a taller block so they aren't squeezed thin), and the same photo shows as a small thumbnail on the calendar and mobile list too.</li>
         <li><strong>Basic Info</strong>: name, series (same-name series get automatic year-over-year PB comparison), status, schedule, lottery info.</li>
         <li><strong>Course & Terrain</strong>: distance, elevation, an elevation profile chart, checkpoint details, ITRA/UTMB points (enter manually).</li>
         <li><strong>Gear, Nutrition & Strategy</strong>: gear checklist (with built-in road/trail/triathlon starter templates), a nutrition schedule, and a pace calculator with wristband generator.</li>
@@ -5099,28 +5133,28 @@ const EN={
       </ul>
       <h3>Importing Data</h3>
       <ul>
-        <li><strong>Import Excel</strong>: reads your own race planning spreadsheet — pick which sheets, review each row before importing.</li>
+        <li><strong>Import Excel</strong> (avatar menu at the top right → “Import”): reads your own race planning spreadsheet — pick which sheets, review each row before importing.</li>
         <li><strong>Import Activity File (GPX/TCX/FIT)</strong>: works with files exported from Garmin, COROS or Strava — automatically pulls distance, elevation, heart rate and splits.</li>
         <li><strong>Paste to Quick-fill</strong>: have an AI turn a race website, brochure or finisher certificate into JSON and paste it in — only the pasted fields get updated.</li>
       </ul>
       <h3>Reminders & Notifications</h3>
       <ul>
-        <li><strong>Calendar Reminders</strong>: use "Add calendar reminder" on a race's detail page, or "Export Calendar Reminders" at the bottom left, to download an .ics file for your phone's calendar — with built-in 1-month and 1-week alerts.</li>
-        <li><strong>Push Notifications</strong> (optional, requires deploying a separate Cloud Function): once signed in for cloud sync, use "Enable push notifications" in the top right. See USAGE.md for deployment steps.</li>
+        <li><strong>Calendar Reminders</strong>: use “More Actions” → “Export Calendar Reminders” on a race page (that race), or avatar menu → “Export & backup” → “Export Calendar Reminders” (all races), to download an .ics file for your phone's calendar — with built-in 1-month and 1-week alerts.</li>
+        <li><strong>Push Notifications</strong> (optional, requires deploying a separate Cloud Function): once signed in for cloud sync, use "Enable push notifications" in the avatar menu. See USAGE.md for deployment steps.</li>
       </ul>
       <h3>Cloud Sync & Data Safety</h3>
       <ul>
-        <li>"Sign in with Google to sync" in the top right syncs your data across devices (requires your own Firebase setup, see USAGE.md). Not signing in has no effect on local use.</li>
+        <li>"Sign in with Google to sync" in the avatar menu at the top right syncs your data across devices (requires your own Firebase setup, see USAGE.md). Not signing in has no effect on local use.</li>
         <li>Local storage is always the primary data source — signing in adds cloud sync on top. On first sign-in, cloud and local data are merged automatically, so nothing is lost.</li>
-        <li>"Export JSON" backs up all your data any time. "Clear All Data" needs two clicks to confirm.</li>
-        <li>Deleting a race keeps it in a trash bin for 30 days — restore it anytime from "Deleted Races". If a sync conflict is detected across devices, the older version is kept in the same place rather than silently disappearing.</li>
+        <li>Avatar menu → “Export & backup” → "Export JSON" backs up all your data any time. "Clear All Data" needs two clicks to confirm.</li>
+        <li>Deleting a race keeps it in a trash bin for 30 days — restore it anytime from "Deleted Races" in the avatar menu. If a sync conflict is detected across devices, the older version is kept in the same place rather than silently disappearing.</li>
         <li>Browser storage has a limit. You'll see a banner at the top when you're approaching it, or if a save actually fails (the failure banner stays visible until the next save succeeds).</li>
       </ul>
       <h3>Other</h3>
       <ul>
         <li>The “Simple” switch in the top right keeps only the everyday fields and screens (results, notes, photos, gear list) and tucks away analysis charts, budget and training plans — nothing is deleted. Turn it off for the full view. This device remembers your choice.</li>
-        <li>The moon/sun icon in the top right toggles dark mode and remembers your choice.</li>
-        <li>The language menu in the top right supports Traditional Chinese, Japanese and English.</li>
+        <li>Text size, dark mode and language (Traditional Chinese, Japanese, English) are under “Display” in the avatar menu at the top right, and your choices are remembered.</li>
+        <li>Help (this page) and feedback are in the avatar menu too; the version number is at the very bottom of the page.</li>
         <li>On mobile, open the site in your browser and choose "Add to Home Screen" for an app-like experience with a custom icon.</li>
         <li>For a quick overview of everything on this site and where to find it, see the <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">sitemap</a>.</li>
       </ul>`,
@@ -5341,9 +5375,14 @@ function hideStorageBanner(){
    面板在 DOM 裡的位置。
    ============================================================ */
 function positionActionMenuPanel(trigger,panel){
+  // 先拿掉上一次設的高度上限再量——選單展開一組之後會變高，要用真正的高度判斷。
+  // 使用者在選單裡捲到一半時也會重新對齊，捲動位置要記下來還回去
+  const keepScroll=panel.scrollTop;
+  panel.style.maxHeight='';
   const rect=trigger.getBoundingClientRect();
   const panelRect=panel.getBoundingClientRect();
-  let left=rect.right-panelRect.width;
+  // 預設跟觸發按鈕靠右對齊；觸發按鈕在左邊的（賽事頁的狀態章）改成靠左
+  let left=trigger.dataset.menuAlign==='start'?rect.left:rect.right-panelRect.width;
   if(left<8) left=8;
   if(left+panelRect.width>window.innerWidth-8) left=Math.max(8,window.innerWidth-8-panelRect.width);
   let top=rect.bottom+6;
@@ -5352,6 +5391,13 @@ function positionActionMenuPanel(trigger,panel){
   }
   panel.style.left=left+'px';
   panel.style.top=top+'px';
+  // 上下都放不下（頭像選單在手機上、或展開了匯出那一組）：限制高度，
+  // 在選單裡面捲動，不要讓下半截超出畫面、點不到（v4.0）
+  if(top+panelRect.height>window.innerHeight-8){
+    panel.style.maxHeight=Math.max(160,window.innerHeight-8-top)+'px';
+    panel.style.overflowY='auto';
+    panel.scrollTop=keepScroll;
+  }
 }
 function findMenuBoostTarget(trigger){
   // 目前只有賽事詳情頁的 .dh-content 有這種被祖先堆疊環境困住的問題；
@@ -5360,7 +5406,7 @@ function findMenuBoostTarget(trigger){
 }
 function closeActionMenuPanel(panel){
   panel.hidden=true;
-  panel.style.left='';panel.style.top='';
+  panel.style.left='';panel.style.top='';panel.style.maxHeight='';panel.style.overflowY='';
   const ownerTrigger=document.querySelector(`[data-menu-trigger="${panel.id}"]`);
   if(ownerTrigger){
     ownerTrigger.setAttribute('aria-expanded','false');
@@ -5396,6 +5442,9 @@ document.addEventListener('click',e=>{
       const freshTrigger=document.querySelector(`[data-menu-trigger="${insidePanel.id}"]`);
       const freshPanel=document.getElementById(insidePanel.id);
       if(freshTrigger&&freshPanel&&freshPanel.hidden) openActionMenuPanel(freshTrigger,freshPanel);
+      // 選單還開著、但內容變了（換字體大小、展開匯出那一組）：寬高跟著變，
+      // 重新對齊一次，不然右邊或下面會超出畫面
+      else if(freshTrigger&&freshPanel) positionActionMenuPanel(freshTrigger,freshPanel);
     },0);
     return;
   }
@@ -6055,25 +6104,41 @@ function renderAccountTrigger(){
     :`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>`;
   btn.classList.toggle('has-photo',!!photo);
 }
+// 頭像選單最上面「已登入 Google · N 場」：場數跟著資料變（同步下載完、新增、
+// 刪除），renderAll() 每次順手更新這一行就好，不用整塊帳號區重畫
+function accountSubLine(){ return tf('ui.accountSub','已登入 Google · {n} 場',state.races.filter(r=>!r.deletedAt).length); }
+function syncAccountSubLine(){
+  const el=document.querySelector('#auth-area .auth-user-sub');
+  if(el) el.textContent=accountSubLine();
+}
 function renderAuthArea(){
   renderAccountTrigger();
   const el=document.getElementById('auth-area');
   if(!el) return;
+  // 登出放在頭像選單最底下（v4.0）：選單上面是帳號，中間是設定和資料，
+  // 登出跟其他常用的東西隔開，不會想按「同步診斷」卻按到登出
+  const out=document.getElementById('auth-signout');
+  if(out){ out.innerHTML=''; out.hidden=true; }
   if(!cloudEnabled()){
     el.innerHTML=`<span class="auth-hint small">${t('ui.cloudNotConfigured','雲端同步未設定')}</span>`;
     return;
   }
   if(state.user){
     const name=state.user.displayName||state.user.email||t('ui.signedIn','已登入');
-    const photo=state.user.photoURL?`<img src="${state.user.photoURL}" alt="">`:'';
+    const photo=state.user.photoURL?`<img src="${escapeHtml(state.user.photoURL)}" alt="">`:'';
     const notifConfigured=window.__cloud&&window.__cloud.notificationsConfigured;
     const notifEnabled=localStorage.getItem('notif-enabled-v1')==='1';
     const notifBtn=notifConfigured?`<button id="btn-enable-notif" class="btn-text">${notifEnabled?t('ui.notifEnabled','推播已啟用'):t('ui.enableNotif','啟用推播通知')}</button>`:'';
     const syncErrorSpan=cloudSyncHasError?`<span class="auth-error small">${t('ui.syncFailing','雲端同步失敗，將自動重試（本機資料不受影響）')}</span>`:'';
-    el.innerHTML=`<span class="auth-user small">${photo}<span class="mono">${escapeHtml(name)}</span></span>${notifBtn}<button id="btn-sync-diag" class="btn-text">${t('ui.syncDiagButton','同步診斷')}</button><button id="btn-signout" class="btn-text">${t('ui.signOut','登出')}</button>${syncErrorSpan}${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
+    const avatar=photo||`<span class="auth-initial" aria-hidden="true">${escapeHtml((name.trim()[0]||'?').toUpperCase())}</span>`;
+    el.innerHTML=`<div class="auth-user">${avatar}<span class="auth-user-text"><span class="auth-user-name">${escapeHtml(name)}</span><span class="auth-user-sub small">${escapeHtml(accountSubLine())}</span></span></div>${notifBtn}<button id="btn-sync-diag" class="btn-text">${t('ui.syncDiagButton','同步診斷')}</button>${syncErrorSpan}${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
+    if(out){ out.innerHTML=`<div class="action-menu-divider"></div><button id="btn-signout" type="button" class="action-menu-item">${t('ui.signOut','登出')}</button>`; out.hidden=false; }
   }else{
     el.innerHTML=`<button id="btn-signin" class="btn-ghost">${t('ui.signIn','使用 Google 登入同步')}</button>${authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:''}`;
   }
+  // 首頁的歡迎卡有一句「右上角頭像登入 Google」，登入／登出之後跟著更新
+  const welcome=document.querySelector('#calendar .welcome-card');
+  if(welcome) welcome.outerHTML=welcomeCardHtml();
 }
 function authErrorMessage(err){
   const code=err&&err.code||'';
@@ -15923,9 +15988,6 @@ function buildFeedbackUrl(){
   if(any) u.searchParams.set('usp','pp_url');
   return u.toString();
 }
-document.getElementById('feedback-fab-caption').addEventListener('click',()=>{
-  document.getElementById('btn-feedback').click();
-});
 document.getElementById('btn-feedback').addEventListener('click',()=>{
   const url=buildFeedbackUrl();
   if(!url){
@@ -16785,6 +16847,8 @@ function startHofPress(card,x,y){
 document.addEventListener('touchstart',e=>{
   const card=e.target&&e.target.closest&&e.target.closest('.honor-card.pressable');
   if(!card||e.touches.length!==1) return;
+  // PB 卡上的「打開生涯回顧」是一般按鈕，按它不要順便開始長按蓄力
+  if(e.target.closest('[data-action="open-hof"]')) return;
   startHofPress(card,e.touches[0].clientX,e.touches[0].clientY);
 },{passive:true});
 document.addEventListener('touchmove',e=>{
@@ -16799,11 +16863,13 @@ document.addEventListener('touchcancel',cancelHofPress,{passive:true});
 document.addEventListener('mousedown',e=>{
   const card=e.target&&e.target.closest&&e.target.closest('.honor-card.pressable');
   if(!card||e.button!==0) return;
+  if(e.target.closest('[data-action="open-hof"]')) return;
   startHofPress(card,e.clientX,e.clientY);
 });
 document.addEventListener('mouseup',cancelHofPress);
 document.addEventListener('click',e=>{
   if(e.target&&e.target.closest&&e.target.closest('[data-action="open-career-share"]')){ openCareerShareModal(); return; }
+  if(e.target&&e.target.closest&&e.target.closest('[data-action="open-hof"]')){ openHallOfFame(); return; }
   if(e.target&&e.target.closest&&e.target.closest('[data-action="close-hof"]')) closeHallOfFame();
 });
 function renderCareerSummary(){
@@ -16812,11 +16878,15 @@ function renderCareerSummary(){
   // 氣溫與配速、熱力圖、榮譽櫃
   const simpleHome=isSimpleMode();
   const s=computeCareerStats();
+  // 生涯回顧原本只能長按 PB 卡 1.5 秒，很少人發現（v4.0 加一顆按鈕，長按照舊可以用）。
+  // 還沒有全馬紀錄就沒有 PB 卡，按鈕單獨放在最上面。
+  const hofBtn=`<button type="button" class="career-hof-open" data-action="open-hof">${escapeHtml(t('ui.careerOpenHof','打開生涯回顧'))} ›</button>`;
   const honorCard=s.marathonPB!=null?`<div class="honor-card pressable">
     <div class="honor-card-label">${t('ui.careerMarathonPB','全馬 PB')}</div>
     <div class="honor-card-value mono">${secToHMSDenoised(s.marathonPB)}</div>
     <div class="honor-card-hint">${t('ui.hofPressHint','長按解鎖生涯回顧')}</div>
-  </div>`:'';
+    ${hofBtn}
+  </div>`:`<div class="career-hof-row">${hofBtn}</div>`;
   const items=[{icon:CAREER_FLAG_ICON,label:t('ui.careerTotalRaces','總完賽場次'),animate:true,value:s.totalCompleted,decimals:0,suffix:' '+t('ui.unitRaces','場'),key:'totalCompleted'}];
   if(s.yearDistance>0) items.push({icon:CAREER_ROUTE_ICON,label:t('ui.careerYearDistance','今年累計里程'),animate:true,value:s.yearDistance,decimals:1,suffix:' '+t('ui.unitKm','公里'),key:'yearDistance'});
   if(s.totalElevationM>0) items.push({icon:CAREER_MOUNTAIN_ICON,label:t('ui.careerTotalElevation','生涯累計完賽爬升'),animate:true,value:Math.round(s.totalElevationM),decimals:0,suffix:' '+t('ui.unitMeters','公尺'),key:'totalElevationM'});
@@ -16850,67 +16920,6 @@ function renderCareerSummary(){
    觸發頻率可能高於螢幕更新率，每次都直接寫 style 等於做了畫面上
    根本看不到的白工，還會拖慢捲動。
    ============================================================ */
-/* ============================================================
-   懸浮按鈕的磁性吸附與追光
-   引力範圍不另外包一層透明的 div（那會動到既有的版面結構，而這顆
-   按鈕外層的 .help-fab-wrap 還帶著旁邊那句提示文字，多包一層容易
-   把兩者的相對位置弄亂），改成直接算「游標到按鈕中心的距離」，
-   超過半徑就當作在範圍外——效果一樣，但不需要碰 DOM。
-   位移只取游標距離的 0.3 倍，按鈕會朝游標方向被「拉」過去一點點、
-   而不是黏著游標跑，這個張力感才是磁性的重點。
-   ============================================================ */
-const MAGNET_RADIUS_PX=90;   // 引力作用範圍（從按鈕中心算起）
-const MAGNET_STRENGTH=0.3;   // 位移係數：游標距離的三成
-let magnetPending=null,magnetRafId=null;
-function magnetSupported(){
-  return window.matchMedia
-    &&window.matchMedia('(hover:hover) and (pointer:fine)').matches
-    &&!window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-}
-function applyMagnetFrame(){
-  magnetRafId=null;
-  if(!magnetPending) return;
-  const {el,mx,my,gx,gy}=magnetPending;
-  magnetPending=null;
-  if(!el.isConnected) return;
-  el.style.setProperty('--mag-x',mx.toFixed(1)+'px');
-  el.style.setProperty('--mag-y',my.toFixed(1)+'px');
-  el.style.setProperty('--glare-x',gx.toFixed(1)+'%');
-  el.style.setProperty('--glare-y',gy.toFixed(1)+'%');
-}
-function releaseMagnet(el){
-  if(magnetPending&&magnetPending.el===el) magnetPending=null;
-  el.classList.remove('magnet-active');
-  el.style.setProperty('--mag-x','0px');
-  el.style.setProperty('--mag-y','0px');
-}
-document.addEventListener('mousemove',e=>{
-  if(!magnetSupported()) return;
-  const el=document.getElementById('btn-help');
-  if(!el) return;
-  const rect=el.getBoundingClientRect();
-  if(!rect.width) return;
-  const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
-  const dx=e.clientX-cx,dy=e.clientY-cy;
-  if(Math.hypot(dx,dy)>MAGNET_RADIUS_PX){
-    // 只有在真的還被吸著的時候才重設，避免游標在畫面上隨便動一下
-    // 就一直寫入樣式。
-    if(el.classList.contains('magnet-active')) releaseMagnet(el);
-    return;
-  }
-  el.classList.add('magnet-active');
-  magnetPending={
-    el,
-    mx:dx*MAGNET_STRENGTH,
-    my:dy*MAGNET_STRENGTH,
-    // 高光位置用「游標相對按鈕左上角的百分比」，夾在 0~100 之間：
-    // 引力範圍比按鈕本身大，游標還在範圍內但已經離開按鈕邊界時，
-    // 不夾的話百分比會跑到負數或超過 100，高光會整個飛出去。
-    gx:Math.max(0,Math.min(100,((e.clientX-rect.left)/rect.width)*100)),
-    gy:Math.max(0,Math.min(100,((e.clientY-rect.top)/rect.height)*100)),
-  };
-  if(magnetRafId==null) magnetRafId=requestAnimationFrame(applyMagnetFrame);
-},{passive:true});
 const TILT_MAX_DEG=9;
 let tiltPending=null,tiltRafId=null;
 function tiltSupported(){
@@ -17157,38 +17166,131 @@ function exitCalendarResults(){
   state.searchQuery=''; if(searchInputEl) searchInputEl.value='';
   state.filterStatus='all';
 }
-function renderCalendar(){
-  const y=state.calendarYear,m=state.calendarMonth;
-  calLabelEl.textContent=monthLabel(y,m);
-  renderFilterChips();
+/* ============================================================
+   首頁分頁與手機清單（v4.0）
+   首頁分成「賽事／生涯數據／訓練」三個分頁。原本生涯數據整片堆在月曆
+   上面（筆電上月曆從 1,526px 才開始）；現在賽事分頁只有「下一場」焦點
+   卡、搜尋篩選列和月曆，生涯數據自己一頁。
+   手機（≤640px）預設看「清單」：即將到來、最近的 5 場、未定日期——手機
+   月曆原本只列「這個月」的賽事，大部分月份打開是空的。
+   ============================================================ */
+const PHONE_LAYOUT_MQ=window.matchMedia?window.matchMedia('(max-width:640px)'):null;
+function isPhoneLayout(){ return !!(PHONE_LAYOUT_MQ&&PHONE_LAYOUT_MQ.matches); }
+// 目前實際畫出來的是哪一種檢視：手機看 phoneView（清單／月曆／獎牌牆），
+// 電腦看 viewMode（月曆／獎牌牆／表格）。簡易版沒有表格檢視的按鈕，原本
+// 停在表格的話先畫月曆——不改 state.viewMode，切回完整版還是表格。
+function currentCalendarView(){
+  if(isPhoneLayout()) return state.phoneView==='calendar'?'calendar':state.phoneView==='grid'?'grid':'list';
+  if(state.viewMode==='table') return isSimpleMode()?'calendar':'table';
+  return state.viewMode==='grid'?'grid':'calendar';
+}
+// 搜尋或篩選中的「跨月份結果清單」只接手月曆和清單；獎牌牆、表格自己會篩
+function resultsListShowing(){ const v=currentCalendarView(); return v==='calendar'||v==='list'; }
+function hasAnyRace(){ return state.races.some(r=>!r.deletedAt); }
+// 分頁列、檢視切換、body 上給 CSS 用的標記——每次重畫首頁都同步一次
+function syncHomeChrome(){
+  const tab=state.homeTab==='career'?'career':'races';
+  document.body.dataset.homeTab=tab;
+  document.body.classList.toggle('is-first-run',!hasAnyRace());
+  document.querySelectorAll('.home-tab[data-home-tab]').forEach(b=>{
+    if(b.dataset.homeTab===tab) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+  });
+  const calNav=document.querySelector('.cal-nav');
+  if(calNav) calNav.dataset.phoneView=state.phoneView;
+  document.querySelectorAll('.view-seg [data-phone-view]').forEach(b=>{
+    b.setAttribute('aria-pressed',String(b.dataset.phoneView===state.phoneView));
+  });
   const viewToggleBtn=document.getElementById('cal-view-toggle');
   if(viewToggleBtn) viewToggleBtn.classList.toggle('active',state.viewMode==='grid');
   const tableToggleBtn=document.getElementById('cal-table-toggle');
   if(tableToggleBtn) tableToggleBtn.classList.toggle('active',state.viewMode==='table');
-  // 簡易版沒有表格檢視的按鈕：原本停在表格檢視的話，先顯示行事曆，不然會
-  // 卡在一個切不出來的畫面。不改 state.viewMode，切回完整版還是表格。
-  const viewMode=(state.viewMode==='table'&&isSimpleMode())?'calendar':state.viewMode;
-  // 搜尋或篩選中：直接列出所有月份的結果。生涯數據和「下一場」焦點卡先
-  // 不畫——不然結果被擠到 1,000px 以下，看起來像什麼都沒找到。
-  const resultsMode=viewMode==='calendar'&&calendarResultsMode();
+}
+function setHomeTab(tab){
+  tab=tab==='career'?'career':'races';
+  if(state.homeTab===tab) return;
+  state.homeTab=tab;
+  renderCalendar();
+  if(tab==='career') logFeatureUse('open_career_tab');
+}
+function setPhoneView(view){
+  view=['list','calendar','grid'].includes(view)?view:'list';
+  if(state.phoneView===view) return;
+  state.phoneView=view;
+  renderCalendar();
+  if(view==='grid') logFeatureUse('view_photo_wall');
+}
+// 第一次打開、一場賽事都沒有：一張歡迎卡取代空的月曆（v4.0）。
+// 有了第一場之後就不再出現（包括從「已刪除賽事」救回來的）。
+function welcomeCardHtml(){
+  const hint=cloudEnabled()&&!state.user
+    ?`<p class="welcome-hint">${escapeHtml(t('ui.welcomeSignIn','已經在別的裝置用過？右上角頭像登入 Google，資料會自動下載。'))}</p>`:'';
+  return `<div class="welcome-card">
+    <h2>${escapeHtml(t('ui.welcomeTitle','開始記錄你的第一場賽事'))}</h2>
+    <p>${escapeHtml(t('ui.welcomeBody','報名、備賽、完賽成績和心得都記在同一個地方。'))}</p>
+    <button type="button" class="btn-primary welcome-main${shouldShowFirstUseGlow()?' cta-glow':''}" data-action="start-create">${escapeHtml(t('ui.welcomeNew','＋ 新增第一場賽事'))}</button>
+    <div class="welcome-alt">
+      <button type="button" class="btn-ghost" data-action="welcome-import">${escapeHtml(t('ui.welcomeImport','匯入 Excel 賽事表'))}</button>
+      <button type="button" class="btn-ghost" data-action="welcome-sample">${escapeHtml(t('ui.welcomeSample','先看範例資料'))}</button>
+    </div>
+    ${hint}
+  </div>`;
+}
+function careerTabHtml(){
+  const summary=renderCareerSummary();
+  if(summary) return summary;
+  const n=state.races.filter(r=>!r.deletedAt).length;
+  return `<div class="career-empty">${escapeHtml(tf('ui.careerEmpty','記錄滿 5 場賽事之後，這裡會出現你的生涯數據：全馬 PB、每年完賽場次、累計爬升。目前 {n} 場。',n))}</div>`;
+}
+const PHONE_LIST_RECENT=5;
+function phoneListHtml(){
+  const today=todayISO();
+  const races=state.races.filter(r=>!r.deletedAt);
+  const dated=races.filter(r=>r.schedule&&r.schedule.raceDate);
+  const upcoming=dated.filter(r=>r.schedule.raceDate>=today).sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
+  const past=dated.filter(r=>r.schedule.raceDate<today).sort((a,b)=>b.schedule.raceDate.localeCompare(a.schedule.raceDate));
+  const recent=past.slice(0,PHONE_LIST_RECENT);
+  // 「看全部」的數字跟篩選列的「歷史紀錄 (N)」一致——按下去就是切到那個篩選
+  const historyCount=races.filter(r=>isHistoryRace(r,today)).length;
+  const year=today.slice(0,4);
+  const fmt=r=>{ const d=r.schedule.raceDate; return d.slice(0,4)===year?d.slice(5).replace('-','/'):d.replace(/-/g,'/'); };
+  const parts=[];
+  if(upcoming.length) parts.push(calendarGroupHtml(t('ui.filterUpcoming','即將到來'),upcoming,fmt));
+  if(recent.length){
+    // 叫「最近的賽事」不叫「最近完賽」：裡面也有 DNF、還沒改成已完賽的過去賽事
+    parts.push(calendarGroupHtml(t('ui.listRecent','最近的賽事'),recent,fmt));
+    if(historyCount>recent.length) parts.push(`<button type="button" class="list-see-all" data-action="list-see-all-history">${escapeHtml(tf('ui.listSeeAllHistory','看全部 {n} 場歷史紀錄 ›',historyCount))}</button>`);
+  }
+  parts.push(calendarUndatedHtml(races));
+  return `<div class="cal-phone-list">${parts.join('')}</div>`;
+}
+function renderCalendar(){
+  const y=state.calendarYear,m=state.calendarMonth;
+  calLabelEl.textContent=monthLabel(y,m);
+  renderFilterChips();
+  syncHomeChrome();
+  const slot=document.getElementById('focus-panel-slot');
   const calNav=document.querySelector('.cal-nav');
+  if(!hasAnyRace()||state.homeTab==='career'){
+    if(calNav) calNav.classList.remove('is-results');
+    if(slot) slot.innerHTML='';
+    if(state.homeTab==='career'){ calendarEl.innerHTML=careerTabHtml(); animateCareerTickers(); }
+    else calendarEl.innerHTML=welcomeCardHtml();
+    return;
+  }
+  const view=currentCalendarView();
+  // 搜尋或篩選中：直接列出所有月份的結果。「下一場」焦點卡先不畫——
+  // 不然結果被擠到畫面下面，看起來像什麼都沒找到。
+  const resultsMode=(view==='calendar'||view==='list')&&calendarResultsMode();
   if(calNav) calNav.classList.toggle('is-results',resultsMode);
   if(resultsMode){
-    const slot=document.getElementById('focus-panel-slot'); if(slot) slot.innerHTML='';
+    if(slot) slot.innerHTML='';
     calendarEl.innerHTML=calendarResultsHtml();
     return;
   }
   renderFocusPanel();
-  if(viewMode==='grid'){
-    calendarEl.innerHTML=`${renderCareerSummary()}${renderPhotoGrid()}`;
-    animateCareerTickers();
-    return;
-  }
-  if(viewMode==='table'){
-    calendarEl.innerHTML=`${renderCareerSummary()}${renderTableView()}`;
-    animateCareerTickers();
-    return;
-  }
+  if(view==='grid'){ calendarEl.innerHTML=renderPhotoGrid(); return; }
+  if(view==='table'){ calendarEl.innerHTML=renderTableView(); return; }
+  if(view==='list'){ calendarEl.innerHTML=phoneListHtml(); return; }
   const racesByDate=buildRacesByDate(filteredRaces());
   const todayISOStr=todayISO();
 
@@ -17228,27 +17330,24 @@ function renderCalendar(){
   }
 
   calendarEl.innerHTML=`
-    ${renderCareerSummary()}
     <div class="cal-weekdays">${weekdayLabels().map((w,i)=>`<span${(i===0||i===6)?' class="weekend"':''}>${w}</span>`).join('')}</div>
     <div class="cal-grid">${cells.join('')}</div>
     <div class="cal-list">${listRows.join('')}</div>
     ${listRows.length?'':calendarMonthEmptyHtml(y,m)}
     ${calendarUndatedHtml(filteredRaces())}
   `;
-  animateCareerTickers();
 }
 
-function coverUploadHtml(race){
+// 封面照片的操作（v4.0 從標題底下搬進「更多操作」）：標題下面原本疊著
+// 狀態條、DNS/DNF 連結、「新增封面照片」、日期行、Google 日曆連結，
+// 完賽的賽事在手機上要捲過 345px 的頁首才看得到成績。
+function coverMenuItemsHtml(race){
   if(race.coverImage){
-    return `<div class="cover-upload">
-      <button type="button" class="btn-ghost" data-action="open-cover-picker">${t('ui.coverChange','更換封面照片')}</button>
-      <button type="button" class="btn-ghost" data-action="open-focal-point">${t('ui.coverFocalPoint','調整焦點')}</button>
-      <button type="button" class="btn-text danger" data-action="remove-cover">${t('ui.coverRemove','移除照片')}</button>
-    </div>`;
+    return `<button type="button" class="action-menu-item" data-action="open-cover-picker">${t('ui.coverChange','更換封面照片')}</button>
+      <button type="button" class="action-menu-item" data-action="open-focal-point">${t('ui.coverFocalPoint','調整焦點')}</button>
+      <button type="button" class="action-menu-item danger" data-action="remove-cover">${t('ui.coverRemove','移除照片')}</button>`;
   }
-  return `<div class="cover-upload">
-    <button type="button" class="btn-ghost" data-action="open-cover-picker">${t('ui.coverAdd','+ 新增封面照片')}</button>
-  </div>`;
+  return `<button type="button" class="action-menu-item" data-action="open-cover-picker">${t('ui.coverAdd','+ 新增封面照片')}</button>`;
 }
 // 生命週期軌道（Lifecycle Stepper）：把狀態下拉選單視覺化成一條可以
 // 直接點擊切換的進度軌道，放在賽事標題正下方。四個主節點對應
@@ -17262,7 +17361,7 @@ function coverUploadHtml(race){
 // 是 DNS／DNF 的時候——不特別做一個「返回正常」的按鈕，因為「點擊
 // 想要的狀態」本身就已經是最直接的返回方式，不需要多一層機制。
 const LIFECYCLE_MAIN_SEQUENCE=['considering','lottery_pending','registered','completed'];
-function lifecycleStepperHtml(race){
+function lifecycleStepperHtml(race,opts){
   const isException=race.status==='dns'||race.status==='dnf';
   const mainIdx=LIFECYCLE_MAIN_SEQUENCE.indexOf(race.status);
   const currentIdx=isException?LIFECYCLE_MAIN_SEQUENCE.length-1:mainIdx;
@@ -17282,7 +17381,8 @@ function lifecycleStepperHtml(race){
     </button>`;
     if(!isLastNode) track+=`<span class="lc-connector${i<currentIdx?' lc-connector-done':''}"></span>`;
   });
-  const exceptionLinks=isException?'':`<div class="lc-exception-row">
+  // 賽事頁頁首（v4.0）不放這一排：DNS／DNF 已經在狀態章的選單裡
+  const exceptionLinks=(isException||(opts&&opts.noExceptionLinks))?'':`<div class="lc-exception-row">
     <button type="button" class="lc-exception-link" data-action="lc-set-status" data-status="dns">${t('ui.lcMarkDns','標記未出賽 (DNS)')}</button>
     <button type="button" class="lc-exception-link" data-action="lc-set-status" data-status="dnf">${t('ui.lcMarkDnf','標記未完賽 (DNF)')}</button>
   </div>`;
@@ -17291,9 +17391,30 @@ function lifecycleStepperHtml(race){
     ${exceptionLinks}
   </div>`;
 }
+// 狀態章（v4.0）：點了跳出六個狀態。完賽之後頁首不再放四步驟的狀態條，
+// 要改回來、或標 DNS／DNF，都從這裡改。
+const DH_STATUS_MENU_ORDER=['considering','lottery_pending','registered','completed'];
+function detailStatusMenuHtml(race){
+  const item=v=>`<button type="button" class="action-menu-item" role="menuitemradio" aria-checked="${v===race.status}" data-action="lc-set-status" data-status="${v}">${escapeHtml(statusLabel(v))}</button>`;
+  const label=t('ui.statusMenuLabel','更改狀態');
+  return `<div class="action-menu dh-status">
+    <button type="button" class="stamp status-${race.status} dh-status-btn" data-menu-trigger="dh-status-menu" data-menu-align="start" aria-haspopup="true" aria-expanded="false" aria-label="${escapeHtml(label+'：'+statusLabel(race.status))}" title="${escapeHtml(label)}">${escapeHtml(statusLabel(race.status))}<svg class="action-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div id="dh-status-menu" class="action-menu-panel dh-status-menu" role="menu" hidden>
+      ${DH_STATUS_MENU_ORDER.map(item).join('')}
+      <div class="action-menu-divider"></div>
+      ${item('dns')}${item('dnf')}
+    </div>
+  </div>`;
+}
+// 頁首的日期行（v4.0）：只留「日期 ・ 地點」。完賽時間下面的成績大字就有；
+// 倒數在下面的進度條就有——原本同一個數字在頁首出現兩次。
+function detailMetaLine(race){
+  const place=(race.location&&(race.location.city||race.location.country))||'';
+  return [race.schedule.raceDate||t('ui.dateNotSet','尚未設定日期'),place].filter(Boolean).join(' ・ ');
+}
 function detailHeaderHtml(race){
   const S=isSimpleMode();
-  const chip=(race.status==='completed'&&race.results.chipTimeSeconds)?` ・ ${t('field.post.results.chipTimeSeconds','晶片時間')} ${secToHMS(race.results.chipTimeSeconds)}`:'';
+  const isDone=['completed','dns','dnf'].includes(race.status);
   const hasCover=!!race.coverImage;
   const isPortraitCover=hasCover&&race.coverImageAspect&&race.coverImageAspect<0.85;
   const sportBorder=hasCover?'':` style="border-bottom-color:${sportColorVar(race.sportType)}"`;
@@ -17305,7 +17426,7 @@ function detailHeaderHtml(race){
     <div class="dh-content">
       <div class="dh-top">
         <div class="dh-badges">
-          <span class="stamp status-${race.status}">${statusLabel(race.status)}</span>
+          ${detailStatusMenuHtml(race)}
           <span class="sport-icon-wrap" style="color:${sportColorVar(race.sportType)}" title="${sportLabel(race.sportType)}">${sportIconSvg(sportIconKey(race.sportType),30)}</span>
           ${race.results.isPb?`<span class="pb-badge">${t('ui.pbBadge','個人最佳 PB')}</span>`:''}
           ${isInTaperPeriod(race)?`<span class="taper-badge">${t('ui.taperBadge','進入減量期')}</span>`:''}
@@ -17318,6 +17439,8 @@ function detailHeaderHtml(race){
               <svg class="action-menu-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
             </button>
             <div id="dh-more-menu" class="action-menu-panel" hidden>
+              ${coverMenuItemsHtml(race)}
+              <div class="action-menu-divider"></div>
               ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="export-race-ics">${t('ui.exportRaceIcs','匯出行事曆提醒（.ics檔）')}</button>`:''}
               ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
               ${!S&&['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
@@ -17334,10 +17457,8 @@ function detailHeaderHtml(race){
         </div>
       </div>
       <h1>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
-      ${lifecycleStepperHtml(race)}
-      ${coverUploadHtml(race)}
-      <div class="dh-meta mono">${race.schedule.raceDate||t('ui.dateNotSet','尚未設定日期')} ・ ${countdownLabel(race)}${chip}</div>
-      ${race.schedule.raceDate?`<button type="button" class="btn-text-small dh-gcal-quicklink" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
+      ${isDone?'':lifecycleStepperHtml(race,{noExceptionLinks:true})}
+      <div class="dh-meta mono">${escapeHtml(detailMetaLine(race))}</div>
       ${S?'':sparklineSvg(race)}
       ${progressBlockHtml(race)}
     </div>
@@ -17358,7 +17479,10 @@ function renderDetail(){
     return;
   }
   const race=state.races.find(r=>r.id===state.selectedId);
-  if(!race){destroyRouteMap();detailEl.innerHTML=emptyStateHtml();currentRace=null;applyAmbientTint(null);return;}
+  // 沒有選賽事＝在首頁（v4.0）：原本這裡放「點選上方行事曆中的賽事…」加一顆
+  // 新增賽事，接在首頁最底下。賽事頁在 v3.99 已經是獨立的畫面，首頁頂列／
+  // 右下角都有新增鈕，第一次打開也有歡迎卡，這段就不再需要
+  if(!race){destroyRouteMap();detailEl.innerHTML='';currentRace=null;applyAmbientTint(null);return;}
   currentRace=race;
   applyAmbientTint(race.coverImageAccentColor||null);
   // 完賽的賽事，打開頁面第一眼要看到的是成績，不是「基本資訊與時間」。
@@ -17525,17 +17649,6 @@ function updateDetailHeaderBits(){
   if(header) header.outerHTML=detailHeaderHtml(currentRace);
 }
 
-function emptyStateHtml(){
-  return `<div class="empty-state">
-    <div class="empty-state-icons">
-      ${sportIconSvg('runner',40)}
-      ${sportIconSvg('trail',40)}
-      ${sportIconSvg('triathlon',40)}
-    </div>
-    <p>${t('ui.selectRaceHint','點選上方行事曆中的賽事查看詳細紀錄，或建立一場新賽事。')}</p>
-    <button class="btn-primary${shouldShowFirstUseGlow()?' cta-glow':''}" data-action="start-create">${t('ui.newRace','+ 新增賽事')}</button>
-  </div>`;
-}
 
 function createActivityLineHtml(){
   return createStagedActivity
@@ -17591,7 +17704,7 @@ function renderAll(){
   // 變短，捲動位置就被瀏覽器夾掉了）
   syncRouteWithState();
   document.body.classList.toggle('viewing-detail',!!(state.selectedId||state.creating));
-  renderCalendar();renderDetail();renderRecoveryButton();
+  renderCalendar();renderDetail();renderRecoveryButton();syncAccountSubLine();
 }
 // 賽事頁是獨立的畫面（v3.99.0），進去一律從最上面開始
 function scrollDetailIntoView(){
@@ -17749,11 +17862,10 @@ function resetCreateStaging(){
    開始，都算完成引導，永久記在 localStorage 裡，之後就算把賽事全部
    刪光重新變回空清單，也不會再亮起來——這是「第一次用這個網站」的
    引導，不是「賽事清單目前是空的」的提示，兩者語意不一樣。
-   有兩個地方都會出現「新增賽事」按鈕：頂部工具列那個是固定不變的
-   靜態元素、用 JS 事後加上 class；空白狀態（還沒選任何賽事時）裡的
-   那個是每次重新渲染都會整段重寫的動態內容，改成在產生 HTML 的當下
-   直接判斷要不要帶上 class，不能只靠事後加 class（會在下一次重新
-   渲染時被整段覆蓋掉、消失不見）。
+   v4.0 起光暈只放在首頁歡迎卡的「新增第一場賽事」——沒有賽事時首頁
+   就是那張卡，頂列的「＋ 新增賽事」再亮一次是重複的（手機上頂列那顆
+   本來就藏起來）。歡迎卡每次重畫都整段重寫，所以在產生 HTML 的當下
+   直接判斷要不要帶上 class，不能事後加（下一次重畫就被蓋掉）。
    ============================================================ */
 const FIRST_USE_GLOW_KEY='race-day-first-use-seen-v1';
 function shouldShowFirstUseGlow(){
@@ -17762,11 +17874,6 @@ function shouldShowFirstUseGlow(){
     if(localStorage.getItem(FIRST_USE_GLOW_KEY)) return false;
     return true;
   }catch(err){ return false; }
-}
-function checkAndShowFirstUseGlow(){
-  if(!shouldShowFirstUseGlow()) return;
-  const btn=document.getElementById('btn-new');
-  if(btn) btn.classList.add('cta-glow');
 }
 function dismissFirstUseGlow(){
   try{ localStorage.setItem(FIRST_USE_GLOW_KEY,'1'); }catch(err){}
@@ -17999,7 +18106,7 @@ calendarEl.addEventListener('click',e=>{
 
 function shiftCalendarMonth(delta){
   // 在跨月份的結果清單裡按 ‹ ›：使用者要的是回到月曆翻月份
-  if(calendarResultsMode()&&state.viewMode!=='grid'&&(state.viewMode!=='table'||isSimpleMode())) exitCalendarResults();
+  if(calendarResultsMode()&&resultsListShowing()) exitCalendarResults();
   let m=state.calendarMonth+delta,y=state.calendarYear;
   if(m<0){m=11;y--;} else if(m>11){m=0;y++;}
   state.calendarMonth=m;state.calendarYear=y;
@@ -18019,6 +18126,9 @@ let calNavSwipeState=null;
 const calNavEl=document.querySelector('.cal-nav');
 calNavEl.addEventListener('touchstart',e=>{
   if(e.touches.length!==1) return;
+  // 手機的清單、獎牌牆沒有月份可以切（月份按鈕也藏起來了），不接這個手勢——
+  // 不然在檢視切換鈕上滑一下，會在看不到的地方偷偷換了月份
+  if(isPhoneLayout()&&state.phoneView!=='calendar') return;
   const touch=e.touches[0];
   calNavSwipeState={startX:touch.clientX,startY:touch.clientY,dragging:false};
 },{passive:true});
@@ -18048,21 +18158,27 @@ calNavEl.addEventListener('touchend',e=>{
 document.getElementById('cal-prev').addEventListener('click',()=>shiftCalendarMonth(-1));
 document.getElementById('cal-next').addEventListener('click',()=>shiftCalendarMonth(1));
 document.getElementById('cal-today').addEventListener('click',()=>{
-  if(calendarResultsMode()&&state.viewMode!=='grid'&&(state.viewMode!=='table'||isSimpleMode())) exitCalendarResults();
+  if(calendarResultsMode()&&resultsListShowing()) exitCalendarResults();
   const t=new Date();
   state.calendarYear=t.getFullYear();state.calendarMonth=t.getMonth();
   renderCalendar();
 });
-/* scrollPhotoWallIntoView()：切成獎牌牆時，畫面上半部（生涯數據、榮譽櫃）
-   完全沒有變化，牆本身在一個半螢幕之外，唯一的回饋是按鈕自己變深色——
-   而那個變化就發生在使用者正在看的地方之外，會以為沒切成功。
-   牆的位置刻意維持原樣（仍在榮譽櫃下方），只是自動捲過去。
-   扣掉 --topbar-height 是因為頂欄是 sticky 的，直接對齊會被蓋住。 */
+/* scrollPhotoWallIntoView()：切成獎牌牆時，如果牆在畫面下方看不到，唯一
+   的回饋只有按鈕自己變深色，會以為沒切成功，所以自動捲過去（v3.x 牆在
+   生涯數據、榮譽櫃下面，一個半螢幕之外）。扣掉 --topbar-height 是因為
+   頂欄是 sticky 的，直接對齊會被蓋住。 */
 function scrollPhotoWallIntoView(){
   const wrap=document.querySelector('.photo-grid-wrap');
   if(!wrap) return;
+  // v4.0 生涯數據搬到自己的分頁之後，牆就接在切換鈕下面，通常已經看得到——
+  // 看得到就不要捲，免得畫面無故跳一下
+  const r=wrap.getBoundingClientRect();
+  if(r.top>=0&&r.top<window.innerHeight*0.6) return;
   const topbar=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-height'),10)||90;
-  const top=wrap.getBoundingClientRect().top+window.scrollY-topbar-12;
+  // 電腦上搜尋篩選列也是固定在頂列下面的，要一起扣掉，不然牆的上緣被它蓋住
+  const row2=document.querySelector('.topbar-row2');
+  const row2H=row2&&getComputedStyle(row2).position==='sticky'?row2.offsetHeight:0;
+  const top=r.top+window.scrollY-topbar-row2H-12;
   const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.scrollTo({top:Math.max(0,top),behavior:reduceMotion?'auto':'smooth'});
 }
@@ -18071,6 +18187,30 @@ document.getElementById('cal-view-toggle').addEventListener('click',()=>{
   renderCalendar();
   if(state.viewMode==='grid'){ logFeatureUse('view_photo_wall'); scrollPhotoWallIntoView(); }
 });
+// 首頁分頁、手機的檢視切換、清單底下的「看全部歷史紀錄」、歡迎卡（v4.0）
+document.addEventListener('click',e=>{
+  const tab=e.target.closest('.home-tab[data-home-tab]');
+  if(tab){ setHomeTab(tab.dataset.homeTab); return; }
+  const seg=e.target.closest('.view-seg [data-phone-view]');
+  if(seg){ setPhoneView(seg.dataset.phoneView); return; }
+  if(e.target.closest('[data-action="list-see-all-history"]')){
+    state.searchQuery=''; if(searchInputEl) searchInputEl.value='';
+    state.filterStatus='history';
+    renderCalendar();
+    const row2=document.querySelector('.topbar-row2');
+    if(row2&&row2.getBoundingClientRect().top<0) row2.scrollIntoView({block:'start'});
+    return;
+  }
+  if(e.target.closest('[data-action="welcome-import"]')){ document.getElementById('btn-import').click(); return; }
+  if(e.target.closest('[data-action="welcome-sample"]')){ document.getElementById('btn-sample-data').click(); return; }
+});
+// 跨過 640px（手機轉橫、視窗拉寬拉窄）時，清單／月曆的畫法不一樣，要重畫
+if(PHONE_LAYOUT_MQ){
+  // 公開分享頁整個 body 換掉了，沒有月曆可以重畫
+  const onPhoneLayoutChange=()=>{ if(document.getElementById('calendar')) renderCalendar(); };
+  if(PHONE_LAYOUT_MQ.addEventListener) PHONE_LAYOUT_MQ.addEventListener('change',onPhoneLayoutChange);
+  else if(PHONE_LAYOUT_MQ.addListener) PHONE_LAYOUT_MQ.addListener(onPhoneLayoutChange);
+}
 document.getElementById('cal-table-toggle').addEventListener('click',()=>{
   state.viewMode=state.viewMode==='table'?'calendar':'table';
   renderCalendar();
@@ -18188,12 +18328,11 @@ document.addEventListener('click',e=>{
    深色模式
    ============================================================ */
 const THEME_KEY='theme-pref-v1';
-const MOON_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`;
-const SUN_ICON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>`;
+// v4.0：深色模式從頂列的月亮／太陽圖示，改成頭像選單裡的一個開關
 function applyTheme(theme){
   document.documentElement.setAttribute('data-theme',theme);
   const btn=document.getElementById('btn-theme-toggle');
-  if(btn) btn.innerHTML = theme==='dark' ? SUN_ICON : MOON_ICON;
+  if(btn) btn.setAttribute('aria-checked',String(theme==='dark'));
   const metaTheme=document.querySelector('meta[name="theme-color"]');
   if(metaTheme) metaTheme.setAttribute('content', theme==='dark' ? '#12161A' : '#2E6B49');
   redrawThemeDependentCanvases();
@@ -20852,26 +20991,28 @@ function openPasteModal(){
 }
 
 /* ============================================================
-   使用說明（App 內建，右下角路跑小人按鈕開啟）
+   使用說明（App 內建，頭像選單裡的「使用說明」開啟；v4.0 以前是右下角的路跑小人按鈕）
    ============================================================ */
 function helpModalHtml(){
   const zhBody=`
-      <h3>行事曆與篩選</h3>
+      <h3>首頁：賽事／生涯數據／訓練</h3>
       <ul>
-        <li>上方 <span class="mono">‹ 年 月 ›</span> 切換月份，「今天」跳回當月；手機（寬度較窄）會自動改成當月賽事清單，方便點按。</li>
+        <li>首頁分成三個分頁：「賽事」是「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄。</li>
+        <li>電腦：上方 <span class="mono">‹ 年 月 ›</span> 切換月份，「今天」跳回當月；旁邊的方格圖示切換「獎牌牆」（有封面照片的完賽賽事），表格圖示切換緊湊表格。</li>
+        <li>手機：預設是「清單」——即將到來、最近的 5 場、未定日期，按「看全部歷史紀錄」列出所有過去的賽事；上面的「清單／月曆／獎牌牆」切換檢視。</li>
         <li>篩選分兩層：先選「全部／即將到來／歷史紀錄」，點「即將到來」或「歷史紀錄」後才會展開細分狀態，避免按鈕一次擠太多。</li>
-        <li>搜尋框可用賽事名稱或城市過濾，搜尋或點篩選鈕時會列出所有月份的結果；沒填日期的賽事列在月曆下方的「未定日期」。累積 5 場以上會出現生涯數據（總完賽場次、全馬 PB、當年里程）。</li>
-        <li>「今天」旁邊的方格圖示可切換「獎牌牆」檢視，以相片卡片呈現已完賽且有封面照片的賽事。</li>
+        <li>搜尋框可用賽事名稱或城市過濾，搜尋或點篩選鈕時會列出所有月份的結果；沒填日期的賽事列在「未定日期」。</li>
       </ul>
       <h3>新增與管理賽事</h3>
       <ul>
-        <li>右上角「+ 新增賽事」建立；點月曆或清單上的賽事開啟詳情頁編輯，欄位修改即時自動儲存。賽事頁最上面的「‹ 返回」或手機的返回手勢回到原本的清單位置；網址會帶上賽事，重新整理或加書籤都會打開同一場。</li>
+        <li>右上角「+ 新增賽事」（手機是右下角的「＋」）建立；點月曆或清單上的賽事開啟詳情頁編輯，欄位修改即時自動儲存。賽事頁最上面的「‹ 返回」或手機的返回手勢回到原本的清單位置；網址會帶上賽事，重新整理或加書籤都會打開同一場。</li>
         <li>新增賽事時可直接貼上官方網站連結，也可以先匯入運動紀錄檔（GPX/TCX/FIT）或賽事主視覺，建立時會一併套用。</li>
         <li>詳情頁「刪除賽事」需連按兩次確認；「複製賽事」可保留地點、路線、裝備等欄位建立新的一場，適合同系列跨年賽事。</li>
       </ul>
       <h3>賽事詳情欄位</h3>
       <ul>
-        <li><strong>封面照片</strong>：標題下方可上傳照片，會變成標題區塊的淡化背景底圖（直式照片會自動加高區塊避免被壓扁），同一張圖也會出現在行事曆格子與手機清單的小縮圖。</li>
+        <li><strong>狀態</strong>：標題上方的狀態章（例如「已報名 ▾」）點了就能改狀態，未起跑（DNS）、未完賽（DNF）也在裡面；還沒比賽的賽事，標題下方的狀態條也可以直接點。</li>
+        <li><strong>封面照片</strong>：賽事頁「更多操作」→「新增封面照片」上傳，會變成標題區塊的淡化背景底圖（直式照片會自動加高區塊避免被壓扁），同一張圖也會出現在行事曆格子與手機清單的小縮圖。</li>
         <li><strong>基本資訊</strong>：名稱、系列（同名系列會自動跨年比較 PB）、狀態、時間、抽籤資訊。</li>
         <li><strong>地理與路線</strong>：距離、爬升、海拔變化圖、CP 明細、ITRA/UTMB 點數（需自行查詢填入）。</li>
         <li><strong>裝備補給與戰略</strong>：裝備清單（可套用路跑／越野／三鐵標配範本）、補給時程規劃、配速試算與手環產生器。</li>
@@ -20879,28 +21020,28 @@ function helpModalHtml(){
       </ul>
       <h3>資料匯入</h3>
       <ul>
-        <li><strong>匯入 Excel</strong>：讀取賽事規劃表，可勾選工作表、逐筆確認後再匯入。</li>
+        <li><strong>匯入 Excel</strong>（右上角頭像選單 →「匯入」）：讀取賽事規劃表，可勾選工作表、逐筆確認後再匯入。</li>
         <li><strong>匯入運動紀錄檔（GPX/TCX/FIT）</strong>：Garmin/COROS/Strava 匯出的檔案，自動抓距離、爬升、心率、分段、海拔。</li>
         <li><strong>貼上資料快速填入</strong>：把賽事網站/簡章/證書內容請 AI 整理成 JSON 後貼上，只更新你貼的欄位。</li>
       </ul>
       <h3>提醒與通知</h3>
       <ul>
-        <li><strong>行事曆提醒</strong>：詳情頁「加入行事曆提醒」或左下角「匯出行事曆提醒」，下載 .ics 檔匯入手機行事曆，內建倒數一個月／一週提醒。</li>
-        <li><strong>推播通知</strong>（選用，需額外部署 Cloud Functions）：登入雲端同步後右上角「啟用推播通知」；部署步驟見 USAGE.md。</li>
+        <li><strong>行事曆提醒</strong>：賽事頁「更多操作」→「匯出行事曆提醒」（這一場），或頭像選單 →「匯出與備份」→「匯出行事曆提醒」（全部），下載 .ics 檔匯入手機行事曆，內建倒數一個月／一週提醒。</li>
+        <li><strong>推播通知</strong>（選用，需額外部署 Cloud Functions）：登入雲端同步後，頭像選單裡的「啟用推播通知」；部署步驟見 USAGE.md。</li>
       </ul>
       <h3>雲端同步與資料安全</h3>
       <ul>
-        <li>右上角「使用 Google 登入同步」讓資料跨裝置同步（需自行設定 Firebase，見 USAGE.md）；不登入完全不影響本機使用。</li>
+        <li>右上角頭像選單裡的「使用 Google 登入同步」讓資料跨裝置同步（需自行設定 Firebase，見 USAGE.md）；不登入完全不影響本機使用。</li>
         <li>本機儲存永遠是主要資料來源，登入後才會額外同步到雲端；首次登入會自動合併雲端與本機資料，不會遺失。</li>
-        <li>「匯出 JSON」可隨時備份全部資料；「清除全部資料」需連按兩次確認。</li>
-        <li>刪除賽事會先進垃圾桶保留 30 天，「已刪除賽事」可還原；多裝置同步若偵測到衝突版本，舊版本會保留在同一個地方，不會靜默消失。</li>
+        <li>頭像選單 →「匯出與備份」→「匯出 JSON」可隨時備份全部資料；「清除全部資料」需連按兩次確認。</li>
+        <li>刪除賽事會先進垃圾桶保留 30 天，頭像選單的「已刪除賽事」可還原；多裝置同步若偵測到衝突版本，舊版本會保留在同一個地方，不會靜默消失。</li>
         <li>瀏覽器儲存空間有上限，接近上限或存檔真的失敗時，畫面上方會跳出提示（存檔失敗會持續顯示，不會自動消失）。</li>
       </ul>
       <h3>其他</h3>
       <ul>
         <li>右上角「簡易版」開關：打開後只留常用的欄位與畫面（成績、心得、照片、裝備清單），分析圖表、預算、訓練計畫先收起來，資料都還在；關掉就回到完整版。這台裝置會記住你的選擇。</li>
-        <li>右上角月亮/太陽圖示切換深色模式，會記住你的選擇。</li>
-        <li>右上角語言選單支援繁體中文／日文／英文。</li>
+        <li>字體大小、深色模式、語言（繁體中文／日文／英文）都在右上角頭像選單的「顯示」，會記住你的選擇。</li>
+        <li>使用說明（就是這一頁）和意見回饋也在頭像選單裡；版本號在頁面最下面。</li>
         <li>手機瀏覽器開啟網站後選「加入主畫面」，會使用自訂圖示，體驗跟 App 一樣。</li>
         <li>想快速瀏覽整個網站有哪些功能、各自放在哪裡，可以看 <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">網站地圖</a>。</li>
       </ul>
@@ -21011,7 +21152,7 @@ helpModalEl_getter().addEventListener('click',e=>{
     helpModalEl_getter().hidden=true;helpModalEl_getter().innerHTML='';
   }
 });
-document.getElementById('btn-help').innerHTML='<img src="icons/help-avatar.png" alt="">';
+// v4.0：使用說明從右下角的懸浮鈕搬進頭像選單，頭像圖直接寫在 HTML 裡
 document.getElementById('btn-help').addEventListener('click',openHelpModal);
 
 /* ============================================================
@@ -22311,7 +22452,6 @@ async function init(){
   try{ applyRouteFromLocation(); }finally{ routeSyncPaused=false; }
   renderAll();
   updateTopbarHeightVar();
-  checkAndShowFirstUseGlow();
   // 走到這裡代表這一次真的啟動完成了，把「開不起來」的計數歸零
   try{ sessionStorage.setItem('boot-fails-v1','0'); }catch(e){}
   registerOfflineWorker();
@@ -22530,6 +22670,15 @@ async function routeDroppedFiles(files){
 
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
+  // 開著的下拉選單最先收（v4.0：頭像選單裡東西變多了，用鍵盤操作的人要能
+  // 按 Esc 關掉），焦點回到打開它的那顆按鈕
+  const openMenu=document.querySelector('.action-menu-panel:not([hidden])');
+  if(openMenu){
+    const trigger=document.querySelector(`[data-menu-trigger="${openMenu.id}"]`);
+    closeActionMenuPanel(openMenu);
+    if(trigger) trigger.focus();
+    return;
+  }
   // 抽屜排在一般彈窗前面處理：抽屜是後開的、疊在最上層，Esc 應該
   // 先收起最上面那一層。
   const trImport=document.getElementById('training-import-modal');
