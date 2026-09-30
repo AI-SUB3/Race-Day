@@ -59,8 +59,21 @@ async (n) => {
 """
 
 
+# v3.97.0 起，完全沒有資料的新裝置預設是簡易版。其他群組測的都是完整版的
+# 功能，而且都是「先開空白頁、再塞資料」，所以開頁前先把偏好設成完整版
+# （已經設過的不動）；簡易版自己的預設行為在 Simple 群組用沒有預設的 context 測。
+PRESET_FULL_MODE_JS = "try{ if(!localStorage.getItem('ui-mode-v1')) localStorage.setItem('ui-mode-v1','full'); }catch(e){}"
+
+
+def full_mode_context(browser, **kw):
+    ctx = browser.new_context(**kw)
+    ctx.add_init_script(PRESET_FULL_MODE_JS)
+    return ctx
+
+
 class Group:
     """一組相關的檢查，共用一個分頁。"""
+    preset_full_mode = True
 
     def __init__(self, name, viewport=None, touch=False):
         self.name = name
@@ -72,6 +85,8 @@ class Group:
     def run(self, browser):
         ctx = browser.new_context(viewport=self.viewport, has_touch=self.touch,
                                   is_mobile=self.touch)
+        if self.preset_full_mode:
+            ctx.add_init_script(PRESET_FULL_MODE_JS)
         page = ctx.new_page()
         page.on('pageerror', lambda e: self.errors.append(str(e)))
         page.goto(APP_URL)
@@ -1793,10 +1808,10 @@ class Mobile(Group):
             return {hoverNone:matchMedia('(hover:none)').matches, glow:cs('#ambient-glow','display'),
               topbar:bd('#topbar'), row2:bd('.topbar-row2'), blob:cs('.focus-mesh-blob','filter'), anim:cs('.focus-mesh-blob','animationName')};
         }'''
-        tctx = br.new_context(viewport={'width':390,'height':844}, is_mobile=True, has_touch=True)
+        tctx = full_mode_context(br, viewport={'width':390,'height':844}, is_mobile=True, has_touch=True)
         tp = tctx.new_page(); tp.goto('file://'+APP); tp.wait_for_timeout(900)
         touch = tp.evaluate(PROBE); tctx.close()
-        dctx = br.new_context(viewport={'width':1200,'height':900})
+        dctx = full_mode_context(br, viewport={'width':1200,'height':900})
         dp = dctx.new_page(); dp.goto('file://'+APP); dp.wait_for_timeout(900)
         desk = dp.evaluate(PROBE); dctx.close()
         c['touch_devices_drop_large_compositing_effects'] = (touch['hoverNone'] is True and touch['glow']=='none'
@@ -1805,7 +1820,7 @@ class Mobile(Group):
         c['desktop_keeps_visual_effects'] = (desk['hoverNone'] is False and desk['glow']!='none'
             and 'blur' in (desk['topbar'] or '') and 'blur' in (desk['blob'] or ''))
         # 安全模式：?safe=fx 開、重新整理仍有效、?safe=all 連圖片一起關、?safe=off 恢復
-        sctx = br.new_context(viewport={'width':390,'height':844}, is_mobile=True, has_touch=True)
+        sctx = full_mode_context(br, viewport={'width':390,'height':844}, is_mobile=True, has_touch=True)
         sp = sctx.new_page(); base='file://'+APP
         sp.goto(base+'?safe=fx'); sp.wait_for_timeout(700)
         a = sp.evaluate("()=>[document.documentElement.getAttribute('data-safe'),!!document.querySelector('.safe-mode-banner')]")
@@ -2842,7 +2857,7 @@ class Offline(Group):
         port = self.server.server_address[1]
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.url = f'http://127.0.0.1:{port}/index.html'
-        ctx = browser.new_context(viewport=self.viewport, service_workers='allow')
+        ctx = full_mode_context(browser, viewport=self.viewport, service_workers='allow')
         page = ctx.new_page()
         page.on('pageerror', lambda e: self.errors.append(str(e)))
         page.goto(self.url)
@@ -3184,7 +3199,7 @@ class PublicView(Group):
     """?s= 唯讀頁：獨立群組，因為要用 ?s= 參數重新載入頁面。"""
 
     def run(self, browser):
-        ctx=browser.new_context(viewport=self.viewport)
+        ctx=full_mode_context(browser, viewport=self.viewport)
         page=ctx.new_page()
         page.on('pageerror', lambda e: self.errors.append(str(e)))
         snap_js='''{
@@ -4429,6 +4444,243 @@ class Training(Group):
             return onTop && modalClosed && overlayStill && document.getElementById('training-overlay').hidden;
         }''' % MK)
 
+
+SIMPLE_SEED_JS = r"""window.__simpleSeed=async function(){
+  const mk=(name,date)=>{ const r=emptyRace(name,'road_running','completed',date); r.route.distanceKm=42.195; r.results.chipTimeSeconds=12600; return r; };
+  const rich=mk('2025 台北馬拉松','2025-12-21'); rich.id='rich';
+  rich.alias='Taipei Marathon'; rich.series='台北馬'; rich.location.city='台北市'; rich.location.country='台灣';
+  rich.route.elevationGainM=60;
+  rich.route.elevationProfile=[{distanceKm:0,elevationM:10},{distanceKm:20,elevationM:32},{distanceKm:42,elevationM:12}];
+  rich.checkpoints=[Object.assign(LIST_META.checkpoints.factory(),{name:'CP1',distanceKm:10}),Object.assign(LIST_META.checkpoints.factory(),{name:'CP2',distanceKm:25})];
+  rich.splits=[...Array(42)].map((_,i)=>({distanceKm:1,splitTimeSeconds:295+(i%5),avgPaceSecPerKm:295+(i%5),avgHr:150+(i%10)}));
+  rich.performanceData.avgHr=155; rich.results.overallRank=812; rich.budget.registrationFee=1500;
+  rich.review.courseReview='後段起風'; rich.review.lessonsLearned='前半太快';
+  const prev=mk('2024 台北馬拉松','2024-12-15'); prev.id='prev'; prev.series='台北馬';
+  const bare=emptyRace('只填名字','road_running','registered','2026-12-20'); bare.id='bare';
+  state.races=[rich,prev,bare]; await persist(); renderAll();
+};
+"""
+
+
+class Simple(Group):
+    """簡易版（v3.97.0）：右上角開關、新裝置預設、只收起不刪資料、抽屜常用欄位。
+    這組刻意不預設完整版——要測的就是「沒有資料的新裝置」會進簡易版。"""
+    preset_full_mode = False
+
+    def body(self, page):
+        c = self.checks
+        mode = "()=>document.documentElement.getAttribute('data-mode')"
+        c['new_device_without_data_defaults_simple'] = page.evaluate("""()=>
+            document.documentElement.getAttribute('data-mode')==='simple'
+            && localStorage.getItem('ui-mode-v1')==='simple' && localStorage.getItem('ui-mode-auto-v1')==='1'
+            && document.getElementById('btn-mode-toggle').getAttribute('aria-checked')==='true'""")
+        # 右上角：工具列第一顆、在畫面右半邊、跟「新增賽事」同一排
+        c['switch_first_in_top_right_toolbar'] = page.evaluate("""()=>{
+            const b=document.getElementById('btn-mode-toggle'), r=b.getBoundingClientRect(), n=document.getElementById('btn-new').getBoundingClientRect();
+            const brand=document.querySelector('.topbar-brand').getBoundingClientRect();
+            return b.parentElement.classList.contains('topbar-actions') && b.parentElement.firstElementChild===b
+              && r.left>brand.right && r.right<=n.left && r.width>0 && Math.abs((r.top+r.bottom)/2-(n.top+n.bottom)/2)<4
+              && b.getAttribute('role')==='switch'; }""")
+        HIDDEN = "['#btn-training','#cal-table-toggle','#btn-export-csv','#btn-export-notebook']"
+        c['simple_hides_static_entries_only'] = page.evaluate("""()=>{
+            const d=q=>getComputedStyle(document.querySelector(q)).display;
+            return %s.every(q=>d(q)==='none') && d('#btn-new')!=='none' && d('.font-scale')!=='none'
+              && d('#btn-export')!=='none' && d('#btn-import')!=='none' && d('#cal-view-toggle')!=='none'
+              && getComputedStyle(document.querySelector('.topbar-row1')).paddingBottom==='0px'; }""" % HIDDEN)
+        page.add_script_tag(content=SIMPLE_SEED_JS)
+        page.evaluate('async()=>{ await __simpleSeed(); selectRace("rich",{scroll:false}); }')
+        page.wait_for_timeout(500)
+        ADV = """()=>{ const q=s=>!!document.querySelector('#detail '+s);
+            return {radar:q('.race-radar'),qnav:q('.quick-nav'),logi:q('#section-logistics'),splitsChart:q('.splits-chart-block'),
+              splitAna:q('.split-analysis'),elev:q('.elevation-profile'),series:!!document.querySelector('#detail > details.section:not([id])'),
+              cp:q('[data-section="checkpoints"]'),weather:q('[data-section="weather"]'),nutri:q('[data-section="nutritionPlan"]'),
+              tplan:q('[data-section="trainingPlan"]'),epp:q('.epp-section'),pacing:q('[data-action="open-pacing-modal"]'),
+              spark:q('.spark'),fatigue:q('[data-action="open-fatigue-mode"]'),paste:q('[data-action="open-paste-modal"]'),
+              aiPrompt:q('[data-action="copy-report-prompt"]'),shoe:[...document.querySelectorAll('#section-post h3')].some(h=>h.textContent.includes('鞋'))}; }"""
+        adv = page.evaluate(ADV)
+        c['simple_detail_does_not_render_advanced'] = not any(adv.values())
+        c['simple_detail_keeps_core'] = page.evaluate("""()=>{ const q=s=>!!document.querySelector('#detail '+s);
+            const sums=[...document.querySelectorAll('#detail details.section>summary')].map(x=>x.textContent.trim());
+            return q('.results-big-time') && q('[data-action="generate-share-image"]') && q('#section-basic') && q('.journey-card')
+              && ['basicInfo','schedule','route','goals','equipment','results','review','mediaLinks'].every(k=>q('[data-section="'+k+'"]'))
+              && q('[data-action="open-gpx-picker"]') && q('[data-action="delete-race"]') && q('[data-action="duplicate-race"]')
+              && JSON.stringify(sums)===JSON.stringify(['基本資訊','路線與天氣','裝備與目標','成績與心得']); }""")
+        # 頁尾提示只列這場真的有資料的進階區塊
+        note = page.evaluate("()=>{ const n=document.querySelector('.simple-hidden-note'); return n?n.textContent:''; }")
+        c['hidden_note_lists_filled_advanced_items'] = all(x in note for x in
+            ['分段配速（42 段）', '賽事能力雷達', '系列賽比較', '海拔剖面', 'CP／補給站 2 筆', '預算與行程', '切換到完整版查看']) \
+            and '訓練計畫' not in note and '補給設定' not in note and '氣象紀錄' not in note
+        c['hidden_note_absent_when_nothing_hidden'] = page.evaluate("""async()=>{ selectRace('bare',{scroll:false});
+            await new Promise(s=>setTimeout(s,200)); const none=!document.querySelector('.simple-hidden-note');
+            selectRace('rich',{scroll:false}); await new Promise(s=>setTimeout(s,200)); return none; }""")
+        # ---- 抽屜：只列常用欄位，可以就地展開 ----
+        c['drawer_basic_common_fields_and_filled_count'] = page.evaluate("""async()=>{
+            openDrawer('basicInfo'); await new Promise(s=>setTimeout(s,200));
+            const paths=[...document.querySelectorAll('#drawer-content [data-path]')].map(x=>x.dataset.path);
+            const btn=document.querySelector('#drawer-content .simple-fields-toggle');
+            // 別名、系列有填；競賽形式是預設值「個人單人」，不算已填
+            return JSON.stringify(paths)===JSON.stringify(['name','officialUrl','status','sportType','location.city','location.country'])
+              && !!btn && btn.textContent==='顯示全部欄位（還有 5 項，其中 2 項已填）' && btn.getAttribute('aria-expanded')==='false'; }""")
+        page.click('#drawer-content .simple-fields-toggle')
+        page.wait_for_timeout(200)
+        c['drawer_show_all_expands_in_place'] = page.evaluate("""()=>{
+            const n=document.querySelectorAll('#drawer-content [data-path]').length;
+            const btn=document.querySelector('#drawer-content .simple-fields-toggle');
+            return n===11 && btn.textContent==='只顯示常用欄位' && btn.getAttribute('aria-expanded')==='true'
+              && document.documentElement.getAttribute('data-mode')==='simple'; }""")
+        page.fill('#drawer-content [data-path="alias"]', 'TPE')
+        page.press('#drawer-content [data-path="alias"]', 'Tab')
+        page.wait_for_timeout(400)
+        c['drawer_edit_saves_and_reopen_resets'] = page.evaluate("""async()=>{
+            const saved=state.races.find(r=>r.id==='rich').alias==='TPE';
+            closeDrawer(); await new Promise(s=>setTimeout(s,300));
+            openDrawer('basicInfo'); await new Promise(s=>setTimeout(s,200));
+            const n=document.querySelectorAll('#drawer-content [data-path]').length;
+            closeDrawer(); await new Promise(s=>setTimeout(s,300));
+            return saved && n===6; }""")
+        c['drawer_schedule_results_review_trimmed'] = page.evaluate("""async()=>{
+            const get=async sec=>{ openDrawer(sec); await new Promise(s=>setTimeout(s,200));
+              const p=[...document.querySelectorAll('#drawer-content [data-path]')].map(x=>x.dataset.path);
+              closeDrawer(); await new Promise(s=>setTimeout(s,300)); return p; };
+            const sc=await get('schedule'), rs=await get('results'), rv=await get('review');
+            return JSON.stringify(sc)===JSON.stringify(['schedule.raceDate','schedule.startTime','bibNumber'])
+              && JSON.stringify(rs)===JSON.stringify(['results.chipTimeSeconds','results.overallRank','results.overallParticipants','results.ageGroupRank','results.isPb'])
+              && JSON.stringify(rv)===JSON.stringify(['review.courseReview']); }""")
+        # ---- 切換：資料一個位元都不變 ----
+        c['switching_never_changes_data'] = page.evaluate("""async()=>{
+            const snap=async()=>JSON.stringify([state.races,await loadJson(STORAGE_KEY)]);
+            const before=await snap(); const btn=document.getElementById('btn-mode-toggle');
+            for(let i=0;i<4;i++){ btn.click(); await new Promise(s=>setTimeout(s,250)); }
+            openDrawer('basicInfo'); await new Promise(s=>setTimeout(s,150));
+            document.querySelector('#drawer-content .simple-fields-toggle').click(); await new Promise(s=>setTimeout(s,150));
+            document.querySelector('#drawer-content .simple-fields-toggle').click(); await new Promise(s=>setTimeout(s,150));
+            closeDrawer(); await new Promise(s=>setTimeout(s,400));
+            return document.documentElement.getAttribute('data-mode')==='simple' && (await snap())===before; }""")
+        # 頁尾按鈕 → 完整版：進階區塊全部回來、手動選過就清掉「自動」旗標
+        # 選賽事時可能跳出「解鎖徽章」的動畫蓋住整頁，先收掉
+        page.evaluate("()=>document.querySelectorAll('.badge-unbox-overlay').forEach(n=>n.remove())")
+        page.click('.simple-hidden-note-btn')
+        page.wait_for_timeout(400)
+        adv_full = page.evaluate(ADV)
+        c['note_button_switches_to_full_and_everything_returns'] = page.evaluate(mode) is None \
+            and page.evaluate("()=>localStorage.getItem('ui-mode-v1')==='full'&&localStorage.getItem('ui-mode-auto-v1')===null&&document.getElementById('btn-mode-toggle').getAttribute('aria-checked')==='false'") \
+            and all(adv_full[k] for k in ['radar', 'qnav', 'logi', 'splitsChart', 'elev', 'series', 'cp', 'weather',
+                                          'nutri', 'tplan', 'pacing', 'fatigue', 'paste', 'aiPrompt', 'shoe'])
+        c['full_mode_drawer_has_all_fields'] = page.evaluate("""async()=>{
+            openDrawer('basicInfo'); await new Promise(s=>setTimeout(s,200));
+            const n=document.querySelectorAll('#drawer-content [data-path]').length, b=!!document.querySelector('#drawer-content .simple-fields-toggle');
+            closeDrawer(); await new Promise(s=>setTimeout(s,300)); return n===11 && !b; }""")
+        # 簡易版沒有入口的抽屜開著時切換 → 收掉，不留孤兒抽屜
+        c['switch_closes_drawer_without_entry'] = page.evaluate("""async()=>{
+            openDrawer('logistics'); await new Promise(s=>setTimeout(s,200));
+            const open=!document.getElementById('global-drawer').hidden;
+            document.getElementById('btn-mode-toggle').click(); await new Promise(s=>setTimeout(s,400));
+            return open && document.getElementById('global-drawer').hidden && document.documentElement.getAttribute('data-mode')==='simple'; }""")
+        # 表格檢視：簡易版沒有那顆按鈕，不能卡在表格裡；切回完整版還是表格
+        c['table_view_not_stuck_in_simple'] = page.evaluate("""async()=>{
+            const btn=document.getElementById('btn-mode-toggle'); btn.click(); await new Promise(s=>setTimeout(s,300));
+            document.getElementById('cal-table-toggle').click(); await new Promise(s=>setTimeout(s,200));
+            const inTable=!!document.querySelector('#calendar .table-view-wrap');
+            btn.click(); await new Promise(s=>setTimeout(s,300));
+            const simpleNoTable=!document.querySelector('#calendar .table-view-wrap');
+            btn.click(); await new Promise(s=>setTimeout(s,300));
+            const back=!!document.querySelector('#calendar .table-view-wrap');
+            document.getElementById('cal-table-toggle').click(); await new Promise(s=>setTimeout(s,200));
+            return inTable && simpleNoTable && back && state.viewMode!=='table'; }""")
+        # 首頁（五場以上才有生涯區）：簡易版收起榮譽櫃、氣溫與配速圖；留 PB 卡與年度回顧長圖卡
+        c['home_trims_trophy_and_charts'] = page.evaluate("""async()=>{
+            const extra=[1,2,3].map(i=>{ const r=emptyRace('馬拉松'+i,'road_running','completed','2023-0'+i+'-10'); r.route.distanceKm=42.195; r.results.chipTimeSeconds=13000+i; return r; });
+            state.races.push(...extra); state.selectedId=null; renderAll(); await new Promise(s=>setTimeout(s,300));
+            const q=s=>!!document.querySelector('#calendar '+s);
+            const full=q('.trophy-cabinet-wrap') && q('.climate-chart-wrap') && q('.honor-card') && q('.year-in-review-row');
+            document.getElementById('btn-mode-toggle').click(); await new Promise(s=>setTimeout(s,300));
+            const simple=!q('.trophy-cabinet-wrap') && !q('.climate-chart-wrap') && q('.honor-card') && q('.year-in-review-row');
+            return full && simple && document.documentElement.getAttribute('data-mode')==='simple'; }""")
+        c['i18n_switch_and_section_labels'] = page.evaluate("""async()=>{
+            selectRace('rich',{scroll:false}); await new Promise(s=>setTimeout(s,200));
+            const lab=()=>document.querySelector('#btn-mode-toggle .mode-switch-label').textContent;
+            const sum=()=>document.querySelector('#section-basic>summary').textContent.trim();
+            setLang('ja'); const ja=[lab(),sum(),document.getElementById('btn-mode-toggle').title];
+            setLang('en'); const en=[lab(),sum(),(document.querySelector('.simple-hidden-note')||{}).textContent||''];
+            setLang('zh'); const zh=[lab(),sum()];
+            return ja[0]==='シンプル' && ja[1]==='基本情報' && ja[2].includes('シンプル') && en[0]==='Simple' && en[1]==='Basics'
+              && en[2].includes('splits (42)') && en[2].includes('View in full view') && zh[0]==='簡易版' && zh[1]==='基本資訊'; }""")
+        # ---- 重新整理：偏好留著，而且在畫面出來前就套上（不會先閃完整版） ----
+        # 記錄 #app 剛被解析出來那一刻的 data-mode（不能用 DOMContentLoaded：module
+        # 腳本會拖慢它，init() 可能已經跑完）。那時主程式還沒讀完本機資料，
+        # 只有 <head> 裡的早期腳本有機會先套上簡易版。
+        page.add_init_script("new MutationObserver((ms,o)=>{ if(document.getElementById('app')){ window.__modeAtApp=document.documentElement.getAttribute('data-mode'); o.disconnect(); } }).observe(document,{childList:true,subtree:true});")
+        page.reload()
+        page.wait_for_timeout(900)
+        c['simple_pref_applied_before_first_render'] = page.evaluate("()=>window.__modeAtApp==='simple' && document.documentElement.getAttribute('data-mode')==='simple' && document.getElementById('btn-mode-toggle').getAttribute('aria-checked')==='true'")
+        # 已經有資料、還沒選過 → 完整版（更新後不會突然少一大半）
+        page.evaluate("()=>{ localStorage.removeItem('ui-mode-v1'); localStorage.removeItem('ui-mode-auto-v1'); }")
+        page.reload()
+        page.wait_for_timeout(900)
+        c['existing_data_defaults_full'] = page.evaluate("()=>window.__modeAtApp===null && document.documentElement.getAttribute('data-mode')===null && localStorage.getItem('ui-mode-v1')==='full' && localStorage.getItem('ui-mode-auto-v1')===null")
+        # ---- 自動選的簡易版 + 第一次登入從雲端載回一堆賽事 → 其實是老使用者換新手機 ----
+        page.add_script_tag(content=FAKE_CLOUD_JS)
+        SETUP = """const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const mk=(id)=>Object.assign(emptyRace('雲端'+id,'road_running','completed','2025-01-01'),{id,updatedAt:'2026-09-0'+id.length+'T00:00:00.000Z'});
+            const setup=async(local,cloudRaces,pref,auto)=>{ await saveJson('cloud-sync-state-v1',null); cloudKnown=null; cloudPendingDeletes=[];
+              state.races=local; trainings=[]; localStorage.setItem('ui-mode-v1',pref);
+              if(auto) localStorage.setItem('ui-mode-auto-v1','1'); else localStorage.removeItem('ui-mode-auto-v1');
+              applyUiModeAttr(pref); document.querySelectorAll('.foreground-toast,.toast').forEach(n=>n.remove());
+              window.__cloud=__makeFakeCloud(cloudRaces,[]); };
+            const done=()=>{ window.__cloud=null; state.user=null; };"""
+        c['auto_simple_switches_full_after_cloud_restore'] = page.evaluate("""async()=>{ %s
+            await setup([],[mk('a'),mk('bb'),mk('ccc')],'simple',true);
+            await handleAuthChange({uid:'u1'}); await wait(1400);
+            const txt=document.body.textContent;
+            const ok=document.documentElement.getAttribute('data-mode')===null && localStorage.getItem('ui-mode-v1')==='full'
+              && localStorage.getItem('ui-mode-auto-v1')===null && txt.includes('已從雲端載入 3 場賽事');
+            done(); return ok; }""" % SETUP)
+        c['explicit_simple_kept_after_cloud_restore'] = page.evaluate("""async()=>{ %s
+            await setup([],[mk('a'),mk('bb')],'simple',false);
+            await handleAuthChange({uid:'u1'}); await wait(1400);
+            const ok=document.documentElement.getAttribute('data-mode')==='simple' && state.races.length===2;
+            done(); return ok; }""" % SETUP)
+        c['auto_simple_with_local_races_kept'] = page.evaluate("""async()=>{ %s
+            await setup([mk('mine')],[mk('mine'),mk('a')],'simple',true);
+            await handleAuthChange({uid:'u1'}); await wait(1400);
+            const ok=document.documentElement.getAttribute('data-mode')==='simple' && localStorage.getItem('ui-mode-auto-v1')==='1';
+            done(); return ok; }""" % SETUP)
+        # 公開分享頁是給別人看的完整紀錄：不受這台裝置的簡易版影響（最後做，會換掉整個 body）
+        c['public_view_ignores_simple_mode'] = page.evaluate("""async()=>{
+            applyUiModeAttr('simple'); fetchPublicSnapshotAnyway=async()=>null;
+            await bootPublicShareView('x'); return document.documentElement.getAttribute('data-mode')===null; }""")
+
+
+class SimplePhone(Group):
+    """簡易版開關在手機：標題列右上角、不壓到標題、不撐出橫向捲軸。"""
+    preset_full_mode = False
+
+    def run(self, browser):
+        for w in (360, 390):
+            for m in ('simple', 'full'):
+                ctx = browser.new_context(viewport={'width': w, 'height': 800}, is_mobile=True, has_touch=True)
+                ctx.add_init_script("try{ localStorage.setItem('ui-mode-v1','%s'); }catch(e){}" % m)
+                page = ctx.new_page()
+                page.on('pageerror', lambda e: self.errors.append(str(e)))
+                page.goto(APP_URL)
+                page.wait_for_timeout(800)
+                for lang in ('zh', 'en', 'ja'):
+                    r = page.evaluate("""(lang)=>{ setLang(lang);
+                        const b=document.getElementById('btn-mode-toggle').getBoundingClientRect();
+                        const h=document.querySelector('.app-title'); const rg=document.createRange(); rg.selectNodeContents(h);
+                        const tr=rg.getBoundingClientRect();
+                        return {right:innerWidth-b.right, top:b.top, titleBottom:tr.bottom, gap:b.left-tr.right, w:b.width,
+                          scroll:document.documentElement.scrollWidth, vw:innerWidth,
+                          training:getComputedStyle(document.getElementById('btn-training')).display}; }""", lang)
+                    ok = (r['w'] > 0 and 10 <= r['right'] <= 24 and r['top'] < r['titleBottom'] and r['gap'] >= 8
+                          and r['scroll'] <= r['vw'] and ((r['training'] == 'none') == (m == 'simple')))
+                    self.checks[f'phone{w}_{m}_{lang}_switch_top_right_no_overlap'] = ok
+                    if not ok:
+                        print(f'   ⚠ phone{w}_{m}_{lang}: {r}')
+                ctx.close()
+        return self.checks, self.errors
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -4450,6 +4702,8 @@ GROUPS = {
     'training':   lambda: Training('training'),
     'radar':      lambda: Radar('radar'),
     'journey':    lambda: Journey('journey'),
+    'simple':     lambda: Simple('simple'),
+    'simple_phone': lambda: SimplePhone('simple_phone'),
 }
 
 

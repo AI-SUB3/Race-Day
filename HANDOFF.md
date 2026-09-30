@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v3.96.0
+> 貼到新對話開頭即可接續。最後更新：v3.97.0
 
 ---
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（380 項檢查，20 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`、`journey`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（416 項檢查，22 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport multisport sync`、`security mobile i18n`、`data`、`share`、`share_touch offline`、`climate publink pubview`、`paste`、`feedback`、`training`、`radar`、`journey`、`simple simple_phone`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -57,7 +57,7 @@ python3 test_suite.py --list          # 列出群組
 APP=/path/to/index.html python3 test_suite.py
 ```
 
-群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate`
+群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate` `publink` `pubview` `paste` `feedback` `training` `radar` `journey` `simple`（不預設完整版，測新裝置的預設）`simple_phone`（360／390 × 簡易／完整 × 中英日）
 
 離開碼：0 通過 / 1 有失敗 / 2 參數錯誤（可直接接 CI）。
 已用「故意注入 XSS 漏洞」驗證過它真的抓得到回歸，不是只會印綠勾。
@@ -137,6 +137,9 @@ APP=/path/to/index.html python3 test_suite.py
 | 賽事旅程的地名 | `looksLikePlace()`：有括號或超過 20 字不拿去查（使用者的場地欄位會寫備註）。同縣市一律在地（`journeyRaceCounty`）。沒有地名用賽事名稱，不用「賽場」 |
 | 賽事旅程的地點快取不能寫進賽事 | `journey-geo-v1`（IndexedDB，這台裝置自己的）。寫進 race 會讓每場都被判定有變更、重新上傳雲端。地圖輪廓是 Natural Earth 簡化後內建的 `JOURNEY_TW`／`JOURNEY_EA`（整數編碼，×1000／×100）；要加範圍就重新產生，不要直接放原始 GeoJSON |
 | 意見回饋表單 | 填寫網址與三個 entry ID 在 `FEEDBACK_FORM_URL`／`FEEDBACK_PREFILL`（版本 1727311429、裝置 1690470865、當下畫面 1958998644），有測試鎖住。表單編輯頁：https://docs.google.com/forms/d/13QA_csP1fQNmuX2cyGZwLEt1xnXFepBm8bekPHKNNHw/edit；回覆試算表：https://docs.google.com/spreadsheets/d/1IN94KHlkWqfNdJOLSNtn_ogsD7qv2iWQr5rIzv6XiEo/edit（兩者都要表單擁有者的帳號才能開）。改了表單欄位要重新取得預先填入連結、更新 entry ID 與測試 |
+| 簡易版只改顯示、不碰資料（v3.97.0） | `isSimpleMode()`（`<html data-mode="simple">`）。賽事頁、首頁的進階區塊在 JS 產生畫面時就直接不產生（`renderDetail` 裡的 `S?'':…`），**不要**改成產生了再用 CSS 藏：手機少畫很多東西，公開分享頁也不會被誤傷。CSS 只藏固定在頁面上的入口（訓練、表格檢視、匯出 CSV／ipynb）。新增一個進階區塊時，記得在 `renderDetail` 加 `S?'':`，有資料的話也加進 `simpleHiddenItems()` 讓頁尾提示列得出來 |
+| 簡易版的偏好與預設 | `ui-mode-v1`（`simple`／`full`，這台裝置、不上雲端）＋ `ui-mode-auto-v1`（自動選的）。沒選過時 `resolveInitialUiMode()` 在第一次 `renderAll` 前決定：沒有賽事也沒有訓練 → 簡易，其他 → 完整（也寫進去，之後刪光也不會被當新使用者）。自動選的簡易版在「登入前本機 0 場、雲端載回賽事」時換成完整版（`maybeLeaveAutoSimple`）；使用者自己切過就清掉自動旗標 |
+| 簡易版抽屜的常用欄位 | `SIMPLE_FIELD_PATHS`（基本 6、時間 3、成績 5、心得 1），經 `drawerFieldsHtml()`。「已填」計數用 `fieldHasValue()`，跟 `emptyRace()` 預設值一樣的不算 |
 | **第一次完整下載一定要分批** | `fullSyncRacesInPages()`：一次 5 場、每批存游標、可續傳；同處崩潰兩次改逐筆。一次抓全部（`fetchAll`）在 iPhone 會撐爆分頁，只留給「同步診斷」這種使用者主動按的功能 |
 | 已登入就崩潰時的出口 | `?nosync=1`（本分頁不同步）、`?nosync=0` 恢復 |
 | **雲端同步是增量的，不要改回整份** | `cloudKnown`（雲端每場的 updatedAt，存 IndexedDB `cloud-sync-state-v1`）。上傳只傳版本不同的（`upsertRaces`），打開網站只抓 `updatedAt > since－1天`（`fetchChangedSince`）。**`replaceAll` 已經不用**：它會先下載全部再整份上傳，iPhone 會崩潰 |
@@ -221,6 +224,9 @@ APP=/path/to/index.html python3 test_suite.py
 - **抽屜（`drawerEl`）不在 `#detail` 底下**：掛在 `detailEl` 的事件監聽抽屜收不到，要兩邊都掛（v3.29.0 時間驗證踩到）
 - **看不懂的輸入不能存成 null**：那是把使用者的值清掉。留在欄位、標紅、不寫入
 - **CHANGELOG 版本號曾重複**，新增前先確認號碼未被使用
+- **測試一律先設成完整版**（v3.97.0）：新裝置沒有資料會進簡易版，而大部分群組是「先開空白頁、再塞資料」。`Group.run` 與其他自建的 context 都加了 `PRESET_FULL_MODE_JS`；只有 `simple`／`simple_phone` 不加（`preset_full_mode = False`）。自己新增 context 時用 `full_mode_context()`
+- **「畫面出來前」不能用 DOMContentLoaded 驗**：module 腳本會拖慢它，`init()` 可能已經跑完。`simple` 群組改用 MutationObserver 記錄 `#app` 剛被解析出來那一刻的 `data-mode`
+- **選賽事可能跳出徽章解鎖動畫蓋住整頁**（`.badge-unbox-overlay`），測試要點頁面上的按鈕前先收掉
 - **升級 xlsx / idb-keyval 時必須同時換 `integrity` 雜湊**，只改版號會被瀏覽器擋掉。作法：`npm pack <套件>@<版本>` 解開後 `openssl dgst -sha384 -binary <檔案> | openssl base64 -A`
 
 ---

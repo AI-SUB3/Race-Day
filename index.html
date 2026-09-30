@@ -12,6 +12,9 @@
     document.documentElement.setAttribute('data-theme', t);
     var f=localStorage.getItem('font-scale-v1');
     if(f==='small'||f==='large') document.documentElement.setAttribute('data-font', f);
+    // 簡易版（v3.97.0）：跟字級一樣在畫面出來之前就套上，不會先閃一下完整版。
+    // 還沒選過的新裝置由 init() 讀完本機資料後決定（resolveInitialUiMode）。
+    if(localStorage.getItem('ui-mode-v1')==='simple') document.documentElement.setAttribute('data-mode','simple');
   }catch(e){}
   /* 安全模式（v3.88.0）：iPhone 打不開時用來在實機上找原因。
      ?safe=fx 關掉所有視覺特效、?safe=img 不顯示圖片、?safe=all 兩個都關、
@@ -1598,6 +1601,50 @@
     .font-scale{height:30px;}
     .font-scale-btn{width:28px;}
   }
+  /* ---- 簡易版開關（v3.97.0） ----
+     刻意做成「開關」而不是跟旁邊「小 中 大」一樣的分段按鈕：兩個分段按鈕
+     並排，分不出哪個是字級、哪個是模式。
+     手機（≤860px）標題列是直的：品牌一行、工具列一行，品牌右邊本來空著，
+     開關就用絕對定位掛在那個角落——同一顆按鈕，不用兩份 DOM。 */
+  .mode-switch{
+    display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 8px 0 12px;box-sizing:border-box;flex-shrink:0;
+    border:1px solid var(--rule);border-radius:999px;background:var(--surface);color:var(--ink-soft);cursor:pointer;
+    font:inherit;font-size:calc(13px*var(--fs,1));font-weight:600;line-height:1;white-space:nowrap;
+  }
+  .mode-switch:hover{border-color:var(--ink-soft);}
+  .mode-switch:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .mode-switch-track{position:relative;flex:none;width:30px;height:18px;border-radius:999px;background:var(--rule);transition:background .2s ease;}
+  .mode-switch-thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s ease;}
+  .mode-switch[aria-checked="true"]{border-color:var(--trail);color:var(--trail);background:var(--stamp-bg-trail);}
+  .mode-switch[aria-checked="true"] .mode-switch-track{background:var(--trail);}
+  .mode-switch[aria-checked="true"] .mode-switch-thumb{transform:translateX(12px);}
+  @media (prefers-reduced-motion:reduce){ .mode-switch-track,.mode-switch-thumb{transition:none;} }
+  @media (max-width:860px){
+    .topbar-row1{position:relative;}
+    .mode-switch{position:absolute;top:2px;right:0;height:30px;}
+    /* 日文、英文的標題比較長，留出開關的位置，不要壓在一起 */
+    .topbar-brand .app-title{padding-right:120px;}
+  }
+  /* 簡易版只在這裡藏「固定在頁面上」的入口。賽事頁、首頁的內容（雷達、
+     分段、預算…）是在 JS 產生畫面時就直接不產生，不是產生了再藏——手機
+     少畫很多東西，公開分享頁也不會被這些規則誤傷。 */
+  html[data-mode="simple"] #btn-training,
+  html[data-mode="simple"] #cal-table-toggle,
+  html[data-mode="simple"] #btn-export-csv,
+  html[data-mode="simple"] #btn-export-notebook{display:none!important;}
+  /* 桌機頂端列底部原本替「訓練」鈕留了高度，訓練鈕收起來就不用留 */
+  @media (min-width:641px){ html[data-mode="simple"] .topbar-row1{padding-bottom:0;} }
+  .simple-hidden-note{
+    margin:18px 0 8px;padding:14px 16px;border:1px dashed var(--rule);border-radius:12px;background:var(--surface);
+    color:var(--ink-soft);font-size:calc(13px*var(--fs,1));line-height:1.65;
+  }
+  .simple-hidden-note b{color:var(--ink);font-weight:600;}
+  .simple-hidden-note-btn,.simple-fields-toggle{
+    border:none;background:none;padding:0;cursor:pointer;font:inherit;font-weight:600;color:var(--trail);
+    text-decoration:underline;text-underline-offset:2px;
+  }
+  .simple-fields-toggle{display:block;margin:4px 0 8px;font-size:calc(13px*var(--fs,1));text-align:left;}
+  .simple-hidden-note-btn:focus-visible,.simple-fields-toggle:focus-visible{outline:2px solid var(--trail);outline-offset:2px;border-radius:3px;}
   /* 意見回饋：疊在「有問題找我」正上方、水平置中對齊。刻意比說明按鈕小一號
      （46 vs 60），主要入口仍然是說明，回饋是次要的。
      右邊距用中心點回推：說明鈕中心在 right:20+30=50，回饋鈕半徑 23 → right:27。 */
@@ -2721,6 +2768,13 @@
         <p class="app-tagline" data-i18n="ui.appTagline">從報名到終點的完整紀錄</p>
       </div>
       <div class="topbar-actions">
+        <!-- 簡易版開關（v3.97.0）：電腦版排在工具列最前面；手機版（≤860px）
+             用絕對定位掛到標題列右上角——那個角落原本是空的。 -->
+        <button type="button" id="btn-mode-toggle" class="mode-switch" role="switch" aria-checked="false"
+          data-i18n-title="ui.modeSwitchTitle" title="切換簡易版／完整版">
+          <span class="mode-switch-label" data-i18n="ui.modeSimple">簡易版</span>
+          <span class="mode-switch-track" aria-hidden="true"><span class="mode-switch-thumb"></span></span>
+        </button>
         <div class="font-scale" role="group" aria-label="字體大小">
           <button type="button" class="font-scale-btn fs-s" data-font-scale="small" aria-pressed="false" title="字體：小" aria-label="字體：小" data-i18n-title="ui.fontSmallTitle">小</button>
           <button type="button" class="font-scale-btn fs-m" data-font-scale="medium" aria-pressed="true" title="字體：中" aria-label="字體：中" data-i18n-title="ui.fontMediumTitle">中</button>
@@ -4036,7 +4090,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null};
 let currentRace=null;
-const APP_VERSION='v3.96.0';
+const APP_VERSION='v3.97.0';
 
 /* ============================================================
    多語系（i18n）
@@ -4087,6 +4141,17 @@ const JA={
   'ui.appTitle':'レース記録','ui.appTagline':'エントリーからゴールまでの完全な記録',
   'ui.newRace':'+ 大会を追加','ui.searchPlaceholder':'大会名・都市で検索…','ui.today':'今日',
   'ui.sampleData':'サンプルデータ','ui.clearSampleData':'サンプルデータを削除','ui.sampleDataCleared':'サンプル {n} 件を削除しました',
+  // 簡易版（v3.97.0）
+  'ui.modeSimple':'シンプル','ui.modeSwitchTitle':'シンプル表示／フル表示の切り替え',
+  'ui.modeToSimple':'シンプル表示に切り替えました：詳細な項目はしまっただけで、データはすべて残っています','ui.modeToFull':'フル表示に切り替えました',
+  'ui.modeAutoFull':'クラウドから {n} 件の大会を読み込んだので、フル表示に切り替えました（右上でシンプル表示に戻せます）',
+  'ui.sectionBasicSimple':'基本情報','ui.sectionRouteSimple':'コースと天気','ui.sectionPrepSimple':'装備と目標','ui.sectionPostSimple':'記録と感想',
+  'ui.simpleHiddenLead':'シンプル表示では、この大会の次の詳細データをしまっています：','ui.simpleHiddenTail':'。データはすべて残っています。','ui.simpleHiddenBtn':'フル表示で見る',
+  'ui.listSep':'、',
+  'ui.simpleHidSplits':'ラップ（{n} 区間）','ui.simpleHidRadar':'レース能力レーダー','ui.simpleHidSeries':'シリーズ比較','ui.simpleHidElevation':'高低図',
+  'ui.simpleHidCheckpoints':'CP／エイド {n} 件','ui.simpleHidGeoPhotos':'コース写真 {n} 枚','ui.simpleHidWeather':'気象の記録','ui.simpleHidNutrition':'補給設定',
+  'ui.simpleHidNutritionSchedule':'補給スケジュール {n} 件','ui.simpleHidTraining':'トレーニング計画','ui.simpleHidLogistics':'予算と旅程','ui.simpleHidShoe':'レースシューズ',
+  'ui.showAllFields':'すべての項目を表示（あと {n} 項目）','ui.showAllFieldsFilled':'すべての項目を表示（あと {a} 項目、うち {b} 項目は入力済み）','ui.showCommonFields':'よく使う項目だけ表示',
   'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'カバー写真付きの完走レースがまだありません。完走したらぜひ写真を追加して、メダル棚を育てましょう！',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
   'ui.filterOverseas':'海外レース',
@@ -4482,6 +4547,7 @@ const JA={
       </ul>
       <h3>その他</h3>
       <ul>
+        <li>右上の「シンプル」スイッチをオンにすると、よく使う項目と画面（記録・感想・写真・装備リスト）だけになり、分析グラフ・予算・トレーニング計画はしまわれます（データは消えません）。オフでフル表示に戻ります。この端末に記憶されます。</li>
         <li>右上の月／太陽アイコンでダークモード切り替え、選択内容は記憶されます。</li>
         <li>右上の言語メニューで繁体字中国語／日本語／英語に対応しています。</li>
         <li>スマートフォンのブラウザでサイトを開き「ホーム画面に追加」を選ぶと、専用アイコンでアプリのように使えます。</li>
@@ -4580,6 +4646,17 @@ const EN={
   'ui.appTitle':'Race Log','ui.appTagline':'Your complete record, from sign-up to finish line',
   'ui.newRace':'+ New Race','ui.searchPlaceholder':'Search by race name or city…','ui.today':'Today',
   'ui.sampleData':'Sample Data','ui.clearSampleData':'Clear Sample Data','ui.sampleDataCleared':'Removed {n} sample races',
+  // Simple mode (v3.97.0)
+  'ui.modeSimple':'Simple','ui.modeSwitchTitle':'Switch between simple and full view',
+  'ui.modeToSimple':'Switched to simple view: advanced sections are tucked away, all your data is still here','ui.modeToFull':'Switched to full view',
+  'ui.modeAutoFull':'Loaded {n} races from the cloud, so switched to full view (switch back at the top right)',
+  'ui.sectionBasicSimple':'Basics','ui.sectionRouteSimple':'Course & Weather','ui.sectionPrepSimple':'Gear & Goals','ui.sectionPostSimple':'Results & Notes',
+  'ui.simpleHiddenLead':'Simple view is hiding this race\'s advanced data: ','ui.simpleHiddenTail':'. Nothing is deleted. ','ui.simpleHiddenBtn':'View in full view',
+  'ui.listSep':', ',
+  'ui.simpleHidSplits':'splits ({n})','ui.simpleHidRadar':'performance radar','ui.simpleHidSeries':'series comparison','ui.simpleHidElevation':'elevation profile',
+  'ui.simpleHidCheckpoints':'{n} checkpoints','ui.simpleHidGeoPhotos':'{n} course photos','ui.simpleHidWeather':'weather notes','ui.simpleHidNutrition':'fueling plan',
+  'ui.simpleHidNutritionSchedule':'{n} fueling items','ui.simpleHidTraining':'training plan','ui.simpleHidLogistics':'budget & travel','ui.simpleHidShoe':'race shoes',
+  'ui.showAllFields':'Show all fields ({n} more)','ui.showAllFieldsFilled':'Show all fields ({a} more, {b} filled in)','ui.showCommonFields':'Show common fields only',
   'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No completed races with cover photos yet. Add a photo once you finish one and start building your trophy wall!',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
   'ui.filterOverseas':'Overseas',
@@ -4963,6 +5040,7 @@ const EN={
       </ul>
       <h3>Other</h3>
       <ul>
+        <li>The “Simple” switch in the top right keeps only the everyday fields and screens (results, notes, photos, gear list) and tucks away analysis charts, budget and training plans — nothing is deleted. Turn it off for the full view. This device remembers your choice.</li>
         <li>The moon/sun icon in the top right toggles dark mode and remembers your choice.</li>
         <li>The language menu in the top right supports Traditional Chinese, Japanese and English.</li>
         <li>On mobile, open the site in your browser and choose "Add to Home Screen" for an app-like experience with a custom icon.</li>
@@ -6114,6 +6192,8 @@ async function handleAuthChange(user){
     if(localDataReady) await localDataReady;
     if(signInAttemptInFlight){ signInAttemptInFlight=false; logFeatureUse('auth_google_signin'); }
     if(syncDisabledThisSession()){ showSyncPill(t('ui.syncPaused','本分頁暫停雲端同步（?nosync=1）'),{sticky:true}); return; }
+    // 登入前本機有幾場：用來判斷「自動簡易版」的裝置其實是老使用者的新手機（v3.97.0）
+    const localCountAtSignIn=state.races.length;
     try{
       const store=await loadCloudSyncStore();
       // 合併、不要覆蓋：永久刪除時的儲存是非同步的，登入時可能還沒寫完；
@@ -6161,6 +6241,7 @@ async function handleAuthChange(user){
       }
       await cloudSyncAllRaces();   // 只上傳本機比較新或雲端沒有的
       if(localChanged) renderAll();
+      maybeLeaveAutoSimple(localCountAtSignIn);
       if(pendingSyncOverwriteNotice>0) showSyncOverwriteNotice(pendingSyncOverwriteNotice);
     }catch(err){
       console.error('雲端資料讀取失敗',err);
@@ -8208,6 +8289,8 @@ function equipmentEmptyStateHtml(race){
    這套接線方式真的可靠，再決定要不要推廣到其他區塊。
    ============================================================ */
 let drawerOpenSection=null;
+// 簡易版的抽屜只列常用欄位；按「顯示全部欄位」就地展開，換一個抽屜就恢復（v3.97.0）
+let drawerShowAllFields=false;
 // dashCardHtml(section, title, sub)：儀表板上的摘要卡片，整張就是一個
 // 按鈕，點了打開對應的抽屜。
 // isEmpty：這個抽屜還沒填任何東西。空的卡片淡化、收成一行——13 張卡片
@@ -8599,6 +8682,76 @@ const BASIC_INFO_PATHS=['name','alias','officialUrl','series','status','sportTyp
 // DRAWER_SECTIONS：抽屜可以裝的區塊登記表。每一筆是「標題」跟「內容
 // 怎麼畫」兩件事，openDrawer() 只負責查表、塞內容、滑出來，不用為了
 // 多一個區塊就去改開關邏輯本身。
+/* ============================================================
+   簡易版：抽屜只列常用欄位＋賽事頁尾「收起了什麼」（v3.97.0）
+   ============================================================ */
+const SIMPLE_FIELD_PATHS=new Set([
+  // 賽事基本資料 11 → 6
+  'name','officialUrl','status','sportType','location.city','location.country',
+  // 時間與報名 11 → 3
+  'schedule.raceDate','schedule.startTime','bibNumber',
+  // 成績與數據 16 → 5
+  'results.chipTimeSeconds','results.overallRank','results.overallParticipants','results.ageGroupRank','results.isPb',
+  // 賽後心得 5 → 1
+  'review.courseReview',
+]);
+let emptyRaceDefaults=null;
+// 這個欄位「有沒有填」：跟新賽事的預設值一樣（例如競賽形式預設「個人單人」、
+// 幣別預設 TWD）不算，不然提示會說「其中 3 項已填」，使用者點開卻什麼都沒填過
+function fieldHasValue(race,path){
+  const v=getPath(race,path);
+  if(v==null||v===false) return false;
+  if(typeof v==='string'&&!v.trim()) return false;
+  if(Array.isArray(v)) return v.length>0;
+  if(!emptyRaceDefaults) emptyRaceDefaults=emptyRace();
+  return v!==getPath(emptyRaceDefaults,path);
+}
+function drawerFieldsHtml(race,fields,ns,after){
+  const row=f=>renderField(race,f,ns)+(after?after(f):'');
+  const extra=isSimpleMode()?fields.filter(f=>!SIMPLE_FIELD_PATHS.has(f.path)):[];
+  if(!extra.length) return fields.map(row).join('');
+  const shown=drawerShowAllFields?fields:fields.filter(f=>SIMPLE_FIELD_PATHS.has(f.path));
+  let label;
+  if(drawerShowAllFields) label=t('ui.showCommonFields','只顯示常用欄位');
+  else{
+    const filled=extra.filter(f=>fieldHasValue(race,f.path)).length;
+    label=filled
+      ?tf2('ui.showAllFieldsFilled','顯示全部欄位（還有 {a} 項，其中 {b} 項已填）',extra.length,filled)
+      :tf('ui.showAllFields','顯示全部欄位（還有 {n} 項）',extra.length);
+  }
+  return shown.map(row).join('')
+    +`<button type="button" class="simple-fields-toggle" data-action="drawer-simple-fields" aria-expanded="${drawerShowAllFields}">${escapeHtml(label)}</button>`;
+}
+function sectionHasValues(race,fields){ return fields.some(f=>fieldHasValue(race,f.path)); }
+// 只列「這一場真的有資料」的進階區塊：沒填的東西收起來不需要交代
+function simpleHiddenItems(race){
+  const items=[];
+  const splitN=(race.splits||[]).length||(race.legs||[]).reduce((a,l)=>a+((l.splits||[]).length),0);
+  if(splitN) items.push(tf('ui.simpleHidSplits','分段配速（{n} 段）',splitN));
+  if(race.status==='completed'&&race.results.chipTimeSeconds!=null&&renderRaceRadarHtml(race)) items.push(t('ui.simpleHidRadar','賽事能力雷達'));
+  if(renderSeriesComparison(race)) items.push(t('ui.simpleHidSeries','系列賽比較'));
+  const elevPts=(race.route.elevationProfile||[]).length>=2?race.route.elevationProfile.length
+    :(race.checkpoints||[]).filter(c=>c.elevationM!=null&&c.distanceKm!=null).length;
+  if(elevPts>=2) items.push(t('ui.simpleHidElevation','海拔剖面'));
+  if((race.checkpoints||[]).length) items.push(tf('ui.simpleHidCheckpoints','CP／補給站 {n} 筆',race.checkpoints.length));
+  if((race.geoPhotos||[]).length) items.push(tf('ui.simpleHidGeoPhotos','沿途照片 {n} 張',race.geoPhotos.length));
+  if(sectionHasValues(race,SECTION_WEATHER)) items.push(t('ui.simpleHidWeather','氣象紀錄'));
+  if(sectionHasValues(race,SECTION_PREP.filter(f=>f.path.startsWith('nutritionPlan.')))) items.push(t('ui.simpleHidNutrition','補給設定'));
+  if((race.nutritionSchedule||[]).length) items.push(tf('ui.simpleHidNutritionSchedule','補給時程 {n} 項',race.nutritionSchedule.length));
+  if(sectionHasValues(race,SECTION_PREP.filter(f=>f.path.startsWith('trainingPlan.')))) items.push(t('ui.simpleHidTraining','訓練計畫'));
+  if(sectionHasValues(race,SECTION_LOGISTICS)||(race.accommodations||[]).length||(race.transportation||[]).length||(race.companions||[]).length)
+    items.push(t('ui.simpleHidLogistics','預算與行程'));
+  if(race.performanceData&&race.performanceData.shoeId) items.push(t('ui.simpleHidShoe','比賽鞋款'));
+  return items;
+}
+function simpleHiddenNoteHtml(race){
+  const items=simpleHiddenItems(race);
+  if(!items.length) return '';
+  return `<div class="simple-hidden-note">${escapeHtml(t('ui.simpleHiddenLead','簡易版收起了這場的進階資料：'))}${
+    items.map(x=>`<b>${escapeHtml(x)}</b>`).join(escapeHtml(t('ui.listSep','、')))}${
+    escapeHtml(t('ui.simpleHiddenTail','。資料都還在，'))}<button type="button" class="simple-hidden-note-btn" data-action="switch-to-full">${
+    escapeHtml(t('ui.simpleHiddenBtn','切換到完整版查看'))}</button></div>`;
+}
 const DRAWER_SECTIONS={
   equipment:{
     title:()=>t('list.equipmentChecklist','裝備清單'),
@@ -8610,15 +8763,15 @@ const DRAWER_SECTIONS={
     // 完檔案之後，接著要做的就是記下這場穿了哪雙鞋，兩件事在同一個
     // 動線上；原本收在這個抽屜的最底下，要先點開抽屜、再滑到最後才
     // 看得到。
-    body:race=>`<div class="section-body">${SECTION_POST.filter(f=>!f.path.startsWith('review.')).map(f=>renderField(race,f,'post')).join('')}</div>`,
+    body:race=>`<div class="section-body">${drawerFieldsHtml(race,SECTION_POST.filter(f=>!f.path.startsWith('review.')),'post')}</div>`,
   },
   basicInfo:{
     title:()=>t('ui.drawerBasicTitle','賽事基本資料'),
-    body:race=>`<div class="section-body">${SECTION_BASIC.filter(f=>BASIC_INFO_PATHS.includes(f.path)).map(f=>renderField(race,f,'basic')).join('')}</div>`,
+    body:race=>`<div class="section-body">${drawerFieldsHtml(race,SECTION_BASIC.filter(f=>BASIC_INFO_PATHS.includes(f.path)),'basic')}</div>`,
   },
   schedule:{
     title:()=>t('ui.drawerScheduleTitle','時間與報名'),
-    body:race=>`<div class="section-body">${SECTION_BASIC.filter(f=>!BASIC_INFO_PATHS.includes(f.path)).map(f=>renderField(race,f,'basic')).join('')}</div>`,
+    body:race=>`<div class="section-body">${drawerFieldsHtml(race,SECTION_BASIC.filter(f=>!BASIC_INFO_PATHS.includes(f.path)),'basic')}</div>`,
   },
   weather:{
     title:()=>t('ui.drawerWeatherTitle','氣象資料'),
@@ -8666,7 +8819,7 @@ const DRAWER_SECTIONS={
   },
   review:{
     title:()=>t('ui.drawerReviewTitle','賽後心得'),
-    body:race=>`<div class="section-body">${SECTION_POST.filter(f=>f.path.startsWith('review.')).map(f=>renderField(race,f,'post')+(f.path==='review.lessonsLearned'?reviewTemplateButtonsHtml(race):'')).join('')}</div>`,
+    body:race=>`<div class="section-body">${drawerFieldsHtml(race,SECTION_POST.filter(f=>f.path.startsWith('review.')),'post',f=>f.path==='review.lessonsLearned'?reviewTemplateButtonsHtml(race):'')}</div>`,
   },
 };
 function openDrawer(section){
@@ -8675,6 +8828,7 @@ function openDrawer(section){
   const def=DRAWER_SECTIONS[section];
   if(!def) return;
   drawerOpenSection=section;
+  drawerShowAllFields=false;
   const drawer=document.getElementById('global-drawer');
   document.getElementById('drawer-title').textContent=def.title();
   document.getElementById('drawer-content').innerHTML=def.body(race);
@@ -9472,7 +9626,7 @@ function renderResultsDashboard(race){
     </div>
     ${badges.length?`<div class="results-badge-grid">${badges.map(([label,val,isHtml])=>`<div class="results-badge"><span class="results-badge-label">${label}</span><span class="results-badge-value mono">${isHtml?val:escapeHtml(String(val))}</span></div>`).join('')}</div>`:''}
     ${renderLegBreakdown(race)}
-    ${renderRaceRadarHtml(race)}
+    ${isSimpleMode()?'':renderRaceRadarHtml(race)}
     <div class="results-dashboard-actions">
       <button type="button" class="btn-ghost" data-action="generate-share-image">${t('ui.generateShareImage','產生分享圖')}</button>
     </div>
@@ -11775,6 +11929,8 @@ function renderPublicShareView(snap){
   </div>`;
 }
 async function bootPublicShareView(id){
+  // 公開分享頁是給別人看的完整紀錄，不管這台裝置選了簡易版還是完整版
+  document.documentElement.removeAttribute('data-mode');
   document.body.innerHTML=`<div class="pubview"><p class="small pubview-loading">${t('ui.publicLoading','載入公開紀錄中…')}</p></div>`;
   let snap=null,err=null;
   try{ snap=await fetchPublicSnapshotAnyway(id); }catch(e){ err=e; }
@@ -15727,6 +15883,84 @@ document.querySelectorAll('[data-font-scale]').forEach(b=>{
 });
 syncFontScaleButtons();
 /* ============================================================
+   簡易版／完整版（v3.97.0）
+   只改「畫面上顯示多少」，不碰資料：切換前後 state.races 一個位元都
+   不變，雲端同步、匯出 JSON、分享圖、年度回顧也都照完整資料走。
+   偏好存在這台裝置（跟字級一樣），不上雲端——手機用簡易、電腦用完整
+   是很合理的組合。
+   預設：這台裝置還沒選過、而且完全沒有資料（沒有賽事、也沒有訓練）
+   → 簡易版，並記一個「自動選的」旗標；其他人維持完整版，不會一更新
+   就發現畫面少了一大半。
+   ============================================================ */
+const UI_MODE_KEY='ui-mode-v1';
+const UI_MODE_AUTO_KEY='ui-mode-auto-v1';
+function isSimpleMode(){ return document.documentElement.getAttribute('data-mode')==='simple'; }
+function syncModeSwitch(){
+  const b=document.getElementById('btn-mode-toggle');
+  if(b) b.setAttribute('aria-checked',String(isSimpleMode()));
+}
+function applyUiModeAttr(mode){
+  if(mode==='simple') document.documentElement.setAttribute('data-mode','simple');
+  else document.documentElement.removeAttribute('data-mode');
+  syncModeSwitch();
+}
+function resolveInitialUiMode(){
+  let saved=null;
+  try{ saved=localStorage.getItem(UI_MODE_KEY); }catch(e){}
+  if(saved==='simple'||saved==='full'){ applyUiModeAttr(saved); return saved; }
+  const isNewUser=state.races.length===0&&trainings.length===0;
+  const mode=isNewUser?'simple':'full';
+  // 既有使用者也寫一次「full」：之後就算把賽事全刪光，也不會突然被當成新使用者
+  try{
+    localStorage.setItem(UI_MODE_KEY,mode);
+    if(isNewUser) localStorage.setItem(UI_MODE_AUTO_KEY,'1');
+  }catch(e){}
+  applyUiModeAttr(mode);
+  return mode;
+}
+function setUiMode(mode,opts){
+  opts=opts||{};
+  mode=mode==='simple'?'simple':'full';
+  try{
+    localStorage.setItem(UI_MODE_KEY,mode);
+    // 使用者自己切過一次，就是他的選擇了，之後不再替他自動換
+    localStorage.removeItem(UI_MODE_AUTO_KEY);
+  }catch(e){}
+  if((mode==='simple')===isSimpleMode()) return;
+  // 開著的抽屜可能是簡易版沒有入口的區塊（例如預算），直接收掉，比留一個
+  // 找不到來源的抽屜好
+  if(drawerOpenSection) closeDrawer();
+  applyUiModeAttr(mode);
+  renderAll();
+  updateTopbarHeightVar();
+  if(!opts.silent) showToast(mode==='simple'
+    ?t('ui.modeToSimple','已切換為簡易版：進階內容先收起來，資料都還在')
+    :t('ui.modeToFull','已切換為完整版'));
+  logFeatureUse('ui_mode_'+mode);
+}
+/* 自動選成簡易版的裝置，第一次登入就從雲端載入一堆賽事——這其實是老
+   使用者換了新手機，不是新使用者。只在「登入前本機一場都沒有」時才換，
+   本機已經有自己建立的賽事就不動（那是真正在用簡易版的人）。 */
+function maybeLeaveAutoSimple(localCountBefore){
+  let auto=false;
+  try{ auto=localStorage.getItem(UI_MODE_AUTO_KEY)==='1'; }catch(e){}
+  if(!auto||!isSimpleMode()||localCountBefore!==0||!state.races.length) return false;
+  setUiMode('full',{silent:true});
+  showToast(tf('ui.modeAutoFull','已從雲端載入 {n} 場賽事，切換為完整版（右上角可以切回簡易版）',state.races.filter(r=>!r.deletedAt).length));
+  return true;
+}
+document.getElementById('btn-mode-toggle').addEventListener('click',()=>setUiMode(isSimpleMode()?'full':'simple'));
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-action="switch-to-full"]')){ setUiMode('full'); return; }
+  if(e.target.closest('[data-action="drawer-simple-fields"]')){
+    drawerShowAllFields=!drawerShowAllFields;
+    const def=drawerOpenSection&&DRAWER_SECTIONS[drawerOpenSection];
+    const dc=document.getElementById('drawer-content');
+    if(def&&dc&&currentRace) dc.innerHTML=def.body(currentRace);
+  }
+});
+syncModeSwitch();
+/* ============================================================
    訓練紀錄（方案 B：只存摘要）。v3.76.0
    跟賽事完全分開：獨立的陣列、獨立的儲存鍵、獨立的雲端集合。
    訓練永遠不會進 state.races，所以生涯統計、PB、EPP、徽章、氣候圖、
@@ -16488,6 +16722,9 @@ document.addEventListener('click',e=>{
 });
 function renderCareerSummary(){
   if(state.races.length<5) return '';
+  // 簡易版（v3.97.0）：留 PB、場次、年度長條、年度回顧長圖卡；收起爬升趨勢、
+  // 氣溫與配速、熱力圖、榮譽櫃
+  const simpleHome=isSimpleMode();
   const s=computeCareerStats();
   const honorCard=s.marathonPB!=null?`<div class="honor-card pressable">
     <div class="honor-card-label">${t('ui.careerMarathonPB','全馬 PB')}</div>
@@ -16511,10 +16748,10 @@ function renderCareerSummary(){
       ${yearlyChartSvg()}
     </div>
     ${yearInReviewPickerHtml()}
-    ${elevationTrendChartSvg()}
-    ${climatePerformanceChartSvg()}
-    ${heatmapHtml()}
-    ${renderTrophyCabinet()}
+    ${simpleHome?'':elevationTrendChartSvg()}
+    ${simpleHome?'':climatePerformanceChartSvg()}
+    ${simpleHome?'':heatmapHtml()}
+    ${simpleHome?'':renderTrophyCabinet()}
   </div>`;
 }
 
@@ -16735,12 +16972,15 @@ function renderCalendar(){
   if(viewToggleBtn) viewToggleBtn.classList.toggle('active',state.viewMode==='grid');
   const tableToggleBtn=document.getElementById('cal-table-toggle');
   if(tableToggleBtn) tableToggleBtn.classList.toggle('active',state.viewMode==='table');
-  if(state.viewMode==='grid'){
+  // 簡易版沒有表格檢視的按鈕：原本停在表格檢視的話，先顯示行事曆，不然會
+  // 卡在一個切不出來的畫面。不改 state.viewMode，切回完整版還是表格。
+  const viewMode=(state.viewMode==='table'&&isSimpleMode())?'calendar':state.viewMode;
+  if(viewMode==='grid'){
     calendarEl.innerHTML=`${renderCareerSummary()}${renderPhotoGrid()}`;
     animateCareerTickers();
     return;
   }
-  if(state.viewMode==='table'){
+  if(viewMode==='table'){
     calendarEl.innerHTML=`${renderCareerSummary()}${renderTableView()}`;
     animateCareerTickers();
     return;
@@ -16858,6 +17098,7 @@ function lifecycleStepperHtml(race){
   </div>`;
 }
 function detailHeaderHtml(race){
+  const S=isSimpleMode();
   const chip=(race.status==='completed'&&race.results.chipTimeSeconds)?` ・ ${t('field.post.results.chipTimeSeconds','晶片時間')} ${secToHMS(race.results.chipTimeSeconds)}`:'';
   const hasCover=!!race.coverImage;
   const isPortraitCover=hasCover&&race.coverImageAspect&&race.coverImageAspect<0.85;
@@ -16885,12 +17126,12 @@ function detailHeaderHtml(race){
             <div id="dh-more-menu" class="action-menu-panel" hidden>
               ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="export-race-ics">${t('ui.exportRaceIcs','匯出行事曆提醒（.ics檔）')}</button>`:''}
               ${race.schedule.raceDate?`<button type="button" class="action-menu-item" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
-              ${['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
-              ${['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-crew-guide">${t('ui.downloadCrewGuide','下載親友應援指南圖')}</button>`:''}
-              ${race.status==='completed'?`<button type="button" class="action-menu-item" data-action="copy-report-prompt" data-id="${race.id}">${t('ui.copyReportPrompt','複製賽後檢討 AI 提示詞')}</button>`:''}
-              <button type="button" class="action-menu-item" data-action="open-fatigue-mode">${t('ui.openFatigueMode','開啟疲勞模式（賽中用）')}</button>
+              ${!S&&['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-dossier">${t('ui.downloadDossier','下載賽前作戰卡')}</button>`:''}
+              ${!S&&['registered','lottery_pending','considering'].includes(race.status)?`<button type="button" class="action-menu-item" data-action="download-crew-guide">${t('ui.downloadCrewGuide','下載親友應援指南圖')}</button>`:''}
+              ${!S&&race.status==='completed'?`<button type="button" class="action-menu-item" data-action="copy-report-prompt" data-id="${race.id}">${t('ui.copyReportPrompt','複製賽後檢討 AI 提示詞')}</button>`:''}
+              ${S?'':`<button type="button" class="action-menu-item" data-action="open-fatigue-mode">${t('ui.openFatigueMode','開啟疲勞模式（賽中用）')}</button>`}
               <div class="action-menu-divider"></div>
-              <button type="button" class="action-menu-item" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>
+              ${S?'':`<button type="button" class="action-menu-item" data-action="open-paste-modal">${t('ui.pasteQuickFill','貼上資料快速填入')}</button>`}
               <button type="button" class="action-menu-item" data-action="duplicate-race" title="${t('ui.duplicateRaceHint','複製地點、路線、裝備等欄位，建立新的一場（適合同系列跨年賽事）')}">${t('ui.duplicateRace','複製賽事')}</button>
               <div class="action-menu-divider"></div>
               <button type="button" class="action-menu-item danger" data-action="delete-race">${t('ui.deleteRace','刪除賽事')}</button>
@@ -16903,7 +17144,7 @@ function detailHeaderHtml(race){
       ${coverUploadHtml(race)}
       <div class="dh-meta mono">${race.schedule.raceDate||t('ui.dateNotSet','尚未設定日期')} ・ ${countdownLabel(race)}${chip}</div>
       ${race.schedule.raceDate?`<button type="button" class="btn-text-small dh-gcal-quicklink" data-action="open-google-calendar">${t('ui.openGoogleCalendar','在 Google 日曆開啟')}</button>`:''}
-      ${sparklineSvg(race)}
+      ${S?'':sparklineSvg(race)}
       ${progressBlockHtml(race)}
     </div>
   </header>`;
@@ -16925,66 +17166,71 @@ function renderDetail(){
   // 要在使用者開始捲動前就先進到視野，才知道有這排可以跳；壓在儀表板
   // 下面時，第一屏被儀表板佔滿，導覽列要捲過去才看得到。
   const heroDashboard=renderResultsDashboard(race);
+  // 簡易版（v3.97.0）：進階的區塊在這裡就直接不產生——不是產生了再用 CSS
+  // 藏起來。雷達、海拔剖面、分段圖表都不小，手機少畫這些差很多。
+  // 資料一個都沒動，頁尾的提示會列出這一場被收起來、而且真的有填的東西。
+  const S=isSimpleMode();
   detailEl.innerHTML=`
     ${detailHeaderHtml(race)}
-    ${quickNavHtml()}
+    ${S?'':quickNavHtml()}
     ${heroDashboard?`<div class="hero-results">${heroDashboard}</div>`:''}
-    ${renderSeriesComparison(race)}
+    ${S?'':renderSeriesComparison(race)}
     <details class="section" id="section-basic">
-      <summary>${t('ui.sectionBasic','基本資訊與時間')}</summary>
+      <summary>${S?t('ui.sectionBasicSimple','基本資訊'):t('ui.sectionBasic','基本資訊與時間')}</summary>
       ${basicInfoDashCardHtml(race)}
       ${journeyCardHtml(race)}
       ${scheduleDashCardHtml(race)}
     </details>
     <details class="section" id="section-route">
-      <summary>${t('ui.sectionRouteWeather','路線與氣象')}</summary>
+      <summary>${S?t('ui.sectionRouteSimple','路線與天氣'):t('ui.sectionRouteWeather','路線與氣象')}</summary>
       <div class="subsection">
         <div class="subsection-head"><h3>${t('ui.subsectionOfficialRoute','官方路線')}</h3></div>
         ${routeDashCardHtml(race)}
-        ${elevationProfileHtml(race)}
+        ${S?'':elevationProfileHtml(race)}
         ${routeMapHtml(race)}
-        ${geoPhotoSectionHtml(race)}
-        ${gpsDenoiseSectionHtml(race)}
-        ${checkpointsDashCardHtml(race)}
+        ${S?'':geoPhotoSectionHtml(race)}
+        ${S?'':gpsDenoiseSectionHtml(race)}
+        ${S?'':checkpointsDashCardHtml(race)}
       </div>
       <div class="subsection">
         <div class="subsection-head"><h3>${t('ui.subsectionRaceDayWeather','當日氣象')}</h3></div>
         ${raceDayWeatherBlockHtml(race)}
-        ${marineConditionsCompactHtml(race)}
-        ${weatherDashCardHtml(race)}
+        ${S?'':marineConditionsCompactHtml(race)}
+        ${S?'':weatherDashCardHtml(race)}
       </div>
     </details>
     <details class="section" id="section-prep">
-      <summary>${t('ui.sectionPrep','裝備、補給與戰略（賽前準備）')}</summary>
-      ${nutritionPlanDashCardHtml(race)}
-      ${trainingPlanDashCardHtml(race)}
-      ${trainingBuildupHtml(race)}
+      <summary>${S?t('ui.sectionPrepSimple','裝備與目標'):t('ui.sectionPrep','裝備、補給與戰略（賽前準備）')}</summary>
+      ${S?'':nutritionPlanDashCardHtml(race)}
+      ${S?'':trainingPlanDashCardHtml(race)}
+      ${S?'':trainingBuildupHtml(race)}
       ${goalsDashCardHtml(race)}
-      ${eppSectionHtml(race)}
-      <div class="subsection">
+      ${S?'':eppSectionHtml(race)}
+      ${S?'':`<div class="subsection">
         <div class="subsection-head"><h3></h3><button type="button" class="btn-ghost" data-action="open-pacing-modal">${t('ui.pacingCalcTitle','配速試算與手環產生器')}</button></div>
-      </div>
+      </div>`}
       ${equipmentDashCardHtml(race)}
-      ${renderNutritionScheduleSection(race)}
+      ${S?'':renderNutritionScheduleSection(race)}
     </details>
-    <details class="section" id="section-logistics">
+    ${S?'':`<details class="section" id="section-logistics">
       <summary>${t('ui.sectionLogistics','預算與行程規劃')}</summary>
       ${logisticsDashCardHtml(race)}
-    </details>
+    </details>`}
     <details class="section" id="section-post">
-      <summary>${t('ui.sectionPost','賽後紀錄與個人數據')}</summary>
-      ${renderSplitAnalysis(race)}
-      ${renderSplitsChart(race)}
+      <summary>${S?t('ui.sectionPostSimple','成績與心得'):t('ui.sectionPost','賽後紀錄與個人數據')}</summary>
+      ${S?'':renderSplitAnalysis(race)}
+      ${S?'':renderSplitsChart(race)}
       <div class="gpx-import-bar">
         <button type="button" class="btn-ghost" data-action="open-gpx-picker">${t('ui.gpxImportBtn','匯入運動紀錄檔（GPX / TCX / FIT）')}</button>
         <span class="small auth-hint">${t('ui.gpxImportHint','支援 Garmin / COROS / Strava 匯出的檔案，自動抓距離、爬升、時間、心率、分段配速')}</span>
       </div>
-      ${(race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}
+      ${(!S&&race.sportType!=='cycling'&&race.sportType!=='swimming')?renderShoeSelector(race):''}
       ${resultsDashCardHtml(race)}
       ${reviewDashCardHtml(race)}
       ${mediaLinksDashCardHtml(race)}
       ${mediaGalleryHtml(race)}
     </details>
+    ${S?simpleHiddenNoteHtml(race):''}
   `;
   destroyRouteMap();
   renderRouteMapIfNeeded(race);
@@ -20291,6 +20537,7 @@ function helpModalHtml(){
       </ul>
       <h3>其他</h3>
       <ul>
+        <li>右上角「簡易版」開關：打開後只留常用的欄位與畫面（成績、心得、照片、裝備清單），分析圖表、預算、訓練計畫先收起來，資料都還在；關掉就回到完整版。這台裝置會記住你的選擇。</li>
         <li>右上角月亮/太陽圖示切換深色模式，會記住你的選擇。</li>
         <li>右上角語言選單支援繁體中文／日文／英文。</li>
         <li>手機瀏覽器開啟網站後選「加入主畫面」，會使用自訂圖示，體驗跟 App 一樣。</li>
@@ -21694,6 +21941,8 @@ async function init(){
   backfillCoverThumbs();
   if(backfillRunningCadence()) persist();
   checkAndRecordBadgeUnlocks();
+  // 要在第一次 renderAll 之前決定：新裝置沒有資料 → 簡易版（v3.97.0）
+  resolveInitialUiMode();
   renderAll();
   updateTopbarHeightVar();
   checkAndShowFirstUseGlow();
