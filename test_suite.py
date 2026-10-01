@@ -4533,7 +4533,8 @@ class Simple(Group):
             return q('.results-big-time') && q('[data-action="generate-share-image"]') && q('#section-basic') && q('.journey-card')
               && ['basicInfo','schedule','route','goals','equipment','results','review','mediaLinks'].every(k=>q('[data-section="'+k+'"]'))
               && q('[data-action="open-gpx-picker"]') && q('[data-action="delete-race"]') && q('[data-action="duplicate-race"]')
-              && JSON.stringify(sums)===JSON.stringify(['基本資訊','路線與天氣','裝備與目標','成績與心得']); }""")
+              // v4.2 起已完賽的賽事「成績與心得」排第一
+              && JSON.stringify(sums)===JSON.stringify(['成績與心得','基本資訊','路線與天氣','裝備與目標']); }""")
         # 頁尾提示只列這場真的有資料的進階區塊
         note = page.evaluate("()=>{ const n=document.querySelector('.simple-hidden-note'); return n?n.textContent:''; }")
         c['hidden_note_lists_filled_advanced_items'] = all(x in note for x in
@@ -4814,8 +4815,10 @@ class UxFixes(Group):
         page.fill('#search-input', '超馬')
         page.wait_for_timeout(400)
         c['undated_race_found_by_search'] = page.evaluate("""()=>{
-            const g=[...document.querySelectorAll('.cal-results-group')].find(x=>x.classList.contains('cal-undated'));
-            return !!g && g.textContent.includes('想參加的超馬') && g.querySelector('.cal-results-date').textContent==='—'; }""")
+            const g=document.querySelector('.cal-results-group');
+            const row=[...g.querySelectorAll('.cal-results-row')].find(x=>x.textContent.includes('想參加的超馬'));
+            return g.querySelector('.cal-results-group-title').childNodes[0].textContent.trim()==='即將到來'
+              && !!row && row.querySelector('.cal-results-date').textContent==='日期未定' && !document.querySelector('.cal-results .cal-undated'); }""")
         page.fill('#search-input', '')
         page.wait_for_timeout(300)
         c['undated_race_visible_in_simple_mode'] = page.evaluate("""async()=>{
@@ -5133,10 +5136,11 @@ class V4Layout(Group):
         c['avatar_menu_holds_everything_in_order'] = page.evaluate("""()=>{
             const p=document.getElementById('account-menu-panel');
             const ids=['auth-area','btn-open-profile','lang-select','menu-group-import','btn-import','btn-import-json','menu-group-export',
-              'btn-export','btn-export-csv','btn-export-notebook','btn-export-ics','btn-recovery','btn-sample-data','btn-clear','btn-help','btn-feedback','auth-signout'];
+              'btn-export','btn-export-csv','btn-export-notebook','btn-export-ics','btn-recovery','btn-sample-data','btn-help','btn-feedback','btn-clear','auth-signout'];
             const els=ids.map(id=>document.getElementById(id));
             return els.every(e=>e&&p.contains(e)) && els.every((e,i)=>i===0||els[i-1].compareDocumentPosition(e)&Node.DOCUMENT_POSITION_FOLLOWING)
               && p.lastElementChild===document.getElementById('auth-signout')
+              && document.getElementById('btn-clear').previousElementSibling.classList.contains('action-menu-divider')
               && ['menu-group-import','menu-group-export'].every(id=>{ const d=document.getElementById(id); return d.tagName==='DETAILS' && !d.open; }); }""")
         page.click('#btn-account-menu')
         page.wait_for_timeout(200)
@@ -5264,15 +5268,16 @@ class V4Layout(Group):
               .map(g=>g.querySelector('.cal-results-group-title').childNodes[0].textContent.trim());
             return getComputedStyle(seg).display!=='none' && pressed.join()==='list' && state.phoneView==='list'
               && hidden('.cal-month-nav') && hidden('.cal-tools')
-              && groups.join()==='即將到來,最近的賽事,未定日期' && !document.querySelector('#calendar .cal-grid'); }""")
+              && groups.join()==='即將到來,最近的賽事' && !document.querySelector('#calendar .cal-grid'); }""")
         c['phone_list_upcoming_ascending_recent_five'] = pp.evaluate("""()=>{
             const gs=[...document.querySelectorAll('#calendar .cal-phone-list > .cal-results-group')];
             const dates=g=>[...g.querySelectorAll('.cal-list-item')].map(b=>state.races.find(r=>r.id===b.dataset.id).schedule.raceDate);
             const up=dates(gs[0]), recent=dates(gs[1]), today=todayISO();
             const past=state.races.filter(r=>!r.deletedAt&&r.schedule.raceDate&&r.schedule.raceDate<today).map(r=>r.schedule.raceDate).sort().reverse();
-            return up.length===3 && up.every((d,i)=>d>=today&&(i===0||d>=up[i-1]))
-              && recent.length===5 && recent.join()===past.slice(0,5).join()
-              && gs[2].textContent.includes('沒日期的比賽'); }""")
+            const dated=up.slice(0,3), rowDates=[...gs[0].querySelectorAll('.cal-results-date')].map(x=>x.textContent);
+            return up.length===4 && dated.every((d,i)=>d>=today&&(i===0||d>=dated[i-1])) && up[3]===''
+              && rowDates[3]==='日期未定' && gs[0].lastElementChild.textContent.includes('沒日期的比賽')
+              && recent.length===5 && recent.join()===past.slice(0,5).join(); }""")
         c['phone_focus_panel_kept_above_list'] = pp.evaluate("""()=>{
             const fp=document.querySelector('#focus-panel-slot .focus-panel'), seg=document.querySelector('.view-seg');
             return !!fp && fp.getBoundingClientRect().bottom<=seg.getBoundingClientRect().top
@@ -5359,6 +5364,1182 @@ class V4Layout(Group):
         sctx.close()
 
 
+
+# v4.1：對比計算（沿著父層把半透明底色疊上去，算出文字實際落在什麼顏色上）
+CONTRAST_JS = r"""window.__contrast=function(el){
+  const rgba=c=>{ const m=(c.match(/[\d.]+/g)||[]).map(Number); return [m[0]||0,m[1]||0,m[2]||0,m.length>3?m[3]:1]; };
+  const layers=[]; let e=el;
+  while(e&&e.nodeType===1){ const b=rgba(getComputedStyle(e).backgroundColor); if(b[3]>0) layers.push(b); if(b[3]>=1) break; e=e.parentElement; }
+  let bg=[255,255,255];
+  for(let i=layers.length-1;i>=0;i--){ const [r,g,b,a]=layers[i]; bg=[r*a+bg[0]*(1-a),g*a+bg[1]*(1-a),b*a+bg[2]*(1-a)]; }
+  const fg=rgba(getComputedStyle(el).color);
+  const lum=c=>{ const v=c.slice(0,3).map(x=>{ x/=255; return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4); }); return 0.2126*v[0]+0.7152*v[1]+0.0722*v[2]; };
+  const a=lum(fg),b=lum(bg); return (Math.max(a,b)+0.05)/(Math.min(a,b)+0.05);
+};
+// 點擊範圍：在元素中心上下各 dy 的地方點下去，打到的還是不是它
+window.__hitsAt=function(el,dx,dy){
+  const r=el.getBoundingClientRect(); const x=r.left+r.width/2+dx, y=r.top+r.height/2+dy;
+  const hit=document.elementFromPoint(x,y); return !!hit&&(hit===el||el.contains(hit));
+};"""
+
+
+class V41Fixes(Group):
+    """v4.1.0 修正：返回鍵關最上面那一層、生涯數據分頁網址、篩選數字一致、表格／獎牌牆
+    不顯示月份箭頭、次要文字與小字金色對比、圖表字、點擊範圍、重複資訊、範例資料日期。"""
+
+    def body(self, page):
+        c = self.checks
+        page.add_script_tag(content=UX_SEED_JS)
+        page.add_script_tag(content=CONTRAST_JS)
+        page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        page.evaluate(V4_EXTRA_JS)
+        page.wait_for_timeout(400)
+        wait = "const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+        # ================= 返回鍵 =================
+        # 每一種疊在上面的層：打開 → 按返回 → 只關掉它，人還在原本的畫面
+        c['back_closes_each_overlay_and_stays'] = page.evaluate("""async()=>{ """ + wait + """
+            const done=state.races.find(r=>r.status==='completed'&&r.results.chipTimeSeconds!=null);
+            done.results.isPb=true; selectRace(done.id); await wait(400);
+            const hash=location.hash, out=[];
+            const vis=id=>{ const el=document.getElementById(id); return !!el&&!el.hidden&&el.getClientRects().length>0; };
+            const cases=[
+              ['training-overlay',()=>openTrainingOverlay()],
+              ['help-modal',()=>openHelpModal()],
+              ['share-modal',()=>openShareModal(done)],
+              ['profile-modal',()=>openProfileModal()],
+              ['hof-overlay',()=>openHallOfFame()],
+              ['recovery-modal',()=>openRecoveryModal()],
+              ['account-menu-panel',()=>document.getElementById('btn-account-menu').click()],
+              ['dh-more-menu',()=>document.querySelector('[data-menu-trigger="dh-more-menu"]').click()],
+              ['global-drawer',()=>openDrawer('basicInfo')],
+            ];
+            for(const [id,open] of cases){
+              open(); await wait(250); const opened=vis(id);
+              history.back(); await wait(450);
+              out.push(opened && !vis(id) && location.hash===hash && state.selectedId===done.id ? 'ok' : id);
+            }
+            return out.every(x=>x==='ok') || out.join(); }""") is True
+        # 用 ✕ 關掉之後，返回鍵按一次就回到清單（不會有一次「按了沒反應」）
+        c['closed_by_x_then_one_back_leaves_race'] = page.evaluate("""async()=>{ """ + wait + """
+            const id=state.selectedId; openHelpModal(); await wait(250);
+            document.querySelector('#help-modal [data-action^="close"]').click(); await wait(250);
+            const closed=document.getElementById('help-modal').hidden;
+            history.back(); await wait(500);
+            return closed && state.selectedId===null && location.hash===''; }""")
+        # 賽事頁上選單用 Esc 關掉、再按頁面上的「返回」：一次就回清單
+        c['page_back_button_after_closed_menu'] = page.evaluate("""async()=>{ """ + wait + """
+            const r=state.races.find(x=>x.status==='completed'); selectRace(r.id); await wait(400);
+            document.querySelector('.dh-status-btn').click(); await wait(200);
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await wait(200);
+            const menuClosed=document.getElementById('dh-status-menu').hidden;
+            // 一次就跳回清單：中間不會先停在「防護」那一筆（換兩次畫面、捲動位置跳兩次）
+            let pops=0; const count=()=>{ pops++; }; window.addEventListener('popstate',count);
+            document.querySelector('#detail .qn-back').click(); await wait(500);
+            window.removeEventListener('popstate',count);
+            return menuClosed && pops===1 && state.selectedId===null && location.hash==='' && !history.state.backGuard; }""")
+        # 從頭像選單點「使用說明」：選單換成說明，返回只關說明
+        c['menu_to_help_back_closes_help_only'] = page.evaluate("""async()=>{ """ + wait + """
+            document.getElementById('btn-account-menu').click(); await wait(200);
+            document.getElementById('btn-help').click(); await wait(300);
+            const a=!document.getElementById('help-modal').hidden && document.getElementById('account-menu-panel').hidden;
+            history.back(); await wait(450);
+            return a && document.getElementById('help-modal').hidden && location.hash==='' && state.selectedId===null; }""")
+        # 兩層疊在一起（生涯回顧上面開「下載生涯回顧圖」）：返回一次關一層
+        c['stacked_layers_close_one_per_back'] = page.evaluate("""async()=>{ """ + wait + """
+            openHallOfFame(); await wait(250); openCareerShareModal(); await wait(300);
+            const vis=id=>{ const el=document.getElementById(id); return !el.hidden&&el.getClientRects().length>0; };
+            const both=vis('hof-overlay')&&vis('career-share-modal');
+            history.back(); await wait(450); const one=vis('hof-overlay')&&!vis('career-share-modal');
+            history.back(); await wait(450); const none=!vis('hof-overlay')&&!vis('career-share-modal');
+            return both && one && none && location.hash===''; }""")
+        # 只改 # 的跳轉（手動改網址）不是返回，開著的層不會被關掉
+        c['hash_jump_is_not_back'] = page.evaluate("""async()=>{ """ + wait + """
+            openHelpModal(); await wait(250); location.hash='#not-a-route'; await wait(300);
+            const still=!document.getElementById('help-modal').hidden;
+            const x=document.querySelector('#help-modal [data-action^="close"]'); if(x) x.click(); await wait(200);
+            history.replaceState({},'',location.pathname+location.search); return still; }""")
+        # ================= 生涯數據分頁的網址 =================
+        c['career_tab_has_url_and_back_returns_to_races'] = page.evaluate("""async()=>{ """ + wait + """
+            document.querySelector('.home-tab[data-home-tab="career"]').click(); await wait(300);
+            const a=location.hash==='#career' && state.homeTab==='career' && !!document.querySelector('#calendar .career-summary-wrap');
+            history.back(); await wait(450);
+            return a && location.hash==='' && state.homeTab==='races' && !document.querySelector('#calendar .career-summary-wrap'); }""")
+        # 點「賽事」分頁切回來＝退回原本那一筆（不是再推一筆）：返回鍵不會在兩個分頁之間來回
+        c['races_tab_click_goes_back_not_forward'] = page.evaluate("""async()=>{ """ + wait + """
+            history.replaceState(Object.assign({},history.state,{testMark:'home'}),'');
+            document.querySelector('.home-tab[data-home-tab="career"]').click(); await wait(300);
+            const onCareer=history.state.testMark!=='home';
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await wait(450);
+            return onCareer && history.state.testMark==='home' && location.hash==='' && state.homeTab==='races'; }""")
+        c['race_from_career_returns_to_career'] = page.evaluate("""async()=>{ """ + wait + """
+            document.querySelector('.home-tab[data-home-tab="career"]').click(); await wait(300);
+            const r=state.races.find(x=>x.status==='completed'); selectRace(r.id); await wait(400);
+            document.querySelector('#detail .qn-back').click(); await wait(500);
+            const ok=state.selectedId===null && location.hash==='#career' && state.homeTab==='career'
+              && !!document.querySelector('#calendar .career-summary-wrap');
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await wait(450); return ok; }""")
+        # 重新整理留在生涯數據：用本機 http 開（headless Chromium 在 file:// 下重新整理，
+        # 偶爾會把整個 localStorage 弄丟——v4.0 一樣會，跟這裡要測的事無關；http 下 8/8 穩定）
+        import http.server, socketserver, threading, functools
+        class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *a, **k):
+                pass
+        socketserver.TCPServer.allow_reuse_address = True
+        srv = socketserver.TCPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=os.path.dirname(os.path.abspath(APP))))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        rctx = full_mode_context(page.context.browser, viewport=DESKTOP)
+        rp = rctx.new_page()
+        rp.on('pageerror', lambda e: self.errors.append(str(e)))
+        rp.goto(f'http://127.0.0.1:{srv.server_address[1]}/' + os.path.basename(APP))
+        rp.wait_for_timeout(900)
+        rp.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        rp.evaluate("""async()=>{ for(let i=0;i<6;i++){ const r=emptyRace('重整測試 '+i,'road_running','completed','2024-0'+(i+1)+'-10');
+            r.route.distanceKm=42.195; r.results.chipTimeSeconds=12600+i*60; state.races.push(r); }
+            await persist(); renderAll(); document.querySelector('.home-tab[data-home-tab="career"]').click(); }""")
+        rp.wait_for_timeout(800)
+        rp.reload()
+        rp.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0", timeout=30000)
+        rp.wait_for_timeout(500)
+        c['reload_stays_on_career_tab'] = rp.evaluate("""()=>location.hash==='#career' && state.homeTab==='career'
+            && document.querySelector('.home-tab[aria-current="page"]').dataset.homeTab==='career' && !!document.querySelector('#calendar .career-summary-wrap')""")
+        rctx.close()
+        srv.shutdown()
+        # ================= 表格／獎牌牆不顯示月份箭頭 =================
+        c['month_arrows_only_in_month_view'] = page.evaluate("""async()=>{ """ + wait + """
+            const shown=()=>{ const n=document.querySelector('.cal-month-nav'); return getComputedStyle(n).display!=='none' && n.getBoundingClientRect().width>0; };
+            const cal=shown();
+            document.getElementById('cal-table-toggle').click(); await wait(300); const table=shown();
+            document.getElementById('cal-table-toggle').click(); await wait(200);
+            document.getElementById('cal-view-toggle').click(); await wait(300); const grid=shown();
+            document.getElementById('cal-view-toggle').click(); await wait(300);
+            return cal && !table && !grid && shown(); }""")
+        # ================= 對比 =================
+        c['secondary_text_meets_aa_light_and_dark'] = page.evaluate("""async()=>{ """ + wait + """
+            const check=()=>{
+              const els=[document.querySelector('.home-tab:not([aria-current])'), document.querySelector('.app-tagline'), document.getElementById('app-version')];
+              return els.every(e=>e&&__contrast(e)>=4.5); };
+            // 切主題有 0.8 秒的底色過場：量的時候先關掉過場，量的是最後的顏色
+            const st=document.createElement('style'); st.textContent='*{transition:none!important}'; document.head.appendChild(st);
+            const light=check(); applyTheme('dark'); await wait(150); const dark=check(); applyTheme('light'); await wait(150); st.remove();
+            return light && dark; }""")
+        c['pb_badge_and_focus_label_meet_aa'] = page.evaluate("""async()=>{ """ + wait + """
+            const r=state.races.find(x=>x.status==='completed'&&x.results.chipTimeSeconds!=null); r.results.isPb=true; selectRace(r.id); await wait(400);
+            const pb=document.querySelector('#detail .pb-badge'); const a=!!pb && __contrast(pb)>=4.5;
+            goBackFromDetail(); await wait(400);
+            const lab=document.querySelector('.focus-panel-label'); return a && !!lab && __contrast(lab)>=4.5; }""")
+        # ================= 重複資訊 =================
+        c['header_date_once_pb_once'] = page.evaluate("""async()=>{ """ + wait + """
+            const up=state.races.find(x=>x.name==='近的比賽'); selectRace(up.id); await wait(400);
+            const h=document.querySelector('#detail .detail-header').innerText;
+            const once=(h.split(up.schedule.raceDate).length-1)===1;
+            const done=state.races.find(x=>x.status==='completed'&&x.results.isPb&&x.results.chipTimeSeconds!=null); selectRace(done.id); await wait(400);
+            const pbs=document.querySelectorAll('#detail .pb-badge').length;
+            goBackFromDetail(); await wait(400); return once && pbs===1; }""")
+        # ================= 範例資料的日期跟著今天走 =================
+        # （版本號的檢查跟著最新的群組走，v4.2.0 起在 v42）
+        c['sample_dates_follow_today'] = page.evaluate("""()=>{
+            const ex=buildExampleRaces(), today=todayISO();
+            const by=id=>ex.find(r=>r.id===id);
+            const gap=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);
+            const a=by('example-alishan-trail'), t=by('example-taroko-marathon'), m=by('example-taipei-marathon');
+            return a.schedule.raceDate===addDaysStr(today,10) && ex.every(r=>r.schedule.raceDate>=today)
+              && gap(a.schedule.raceDate,t.schedule.raceDate)===42 && gap(a.schedule.raceDate,m.schedule.raceDate)===84
+              && ex.every(r=>r.name.includes(r.schedule.raceDate.slice(0,4)))
+              && m.accommodations[0].checkIn===addDaysStr(m.schedule.raceDate,-1)
+              && t.schedule.lotteryResultDate<t.schedule.raceDate; }""")
+        # ================= 手機 =================
+        pctx = full_mode_context(page.context.browser, viewport=PHONE, is_mobile=True, has_touch=True)
+        pp = pctx.new_page()
+        pp.on('pageerror', lambda e: self.errors.append(str(e)))
+        pp.goto(APP_URL)
+        pp.wait_for_timeout(900)
+        pp.add_script_tag(content=UX_SEED_JS)
+        pp.add_script_tag(content=CONTRAST_JS)
+        pp.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        pp.evaluate(V4_EXTRA_JS)
+        pp.wait_for_timeout(400)
+        c['phone_upcoming_chip_matches_list_group'] = pp.evaluate("""()=>{
+            const chip=[...document.querySelectorAll('#filter-chips .chip')].find(b=>b.dataset.status==='upcoming');
+            const n=Number((chip.textContent.match(/\\((\\d+)\\)/)||[])[1]);
+            const g=document.querySelector('#calendar .cal-phone-list > .cal-results-group');
+            const cnt=Number(g.querySelector('.cal-results-count').textContent);
+            const rows=g.querySelectorAll('.cal-list-item').length;
+            const last=g.querySelector('.cal-results-row:last-child');
+            return n===4 && cnt===n && rows===n && last.textContent.includes('沒日期的比賽')
+              && last.querySelector('.cal-results-date').textContent==='日期未定' && !document.querySelector('#calendar .cal-undated'); }""")
+        c['phone_upcoming_filter_title_matches_group'] = pp.evaluate("""async()=>{
+            [...document.querySelectorAll('#filter-chips .chip')].find(b=>b.dataset.status==='upcoming').click();
+            await new Promise(s=>setTimeout(s,300));
+            const n=Number(document.querySelector('.cal-results-title').textContent.match(/(\\d+) 場/)[1]);
+            const g=document.querySelector('.cal-results-group'); const cnt=Number(g.querySelector('.cal-results-count').textContent);
+            document.querySelector('[data-action="clear-cal-results"]').click(); await new Promise(s=>setTimeout(s,300));
+            return n===4 && cnt===4; }""")
+        c['phone_small_controls_have_44px_hit_area'] = pp.evaluate("""async()=>{ """ + wait + """
+            const out=[];
+            const h44=(el,name)=>{ if(!(el&&__hitsAt(el,0,-20)&&__hitsAt(el,0,20))) out.push(name); };
+            h44(document.getElementById('btn-account-menu'),'avatar');
+            h44(document.getElementById('btn-mode-toggle'),'mode');
+            h44(document.querySelector('[data-action="dismiss-focus-panel"]'),'dismiss');
+            [...document.querySelectorAll('.view-seg button')].forEach(b=>{ if(b.getBoundingClientRect().height<40) out.push('seg'); });
+            const up=state.races.find(x=>x.name==='近的比賽'); selectRace(up.id); await wait(400);
+            h44(document.querySelector('.dh-status-btn'),'stamp');
+            [...document.querySelectorAll('.quick-nav a, .quick-nav .qn-back')].forEach(a=>{ if(a.getBoundingClientRect().height<40) out.push('qn'); });
+            [...document.querySelectorAll('.lc-node')].forEach(n=>{ if(n.getBoundingClientRect().width<44) out.push('lc'); });
+            return out.length===0 || out.join(); }""") is True
+        c['phone_avatar_tap_at_edge_opens_menu'] = pp.evaluate("""async()=>{ """ + wait + """
+            goBackFromDetail(); await wait(400);
+            const b=document.getElementById('btn-account-menu').getBoundingClientRect();
+            document.elementFromPoint(b.left+b.width/2, b.bottom+4).click(); await wait(250);
+            const open=!document.getElementById('account-menu-panel').hidden;
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await wait(200); return open; }""")
+        c['phone_gear_drawer_fits_and_checkboxes_20px'] = pp.evaluate("""async()=>{ """ + wait + """
+            const r=state.races.find(x=>x.name==='近的比賽');
+            r.equipmentChecklist=[{itemName:'跑鞋',category:'other',weightG:null,isConsumable:false,isMandatory:false,isPacked:false,location:'',notes:''}];
+            // v4.2 起裝備清單預設是「打包」模式；範本選單與每件的「已打包」核取方塊在「編輯」
+            selectRace(r.id); await wait(300); equipmentViewMode='list'; openDrawer('equipment'); await wait(400);
+            const d=document.getElementById('global-drawer');
+            const sel=d.querySelector('#template-select'); const box=d.querySelector('input[type="checkbox"][data-path$="isPacked"]');
+            const ok=!!sel && sel.getBoundingClientRect().right<=innerWidth && !!box && box.getBoundingClientRect().width>=20
+              && document.documentElement.scrollWidth<=innerWidth;
+            closeDrawer(); await wait(300); goBackFromDetail(); await wait(400); return ok; }""")
+        pp.evaluate("()=>document.querySelector('.home-tab[data-home-tab=\"career\"]').click()")
+        pp.wait_for_timeout(700)
+        c['phone_career_chart_labels_readable'] = pp.evaluate("""()=>{
+            const vis=[...document.querySelectorAll('.yc-year,.yc-count,.et-year')].filter(e=>e.getClientRects().length);
+            const sized=vis.every(e=>e.getBoundingClientRect().height>=11 && parseFloat(getComputedStyle(e).fontSize)>=12);
+            // 標籤之間至少留 4px（貼在一起一樣讀不出來）
+            const noOverlap=sel=>{ const rs=[...document.querySelectorAll(sel)].filter(e=>e.getClientRects().length).map(e=>e.getBoundingClientRect()).sort((a,b)=>a.left-b.left);
+              return rs.every((r,i)=>i===0||r.left>=rs[i-1].right+4); };
+            const yc=document.querySelectorAll('.yc-year').length, et=[...document.querySelectorAll('.et-year')].filter(e=>e.getClientRects().length).length;
+            return yc===11 && et>=5 && sized && noOverlap('.yc-year') && noOverlap('.et-year')
+              && !document.querySelector('.elevation-trend-svg text'); }""")
+        # 年份很多（26 年）：年份標籤一樣不會疊在一起
+        c['phone_career_labels_no_overlap_many_years'] = pp.evaluate("""async()=>{
+            const extra=[]; for(let y=2000;y<2026;y++){ const r=emptyRace('多年 '+y,'trail_running','completed',y+'-06-15');
+              r.route.distanceKm=30; r.route.elevationGainM=800+(y%5)*300; r.results.chipTimeSeconds=14000; extra.push(r); }
+            state.races.push(...extra); renderCalendar(); await new Promise(s=>setTimeout(s,400));
+            const shown=e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden';
+            const noOverlap=(sel,min)=>{ const rs=[...document.querySelectorAll(sel)].filter(shown).map(e=>e.getBoundingClientRect()).sort((a,b)=>a.left-b.left);
+              return rs.length>=min && rs.every((r,i)=>i===0||r.left>=rs[i-1].right+4); };
+            const latest=[...document.querySelectorAll('.yc-year')].pop();
+            // 場次數字太擠時收起來（每一欄的提示文字裡還有），收起來也算沒有疊在一起
+            const ok=noOverlap('.et-year',5) && noOverlap('.yc-year',5) && noOverlap('.yc-count',0) && shown(latest) && latest.textContent.includes('25');
+            state.races=state.races.filter(r=>!extra.includes(r)); renderCalendar(); await new Promise(s=>setTimeout(s,300)); return ok; }""")
+        c['phone_elevation_dots_are_round'] = pp.evaluate("""()=>{
+            const d=[...document.querySelectorAll('.et-dot')]; return d.length>5 && d.every(x=>{ const r=x.getBoundingClientRect(); return Math.abs(r.width-r.height)<0.5; }); }""")
+        # 從頭像選單點「範例資料」打開一場 → 返回回到首頁 → 再返回就離開（不會卡一下）
+        pp.evaluate("()=>document.querySelector('.home-tab[data-home-tab=\"races\"]').click()")
+        pp.wait_for_timeout(400)
+        pp.goto(APP_URL)
+        pp.wait_for_timeout(900)
+        pp.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        pp.click('#btn-account-menu')
+        pp.wait_for_timeout(250)
+        pp.click('#btn-sample-data')
+        pp.wait_for_timeout(600)
+        opened = pp.evaluate("()=>EXAMPLE_RACE_IDS.includes(state.selectedId) && location.hash.startsWith('#race=')")
+        pp.go_back()
+        pp.wait_for_timeout(700)
+        home = pp.evaluate("()=>state.selectedId===null && location.hash===''")
+        first_url = pp.url
+        pp.go_back()
+        pp.wait_for_timeout(800)
+        c['sample_from_menu_back_twice_leaves_cleanly'] = opened and home and pp.url != first_url
+        pctx.close()
+
+
+
+class V42Flows(Group):
+    """v4.2.0：比完賽之後記錄成績、打包模式、賽前四格、已完賽「賽後」排第一、生涯數據可以點。"""
+
+    def body(self, page):
+        c = self.checks
+        page.add_script_tag(content=UX_SEED_JS)
+        page.add_style_tag(content='.badge-unbox-overlay{display:none!important}')
+        page.evaluate(V4_EXTRA_JS)
+        page.wait_for_timeout(400)
+        W = "const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+        # 測試用的賽事：昨天比完還沒填（有 A 目標）、15 天前、今天、抽籤中昨天
+        page.evaluate("""async()=>{
+            const mk=(n,st,d)=>{ const r=emptyRace(n,'road_running',st,d!=null?addDaysStr(todayISO(),d):''); r.route.distanceKm=42.195; r.location.city='台中市'; state.races.push(r); return r; };
+            const y=mk('昨天的馬拉松','registered',-1); y.goals[0].targetTimeSeconds=hmsToSec('3:30:00');
+            mk('三天前的半馬','registered',-3).route.distanceKm=21.1;
+            mk('十五天前的賽事','registered',-15); mk('今天的賽事','registered',0); mk('昨天沒抽中','lottery_pending',-1);
+            await persist(); renderAll(); scrollTo(0,0); }""")
+        page.wait_for_timeout(300)
+        id_of = lambda n: page.evaluate("(n)=>state.races.find(r=>r.name===n).id", n)
+        # ================= ① 記錄成績 =================
+        c['prompt_day_after_registered_only'] = page.evaluate("""()=>{
+            const card=document.querySelector('#focus-panel-slot .result-prompt');
+            return !!card && card.querySelector('.result-prompt-title').textContent==='昨天的馬拉松'
+              && card.querySelector('.result-prompt-meta').textContent.startsWith('昨天')
+              && card.compareDocumentPosition(document.querySelector('#focus-panel-slot .focus-panel'))&Node.DOCUMENT_POSITION_FOLLOWING; }""")
+        c['list_tag_only_on_awaiting'] = page.evaluate("""()=>{
+            const tagged=[...document.querySelectorAll('#calendar .cal-list-item')].filter(b=>b.querySelector('.result-tag')).map(b=>state.races.find(r=>r.id===b.dataset.id).name).sort();
+            return JSON.stringify(tagged)===JSON.stringify(['三天前的半馬','昨天的馬拉松']); }""")
+        c['record_opens_race_and_short_sheet'] = page.evaluate("""async()=>{ """ + W + """
+            document.querySelector('.result-prompt [data-action="result-record"]').click(); await wait(500);
+            const d=document.getElementById('global-drawer');
+            const paths=[...d.querySelectorAll('#drawer-content [data-path]')].map(x=>x.dataset.path);
+            return currentRace&&currentRace.name==='昨天的馬拉松' && location.hash.startsWith('#race=') && !d.hidden
+              && document.getElementById('drawer-title').textContent==='記錄成績'
+              && JSON.stringify(paths)===JSON.stringify(['results.chipTimeSeconds','results.overallRank','results.overallParticipants','results.ageGroupRank','results.ageGroupParticipants']); }""")
+        page.fill('#drawer-content input[data-path="results.chipTimeSeconds"]', '3:21:27')
+        page.keyboard.press('Tab')
+        page.wait_for_timeout(600)
+        c['goal_comparison_in_words'] = page.evaluate("""()=>{ const g=document.querySelector('#drawer-content .record-result-goal');
+            return !!g && g.textContent==='比 A 目標（3:30:00）快 8 分 33 秒' && g.classList.contains('is-ahead'); }""")
+        c['save_marks_completed_and_shows_result'] = page.evaluate("""async()=>{ """ + W + """
+            document.querySelector('[data-action="record-result-save"]').click(); await wait(700);
+            const r=state.races.find(x=>x.name==='昨天的馬拉松');
+            return r.status==='completed' && r.results.chipTimeSeconds===12087 && document.getElementById('global-drawer').hidden
+              && scrollY===0 && document.querySelector('#detail .results-big-time').textContent.includes('21')
+              && document.querySelector('#detail .quick-nav a').dataset.target==='section-post'; }""")
+        c['back_after_save_goes_home_and_card_moves_on'] = page.evaluate("""async()=>{ """ + W + """
+            goBackFromDetail(); await wait(500);
+            const card=document.querySelector('#focus-panel-slot .result-prompt');
+            return state.selectedId===null && !!card && card.querySelector('.result-prompt-title').textContent==='三天前的半馬'; }""")
+        c['dns_from_card_with_undo'] = page.evaluate("""async()=>{ """ + W + """
+            document.querySelector('.result-prompt [data-action="result-set-status"][data-status="dns"]').click(); await wait(500);
+            const r=state.races.find(x=>x.name==='三天前的半馬');
+            const a=r.status==='dns' && !document.querySelector('#focus-panel-slot .result-prompt');
+            const undo=[...document.querySelectorAll('.foreground-toast .race-undo-btn')].pop(); if(!undo) return false; undo.click(); await wait(500);
+            return a && r.status==='registered' && !!document.querySelector('#focus-panel-slot .result-prompt'); }""")
+        c['later_hides_card_keeps_tag_and_banner'] = page.evaluate("""async()=>{ """ + W + """
+            document.querySelector('.result-prompt [data-action="result-later"]').click(); await wait(300);
+            renderAll(); await wait(200);
+            const id=state.races.find(x=>x.name==='三天前的半馬').id;
+            const gone=!document.querySelector('#focus-panel-slot .result-prompt');
+            const tag=!!document.querySelector('#calendar .cal-list-item[data-id="'+id+'"] .result-tag');
+            selectRace(id); await wait(400);
+            const banner=document.querySelector('#detail .result-banner');
+            const ok=gone && tag && !!banner && banner.textContent.includes('比賽已經過了 3 天') && !document.querySelector('#detail .rw-tiles');
+            goBackFromDetail(); await wait(400); return ok; }""")
+        c['banner_any_age_and_dns_from_banner'] = page.evaluate("""async()=>{ """ + W + """
+            const r=state.races.find(x=>x.name==='十五天前的賽事');
+            const noTag=!document.querySelector('#calendar .cal-list-item[data-id="'+r.id+'"] .result-tag');
+            selectRace(r.id); await wait(400);
+            const has=!!document.querySelector('#detail .result-banner');
+            const dnsBtn=document.querySelector('#detail .result-banner [data-action="lc-set-status"][data-status="dns"]');
+            if(!dnsBtn){ goBackFromDetail(); await wait(400); return false; }
+            dnsBtn.click(); await wait(500);
+            const ok=noTag && has && r.status==='dns' && !document.querySelector('#detail .result-banner');
+            goBackFromDetail(); await wait(400); return ok; }""")
+        c['no_prompt_on_race_day_or_for_lottery'] = page.evaluate("""()=>{
+            const today=state.races.find(x=>x.name==='今天的賽事'), lot=state.races.find(x=>x.name==='昨天沒抽中');
+            return today.schedule.raceDate===todayISO() && !raceNeedsResult(today) && !isAwaitingResult(lot) && !raceNeedsResult(lot)
+              && !document.querySelector('#calendar .cal-list-item[data-id="'+today.id+'"] .result-tag'); }""")
+        c['save_without_time_still_completes'] = page.evaluate("""async()=>{ """ + W + """
+            const r=emptyRace('沒記時間的賽事','road_running','registered',addDaysStr(todayISO(),-2)); state.races.push(r); await persist(); renderAll();
+            openRecordResult(r.id); await wait(400);
+            document.querySelector('[data-action="record-result-save"]').click(); await wait(600);
+            const ok=r.status==='completed' && r.results.chipTimeSeconds==null && document.getElementById('global-drawer').hidden;
+            goBackFromDetail(); await wait(400); return ok; }""")
+        # 鐵人三項只填完賽時間（沒有匯入分項，記錄成績最常見的情況）：不顯示全場平均配速，分享圖也一樣
+        c['triathlon_with_only_time_has_no_overall_pace'] = page.evaluate("""async()=>{ """ + W + """
+            const r=emptyRace('只填時間的三鐵','triathlon','registered',addDaysStr(todayISO(),-1)); r.route.distanceKm=113; state.races.push(r); await persist(); renderAll();
+            openRecordResult(r.id); await wait(400);
+            const inp=document.querySelector('#drawer-content input[data-path="results.chipTimeSeconds"]'); inp.value='5:41:27'; inp.dispatchEvent(new Event('change',{bubbles:true})); await wait(300);
+            document.querySelector('[data-action="record-result-save"]').click(); await wait(600);
+            const labels=[...document.querySelectorAll('#detail .results-badge-label')].map(e=>e.textContent);
+            const share=shareStatsBadges(r,SHARE_SHOW_DEFAULT).map(b=>b[0]);
+            const ok=r.status==='completed' && r.results.chipTimeSeconds===20487 && labels.includes('距離')
+              && !labels.some(l=>l.includes('配速')) && !share.some(l=>l.includes('配速'));
+            goBackFromDetail(); await wait(400); return ok; }""")
+        c['back_closes_record_sheet_first'] = page.evaluate("""async()=>{ """ + W + """
+            const r=emptyRace('返回測試','road_running','registered',addDaysStr(todayISO(),-1)); state.races.push(r); await persist(); renderAll();
+            openRecordResult(r.id); await wait(400);
+            history.back(); await wait(500);
+            const a=document.getElementById('global-drawer').hidden && state.selectedId===r.id;
+            history.back(); await wait(500);
+            return a && state.selectedId===null && location.hash===''; }""")
+        # 有封面照的賽事頁首上的提示列：淺色、深色模式都要看得清楚（深色模式的封面頁首是深底淺字）
+        page.add_script_tag(content=CONTRAST_JS)
+        c['banner_on_cover_readable_light_and_dark'] = page.evaluate("""async()=>{ """ + W + """
+            const r=emptyRace('有封面的賽事','road_running','registered',addDaysStr(todayISO(),-2));
+            const cv=document.createElement('canvas'); cv.width=320; cv.height=180; const g=cv.getContext('2d');
+            g.fillStyle='#d8c8a0'; g.fillRect(0,0,320,180); g.fillStyle='#334'; g.fillRect(0,110,320,70);
+            r.coverImage=cv.toDataURL('image/jpeg',.8); r.coverImageAspect=320/180; state.races.push(r); await persist();
+            selectRace(r.id); await wait(400);
+            const st=document.createElement('style'); st.textContent='*{transition:none!important}'; document.head.appendChild(st);
+            const read=()=>{ const b=document.querySelector('#detail .detail-header.has-cover .result-banner b'); return !!b && __contrast(b)>=4.5; };
+            const light=read(); applyTheme('dark'); await wait(150); const dark=read(); applyTheme('light'); await wait(150); st.remove();
+            goBackFromDetail(); await wait(400); return light && dark; }""")
+        # ================= ③ 賽前四格、已完賽順序 =================
+        c['tiles_for_registered_upcoming_only'] = page.evaluate("""async()=>{ """ + W + """
+            const near=state.races.find(x=>x.name==='近的比賽'); near.bibNumber='B77'; near.schedule.startTime='06:30';
+            near.equipmentChecklist=[{itemName:'跑鞋',isPacked:true},{itemName:'帽子',isPacked:false}].map(x=>Object.assign(LIST_META.equipmentChecklist.factory(),x));
+            const gi=near.goals.findIndex(g=>g.tier==='A'); near.goals[gi].targetTimeSeconds=hmsToSec('3:15:00'); await persist();
+            selectRace(near.id); await wait(400);
+            const v=[...document.querySelectorAll('#detail .rw-tile')].map(b=>b.dataset.tile+':'+b.querySelector('.rw-tile-value').textContent);
+            const far=state.races.find(x=>x.name==='遠的比賽'); selectRace(far.id); await wait(400);
+            const none=!document.querySelector('#detail .rw-tiles');
+            return JSON.stringify(v)===JSON.stringify(['bib:B77','start:06:30','pack:1/2','goal:3:15:00']) && none; }""")
+        # 全部打包好：值寫「2/2」、勾勾在標籤上（「打包 ✓」），值本身不加勾，兩位數的清單才放得下
+        c['all_packed_tile_marks_done'] = page.evaluate("""async()=>{ """ + W + """
+            const near=state.races.find(x=>x.name==='近的比賽'); const keep=near.equipmentChecklist.map(i=>i.isPacked);
+            near.equipmentChecklist.forEach(i=>{ i.isPacked=true; }); selectRace(near.id); await wait(400);
+            const t=document.querySelector('#detail .rw-tile[data-tile="pack"]');
+            const ok=t.querySelector('.rw-tile-value').textContent==='2/2' && t.querySelector('.rw-tile-label').textContent==='打包 ✓';
+            near.equipmentChecklist.forEach((i,k)=>{ i.isPacked=keep[k]; }); await persist(); renderDetail(); await wait(100);
+            return ok; }""")
+        c['empty_tile_opens_drawer_and_focuses'] = page.evaluate("""async()=>{ """ + W + """
+            const r=emptyRace('還沒填的','road_running','registered',addDaysStr(todayISO(),20)); state.races.push(r); await persist();
+            selectRace(r.id); await wait(400);
+            const t=document.querySelector('#detail .rw-tile[data-tile="bib"]');
+            const empty=t.classList.contains('is-empty') && t.textContent.includes('＋ 填寫');
+            t.click(); await wait(400);
+            const ae=document.activeElement;
+            const ok=empty && !document.getElementById('global-drawer').hidden && ae && ae.dataset.path==='bibNumber';
+            ae.value='Z9'; ae.dispatchEvent(new Event('change',{bubbles:true})); await wait(400);
+            closeDrawer(); await wait(300);
+            return ok && document.querySelector('#detail .rw-tile[data-tile="bib"] .rw-tile-value').textContent==='Z9'; }""")
+        c['pack_tile_opens_pack_mode'] = page.evaluate("""async()=>{ """ + W + """
+            equipmentViewMode='list';
+            const near=state.races.find(x=>x.name==='近的比賽'); selectRace(near.id); await wait(400);
+            document.querySelector('#detail .rw-tile[data-tile="pack"]').click(); await wait(400);
+            const ok=!document.getElementById('global-drawer').hidden && !!document.querySelector('#drawer-content .pack-row')
+              && document.querySelector('[data-action="equipment-view"][aria-pressed="true"]').dataset.view==='pack';
+            closeDrawer(); await wait(300); return ok; }""")
+        c['completed_post_first_upcoming_basic_first'] = page.evaluate("""async()=>{ """ + W + """
+            const order=()=>[...document.querySelectorAll('#detail details.section')].map(d=>d.id).join();
+            const nav=()=>[...document.querySelectorAll('#detail .quick-nav a')].map(a=>a.dataset.target).join();
+            const done=state.races.find(x=>x.status==='completed'&&x.results.chipTimeSeconds); selectRace(done.id); await wait(400);
+            const a=order()==='section-post,section-basic,section-route,section-prep,section-logistics' && nav()==='section-post,section-basic,section-route,section-prep,section-logistics';
+            const dnf=state.races.find(x=>x.status==='dnf'); selectRace(dnf.id); await wait(400); const b=order().startsWith('section-post');
+            const up=state.races.find(x=>x.name==='近的比賽'); selectRace(up.id); await wait(400);
+            const c2=order()==='section-basic,section-route,section-prep,section-logistics,section-post' && nav().startsWith('section-basic');
+            goBackFromDetail(); await wait(400); return a && b && c2; }""")
+        # ================= ② 打包模式 =================
+        page.evaluate("""async()=>{ const r=state.races.find(x=>x.name==='近的比賽');
+            r.equipmentChecklist=['跑鞋','號碼布','能量膠','鹽錠','帽子','手錶'].map((n,i)=>Object.assign(LIST_META.equipmentChecklist.factory(),{itemName:n,isPacked:i<2,isMandatory:i===1||i===3,location:i===2?'body':''}));
+            await persist(); equipmentViewMode='pack'; packFilter='todo'; selectRace(r.id); await new Promise(s=>setTimeout(s,300)); openDrawer('equipment'); }""")
+        page.wait_for_timeout(400)
+        c['pack_mode_default_lists_unpacked_first'] = page.evaluate("""()=>{
+            const dc=document.getElementById('drawer-content');
+            const todo=[...dc.querySelectorAll('.pack-list > .pack-row')].map(b=>b.querySelector('.pack-name').textContent);
+            const done=dc.querySelector('details.pack-done');
+            return JSON.stringify(todo)===JSON.stringify(['能量膠','鹽錠','帽子','手錶']) && !!done && !done.open
+              && done.querySelector('summary').textContent==='已打包 2 件' && dc.querySelector('.pack-progress b').textContent==='2 / 6'
+              && !dc.querySelector('input[data-path$="itemName"]')
+              && dc.querySelector('.pack-row .pack-where').textContent==='隨身攜帶'
+              && [...dc.querySelectorAll('.pack-list > .pack-row')][1].querySelector('.pack-must').textContent==='強制'; }""")
+        c['tap_row_packs_and_moves_to_done'] = page.evaluate("""async()=>{ """ + W + """
+            document.querySelector('#drawer-content .pack-list > .pack-row').click(); await wait(400);
+            const r=currentRace; const dc=document.getElementById('drawer-content');
+            return r.equipmentChecklist[2].isPacked===true && dc.querySelector('.pack-progress b').textContent==='3 / 6'
+              && dc.querySelector('details.pack-done summary').textContent==='已打包 3 件'
+              && ![...dc.querySelectorAll('.pack-list > .pack-row')].some(b=>b.textContent.includes('能量膠')); }""")
+        c['done_group_stays_open_and_unpacks'] = page.evaluate("""async()=>{ """ + W + """
+            const d=document.querySelector('#drawer-content details.pack-done'); d.open=true; await wait(100);
+            const row=[...d.querySelectorAll('.pack-row')].find(b=>b.textContent.includes('跑鞋')); row.click(); await wait(400);
+            const d2=document.querySelector('#drawer-content details.pack-done');
+            return currentRace.equipmentChecklist[0].isPacked===false && !!d2 && d2.open; }""")
+        c['filters_all_and_must'] = page.evaluate("""async()=>{ """ + W + """
+            document.querySelector('[data-action="pack-filter"][data-filter="must"]').click(); await wait(300);
+            const must=[...document.querySelectorAll('#drawer-content .pack-row .pack-name')].map(x=>x.textContent);
+            document.querySelector('[data-action="pack-filter"][data-filter="all"]').click(); await wait(300);
+            const all=document.querySelectorAll('#drawer-content .pack-row').length;
+            document.querySelector('[data-action="pack-filter"][data-filter="todo"]').click(); await wait(300);
+            return JSON.stringify(must)===JSON.stringify(['號碼布','鹽錠']) && all===6; }""")
+        page.click('#drawer-content .pack-add-input')
+        page.keyboard.type('壓縮襪')
+        page.keyboard.press('Enter')
+        page.wait_for_timeout(400)
+        page.keyboard.type('防曬乳')
+        page.keyboard.press('Enter')
+        page.wait_for_timeout(400)
+        c['add_items_with_enter_back_to_back'] = page.evaluate("""()=>{ const l=currentRace.equipmentChecklist;
+            return l.length===8 && l[6].itemName==='壓縮襪' && l[7].itemName==='防曬乳' && l[7].isPacked===false
+              && document.activeElement && document.activeElement.classList.contains('pack-add-input') && document.activeElement.value===''; }""")
+        # 注音／拼音／日文輸入法選字時按的 Enter 是「確定這個字」，不能被當成新增
+        c['enter_while_composing_does_not_add'] = page.evaluate("""async()=>{ """ + W + """
+            const inp=document.querySelector('#drawer-content .pack-add-input'); inp.value='選字中';
+            inp.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',isComposing:true,bubbles:true,cancelable:true})); await wait(300);
+            const ok=currentRace.equipmentChecklist.length===8;
+            document.querySelector('#drawer-content .pack-add-input').value=''; return ok; }""")
+        c['edit_and_kanban_views_still_work'] = page.evaluate("""async()=>{ """ + W + """
+            document.querySelector('[data-action="equipment-view"][data-view="list"]').click(); await wait(300);
+            const edit=document.querySelectorAll('#drawer-content input[data-path$=".itemName"]').length===8 && !!document.getElementById('template-select');
+            document.querySelector('[data-action="equipment-view"][data-view="kanban"]').click(); await wait(300);
+            const kb=!!document.querySelector('#drawer-content .kanban-card');
+            document.querySelector('[data-action="equipment-view"][data-view="pack"]').click(); await wait(300);
+            closeDrawer(); await wait(300); return edit && kb && !!document.querySelector('#detail .rw-tiles'); }""")
+        c['empty_list_offers_templates_in_pack_mode'] = page.evaluate("""async()=>{ """ + W + """
+            const r=emptyRace('空清單','trail_running','registered',addDaysStr(todayISO(),30)); state.races.push(r); await persist();
+            selectRace(r.id); await wait(300); openDrawer('equipment'); await wait(300);
+            const dc=document.getElementById('drawer-content');
+            const ok=!!dc.querySelector('[data-action="apply-starter-template"]') && !!dc.querySelector('.pack-add-input');
+            dc.querySelector('[data-action="apply-starter-template"]').click(); await wait(400);
+            const filled=r.equipmentChecklist.length>0 && document.querySelectorAll('#drawer-content .pack-row').length===r.equipmentChecklist.length;
+            closeDrawer(); await wait(300); goBackFromDetail(); await wait(400); return ok && filled; }""")
+        c['focus_card_packing_opens_drawer'] = page.evaluate("""async()=>{ """ + W + """
+            equipmentViewMode='list';
+            // v4.3 起焦點卡的打包是一格（跟賽事頁的賽前四格同一套）
+            const ring=document.querySelector('#focus-panel-slot .focus-panel [data-action="open-packing"]');
+            const fr=computeFocusRace(); if(!ring) return false; ring.click(); await wait(500);
+            // 焦點賽事可能還沒有清單（那時面板是範本與新增），所以看「打開的是打包模式」
+            const on=document.querySelector('#drawer-content [data-action="equipment-view"][aria-pressed="true"]');
+            const ok=!!fr && state.selectedId===fr.id && !document.getElementById('global-drawer').hidden && !!on && on.dataset.view==='pack';
+            closeDrawer(); await wait(300); goBackFromDetail(); await wait(400); return ok; }""")
+        # ================= ④ 生涯數據 =================
+        # 上面幾項是賽事頁直接跳賽事頁（每一跳都是新的一頁，返回會回到上一場），
+        # 先一路返回到首頁，生涯數據才是從首頁點進去的狀態
+        page.evaluate("""async()=>{ for(let i=0;i<25&&(state.selectedId||state.creating);i++){ goBackFromDetail(); await new Promise(s=>setTimeout(s,350)); } }""")
+        page.evaluate("()=>document.querySelector('.home-tab[data-home-tab=\"career\"]').click()")
+        page.wait_for_timeout(600)
+        c['year_bar_opens_that_years_races'] = page.evaluate("""async()=>{ """ + W + """
+            const bar=document.querySelector('.yc-col[data-year="2019"]'); if(!bar) return false; const n=Number(bar.querySelector('.yc-count').textContent);
+            bar.click(); await wait(400);
+            const el=document.getElementById('career-sheet');
+            const rows=[...el.querySelectorAll('.cal-list-item')].map(b=>state.races.find(r=>r.id===b.dataset.id));
+            const dates=rows.map(r=>r.schedule.raceDate);
+            return !el.hidden && el.querySelector('h2').textContent==='2019 年・完賽 '+n+' 場' && rows.length===n
+              && rows.every(r=>r.status==='completed'&&r.schedule.raceDate.startsWith('2019')) && dates.every((d,i)=>i===0||d>=dates[i-1])
+              && el.querySelector('.career-sheet-sum b').textContent===n+' 場'; }""")
+        c['back_closes_sheet_first'] = page.evaluate("""async()=>{ """ + W + """
+            history.back(); await wait(500);
+            return document.getElementById('career-sheet').hidden && location.hash==='#career' && state.homeTab==='career'; }""")
+        c['heatmap_cell_opens_month'] = page.evaluate("""async()=>{ """ + W + """
+            const cell=document.querySelector('.heatmap-cell[data-action="career-month"]'); if(!cell) return false; const ym=cell.dataset.ym;
+            cell.click(); await wait(400);
+            const el=document.getElementById('career-sheet');
+            const rows=[...el.querySelectorAll('.cal-list-item')].map(b=>state.races.find(r=>r.id===b.dataset.id));
+            const n=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.schedule.raceDate.startsWith(ym)).length;
+            const ok=!el.hidden && rows.length===n && n>0 && rows.every(r=>r.schedule.raceDate.startsWith(ym))
+              && el.querySelector('h2').textContent.startsWith(ym.slice(0,4)+' 年 '+Number(ym.slice(5))+' 月');
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await wait(300);
+            return ok && el.hidden; }""")
+        c['total_races_opens_all_by_year'] = page.evaluate("""async()=>{ """ + W + """
+            const all=document.querySelector('[data-action="career-all"]'); if(!all) return false; all.click(); await wait(400);
+            const el=document.getElementById('career-sheet');
+            const n=state.races.filter(r=>!r.deletedAt&&r.status==='completed').length;
+            const years=[...el.querySelectorAll('.cal-results-group-title')].map(h=>h.childNodes[0].textContent.trim());
+            return el.querySelectorAll('.cal-list-item').length===n && years.length>5 && years.every((y,i)=>i===0||y<years[i-1]); }""")
+        c['sheet_row_opens_race_back_returns_to_career'] = page.evaluate("""async()=>{ """ + W + """
+            const row=document.querySelector('#career-sheet .cal-list-item'); if(!row) return false; const id=row.dataset.id; row.click(); await wait(500);
+            const a=state.selectedId===id && document.getElementById('career-sheet').hidden && location.hash.startsWith('#race=');
+            history.back(); await wait(600);
+            return a && state.selectedId===null && state.homeTab==='career' && location.hash==='#career'; }""")
+        # PB 的時間：真的用滑鼠按。按住 0.8 秒才放開是想長按（還沒到 1.5 秒解鎖），
+        # 不該跳走；很快點一下才打開那一場；鍵盤 Enter 也要能打開
+        pb = page.locator('[data-action="career-pb"]')
+        bb = None
+        if pb.count() and pb.first.is_visible():
+            pb.first.scroll_into_view_if_needed()
+            bb = pb.first.bounding_box()
+        if not bb:
+            # 前面的項目壞掉、人已經不在生涯數據：記成這一項失敗，不要整組當掉
+            bb = {'x': -100, 'y': -100, 'width': 0, 'height': 0}
+        cx, cy = bb['x'] + bb['width'] / 2, bb['y'] + bb['height'] / 2
+        page.mouse.move(max(cx, 0), max(cy, 0))
+        page.mouse.down()
+        page.wait_for_timeout(800)
+        page.mouse.up()
+        page.wait_for_timeout(300)
+        held_stays = page.evaluate("()=>state.selectedId===null && document.getElementById('hof-overlay').hidden")
+        page.mouse.click(cx, cy)
+        page.wait_for_timeout(500)
+        tap_opens = page.evaluate("()=>state.selectedId===marathonPbRace().id")
+        page.evaluate("""async()=>{ goBackFromDetail(); await new Promise(s=>setTimeout(s,500)); }""")
+        if page.locator('[data-action="career-pb"]').count():
+            page.evaluate("()=>document.querySelector('[data-action=\"career-pb\"]').focus()")
+            page.keyboard.press('Enter')
+        page.wait_for_timeout(500)
+        key_opens = page.evaluate("()=>state.selectedId===marathonPbRace().id")
+        page.evaluate("""async()=>{ goBackFromDetail(); await new Promise(s=>setTimeout(s,500)); }""")
+        c['pb_tap_opens_pb_race_long_press_does_not'] = held_stays and tap_opens and key_opens
+        # （版本號的檢查跟著最新的群組走，v4.3.0 起在 v43）
+        # ================= 手機：大小與英文 =================
+        for w in (390, 360):
+            pctx = full_mode_context(page.context.browser, viewport={'width': w, 'height': 800}, is_mobile=True, has_touch=True)
+            pp = pctx.new_page()
+            pp.on('pageerror', lambda e: self.errors.append(str(e)))
+            pp.goto(APP_URL)
+            pp.wait_for_timeout(900)
+            pp.add_script_tag(content=UX_SEED_JS)
+            pp.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+            pp.evaluate(V4_EXTRA_JS)
+            pp.wait_for_timeout(300)
+            if w == 390:
+                # 剛打開網站，從賽事頁的「裝備清單」卡片進去，預設就是打包模式
+                c['fresh_page_gear_card_opens_pack_mode'] = pp.evaluate("""async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+                    const r=state.races.find(x=>x.name==='近的比賽');
+                    r.equipmentChecklist=['跑鞋','帽子'].map(n=>Object.assign(LIST_META.equipmentChecklist.factory(),{itemName:n}));
+                    await persist(); selectRace(r.id); await wait(400);
+                    document.querySelector('#detail .dash-card[data-section="equipment"]').click(); await wait(400);
+                    const ok=document.querySelector('[data-action="equipment-view"][aria-pressed="true"]').dataset.view==='pack'
+                      && document.querySelectorAll('#drawer-content .pack-list > .pack-row').length===2;
+                    closeDrawer(); await wait(300); goBackFromDetail(); await wait(400); return ok; }""")
+            # 四格在三種語言 × 三種字級 × 幾種最長的內容下：值不被截掉、標籤不超出格子。
+            # 「12/12」全部打包好、A12345、11:50:00（超馬）是實際會出現的最寬的值
+            c[f'phone{w}_tiles_and_pack_rows_fit'] = pp.evaluate("""async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+                const r=state.races.find(x=>x.name==='近的比賽'); const gi=r.goals.findIndex(g=>g.tier==='A');
+                const fill=(bib,st,n,packed,goal)=>{ r.bibNumber=bib; r.schedule.startTime=st; r.goals[gi].targetTimeSeconds=goal?hmsToSec(goal):null;
+                  r.equipmentChecklist=Array.from({length:n},(_,i)=>Object.assign(LIST_META.equipmentChecklist.factory(),{itemName:'裝備 '+i,isPacked:i<packed})); };
+                fill('T0231','06:30',12,7,'11:50:00'); await persist(); selectRace(r.id); await wait(400);
+                const bad=[];
+                for(const lang of ['zh','ja','en']){ setLang(lang); await wait(200);
+                  for(const fs of ['small','medium','large']){ applyFontScale(fs);
+                    for(const cs of [['T0231','06:30',12,7,'11:50:00'],['A12345','06:30',12,12,'3:30:00'],['','',0,0,'']]){
+                      fill(...cs); renderDetail(); await wait(30);
+                      const tiles=[...document.querySelectorAll('#detail .rw-tile')];
+                      if(tiles.length!==4) bad.push(lang+fs+' tiles='+tiles.length);
+                      tiles.forEach(t=>{ const st=getComputedStyle(t), inner=t.getBoundingClientRect().right-parseFloat(st.paddingRight);
+                        const v=t.querySelector('.rw-tile-value'), rg=document.createRange(); rg.selectNodeContents(t.querySelector('.rw-tile-label'));
+                        if(v.scrollWidth>v.clientWidth+1) bad.push(lang+' '+fs+' cut '+v.textContent);
+                        if(rg.getBoundingClientRect().right>inner+0.5) bad.push(lang+' '+fs+' label '+t.querySelector('.rw-tile-label').textContent); });
+                      if(document.documentElement.scrollWidth>innerWidth) bad.push(lang+' '+fs+' hscroll');
+                    } } }
+                setLang('zh'); applyFontScale('medium'); fill('T0231','06:30',12,7,'11:50:00'); await persist(); renderDetail(); await wait(200);
+                if(bad.length) console.log('tiles:',bad.join(' | '));
+                document.querySelector('#detail .rw-tile[data-tile="pack"]').click(); await wait(400);
+                const rows=[...document.querySelectorAll('#drawer-content .pack-list > .pack-row')];
+                return bad.length===0 && rows.length===5 && rows.every(b=>b.getBoundingClientRect().height>=44)
+                  && document.documentElement.scrollWidth<=innerWidth; }""")
+            pctx.close()
+        ectx = full_mode_context(page.context.browser, viewport=PHONE, is_mobile=True, has_touch=True)
+        ectx.add_init_script("try{localStorage.setItem('lang-pref-v1','en');}catch(e){}")
+        ep = ectx.new_page()
+        ep.on('pageerror', lambda e: self.errors.append(str(e)))
+        ep.goto(APP_URL)
+        ep.wait_for_timeout(900)
+        ep.add_script_tag(content=UX_SEED_JS)
+        ep.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        ep.evaluate(V4_EXTRA_JS)
+        c['english_prompt_and_tiles'] = ep.evaluate("""async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const r=emptyRace('Yesterday race','road_running','registered',addDaysStr(todayISO(),-1)); state.races.push(r); await persist(); renderAll(); await wait(300);
+            const card=document.querySelector('.result-prompt');
+            const a=card.querySelector('.result-prompt-label').textContent==='Did you finish?' && card.querySelector('.result-prompt-main').textContent==='Log result'
+              && document.querySelector('.result-tag').textContent==='Result pending';
+            const up=state.races.find(x=>x.name==='近的比賽'); selectRace(up.id); await wait(400);
+            const labels=[...document.querySelectorAll('#detail .rw-tile-label')].map(x=>x.textContent).join('|');
+            return a && labels==='Bib|Start|Packed|Goal A'; }""")
+        # 英文單數：昨天的比賽不是「1 days ago」，只有一場的月份不是「1 races」
+        c['english_singular_reads_naturally'] = ep.evaluate("""async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const r=state.races.find(x=>x.name==='Yesterday race'); selectRace(r.id); await wait(400);
+            const b=document.querySelector('#detail .result-banner b').textContent;
+            goBackFromDetail(); await wait(400);
+            const by={}; state.races.filter(x=>!x.deletedAt&&x.status==='completed'&&x.schedule.raceDate).forEach(x=>{ const k=x.schedule.raceDate.slice(0,7); by[k]=(by[k]||0)+1; });
+            const ym=Object.keys(by).find(k=>by[k]===1); if(!ym) return false;
+            openCareerSheet('month',ym); await wait(200);
+            const h=document.querySelector('#career-sheet h2').textContent, n=document.querySelector('#career-sheet .career-sheet-sum b').textContent;
+            closeCareerSheet();
+            return b==='This race was yesterday — no result yet' && h.endsWith('· 1 finished') && n==='1'; }""")
+        ectx.close()
+
+
+class V43Flows(Group):
+    """v4.3.0：精簡的「下一場」卡、獎牌牆（沒有封面照的畫成獎牌）、表格排序與各距離最佳、
+    全馬 PB 只算跑步。"""
+
+    def _ctx(self, browser, viewport, lang=None, touch=False):
+        ctx = full_mode_context(browser, viewport=viewport, is_mobile=touch, has_touch=touch)
+        if lang:
+            ctx.add_init_script(f"try{{localStorage.setItem('lang-pref-v1','{lang}');}}catch(e){{}}")
+        pg = ctx.new_page()
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=UX_SEED_JS)
+        pg.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        pg.evaluate(V4_EXTRA_JS)
+        pg.wait_for_timeout(300)
+        return ctx, pg
+
+    # 檢查失敗時頁面裡用 console.log 印出實際拿到的值，帶到測試輸出，不用重跑一次才知道差在哪
+    ECHO = ('third:', 'fetch:', 'medal:', 'nodist:', 'sorts:', 'prompt:', 'fit:', 'medalfit:', 'en:')
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js):
+        # 一項檢查在頁面裡拋出例外（例如某個元素不見了）：記成這一項失敗並印出原因，
+        # 後面的檢查照跑——不要整組當掉、看不到其他項目的結果
+        try:
+            return pg.evaluate(js)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def body(self, page):
+        c = self.checks
+        page.on('console', self._echo)
+        page.add_script_tag(content=UX_SEED_JS)
+        page.add_script_tag(content=CONTRAST_JS)
+        page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        page.evaluate(V4_EXTRA_JS)
+        page.wait_for_timeout(400)
+        # 每一項都用得到的：等待、焦點賽事（9 天後的「近的比賽」）、它的 A 目標在第幾個
+        W = ("const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+             "const near=state.races.find(x=>x.name==='近的比賽'); const gi=near.goals.findIndex(g=>g.tier==='A');"
+             "const card=()=>document.querySelector('#focus-panel-slot .focus-panel');"
+             "const tile=k=>document.querySelector('#focus-panel-slot .rw-tile[data-tile=\"'+k+'\"]');"
+             "const tiles=()=>[...document.querySelectorAll('#focus-panel-slot .rw-tile')].map(t=>t.dataset.tile+':'+t.querySelector('.rw-tile-label').textContent+':'+t.querySelector('.rw-tile-value').textContent);"
+             # 回到首頁：先關抽屜，再一層一層返回
+             "const home=async()=>{ for(let i=0;i<12;i++){ if(!document.getElementById('global-drawer').hidden){ closeDrawer(); await wait(300); continue; } if(state.selectedId||state.creating){ goBackFromDetail(); await wait(350); continue; } break; } };")
+        # ================= ① 「下一場」卡 =================
+        c['laptop_card_is_one_compact_row'] = self.ev(page, """()=>{ const f=document.querySelector('#focus-panel-slot .focus-panel'); if(!f) return false;
+            const head=f.querySelector('.nx-head').getBoundingClientRect(), tl=f.querySelector('.nx-tiles').getBoundingClientRect();
+            // 一列：三格在倒數的右邊、上下範圍重疊；v4.2 的圓環、三張卡、「查看完整賽事」都不在了
+            const oneRow=tl.left>=head.right-1 && tl.top<head.bottom && tl.bottom>head.top;
+            const old=f.querySelector('.focus-panel-card,.focus-panel-grid,.focus-hero,.focus-panel-view-btn,.progress-ring-wrap,svg');
+            return f.classList.contains('focus-panel-compact') && f.getBoundingClientRect().height<=150 && oneRow && !old
+              && f.querySelectorAll('.rw-tile').length===3; }""")
+        c['card_name_date_time_place_countdown'] = self.ev(page, """async()=>{ """ + W + """
+            near.schedule.startTime='06:30'; await persist(); renderAll(); await wait(100);
+            const f=card(); const d=near.schedule.raceDate; const wd='日一二三四五六'[new Date(d+'T00:00:00').getDay()];
+            return f.dataset.id===near.id && f.querySelector('.nx-name').textContent==='近的比賽'
+              && f.querySelector('.nx-meta').textContent===d.slice(5).replace('-','/')+'（'+wd+'） 06:30 ・ 台北市'
+              && f.querySelector('.nx-count b').textContent==='9' && f.querySelector('.nx-count span').textContent==='天後'; }""")
+        c['empty_tiles_invite_filling'] = self.ev(page, """()=>{ """ + W + """
+            return JSON.stringify(tiles())===JSON.stringify(['pack:打包:＋ 清單','goal:A 目標:＋ 填寫','bib:號碼布:＋ 填寫'])
+              && [...document.querySelectorAll('#focus-panel-slot .rw-tile')].every(t=>t.classList.contains('is-empty')&&t.type==='button'); }""")
+        c['tiles_show_pack_goal_bib'] = self.ev(page, """async()=>{ """ + W + """
+            near.equipmentChecklist=Array.from({length:12},(_,i)=>Object.assign(LIST_META.equipmentChecklist.factory(),{itemName:'裝備 '+i,isPacked:i<7}));
+            near.goals[gi].targetTimeSeconds=hmsToSec('3:15:00'); near.bibNumber='B77'; await persist(); renderAll(); await wait(100);
+            const a=JSON.stringify(tiles())===JSON.stringify(['pack:打包:7/12','goal:A 目標:3:15:00','bib:號碼布:B77']);
+            near.equipmentChecklist.forEach(i=>{ i.isPacked=true; }); renderAll(); await wait(100);
+            const p=tile('pack');
+            const b=p.querySelector('.rw-tile-label').textContent==='打包 ✓' && p.querySelector('.rw-tile-value').textContent==='12/12' && p.classList.contains('is-done');
+            near.equipmentChecklist.forEach((i,k)=>{ i.isPacked=k<7; }); await persist(); renderAll(); await wait(100);
+            return a && b; }""")
+        c['card_top_opens_race_back_returns'] = self.ev(page, """async()=>{ """ + W + """
+            document.querySelector('#focus-panel-slot .nx-main').click(); await wait(500);
+            const a=state.selectedId===near.id && location.hash.startsWith('#race=');
+            history.back(); await wait(500);
+            return a && state.selectedId===null && !!card(); }""")
+        c['empty_goal_tile_opens_and_focuses_field'] = self.ev(page, """async()=>{ """ + W + """
+            near.goals[gi].targetTimeSeconds=null; await persist(); renderAll(); await wait(100);
+            tile('goal').click(); await wait(500);
+            const ae=document.activeElement;
+            const a=state.selectedId===near.id && !document.getElementById('global-drawer').hidden && !!ae && ae.dataset.path==='goals.'+gi+'.targetTimeSeconds';
+            if(!a){ await home(); return false; }
+            ae.value='3:20:00'; ae.dispatchEvent(new Event('change',{bubbles:true})); await wait(400);
+            await home();
+            const v=tile('goal');
+            return near.goals[gi].targetTimeSeconds===12000 && !!v && v.querySelector('.rw-tile-value').textContent==='3:20:00'; }""")
+        # 已經有值的格子：打開那一區，但不搶焦點（手機會跳出鍵盤蓋住畫面）
+        c['filled_tile_opens_without_focus'] = self.ev(page, """async()=>{ """ + W + """
+            tile('bib').click(); await wait(500);
+            const inp=document.querySelector('#drawer-content [data-path="bibNumber"]');
+            const ok=state.selectedId===near.id && !document.getElementById('global-drawer').hidden && !!inp && inp.value==='B77' && document.activeElement!==inp;
+            await home(); return ok; }""")
+        c['back_from_tile_closes_sheet_then_home'] = self.ev(page, """async()=>{ """ + W + """
+            tile('bib').click(); await wait(500);
+            history.back(); await wait(500);
+            const a=document.getElementById('global-drawer').hidden && state.selectedId===near.id;
+            history.back(); await wait(500);
+            return a && state.selectedId===null && location.hash===''; }""")
+        c['pack_tile_opens_pack_mode'] = self.ev(page, """async()=>{ """ + W + """
+            equipmentViewMode='list';
+            tile('pack').click(); await wait(500);
+            const on=document.querySelector('#drawer-content [data-action="equipment-view"][aria-pressed="true"]');
+            const ok=state.selectedId===near.id && !document.getElementById('global-drawer').hidden && !!on && on.dataset.view==='pack'
+              && document.querySelectorAll('#drawer-content .pack-list > .pack-row').length===5;
+            await home(); return ok; }""")
+        # 第三格：有預報才放天氣（手填的、抓到的即時預報）；只有「歷年平均」自動帶進來的氣溫不算預報
+        c['third_tile_weather_only_with_forecast'] = self.ev(page, """async()=>{ """ + W + """
+            const third=()=>{ const t=document.querySelectorAll('#focus-panel-slot .rw-tile')[2]; return t?[t.dataset.tile,t.querySelector('.rw-tile-label').textContent,t.querySelector('.rw-tile-value').textContent,t.dataset.action||''].join(':'):''; };
+            const HA={avgTempC:21.3,avgHumidityPct:70,years:[2021,2022,2023],sampleCount:21,windowDays:3,fetchedAt:new Date().toISOString()};
+            const set=async(temp,rain,ha)=>{ near.climateForecast.avgTempC=temp; near.climateForecast.rainProbabilityPct=rain; near.historicalAverageWeather=ha; renderAll(); await wait(80); return third(); };
+            const got=[await set(null,null,null), await set(24.4,30,null), await set(18,null,null), await set(21.3,null,HA), await set(21.3,40,HA)];
+            const want=['bib:號碼布:B77:focus-tile','weather:降雨 30%:24°C:focus-view-race','weather:天氣:18°C:focus-view-race','bib:號碼布:B77:focus-tile','weather:降雨 40%:21°C:focus-view-race'];
+            const ok=JSON.stringify(got)===JSON.stringify(want);
+            if(!ok) console.log('third:',got.join(' | '));
+            await set(24.4,30,null);
+            document.querySelectorAll('#focus-panel-slot .rw-tile')[2].click(); await wait(500);
+            const opened=state.selectedId===near.id && document.getElementById('global-drawer').hidden;
+            await home(); await set(null,null,null); await persist();
+            return ok && opened; }""")
+        c['weather_tile_uses_live_forecast_at_start'] = self.ev(page, """async()=>{ """ + W + """
+            const d=near.schedule.raceDate;
+            near.liveForecast={fetchedAt:new Date().toISOString(),times:[d+'T05:00',d+'T06:00',d+'T07:00'],temp:[19.2,21.6,24.8],precipProb:[10,60,20],gust:[10,12,14]};
+            renderAll(); await wait(80);
+            const t=document.querySelectorAll('#focus-panel-slot .rw-tile')[2];
+            const ok=t.dataset.tile==='weather' && t.querySelector('.rw-tile-label').textContent==='降雨 60%' && t.querySelector('.rw-tile-value').textContent==='22°C';
+            near.liveForecast=null; await persist(); renderAll(); return ok; }""")
+        # 7 天內、有軌跡、還沒抓：第三格是「抓取預報」，按下去真的抓（這裡把 Open-Meteo 換成假的回應）
+        c['fetch_tile_within_7_days_with_track'] = self.ev(page, """async()=>{ """ + W + """
+            const third=()=>document.querySelectorAll('#focus-panel-slot .rw-tile')[2];
+            near.route.trackPoints=[{lat:25.03,lon:121.56,ele:10},{lat:25.04,lon:121.57,ele:12}];
+            renderAll(); await wait(80);
+            const far=third().dataset.tile==='bib';
+            const keep=near.schedule.raceDate; near.schedule.raceDate=addDaysStr(todayISO(),5);
+            near.climateForecast.rainProbabilityPct=50;
+            renderAll(); await wait(80);
+            const t=third();
+            const offer=t.dataset.tile==='weather' && t.dataset.action==='fetch-live-weather' && t.querySelector('.rw-tile-label').textContent==='天氣'
+              && t.querySelector('.rw-tile-value').textContent==='抓取預報';
+            const calls=[]; const realFetch=window.fetch;
+            window.fetch=async(u,o)=>{ const s=String(u); calls.push(s);
+              if(s.includes('api.open-meteo.com/v1/forecast')){ await wait(200); const d=near.schedule.raceDate;
+                return new Response(JSON.stringify({hourly:{time:[d+'T06:00',d+'T07:00'],temperature_2m:[26.4,27.9],apparent_temperature:[28,29],relative_humidity_2m:[80,78],precipitation_probability:[35,40],wind_speed_10m:[8,9],wind_direction_10m:[90,95],wind_gusts_10m:[15,18]}})); }
+              return realFetch(u,o); };
+            t.click(); await wait(80);
+            const b=third(); const busy=b.disabled && b.querySelector('.rw-tile-value').textContent==='抓取中…';
+            await wait(700); window.fetch=realFetch;
+            const w=third();
+            const got=w.dataset.tile==='weather' && w.dataset.action==='focus-view-race' && w.querySelector('.rw-tile-label').textContent==='降雨 35%'
+              && w.querySelector('.rw-tile-value').textContent==='26°C' && calls.some(s=>s.includes('latitude=25.03')) && !!near.liveForecast;
+            if(!(far&&offer&&busy&&got)) console.log('fetch:',far,offer,busy,got);
+            near.schedule.raceDate=keep; near.route.trackPoints=[]; near.liveForecast=null;
+            near.climateForecast=emptyRace('x','road_running','registered','').climateForecast; await persist(); renderAll();
+            return far && offer && busy && got; }""")
+        c['cover_photo_is_card_background'] = self.ev(page, """async()=>{ """ + W + """
+            const cv=document.createElement('canvas'); cv.width=320; cv.height=180; const g=cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,320,180);
+            near.coverImage=cv.toDataURL('image/jpeg',.9); near.coverImageAspect=320/180; await persist(); renderAll(); await wait(150);
+            const f=card(); const bi=getComputedStyle(f.querySelector('.nx-head')).backgroundImage;
+            return f.classList.contains('has-cover') && !f.querySelector('.focus-mesh') && bi.includes('url(') && bi.includes('data:image')
+              && f.querySelectorAll('.rw-tile').length===3 && f.getBoundingClientRect().height<=170; }""")
+        # 最難讀的情況：封面照是一整片白（雪地、天空）。用頁首漸層算出每個字底下的顏色——淺色、深色模式都一樣
+        COVER_READ = """()=>{ const head=document.querySelector('#focus-panel-slot .has-cover .nx-head'); if(!head) return ['no cover'];
+            const bi=getComputedStyle(head).backgroundImage;
+            const stops=[...bi.matchAll(/rgba?\\(([\\d.]+), ([\\d.]+), ([\\d.]+)(?:, ([\\d.]+))?\\)/g)].map(m=>[+m[1],+m[2],+m[3],m[4]==null?1:+m[4]]);
+            if(stops.length<2) return ['no gradient'];
+            const hb=head.getBoundingClientRect();
+            const lum=c=>{ const v=c.map(x=>{ x/=255; return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4); }); return 0.2126*v[0]+0.7152*v[1]+0.0722*v[2]; };
+            const over=(top,a,base)=>top.map((x,i)=>x*a+base[i]*(1-a));
+            const bad=[]; let n=0;
+            head.querySelectorAll('.focus-panel-label,.taper-badge,.nx-dismiss,.nx-name,.nx-meta,.nx-count b,.nx-count span').forEach(el=>{ n++;
+              const b=el.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(b.top-hb.top)/hb.height));
+              const s0=stops[0], s1=stops[stops.length-1]; const a=s0[3]+(s1[3]-s0[3])*p; const col=s0.slice(0,3).map((x,i)=>x+(s1[i]-x)*p);
+              let bg=over(col,a,[255,255,255]);
+              const own=(getComputedStyle(el).backgroundColor.match(/[\\d.]+/g)||[]).map(Number); if(own.length===4&&own[3]>0) bg=over(own.slice(0,3),own[3],bg);
+              const fm=getComputedStyle(el).color.match(/[\\d.]+/g).map(Number); const fg=fm.length===4?over(fm.slice(0,3),fm[3],bg):fm.slice(0,3);
+              const L1=lum(fg),L2=lum(bg), cr=(Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05);
+              const cs=getComputedStyle(el), fs=parseFloat(cs.fontSize), bold=parseInt(cs.fontWeight)>=700;
+              if(cr<((fs>=24||(fs>=18.66&&bold))?3:4.5)) bad.push(el.className+' '+cr.toFixed(2)); });
+            return n>=7?bad:['only '+n]; }"""
+        page.evaluate("""async()=>{ """ + W + """ near.trainingPlan.taperStartDate=addDaysStr(todayISO(),-2); renderAll(); await wait(100); }""")
+        light = self.ev(page, COVER_READ)
+        light = ['error'] if light is False else light
+        page.evaluate("()=>applyTheme('dark')")
+        page.wait_for_timeout(200)
+        dark = self.ev(page, COVER_READ)
+        dark = ['error'] if dark is False else dark
+        page.evaluate("()=>applyTheme('light')")
+        page.wait_for_timeout(200)
+        if light or dark:
+            print('   cover contrast:', light, dark)
+        c['cover_text_readable_on_white_photo'] = not light and not dark
+        c['taper_badge_only_in_taper'] = self.ev(page, """async()=>{ """ + W + """
+            near.coverImage=null; renderAll(); await wait(80);
+            const b=document.querySelector('#focus-panel-slot .nx-top .taper-badge');
+            const on=!!b && b.textContent==='進入減量期';
+            near.trainingPlan.taperStartDate=addDaysStr(todayISO(),3); renderAll(); await wait(80);
+            const off=!document.querySelector('#focus-panel-slot .taper-badge');
+            near.trainingPlan.taperStartDate=''; await persist(); renderAll(); return on && off; }""")
+        c['race_day_says_today'] = self.ev(page, """async()=>{ """ + W + """
+            const keep=near.schedule.raceDate; near.schedule.raceDate=todayISO(); renderAll(); await wait(80);
+            const b=document.querySelector('#focus-panel-slot .nx-count b');
+            const ok=!!b && b.classList.contains('nx-today') && b.textContent==='今天' && !document.querySelector('#focus-panel-slot .nx-count span');
+            near.schedule.raceDate=keep; await persist(); renderAll(); return ok; }""")
+        c['dismiss_hides_card'] = self.ev(page, """async()=>{ """ + W + """
+            document.querySelector('#focus-panel-slot [data-action="dismiss-focus-panel"]').click(); await wait(200);
+            const gone=!card() && state.focusDismissedId===near.id; renderAll(); await wait(100);
+            const stays=!card(); state.focusDismissedId=null; renderAll(); await wait(100);
+            return gone && stays && !!card(); }""")
+        # 筆電看不到手機那份「即將到來」清單：「比完了嗎？」和「下一場」兩張都放
+        c['laptop_shows_prompt_and_card'] = self.ev(page, """async()=>{ """ + W + """
+            const y=emptyRace('昨天的路跑','road_running','registered',addDaysStr(todayISO(),-1)); state.races.push(y); await persist(); renderAll(); await wait(150);
+            const slot=document.getElementById('focus-panel-slot');
+            const ok=!!slot.querySelector('.result-prompt') && !!slot.querySelector('.focus-panel');
+            state.races=state.races.filter(r=>r!==y); await persist(); renderAll(); return ok; }""")
+        # ================= ③ 獎牌牆 =================
+        c['wall_has_every_finished_race_newest_first'] = self.ev(page, """async()=>{ """ + W + """
+            scrollTo(0,0); document.getElementById('cal-view-toggle').click(); await wait(800);
+            const done=state.races.filter(r=>!r.deletedAt&&r.status==='completed').sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
+            const ids=[...document.querySelectorAll('#calendar .photo-card')].map(b=>b.dataset.id);
+            return state.viewMode==='grid' && done.length>90 && JSON.stringify(ids)===JSON.stringify(done.map(r=>r.id))
+              && document.querySelectorAll('#calendar .photo-card.is-medal').length===done.length; }""")
+        c['medal_shows_distance_time_year'] = self.ev(page, """()=>{
+            const pick=(s,km)=>state.races.find(r=>!r.deletedAt&&r.status==='completed'&&r.sportType===s&&r.route.distanceKm===km);
+            const exp=[['road_running',42.195,'42.2K','3:30:59'],['road_running',21.0975,'21.1K','1:45:29'],['road_running',10,'10K','0:50:00'],
+                       ['triathlon',51.5,'51.5K','4:17:30'],['trail_running',35,'35K','2:55:00'],['cycling',100,'100K','8:20:00']];
+            const bad=[];
+            exp.forEach(([s,km,label,time])=>{ const r=pick(s,km); const el=r&&document.querySelector('#calendar .photo-card[data-id="'+r.id+'"]');
+              if(!el){ bad.push(s+km+' missing'); return; }
+              const got=[...el.querySelectorAll('.medal-disc > span')].map(x=>x.textContent).concat(el.querySelector('.photo-card-date').textContent);
+              const want=[label,time,r.schedule.raceDate.slice(0,4),r.schedule.raceDate];
+              if(JSON.stringify(got)!==JSON.stringify(want)) bad.push(JSON.stringify(got)); });
+            if(bad.length) console.log('medal:',bad.join(' | '));
+            return bad.length===0; }""")
+        c['medal_color_is_sport_type'] = self.ev(page, """()=>{
+            const sports=['road_running','trail_running','triathlon','cycling'];
+            const probe=document.createElement('span'); document.body.appendChild(probe);
+            const res=sports.map(s=>{ const r=state.races.find(x=>!x.deletedAt&&x.status==='completed'&&x.sportType===s&&!x.results.isPb);
+              const d=document.querySelector('#calendar .photo-card[data-id="'+r.id+'"] .medal-disc');
+              probe.style.color=sportColorVar(s); return [getComputedStyle(d).borderTopColor,getComputedStyle(probe).color]; });
+            probe.remove();
+            return res.every(([a,b])=>a===b) && new Set(res.map(x=>x[0])).size===4; }""")
+        c['pb_medal_gold_frame_and_pill'] = self.ev(page, """async()=>{ """ + W + """
+            const pbs=['road_running','trail_running'].map(s=>state.races.find(x=>!x.deletedAt&&x.status==='completed'&&x.sportType===s));
+            pbs.forEach(r=>{ r.results.isPb=true; }); await persist(); renderCalendar(); await wait(150);
+            const other=state.races.find(x=>!x.deletedAt&&x.status==='completed'&&x.sportType==='trail_running'&&!x.results.isPb);
+            const check=()=>{ const probe=document.createElement('span'); probe.style.color='var(--gold)'; document.body.appendChild(probe); const gold=getComputedStyle(probe).color; probe.remove();
+              const face=r=>document.querySelector('#calendar .photo-card[data-id="'+r.id+'"] .medal-face');
+              const pbOk=pbs.every(r=>{ const f=face(r), cs=getComputedStyle(f.querySelector('.medal-disc')); const pill=f.querySelector('.medal-pb');
+                return f.classList.contains('is-pb') && cs.borderTopColor===gold && cs.borderTopWidth==='4px' && !!pill && pill.textContent==='PB'
+                  && !!f.closest('.photo-card').querySelector('.photo-card-pb'); });
+              const of=face(other), ocs=getComputedStyle(of.querySelector('.medal-disc'));
+              return pbOk && !of.classList.contains('is-pb') && !of.querySelector('.medal-pb') && ocs.borderTopWidth==='3px' && ocs.borderTopColor!==gold; };
+            const light=check(); applyTheme('dark'); await wait(150); const dark=check(); applyTheme('light'); await wait(150);
+            return light && dark; }""")
+        c['cover_race_stays_a_photo_card'] = self.ev(page, """async()=>{ """ + W + """
+            const r=state.races.filter(x=>!x.deletedAt&&x.status==='completed'&&x.results.chipTimeSeconds!=null)[5];
+            const cv=document.createElement('canvas'); cv.width=64; cv.height=64; cv.getContext('2d').fillRect(0,0,64,64);
+            r.coverImage=cv.toDataURL('image/jpeg',.7); r.coverThumb=r.coverImage; await persist(); renderCalendar(); await wait(150);
+            const el=document.querySelector('#calendar .photo-card[data-id="'+r.id+'"]');
+            const ok=!!el && !el.classList.contains('is-medal') && !!el.querySelector('.photo-card-img img') && !el.querySelector('.medal-disc')
+              && el.querySelector('.photo-card-date').textContent===r.schedule.raceDate+' · '+secToHMS(r.results.chipTimeSeconds);
+            r.coverImage=null; r.coverThumb=null; await persist(); renderCalendar(); return ok; }""")
+        # 沒填距離（少見）：不寫運動別（日文、英文的名稱放不進獎牌），成績變最大的那行；什麼都沒填就只有年份
+        c['medal_without_distance_or_time'] = self.ev(page, """async()=>{ """ + W + """
+            const a=emptyRace('沒填距離的越野賽','trail_running','completed','2025-12-30'); a.results.chipTimeSeconds=hmsToSec('6:12:00');
+            const b=emptyRace('什麼都沒填','obstacle_race','completed','2025-12-29'); state.races.push(a,b); await persist(); renderCalendar(); await wait(150);
+            const lines=r=>[...document.querySelectorAll('#calendar .photo-card[data-id="'+r.id+'"] .medal-disc > span')].map(s=>s.className.split(' ')[0]+'='+s.textContent).join('|');
+            const ta=lines(a), tb=lines(b);
+            state.races=state.races.filter(r=>r!==a&&r!==b); await persist(); renderCalendar();
+            if(ta!=='medal-main=6:12:00|medal-year=2025'||tb!=='medal-main=2025') console.log('nodist:',ta,tb);
+            return ta==='medal-main=6:12:00|medal-year=2025' && tb==='medal-main=2025'; }""")
+        # 手錶量到的距離（9.97、21.08）：四捨五入到小數一位，整數不寫「.0」
+        c['medal_distance_rounds_to_one_decimal'] = self.ev(page, """async()=>{ """ + W + """
+            const mk=(km,d)=>{ const r=emptyRace('距離 '+km,'road_running','completed',d); r.route.distanceKm=km; r.results.chipTimeSeconds=3600; state.races.push(r); return r; };
+            const rs=[mk(9.97,'2025-12-28'),mk(21.08,'2025-12-27'),mk(160.93,'2025-12-26')]; await persist(); renderCalendar(); await wait(150);
+            const got=rs.map(r=>document.querySelector('#calendar .photo-card[data-id="'+r.id+'"] .medal-main').textContent).join();
+            state.races=state.races.filter(r=>!rs.includes(r)); await persist(); renderCalendar();
+            if(got!=='10K,21.1K,160.9K') console.log('medal:',got);
+            return got==='10K,21.1K,160.9K'; }""")
+        # 卡片是 <button>：沒寫顏色的話賽名是瀏覽器預設的黑字，深色模式下看不到。淺色、深色都要 4.5:1
+        c['wall_text_readable_light_and_dark'] = self.ev(page, """async()=>{ """ + W + """
+            const r=state.races.filter(x=>!x.deletedAt&&x.status==='completed')[7];
+            const cv=document.createElement('canvas'); cv.width=64; cv.height=64; cv.getContext('2d').fillRect(0,0,64,64);
+            r.coverImage=cv.toDataURL('image/jpeg',.7); r.coverThumb=r.coverImage; renderCalendar(); await wait(150);
+            const st=document.createElement('style'); st.textContent='*{transition:none!important}'; document.head.appendChild(st);
+            const read=()=>{ const bad=[];
+              const cards=[document.querySelector('#calendar .photo-card.is-medal'),document.querySelector('#calendar .photo-card[data-id="'+r.id+'"]')];
+              cards.forEach(card=>{ if(!card){ bad.push('missing'); return; }
+                card.querySelectorAll('.photo-card-name,.photo-card-date,.medal-main,.medal-time,.medal-year').forEach(el=>{ const cr=__contrast(el); if(cr<4.5) bad.push(el.className.split(' ')[0]+' '+cr.toFixed(2)); }); });
+              return bad; };
+            const light=read(); applyTheme('dark'); await wait(150); const dark=read(); applyTheme('light'); await wait(150); st.remove();
+            r.coverImage=null; r.coverThumb=null; renderCalendar();
+            if(light.length||dark.length) console.log('medal: contrast',light.join(' | '),'/',dark.join(' | '));
+            return !light.length && !dark.length; }""")
+        c['medal_opens_race_back_to_wall'] = self.ev(page, """async()=>{ """ + W + """
+            const el=document.querySelector('#calendar .photo-card.is-medal'); const id=el.dataset.id; el.click(); await wait(500);
+            const ok=state.selectedId===id; await home(); return ok && state.selectedId===null && state.viewMode==='grid' && !!document.querySelector('#calendar .photo-card'); }""")
+        c['empty_wall_and_no_best_strip'] = self.ev(page, """async()=>{ """ + W + """
+            const keep=state.races; state.races=keep.filter(r=>r.status!=='completed'); renderCalendar(); await wait(100);
+            const wrap=document.querySelector('#calendar .photo-grid-wrap');
+            const ok=!!wrap && wrap.textContent.includes('還沒有已完賽的賽事') && !wrap.querySelector('.photo-card');
+            state.viewMode='table'; renderCalendar(); await wait(100);
+            const noBest=!!document.querySelector('#calendar .table-view') && !document.querySelector('#calendar .tv-best');
+            state.races=keep; state.viewMode='grid'; renderCalendar(); return ok && noBest; }""")
+        # ================= ④ 表格排序、各距離最佳 =================
+        ROWS = "[...document.querySelectorAll('#calendar .table-view-row')]"
+        TIMES = ROWS + ".map(r=>{ const t=r.cells[5].textContent.replace('PB','').trim(); return t==='—'?null:hmsToSec(t); })"
+        c['table_headers_sortable_default_by_year'] = self.ev(page, """async()=>{ """ + W + """
+            document.getElementById('cal-table-toggle').click(); await wait(500);
+            const ths=[...document.querySelectorAll('.table-view thead th')];
+            const sorts=ths.map(th=>th.getAttribute('aria-sort')||'-').join(',');
+            return state.viewMode==='table' && sorts==='descending,none,-,none,none,none' && !!document.querySelector('.table-year-row') && !document.querySelector('.tv-sortbar')
+              && ths.filter(th=>th.querySelector('button.tv-sort-btn')).length===5 && !ths[2].querySelector('button') && ths[2].textContent.trim()==='狀態'; }""")
+        c['time_sort_flat_fastest_first_blank_last'] = self.ev(page, """async()=>{ """ + W + """
+            document.querySelector('.tv-sort-btn[data-key="time"]').click(); await wait(300);
+            const secs=""" + TIMES + """; const firstNull=secs.indexOf(null); const timed=secs.slice(0,firstNull<0?secs.length:firstNull);
+            const th=document.querySelector('.tv-sort-btn[data-key="time"]').closest('th'); const bar=document.querySelector('.tv-sortbar');
+            return !document.querySelector('.table-year-row') && secs.length===filteredRaces().length && timed.length>90 && firstNull>0
+              && timed.every((v,i)=>i===0||v>=timed[i-1]) && secs.slice(firstNull).every(v=>v==null)
+              && th.getAttribute('aria-sort')==='ascending' && th.querySelector('.tv-arrow').textContent==='▲'
+              && !!bar && bar.querySelector('span').textContent==='依「完賽時間」排序（快 → 慢）・'+secs.length+' 場'; }""")
+        c['click_again_reverses_blank_still_last'] = self.ev(page, """async()=>{ """ + W + """
+            document.querySelector('.tv-sort-btn[data-key="time"]').click(); await wait(300);
+            const secs=""" + TIMES + """; const firstNull=secs.indexOf(null); const timed=secs.slice(0,firstNull);
+            const th=document.querySelector('.tv-sort-btn[data-key="time"]').closest('th');
+            return firstNull>0 && timed.every((v,i)=>i===0||v<=timed[i-1]) && secs.slice(firstNull).every(v=>v==null) && th.getAttribute('aria-sort')==='descending'
+              && th.querySelector('.tv-arrow').textContent==='▼' && document.querySelector('.tv-sortbar span').textContent.includes('（慢 → 快）'); }""")
+        # 設計稿的情境：搜「半程」再點「完賽時間」，第一列就是最快的一場半馬
+        c['search_then_sort_finds_fastest_half'] = self.ev(page, """async()=>{ """ + W + """
+            const half=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.route.distanceKm===21.0975).sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate))[0];
+            half.results.chipTimeSeconds=hmsToSec('1:38:12'); await persist();
+            document.querySelector('.tv-chip[data-action="table-sort-reset"]').click(); await wait(300);
+            const s=document.getElementById('search-input'); s.value='半程'; s.dispatchEvent(new Event('input',{bubbles:true})); await wait(600);
+            document.querySelector('.tv-sort-btn[data-key="time"]').click(); await wait(300);
+            const rows=""" + ROWS + """;
+            const ok=rows.length>5 && rows.every(r=>r.cells[1].textContent.includes('半程')) && rows[0].dataset.id===half.id && rows[0].cells[5].textContent.replace('PB','').trim()==='1:38:12';
+            s.value=''; s.dispatchEvent(new Event('input',{bubbles:true})); await wait(600);
+            return ok && document.querySelectorAll('#calendar .table-view-row').length===filteredRaces().length; }""")
+        c['reset_chip_back_to_year_groups'] = self.ev(page, """async()=>{ """ + W + """
+            const chip=document.querySelector('.tv-chip[data-action="table-sort-reset"]'); if(!chip) return false;
+            const label=chip.textContent.trim(); chip.click(); await wait(300);
+            return label==='回到依年份分組 ✕' && tableSort.key==='date' && tableSort.dir==='desc' && !!document.querySelector('.table-year-row') && !document.querySelector('.tv-sortbar'); }""")
+        c['date_header_oldest_first_keeps_years'] = self.ev(page, """async()=>{ """ + W + """
+            document.querySelector('.tv-sort-btn[data-key="date"]').click(); await wait(300);
+            const years=[...document.querySelectorAll('.table-year-row')].map(r=>r.dataset.year);
+            const chip=document.querySelector('.tv-chip');
+            const ok=tableSort.dir==='asc' && years[0]==='2015' && years.every((y,i)=>i===0||y>=years[i-1]) && !!chip && chip.textContent.trim()==='回到新到舊 ✕'
+              && document.querySelector('.tv-sort-btn[data-key="date"]').closest('th').getAttribute('aria-sort')==='ascending';
+            chip.click(); await wait(300); return ok && tableSort.dir==='desc'; }""")
+        c['name_distance_elevation_sort'] = self.ev(page, """async()=>{ """ + W + """
+            const col=i=>""" + ROWS + """.map(r=>r.cells[i].textContent.trim());
+            document.querySelector('.tv-sort-btn[data-key="name"]').click(); await wait(300);
+            const names=col(1), want=filteredRaces().map(r=>r.name).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+            const nameOk=JSON.stringify(names)===JSON.stringify(want);
+            document.querySelector('.tv-sort-btn[data-key="distance"]').click(); await wait(300);
+            const d=col(3).map(x=>x==='—'?null:Number(x)), dn=d.filter(x=>x!=null);
+            const distOk=dn[0]===100 && dn.every((v,i)=>i===0||v<=dn[i-1]) && d.slice(dn.length).every(v=>v==null);
+            const ev=state.races.filter(r=>!r.deletedAt&&r.status==='completed').slice(0,3); [1200,300,2500].forEach((m,i)=>{ ev[i].route.elevationGainM=m; }); await persist();
+            document.querySelector('.tv-sort-btn[data-key="elevation"]').click(); await wait(300);
+            const e=col(4); const elevOk=e.slice(0,3).join()==='2500,1200,300' && e.slice(3).every(x=>x==='—');
+            tableSort={key:'date',dir:'desc'}; renderCalendar(); await wait(100);
+            if(!(nameOk&&distOk&&elevOk)) console.log('sorts:',nameOk,distOk,elevOk);
+            return nameOk && distOk && elevOk; }""")
+        c['best_strip_per_distance_matches_career_pb'] = self.ev(page, """()=>{
+            const cards=[...document.querySelectorAll('#calendar .tv-best-card')];
+            const fm=cards.find(x=>x.dataset.best==='fm'), hm=cards.find(x=>x.dataset.best==='hm');
+            const half=state.races.find(r=>r.results.chipTimeSeconds===hmsToSec('1:38:12'));
+            const labels=cards.map(x=>x.querySelector('.tv-best-label').textContent).join('|');
+            return cards.map(x=>x.dataset.best).join()==='fm,hm,10k,tri51' && labels==='全馬最佳|半馬最佳|10K 最佳|51.5K 鐵人最佳'
+              && fm.querySelector('b').textContent===secToHMS(computeCareerStats().marathonPB) && fm.dataset.id===marathonPbRace().id
+              && hm.dataset.id===half.id && hm.querySelector('b').textContent==='1:38:12' && hm.querySelector('.tv-best-race').textContent===half.name; }""")
+        c['best_card_opens_race'] = self.ev(page, """async()=>{ """ + W + """
+            const hm=document.querySelector('#calendar .tv-best-card[data-best="hm"]'); const id=hm.dataset.id; hm.click(); await wait(500);
+            const ok=state.selectedId===id; await home(); return ok && state.selectedId===null && state.viewMode==='table' && !!document.querySelector('.tv-best'); }""")
+        # 42 公里的自行車賽不是全馬：各距離最佳、生涯數據的全馬 PB、榮譽櫃都不算它；越野全馬算
+        c['cycling_42k_is_not_marathon_pb'] = self.ev(page, """async()=>{ """ + W + """
+            const before=computeCareerStats().marathonPB;
+            const bike=emptyRace('42K 自行車繞圈賽','cycling','completed','2025-06-01'); bike.route.distanceKm=42.195; bike.results.chipTimeSeconds=hmsToSec('1:05:00');
+            state.races.push(bike); await persist(); renderCalendar(); await wait(150);
+            const fm=document.querySelector('#calendar .tv-best-card[data-best="fm"]');
+            const a=computeCareerStats().marathonPB===before && marathonPbRace().id!==bike.id && fm.dataset.id!==bike.id && computeHallOfFameData().pbRace.id!==bike.id;
+            const trail=emptyRace('越野全馬','trail_running','completed','2025-07-01'); trail.route.distanceKm=42.195; trail.results.chipTimeSeconds=hmsToSec('3:05:00');
+            state.races.push(trail); await persist(); renderCalendar(); await wait(150);
+            const fm2=document.querySelector('#calendar .tv-best-card[data-best="fm"]');
+            const b=computeCareerStats().marathonPB===hmsToSec('3:05:00') && fm2.dataset.id===trail.id;
+            state.races=state.races.filter(r=>r!==bike&&r!==trail); await persist(); renderCalendar();
+            return a && b; }""")
+        c['best_strip_only_in_table'] = self.ev(page, """async()=>{ """ + W + """
+            state.viewMode='calendar'; renderAll(); await wait(150); const cal=!document.querySelector('.tv-best');
+            state.viewMode='grid'; renderAll(); await wait(150); const grid=!document.querySelector('.tv-best');
+            state.viewMode='table'; renderAll(); await wait(150); const table=!!document.querySelector('.tv-best');
+            state.viewMode='calendar'; renderAll(); return cal && grid && table; }""")
+        c['version_is_v4_3_0'] = self.ev(page, "()=>APP_VERSION==='v4.3.0'")
+        # ================= 手機 =================
+        pctx, pp = self._ctx(page.context.browser, {'width': 390, 'height': 844}, touch=True)
+        # 打開 App 的第一個畫面就看得到第一場賽事（v4.2 是 1,044px，在畫面外）
+        c['phone_first_race_on_first_screen'] = self.ev(pp, """async()=>{ """ + W + """
+            near.schedule.startTime='06:30'; near.bibNumber='B77'; near.goals[gi].targetTimeSeconds=hmsToSec('3:15:00');
+            near.equipmentChecklist=Array.from({length:12},(_,i)=>Object.assign(LIST_META.equipmentChecklist.factory(),{itemName:'裝備 '+i,isPacked:i<7}));
+            await persist(); renderAll(); scrollTo(0,0); await wait(200);
+            const f=card(), first=document.querySelector('#calendar .cal-list-item'); if(!f||!first) return false;
+            const fb=f.getBoundingClientRect(), lb=first.getBoundingClientRect();
+            return state.phoneView==='list' && fb.height<=200 && lb.top>fb.bottom && lb.bottom<=innerHeight && first.dataset.id===near.id; }""")
+        # 手機清單：「比完了嗎？」在的時候先不放「下一場」卡（它就在清單第一列）；月曆上兩張都放；按「之後再說」卡片回來
+        c['phone_list_prompt_takes_card_place'] = self.ev(pp, """async()=>{ """ + W + """
+            const y=emptyRace('昨天的路跑','road_running','registered',addDaysStr(todayISO(),-1)); state.races.push(y); await persist(); renderAll(); await wait(200);
+            const slot=document.getElementById('focus-panel-slot');
+            const list=!!slot.querySelector('.result-prompt') && !slot.querySelector('.focus-panel');
+            const firstUp=document.querySelector('#calendar .cal-list-item').dataset.id===near.id;
+            document.querySelector('.view-seg [data-phone-view="calendar"]').click(); await wait(300);
+            const cal=!!slot.querySelector('.result-prompt') && !!slot.querySelector('.focus-panel');
+            document.querySelector('.view-seg [data-phone-view="list"]').click(); await wait(300);
+            const back=!!slot.querySelector('.result-prompt') && !slot.querySelector('.focus-panel');
+            document.querySelector('.result-prompt [data-action="result-later"]').click(); await wait(300);
+            const later=!slot.querySelector('.result-prompt') && !!slot.querySelector('.focus-panel');
+            state.races=state.races.filter(r=>r!==y); await persist(); renderAll();
+            if(!(list&&firstUp&&cal&&back&&later)) console.log('prompt:',list,firstUp,cal,back,later);
+            return list && firstUp && cal && back && later; }""")
+        pctx.close()
+        # 三格在 360／390 × 三種語言 × 三種字級 × 最寬的內容：值不被截掉、標籤不超出格子、沒有橫向捲動。
+        # 「12/12」「11:50:00」（超馬）「A12345」、降雨 100%、「Get forecast」「抓取中…」是實際會出現的最寬的字
+        FIT = """async()=>{ """ + W + """
+            const list=(n,p)=>Array.from({length:n},(_,i)=>Object.assign(LIST_META.equipmentChecklist.factory(),{itemName:'x'+i,isPacked:i<p}));
+            const cases={
+              full:()=>{ near.equipmentChecklist=list(12,12); near.goals[gi].targetTimeSeconds=hmsToSec('11:50:00'); near.bibNumber='A12345'; near.liveForecast=null; near.route.trackPoints=[]; near.schedule.raceDate=addDaysStr(todayISO(),9); },
+              weather:()=>{ near.equipmentChecklist=list(12,7); near.goals[gi].targetTimeSeconds=hmsToSec('3:30:00'); near.liveForecast={fetchedAt:new Date().toISOString(),times:['2026-01-01T06:00'],temp:[-12.4],precipProb:[100],gust:[30]}; },
+              empty:()=>{ near.equipmentChecklist=[]; near.goals[gi].targetTimeSeconds=null; near.bibNumber=''; near.liveForecast=null; near.route.trackPoints=[{lat:25,lon:121,ele:10}]; near.schedule.raceDate=addDaysStr(todayISO(),5); },
+              busy:()=>{ weatherFetchingRaceId=near.id; } };
+            const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(150);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs);
+                for(const [k,fn] of Object.entries(cases)){ fn(); renderFocusPanel(); await wait(30);
+                  const f=card(); if(!f){ bad.push(lang+fs+k+' nocard'); continue; } const cr=f.getBoundingClientRect();
+                  const ts=[...f.querySelectorAll('.rw-tile')]; if(ts.length!==3) bad.push(lang+fs+k+' tiles='+ts.length);
+                  ts.forEach(t=>{ const st=getComputedStyle(t), inner=t.getBoundingClientRect().right-parseFloat(st.paddingRight);
+                    const v=t.querySelector('.rw-tile-value'), lb=t.querySelector('.rw-tile-label'), rg=document.createRange(); rg.selectNodeContents(lb);
+                    if(v.scrollWidth>v.clientWidth+1) bad.push(lang+' '+fs+' '+k+' cut '+v.textContent);
+                    if(rg.getBoundingClientRect().right>inner+0.5) bad.push(lang+' '+fs+' '+k+' label '+lb.textContent); });
+                  f.querySelectorAll('.nx-name,.nx-meta,.nx-count,.nx-dismiss,.focus-panel-label').forEach(e=>{ const b=e.getBoundingClientRect(); if(b.right>cr.right+0.5||b.left<cr.left-0.5) bad.push(lang+' '+fs+' '+k+' out '+e.className); });
+                  if(document.documentElement.scrollWidth>innerWidth) bad.push(lang+' '+fs+' '+k+' hscroll');
+                }
+                weatherFetchingRaceId=null; } }
+            setLang('zh'); applyFontScale('medium'); renderFocusPanel();
+            if(bad.length) console.log('fit:',bad.slice(0,12).join(' | '));
+            return bad.length===0; }"""
+        # 獎牌牆：圓盤上的字（PB、距離、成績、年份）四個角都在圓裡面
+        MEDAL_FIT = """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const mk=(n,sport,km,t,pb)=>{ const r=emptyRace(n,sport,'completed','2026-0'+(1+state.races.length%8)+'-15'); r.route.distanceKm=km; r.results.chipTimeSeconds=t!=null?hmsToSec(t):null; r.results.isPb=!!pb; state.races.push(r); };
+            mk('U','ultra_marathon',160.9,'26:59:59',true); mk('T','trail_running',null,'11:50:00'); mk('Y','obstacle_race',null,null); mk('S','swimming',1.9,'0:41:12',true);
+            await persist(); state.viewMode='grid'; setPhoneView('grid'); renderAll(); await wait(300);
+            const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(150);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); renderCalendar(); await wait(50);
+                const discs=[...document.querySelectorAll('#calendar .medal-disc')].slice(0,40); if(discs.length<10) bad.push('discs='+discs.length);
+                discs.forEach(d=>{ const db=d.getBoundingClientRect(), cx=db.left+db.width/2, cy=db.top+db.height/2, R=db.width/2-3;
+                  [...d.children].forEach(ch=>{ const b=ch.getBoundingClientRect();
+                    if([[b.left,b.top],[b.right,b.top],[b.left,b.bottom],[b.right,b.bottom]].some(([x,y])=>Math.hypot(x-cx,y-cy)>R+1)||ch.scrollWidth>ch.clientWidth+1)
+                      bad.push(lang+' '+fs+' '+ch.className+' '+ch.textContent); }); });
+                if(document.documentElement.scrollWidth>innerWidth) bad.push(lang+' '+fs+' hscroll'); } }
+            setLang('zh'); applyFontScale('medium'); state.viewMode='calendar'; setPhoneView('list'); renderAll();
+            if(bad.length) console.log('medalfit:',[...new Set(bad)].slice(0,12).join(' | '));
+            return bad.length===0; }"""
+        # 700：直拿的小平板、縮窄的視窗（筆電的一列排法要到 768px 才放得下）
+        for w in (390, 360, 700):
+            fctx, fp = self._ctx(page.context.browser, {'width': w, 'height': 800}, touch=w < 641)
+            kind = 'phone' if w < 641 else 'tablet'
+            c[f'{kind}{w}_card_tiles_fit'] = self.ev(fp, FIT)
+            c[f'{kind}{w}_medals_fit'] = self.ev(fp, MEDAL_FIT)
+            fctx.close()
+        # ================= 英文、日文 =================
+        ectx, ep = self._ctx(page.context.browser, DESKTOP, lang='en')
+        c['english_card_and_table'] = self.ev(ep, """async()=>{ """ + W + """
+            near.schedule.startTime='06:30'; await persist(); renderAll(); await wait(200);
+            const f=card(); const unit=f.querySelector('.nx-count span').textContent, meta=f.querySelector('.nx-meta').textContent;
+            const labels=[...f.querySelectorAll('.rw-tile-label')].map(x=>x.textContent).join('|');
+            const keep=near.schedule.raceDate; near.schedule.raceDate=addDaysStr(todayISO(),1); renderAll(); await wait(100);
+            const one=document.querySelector('#focus-panel-slot .nx-count span').textContent;
+            near.schedule.raceDate=keep; await persist();
+            state.viewMode='table'; tableSort={key:'date',dir:'desc'}; renderAll(); await wait(200);
+            document.querySelector('.tv-sort-btn[data-key="time"]').click(); await wait(300);
+            const n=document.querySelectorAll('#calendar .table-view-row').length;
+            const bar=document.querySelector('.tv-sortbar span').textContent, chip=document.querySelector('.tv-chip').textContent.trim();
+            const heads=[...document.querySelectorAll('.table-view thead th')].map(th=>th.textContent.replace(/[▲▼↕]/g,'').trim()).join('|');
+            const best=[...document.querySelectorAll('.tv-best-label')].map(x=>x.textContent).join('|');
+            const s=document.getElementById('search-input'); s.value='遠的比賽'; s.dispatchEvent(new Event('input',{bubbles:true})); await wait(600);
+            const single=document.querySelector('.tv-sortbar span').textContent;
+            s.value=''; s.dispatchEvent(new Event('input',{bubbles:true})); await wait(400);
+            const want={unit:'days',one:'day',labels:'Packed|Goal A|Bib',bar:'Sorted by “Finish Time” (fastest first) · '+n+' races',chip:'Back to grouping by year ✕',
+              heads:'Date|Race Name|Status|Distance(km)|Elevation(m)|Finish Time',best:'Best marathon|Best half|Best 10K|Best 51.5K triathlon',single:'Sorted by “Finish Time” (fastest first) · 1 race'};
+            const got={unit,one,labels,bar,chip,heads,best,single};
+            const bad=Object.keys(want).filter(k=>got[k]!==want[k]);
+            const metaOk=/^\\d\\d\\/\\d\\d \\((Sun|Mon|Tue|Wed|Thu|Fri|Sat)\\) 06:30 · 台北市$/.test(meta);
+            if(bad.length||!metaOk) console.log('en:',bad.map(k=>k+'='+got[k]).join(' | '),meta);
+            return bad.length===0 && metaOk; }""")
+        ectx.close()
+        jctx, jp = self._ctx(page.context.browser, DESKTOP, lang='ja')
+        c['japanese_table_sort_bar'] = self.ev(jp, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            state.viewMode='table'; renderAll(); await wait(200);
+            document.querySelector('.tv-sort-btn[data-key="distance"]').click(); await wait(300);
+            const n=document.querySelectorAll('#calendar .table-view-row').length;
+            return document.querySelector('.tv-sortbar span').textContent==='「距離(km)」で並べ替え（長い順）・'+n+' レース'
+              && document.querySelector('.tv-chip').textContent.trim()==='年ごとの表示に戻す ✕'
+              && [...document.querySelectorAll('.tv-best-label')].map(x=>x.textContent).join('|')==='フル最速|ハーフ最速|10K 最速|51.5K トライアスロン最速'; }""")
+        jctx.close()
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -5384,6 +6565,9 @@ GROUPS = {
     'simple_phone': lambda: SimplePhone('simple_phone'),
     'ux':         lambda: UxFixes('ux'),
     'v4':         lambda: V4Layout('v4'),
+    'v41':        lambda: V41Fixes('v41'),
+    'v42':        lambda: V42Flows('v42'),
+    'v43':        lambda: V43Flows('v43'),
 }
 
 

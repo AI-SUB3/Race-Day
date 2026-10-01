@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v4.0.0
+> 貼到新對話開頭即可接續。最後更新：v4.3.0
 
 ---
 
@@ -8,7 +8,7 @@
 
 - **名稱**：賽事紀錄（英文品牌 My Race；介面英文名 Race Log）
 - **Repo**：AI-SUB3/Race-Day → https://ai-sub3.github.io/Race-Day/
-- **架構**：純前端，主體是單一 `index.html`（約 1.4 MB），無建置步驟
+- **架構**：純前端，主體是單一 `index.html`（約 1.5 MB），無建置步驟
 - **Firebase**：race-day-6da0b（Blaze），Google 登入 + Firestore
 - **工作路徑**：`/home/claude/race-schema/index.html`
 
@@ -45,7 +45,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（496 項檢查，24 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport sync`、`security mobile i18n data`、`share share_touch offline climate publink`、`pubview paste feedback training`、`multisport`、`radar`、`journey simple simple_phone`、`ux v4`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（609 項檢查，27 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport sync`、`security mobile i18n data`、`share share_touch offline climate publink`、`pubview paste feedback training`、`multisport`、`radar`、`journey simple simple_phone`、`ux v4 v41`、`v42`、`v43`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -57,7 +57,7 @@ python3 test_suite.py --list          # 列出群組
 APP=/path/to/index.html python3 test_suite.py
 ```
 
-群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate` `publink` `pubview` `paste` `feedback` `training` `radar` `journey` `simple`（不預設完整版，測新裝置的預設）`simple_phone`（360／390 × 簡易／完整 × 中英日，一行頂列）`ux`（v3.98 起的使用者體驗修正，107 場固定種子資料）`v4`（v4.0 版面：歡迎卡、頂列三樣、頭像選單、首頁分頁、手機清單、賽事頁頁首）
+群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate` `publink` `pubview` `paste` `feedback` `training` `radar` `journey` `simple`（不預設完整版，測新裝置的預設）`simple_phone`（360／390 × 簡易／完整 × 中英日，一行頂列）`ux`（v3.98 起的使用者體驗修正，107 場固定種子資料）`v4`（v4.0 版面：歡迎卡、頂列三樣、頭像選單、首頁分頁、手機清單、賽事頁頁首）`v41`（v4.1 修正：返回鍵關最上面那一層、生涯數據網址、即將到來數字、月份箭頭、對比、圖表字、點擊範圍、範例資料日期；重新整理那一項自起本機 http）`v42`（v4.2：比完賽之後記錄成績、打包模式、賽前四格與區段順序、生涯數據可以點；手機那兩項要跑中日英 × 三種字級，最好單獨一批）`v43`（v4.3：精簡的「下一場」卡、獎牌牆、表格排序與各距離最佳、全馬只算跑步、版本號；fit 三項跑 360／390／700 × 中日英 × 三種字級）
 
 離開碼：0 通過 / 1 有失敗 / 2 參數錯誤（可直接接 CI）。
 已用「故意注入 XSS 漏洞」驗證過它真的抓得到回歸，不是只會印綠勾。
@@ -72,7 +72,7 @@ APP=/path/to/index.html python3 test_suite.py
 ### 架構
 - **詳情頁順序：區段導覽列（最前面是「‹ 返回」）→ header → 成績儀表板（完賽才有）→ 各區段**（v3.30.0 儀表板移出賽後區段；v3.34.0 導覽列提到儀表板上方；v3.99.0 導覽列移到最上面、加返回鍵）
 - **賽事頁是獨立畫面（v3.99.0）**：`body.viewing-detail` 時首頁分頁列、月曆、搜尋篩選列、焦點卡都 `display:none`。網址 `#race=<id>`／`#new`，由 `renderAll()` 開頭的 `syncRouteWithState()` 統一處理
-- **v4.0 版面**：`#main-content` 依序是 `.home-tabs` → `#focus-panel-slot` → `.topbar-row2` → `#calendar` → `#detail` → `.app-footer`（版本號、版權）。頂列只有 `#btn-mode-toggle`、`#btn-new`（手機藏起來，用右下角 `#btn-new-fab`）、頭像選單；字體、深色模式（`#btn-theme-toggle` 是 role=switch）、語言、匯入匯出（兩組 `<details>`）、`#btn-help`、`#btn-feedback`、登出（`#auth-signout`，選單最底下）都在 `#account-menu-panel` 裡。原本的 `.topbar-row3`、`#data-mgmt-menu`、說明與回饋懸浮鈕都拿掉了
+- **v4.0 版面**：`#main-content` 依序是 `.home-tabs` → `#focus-panel-slot` → `.topbar-row2` → `#calendar` → `#detail` → `.app-footer`（版本號、版權）。頂列只有 `#btn-mode-toggle`、`#btn-new`（手機藏起來，用右下角 `#btn-new-fab`）、頭像選單；字體、深色模式（`#btn-theme-toggle` 是 role=switch）、語言、匯入匯出（兩組 `<details>`）、`#btn-help`、`#btn-feedback`、清除全部資料（`#btn-clear`，v4.1 起移到最下面自己一區）、登出（`#auth-signout`，選單最底下）都在 `#account-menu-panel` 裡。原本的 `.topbar-row3`、`#data-mgmt-menu`、說明與回饋懸浮鈕都拿掉了
 - **詳情頁五個區段**（v3.42.0 合併、v3.43.0 對調順序）：基本資訊與時間／路線與氣象（子標題：官方路線、當日氣象）／裝備補給與戰略／預算與行程規劃／賽後紀錄與個人數據。`section-weather` 這個 id 已不存在；改區段順序時 `QUICK_NAV_SECTIONS` 要一起改，測試會比對兩者；空抽屜卡片帶 `is-empty`，由各卡片自行判斷
 - **抽屜面板化**：13 個抽屜（equipment / results / review / basicInfo / schedule / weather / checkpoints / mediaLinks / nutritionPlan / trainingPlan / goals / route / logistics），詳情頁全部變成「摘要卡片 + 點開編輯」
 - **雲端同步六種資料**：賽事、鞋款、補給品資料庫、個人資料、裝備範本、徽章解鎖。合併規則「本機優先」，不覆蓋本機已有值
@@ -80,7 +80,7 @@ APP=/path/to/index.html python3 test_suite.py
 - **儲存失敗一定跳警示**（七種資料全涵蓋）
 
 ### 功能
-- **生涯回顧主卡**：長按 PB 數字 1.5 秒解鎖（或 Cmd+K → `wrap`），含軌跡畫廊（GPX→SVG 霓虹線條）、戰靴排行、能量補給統計
+- **生涯回顧主卡**：長按 PB 卡 1.5 秒解鎖（或 Cmd+K → `wrap`、PB 卡上的「打開生涯回顧 ›」），含軌跡畫廊（GPX→SVG 霓虹線條）、戰靴排行、能量補給統計。v4.2 起很快點一下 PB 的時間是打開締造 PB 的那一場
 - **鐵人三項分項成績**：FIT session 解析，游泳／T1／自行車／T2／跑步各自的距離、時間、心率、配速（各用自己的單位）
 - **賽事五維雷達圖**：距離／爬升／氣溫嚴苛／高心率／穩定度，Canvas 原生繪製
 - **徽章 103 枚**，五大類
@@ -94,7 +94,7 @@ APP=/path/to/index.html python3 test_suite.py
 ### 運動別正確性（近期重點）
 - **跑步步頻 ×2**（FIT 記單腳，區間 30–110 才換算，可安全重跑）
 - **游泳用每 100m 配速**，不顯示步頻與總爬升
-- **多項運動不顯示全場平均**配速／心率／步頻
+- **多項運動不顯示全場平均**配速／心率／步頻。判斷一律用 `isMultisportRace()`（有分項，或運動種類是三鐵／二鐵）；v4.2 以前只看有沒有 `legs`，手動填時間的鐵人三項會算出 3'01"/km
 - **分享圖同樣受上述規則管轄**。v3.28.0 起數據集中在 `shareStatsBadges()`／`shareDetailRows()`，方形與限動共用；改運動別規則改那兩個函式就好
 - **社群用途的圖（分享圖、徽章、年度回顧）走 `shareOrDownloadImage()`**：觸控裝置進系統分享面板、桌機下載。列印用途（手環、作戰卡、應援指南）維持 `downloadBlob()`
 
@@ -111,6 +111,7 @@ APP=/path/to/index.html python3 test_suite.py
 - **CSP**：JS 全行內，有意義的 CSP 需先拆出獨立 .js，屬架構級改動
 
 ### 下一步候選
+- 筆電首頁預設仍是月曆（v4.3 設計稿②你選了照舊）。之後若覺得空月份太多，設計稿的方案 A（筆電也預設清單）、C（這個月沒比賽就跳到下一場的月份）可以再拿出來
 - 行為追蹤型徽章（連續鍵盤操作、停留時間等）需 session 級追蹤機制，獨立一輪
 - 其他表格（賽事清單、系列比較、鞋款分析）尚未做高度處理
 
@@ -144,11 +145,22 @@ APP=/path/to/index.html python3 test_suite.py
 | 簡易版抽屜的常用欄位 | `SIMPLE_FIELD_PATHS`（基本 6、時間 3、成績 5、心得 1），經 `drawerFieldsHtml()`。「已填」計數用 `fieldHasValue()`，跟 `emptyRace()` 預設值一樣的不算 |
 | 搜尋與篩選一律跨月份（v3.98.0） | 行事曆檢視下只要有搜尋字或篩選不是「全部」（`calendarResultsMode()`），就改畫 `calendarResultsHtml()`：即將到來／各年份／未定日期，不畫生涯數據與焦點卡。**不要**再讓搜尋只作用在當月——那會讓人以為資料不見。沒日期的賽事一定要有地方出現（`calendarUndatedHtml()`），新增表單的日期是選填的 |
 | 同一場賽事重畫要保留區段與捲動（v3.98.0） | `renderDetail()` 用 `detailEl.dataset.raceId` 判斷是不是同一場；是的話換完 innerHTML **立刻**把 `details.section` 打開回去，再讀版面、最後補回 `scrollY`。從抽屜 change 觸發的完整重畫延到 `setTimeout(0)`，游標才已經移到下一格、可以放回去 |
-| 賽事頁的網址與返回（v3.99.0） | 不要在各個入口自己 pushState：`renderAll()` 一開頭 `syncRouteWithState()` 比對「狀態該有的網址」與現在的網址——清單→賽事、賽事→賽事用 push（先把目前這筆 replace 成帶 `scrollY`）；`#new`→賽事用 replace；離開賽事頁時，這筆是從清單推進來的就 `history.back()`，否則 replace。`popstate` 用 `applyRouteFromLocation()` 反推狀態，期間 `routeSyncPaused` 避免又推一筆。抽屜自己推的那筆（網址不變）不受影響。捲動位置 App 自己管（`scrollRestoration='manual'`），回清單用 `restoreScrollY()`（手機頂列收合動畫跑完要再補一次） |
-| 首頁分頁（v4.0） | `state.homeTab`（`races`／`career`，只在記憶體）。`renderCalendar()` 開頭 `syncHomeChrome()` 同步分頁列、`body[data-home-tab]`、`is-first-run`、手機檢視切換鈕。生涯數據（`renderCareerSummary()`）**只**畫在 career 分頁，賽事分頁的月曆／獎牌牆／表格上面都不再有它。「訓練」分頁其實是 `#btn-training`，點了開訓練全螢幕頁、不切換 `homeTab` |
-| 手機檢視與電腦檢視分開記（v4.0） | 手機（`isPhoneLayout()`＝≤640px）看 `state.phoneView`（`list` 預設／`calendar`／`grid`），電腦看 `state.viewMode`（`calendar`／`grid`／`table`），實際畫哪一種統一問 `currentCalendarView()`。清單是 `phoneListHtml()`：即將到來、最近 `PHONE_LIST_RECENT` 場、「看全部」（數字用 `isHistoryRace`，跟篩選鈕一致）、未定日期。跨過 640px 由 `PHONE_LAYOUT_MQ` 的 change 重畫 |
+| 賽事頁的網址與返回（v3.99.0） | 不要在各個入口自己 pushState（v4.1 起推、取代都經 `pushRoute()`／`replaceRoute()`，退一步經 `appHistoryBack()`）：`renderAll()` 一開頭 `syncRouteWithState()` 比對「狀態該有的網址」與現在的網址——清單→賽事、賽事→賽事用 push（先把目前這筆 replace 成帶 `scrollY`）；`#new`→賽事用 replace；離開賽事頁時，這筆是從清單推進來的就 `history.back()`，否則 replace。`popstate` 用 `applyRouteFromLocation()` 反推狀態，期間 `routeSyncPaused` 避免又推一筆。抽屜在 v4.1 起改走「返回鍵關最上面那一層」。捲動位置 App 自己管（`scrollRestoration='manual'`），回清單用 `restoreScrollY()`（手機頂列收合動畫跑完要再補一次） |
+| 首頁分頁（v4.0） | `state.homeTab`（`races`／`career`）；v4.1 起生涯數據有網址 `#career`（`routeOfState()`、`isHomeRoute()`，`setHomeTab()` 會 `syncRouteWithState()`：切過去推一筆 `fromTab`，切回來是 `appHistoryBack()`）。`renderCalendar()` 開頭 `syncHomeChrome()` 同步分頁列、`body[data-home-tab]`、`is-first-run`、手機檢視切換鈕。生涯數據（`renderCareerSummary()`）**只**畫在 career 分頁，賽事分頁的月曆／獎牌牆／表格上面都不再有它。「訓練」分頁其實是 `#btn-training`，點了開訓練全螢幕頁、不切換 `homeTab` |
+| 手機檢視與電腦檢視分開記（v4.0） | 手機（`isPhoneLayout()`＝≤640px）看 `state.phoneView`（`list` 預設／`calendar`／`grid`），電腦看 `state.viewMode`（`calendar`／`grid`／`table`），實際畫哪一種統一問 `currentCalendarView()`。清單是 `phoneListHtml()`：即將到來（`upcomingGroupRaces()`：有日期的由近到遠＋沒日期的計畫排最後，跟篩選鈕的 `isUpcomingRace` 數字一致）、最近 `PHONE_LIST_RECENT` 場、「看全部」（數字用 `isHistoryRace`，跟篩選鈕一致）、未定日期（`calendarUndatedHtml(races,inResults,skipPlans)`，清單與結果清單只列沒日期的過去賽事）。跨過 640px 由 `PHONE_LAYOUT_MQ` 的 change 重畫 |
 | 下拉選單（v4.0 補強） | `positionActionMenuPanel()`：觸發按鈕帶 `data-menu-align="start"` 就靠左對齊（賽事頁的狀態章）；上下都放不下時設 `max-height` 在選單內捲動，重新對齊時保留選單自己的捲動位置。`data-keep-menu-open` 的列點了之後會重新對齊一次（字體變大、展開一組）。Esc 先收開著的選單。頭像選單長在頂列裡，所以 `#topbar` 的 z-index（45）要高過右下角的「＋」（41） |
 | 賽事頁頁首（v4.0） | 狀態章是 `detailStatusMenuHtml()`（`#dh-status-menu`，六個狀態，走既有的 `lc-set-status`）；完賽／DNS／DNF 不畫狀態條，還沒比的畫、但 `noExceptionLinks`。封面照片的操作在「更多操作」（`coverMenuItemsHtml()`）；日期行是 `detailMetaLine()`（日期 ・ 地點） |
+| 返回鍵關最上面那一層（v4.1） | 疊在上面的層（`BACK_LAYER_IDS` 列的彈窗、`.action-menu-panel`、`.badge-unbox-overlay`）由 MutationObserver 偵測打開，打開時推一筆「返回鍵防護」（網址不變、state 複製底下那一筆＋`backGuard:true`）；`popstate` 離開防護時關掉 `backLayerStack` 最上面那一層（`closeBackLayer()`，有自己關閉函式的列在 `BACK_LAYER_CLOSERS`，其他按 `[data-action^="close"]`）。**用 ✕／Esc 關掉時不要 `history.back()`**（非同步，同一個點擊裡接著換頁會把新網址退掉）：防護留著，之後返回離開它時發現沒東西就再退一格。程式要「退一步」一律用 `appHistoryBack()`（防護還在就 `go(-2)`）；`pushRoute()`／`replaceRoute()` 會處理防護的記號。只改 # 的跳轉 state 是 null，不算返回。新增全螢幕彈窗時把 id 加進 `BACK_LAYER_IDS` |
+| 文字顏色與點擊範圍（v4.1） | 次要文字用 `--stone`（淺色 #676860、深色 #838A92，都 ≥4.5:1）；金色小字（PB 標章、「備戰釘選」、鞋款標籤）用 `--gold-ink`，`--gold` 只拿來當底色、線條、大數字。外觀要小、手指要點得到的控制項用透明 `::after` 撐到 44px（頭像、簡易版開關、狀態章、「暫時隱藏」）；放在 `overflow` 容器裡的（賽事頁導覽列）不能用 `::after`，直接加高 |
+| 生涯圖表的字（v4.1） | 「歷年完賽場次」是 HTML 長條（`.yearly-chart`），「累積爬升趨勢」SVG 只畫線和面積（`preserveAspectRatio="none"`＋`non-scaling-stroke`），圓點與年份是 HTML 疊上去。**不要把文字放進會被拉伸的 SVG**：字會跟著縮放或壓扁。年份多時 `.is-dense` 改兩位數；趨勢圖的年份位置不平均（有比賽的季度才有點），`keep()` 依距離挑要標的年份（兩端一定標、窄螢幕隔 9%、寬螢幕 3.5%，第一個／最後一個標籤不是置中要算半個寬），沒挑到的加 `.is-minor`／`.is-minor-lg`；歷年長條超過 11 年手機上隔幾個標一個 |
+| 範例資料的日期（v4.1） | `buildExampleRaces()` 裡寫的是以 2026-09-17 為今天排的日期，`shiftExampleRaceDates()` 依今天整組平移（阿里山永遠 10 天後），`createdAt` 這類不動，賽名年份跟著改。改範例內容時日期照舊寫在那組基準上就好 |
+| 比完賽之後記錄成績（v4.2） | `raceNeedsResult()`＝已報名＋比賽日早於今天；`isAwaitingResult()` 再加「14 天內」（`RESULT_PROMPT_DAYS`）。首頁卡 `resultPromptHtml()` 取最近一場、扣掉這台裝置按過「之後再說」的（`result-prompt-later-v1`，最多記 50 筆），放在 `#focus-panel-slot` 的焦點卡前面；清單標籤 `resultTagHtml()`（14 天內）；賽事頁提示列 `resultBannerHtml()`（不限天數，取代四格）。**只問 `registered`**：抽籤中、考慮中的日期過了多半是沒抽中或沒去。記錄面板是抽屜 `recordResult`（`DRAWER_SECTIONS`），欄位用 `renderField()`＋`SECTION_POST` 的定義，所以照舊改完就存、時間驗證照舊；「儲存」只做 `quickSetRaceStatus(race,'completed')`，沒有另一條寫資料的路。首頁卡的 DNS／DNF 走 `setRaceStatusWithUndo()`（6 秒復原） |
+| 打包模式（v4.2） | `equipmentViewMode`（`pack` 預設／`list` 編輯／`kanban` 佈署，記在記憶體、每次開網站從打包開始）、`packFilter`、`packDoneOpen`。`equipmentPackHtml()` 的每一列是 `button.pack-row[data-action="pack-toggle"]`，`data-index` 是在 `equipmentChecklist` 裡的位置（不是篩選後的位置）。「已打包 N 件」是 `<details>`：收起來的列還在 DOM 裡，量畫面上的列要用 `.pack-list > .pack-row`。`.pack-add-input` 的 Enter 要略過 `isComposing`（輸入法選字）。從四格、「下一場」卡的打包格（v4.2 是焦點卡圓環）進來一律經 `openRacePacking(id)`（重設成打包＋「還沒打包」） |
+| 賽前四格與區段順序（v4.2） | `raceWeekTilesHtml()` 只在 `registered` 且還沒過比賽日。欄寬 `1fr .9fr 1fr 1.3fr`、≤380px 值縮到 14px、字級「大」在 ≤420px 排兩排兩格——這是用 360／375／390／414 × 小中大 × 中日英 × 最寬的值（12/12、A12345、11:50:00、日文空格子「＋ 作成」）量出來的，改欄寬或文字前先跑 `v42` 手機那兩項；全部打包好時勾勾放標籤上（`is-done`），值本身不加，兩位數才放得下；格子是 `open-drawer`＋`data-focus-path`，`detailEl` 的點擊處理在欄位**是空的**時才 focus（有值還搶焦點，手機會跳鍵盤蓋住畫面）。`renderDetail()` 把五個區段放進物件，依 `isDoneStatus`（completed／dns／dnf）決定順序；導覽列 `quickNavHtml({postFirst})` 跟著調。`simple` 與 `v42` 兩邊都鎖住順序 |
+| 生涯數據可以點（v4.2） | `.yc-col`、熱力圖格子、「總完賽場次」「今年累計里程」都是 `<button>`，經 `openCareerSheet(kind,key)`（`year`／`month`／`all`）畫進 `#career-sheet`；統計一律 `completedRacesFor()`（只算已完賽，跟長條一致）。`#career-sheet` 登記在 `BACK_LAYER_IDS`／`BACK_LAYER_CLOSERS`／Esc 的 `modalIds`，返回鍵先關它。列表直接用清單的 `.cal-list-item`：點了先 `closeCareerSheet()` 再 `selectRace()`，網址從 `#career` 推一筆 `#race=`，返回回到 `#career`。PB 時間：`pointerdown` 記下按下的時間，`click` 的 `detail>0` 且按住超過 450ms 就不跳（那是想長按）；鍵盤的 click（`detail` 是 0）一律打開——v4.2 開發時抓到「上一次按住留下的時間讓鍵盤怎麼按都打不開」 |
+| 「下一場」卡（v4.3） | `focusPanelHtml()`：`.focus-panel-compact`，上半部 `.nx-head`（`button.nx-main` 是 `focus-view-race`），下半部 `.nx-tiles` 三格用跟賽事頁四格同一組 `rwTileHtml()`／`rwPackTileHtml()`／`rwGoalTileHtml()`／`rwBibTileHtml()`。首頁卡的格子是 `data-action="focus-tile"`（先 `selectRace()` 再 `openDrawer()`，欄位是空的才 `focusDrawerFieldIfEmpty()`），賽事頁是 `open-drawer`（`detailEl` 接）。第三格 `focusThirdTileHtml()`：7 天內有軌跡、還沒抓過 → 「抓取預報」；`focusWeatherNow()` 有值 → 天氣（只有歷年平均自動帶進 `climateForecast.avgTempC` 的不算）；都沒有 → 號碼布。`renderFocusPanel()`：手機清單上有「比完了嗎？」就不放卡片（`currentCalendarView()==='list'`）。筆電一列從 768px 起（641–767 排兩欄每格只剩 73px）；字級「大」≤420px 排兩欄、第三格整列。改格子文字或欄寬先跑 `v43` 的 fit 三項。封面照頁首的漸層最上面 .58：`v43` 用「全白的照片」算每一行字的對比，調淡會被抓到 |
+| 獎牌牆（v4.3） | `renderPhotoGrid()` 是全部已完賽、新到舊；`photoCardHtml()` 有封面照 → 照片卡，沒有 → `.is-medal`（`.medal-face` 的 `--medal`／`--medal-bg` 用 `sportColorVar()`／`sportBgVar()`；PB 加 `.is-pb`：金框、4px、`.medal-pb`——路跑本來就是金色，只換顏色分不出來）。最大的那行 `.medal-main`：距離 → 沒距離用成績 → 都沒有用年份，**不放運動別名稱**（日英放不進圓）；超過 6 個字加 `.is-long` 縮字。`.medal-disc` 的 `line-height:1.2` 不能拿掉：沿用 body 的 1.6，字級「大」時 PB 標記會超出圓（`v43` 量四個角都在圓裡） |
+| 表格排序與各距離最佳（v4.3） | `tableSort`（記憶體）、`TABLE_SORT_FIRST_DIR`、`sortTableRaces()`（空值不論方向都在最後、同值新的在前）。照日期以外的欄位排時不分年份（`byDate`）。表格上面那行是整句的字典 `ui.tableSortBar`（`{a}` 欄位、`{b}` 方向、`{c}` 場數）——**不要拆成幾段拼**：英文要半形括號和「·」。場數用 `tableRaceCount()`（英文單數）。`BEST_DISTANCES`／`bestByDistance()`：跑步距離要 `isRunningSportType()`，全馬用 `isMarathonDistance()`——跟 `computeCareerStats()`、`marathonPbRace()`、`computeHallOfFameData()` 同一個判斷，v4.3 起只算跑步類（原本 42 公里的自行車賽會變成全馬 PB） |
 | **第一次完整下載一定要分批** | `fullSyncRacesInPages()`：一次 5 場、每批存游標、可續傳；同處崩潰兩次改逐筆。一次抓全部（`fetchAll`）在 iPhone 會撐爆分頁，只留給「同步診斷」這種使用者主動按的功能 |
 | 已登入就崩潰時的出口 | `?nosync=1`（本分頁不同步）、`?nosync=0` 恢復 |
 | **雲端同步是增量的，不要改回整份** | `cloudKnown`（雲端每場的 updatedAt，存 IndexedDB `cloud-sync-state-v1`）。上傳只傳版本不同的（`upsertRaces`），打開網站只抓 `updatedAt > since－1天`（`fetchChangedSince`）。**`replaceAll` 已經不用**：它會先下載全部再整份上傳，iPhone 會崩潰 |
@@ -238,6 +250,16 @@ APP=/path/to/index.html python3 test_suite.py
 - **沙盒裡 idb-keyval 的 CDN 連不到，`saveJson` 退回同步的 localStorage**：`await persist()` 之後的程式在同一個微任務就跑了，時序跟正式環境（IndexedDB，真正非同步）不一樣。v3.98 的「Tab 後游標消失」就是這樣才在測試裡重現；修的時候兩種時序都要成立
 - **Playwright 的 `goto` 只改 `#` 是同一份文件的跳轉**，不會重新跑 `init()`；要測「直接開網址」得再 `reload()`（v3.99 的反例驗證抓到的）
 - **分批平行跑測試時，`ux` 重新整理後的等待設 30 秒**：跟 `multisport`／`radar` 同時跑，Chromium 重新載入偶爾超過 15 秒，整組會被記成 GROUP_CRASHED（v4.0 遇到一次，單獨重跑通過）
+- **headless Chromium 在 file:// 下重新整理，偶爾會整個 localStorage 不見**（v4.0 也一樣，http 下 8/8 穩定）：要測「重新整理之後」的事，開本機 http 伺服器（`v41` 的重新整理那一項、`offline` 群組的做法）
+- **測試裡量顏色前先關掉過場**：`body` 換主題有 0.8 秒的底色過場，量到的是半途的顏色（`v41` 用 `*{transition:none!important}`）
+- **賽事頁直接跳賽事頁，每一跳都是新的一頁**（v3.99 起）：測試連續 `selectRace()` 好幾場之後，`goBackFromDetail()` 一次只回到上一場，不是回首頁。要回首頁就一路退到 `state.selectedId` 是 null（`v42` 生涯數據那段開頭的寫法），不然點分頁時網址還是 `#race=`
+- **收起來的 `<details>` 裡的元素還在 DOM**：`querySelectorAll` 會數到、高度是 0。量「畫面上看得到的列」要限定直屬的容器（`v42` 手機那項原本把收起來的「已打包」7 列也算進去）
+- **測「按住」和「點一下」要用真的滑鼠**：`el.click()` 的 `detail` 是 0，跟鍵盤一樣，測不到按住多久。`page.mouse.down()`、等、`page.mouse.up()`
+- **`d ? 加天數 : ''` 會把 0 天（今天）當成沒有日期**：`v42` 的反例驗證抓到「比賽當天不問」那一項原本是空測（今天的賽事根本沒有日期）。天數參數一律 `d!=null`
+- **一項檢查在頁面裡拋例外，整組會當掉**：`page.evaluate` 丟出例外 → `GROUP_CRASHED`，後面的項目全部沒跑，反例驗證也看不出是哪一項抓到的。`v43` 用 `self.ev()` 包起來（例外＝這一項失敗、印出原因、後面照跑），新群組照這樣寫
+- **歷年平均會自動寫進預報欄位**：打開有軌跡的賽事，背景查到的歷年平均會填進 `climateForecast.avgTempC`。拿 `climateForecast` 判斷「有沒有預報」要先排除這種情況（`focusWeatherNow()` 比對 `historicalAverageWeather.avgTempC`）
+- **卡片做成 `<button>` 時一定要寫 `color`**：不寫就是瀏覽器預設的黑字，深色模式下看不到。獎牌牆的照片卡一直有這個問題，v4.3 每一場完賽都上牆才看出來（`v43` 的 wall_text_readable 量淺色、深色的對比）。新增按鈕式的卡片照這樣寫
+- **641–767px 是筆電版面，但很窄**：直拿的平板、縮窄的視窗。兩欄排法最容易在這裡擠爆；版面測試除了 360／390 也量一個 700px（`v43` 的 tablet700）
 - **選賽事可能跳出徽章解鎖動畫蓋住整頁**（`.badge-unbox-overlay`），測試要點頁面上的按鈕前先收掉
 - **升級 xlsx / idb-keyval 時必須同時換 `integrity` 雜湊**，只改版號會被瀏覽器擋掉。作法：`npm pack <套件>@<版本>` 解開後 `openssl dgst -sha384 -binary <檔案> | openssl base64 -A`
 
