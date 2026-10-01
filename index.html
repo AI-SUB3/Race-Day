@@ -186,8 +186,29 @@
     --thumb-bg:var(--surface);
     --thumb-line:#9C7B22;
     --thumb-glow:rgba(176,141,46,0.22);
+    /* 輸入框與可以點的格子（v4.3.3）。原本輸入框的底色跟抽屜、彈窗一樣都是 --surface，
+       只靠 --rule 的細框分辨：淺色 1.35:1、深色 1.19:1，空的欄位幾乎看不出在哪。
+       --field-border 對 --surface、--paper 都至少 3:1（WCAG 1.4.11 介面元件）。
+       框用 box-shadow 畫（--field-ring），不用 border：瀏覽器的「網頁強制深色」
+       （Chrome／Edge 的 Auto Dark Mode）轉換 border 顏色的結果很亂——同樣是中灰，
+       有的變亮、有的變得跟底色一樣深（實測 #7A7F78 的框變成 1.37:1）；box-shadow
+       則一律照「底色」的規則轉，這個中灰不會被反轉，強制深色下還有 4:1。
+       border 留 1px 透明：版面尺寸不變，Windows 高對比模式（會拿掉 box-shadow）
+       也會把透明框畫成看得見的系統顏色。 */
+    --field-bg:#FFFFFF;
+    --field-border:#7A7F78;
+    --field-ring:inset 0 0 0 1px var(--field-border);
+    --field-ring-focus:inset 0 0 0 1px var(--trail),0 0 0 3px var(--focus-glow);
   }
   [data-theme="dark"]{
+    /* 告訴瀏覽器深色模式是深色的一套（v4.3.3）：原生的核取方塊、下拉清單、日期選擇器、捲軸
+       跟著換深色（原本是白色的方塊、白底的下拉清單）。系統也設成深色時，瀏覽器的「網頁強制深色」
+       就不會把 App 自己的深色再轉一次（原本選中的格子會被反成深色）。淺色模式不必宣告：
+       沒宣告就是淺色 */
+    color-scheme:dark;
+    /* 深色的輸入框比抽屜再深一階，像嵌進去的格子；框對抽屜 3.6:1、對頁面底色 4.4:1 */
+    --field-bg:#12161B;
+    --field-border:#717A85;
     --thumb-bg:#12171B;
     --thumb-line:#E8C97A;
     --thumb-glow:rgba(217,177,92,0.28);
@@ -554,8 +575,8 @@
   }
 
   #search-input{
-    flex:1 1 200px;min-width:160px;padding:8px 10px;border:1px solid var(--rule);
-    border-radius:3px;background:var(--surface);color:var(--ink);font:inherit;
+    flex:1 1 200px;min-width:160px;padding:8px 10px;border:1px solid transparent;box-shadow:var(--field-ring);
+    border-radius:3px;background:var(--field-bg);color:var(--ink);font:inherit;
   }
   .chips{display:flex;flex-wrap:wrap;gap:6px;}
   .chip{
@@ -891,8 +912,8 @@
   .year-in-review-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
   .year-in-review-label{color:var(--stone);}
   .year-in-review-select{
-    font-size:calc(14px*var(--fs,1));padding:4px 8px;border:1px solid var(--rule);border-radius:12px;
-    background:var(--surface);color:var(--ink);font-family:inherit;
+    font-size:calc(14px*var(--fs,1));padding:4px 8px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:12px;
+    background:var(--field-bg);color:var(--ink);font-family:inherit;
   }
   /* 歷年完賽場次（v4.1.0 改成 HTML 長條，字是真的 12px） */
   .yearly-chart{display:flex;align-items:flex-end;gap:6px;height:132px;padding-top:4px;}
@@ -1323,7 +1344,7 @@
 
   /* ---------- Shoe management ---------- */
   .shoe-add-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-  .shoe-add-row input{font:inherit;font-size:calc(15px*var(--fs,1));padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
+  .shoe-add-row input{font:inherit;font-size:calc(15px*var(--fs,1));padding:8px 10px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:3px;background:var(--field-bg);color:var(--ink);}
   .shoe-add-row input#new-shoe-name{flex:2;min-width:140px;}
   .shoe-add-row input#new-shoe-target{flex:1;min-width:100px;}
   .shoe-add-row input#new-shoe-stack,.shoe-add-row input#new-shoe-drop{flex:1;min-width:100px;}
@@ -1352,7 +1373,7 @@
   .shoe-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;}
   .shoe-edit-grid label{display:flex;flex-direction:column;gap:3px;}
   .shoe-edit-grid .small{color:var(--stone);}
-  .shoe-edit-input{width:100%;font:inherit;font-size:calc(14px*var(--fs,1));padding:5px 7px;border:1px solid var(--trail);border-radius:3px;background:var(--surface);color:var(--ink);box-sizing:border-box;}
+  .shoe-edit-input{width:100%;font:inherit;font-size:calc(14px*var(--fs,1));padding:5px 7px;border:1px solid transparent;box-shadow:inset 0 0 0 1px var(--trail);border-radius:3px;background:var(--field-bg);color:var(--ink);box-sizing:border-box;}
   .shoe-edit-actions{display:flex;gap:8px;margin-top:10px;}
   .btn-small{padding:6px 12px;font-size:calc(13px*var(--fs,1));}
   .shoe-row-actions{display:flex;align-items:center;gap:12px;margin-top:2px;opacity:0.75;}
@@ -1360,7 +1381,7 @@
 
   /* ---------- 補給品資料庫（Nutrition dictionary） ---------- */
   .nutrition-dict-add-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-  .nutrition-dict-add-row input{font:inherit;font-size:calc(14px*var(--fs,1));padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
+  .nutrition-dict-add-row input{font:inherit;font-size:calc(14px*var(--fs,1));padding:8px 10px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:3px;background:var(--field-bg);color:var(--ink);}
   .nutrition-dict-add-row input#new-dict-name,.nutrition-dict-add-row input#edit-dict-name{flex:2;min-width:140px;}
   .nutrition-dict-add-row input[id*="dict-carb"],.nutrition-dict-add-row input[id*="dict-sodium"],.nutrition-dict-add-row input[id*="dict-caffeine"]{flex:1;min-width:70px;}
   .nutrition-dict-add-row input[id*="dict-tags"]{flex:1.5;min-width:110px;}
@@ -1370,7 +1391,7 @@
   .nutrition-dict-name{font-size:calc(14px*var(--fs,1));font-weight:600;}
   .nutrition-dict-stats{color:var(--stone);}
   .nutrition-dict-row-actions{display:flex;gap:12px;flex:0 0 auto;}
-  .nutrition-dict-row input{font:inherit;font-size:calc(13px*var(--fs,1));padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);}
+  .nutrition-dict-row input{font:inherit;font-size:calc(13px*var(--fs,1));padding:6px 8px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:3px;background:var(--field-bg);color:var(--ink);}
   .nutrition-dict-row input#edit-dict-name-,.nutrition-dict-row input[id^="edit-dict-name-"]{flex:2;min-width:120px;}
   .nutrition-dict-row input[id^="edit-dict-carb-"],.nutrition-dict-row input[id^="edit-dict-sodium-"],.nutrition-dict-row input[id^="edit-dict-caffeine-"]{flex:1;min-width:60px;}
   .nutrition-dict-row input[id^="edit-dict-tags-"]{flex:1.5;min-width:100px;}
@@ -1486,7 +1507,7 @@
   .training-shoe{margin-top:4px;border:none;background:transparent;padding:0;color:var(--stone);font:inherit;font-size:calc(12px*var(--fs,1));cursor:pointer;text-align:left;}
   .training-shoe:hover{color:var(--ink);}
   .training-edit{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;}
-  .training-edit select{font:inherit;font-size:calc(13px*var(--fs,1));padding:5px 8px;border-radius:6px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);}
+  .training-edit select{font:inherit;font-size:calc(13px*var(--fs,1));padding:5px 8px;border-radius:6px;border:1px solid transparent;box-shadow:var(--field-ring);background:var(--field-bg);color:var(--ink);}
   .training-delete{color:var(--flag);}
   .training-footer{margin-top:18px;text-align:center;}
   .training-group-head{
@@ -1784,8 +1805,8 @@
   .icon-btn svg{width:18px;height:18px;display:block;}
   .lang-switcher{display:flex;flex-direction:column;gap:2px;align-items:flex-start;}
   .lang-switcher select{
-    font:inherit;font-size:calc(13px*var(--fs,1));padding:5px 8px;border:1px solid var(--rule);border-radius:3px;
-    background:var(--surface);color:var(--ink);
+    font:inherit;font-size:calc(13px*var(--fs,1));padding:5px 8px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:3px;
+    background:var(--field-bg);color:var(--ink);
   }
   .btn-ghost.danger{color:var(--flag);border-color:var(--rule);}
   .btn-ghost.danger:hover{border-color:var(--flag);}
@@ -2026,12 +2047,17 @@
 
   .field span{font-size:calc(14px*var(--fs,1));color:var(--stone);}
   .field span i{font-style:normal;color:var(--stone);margin-left:3px;}
+  /* 框與底色見 :root 的 --field-*（v4.3.3）。核取方塊、單選鈕不套：瀏覽器自己畫的方塊外面再加一圈會變兩層 */
   .field input,.field select,.field textarea{
     font:inherit;font-size:calc(15px*var(--fs,1));
-    padding:8px 10px;border:1px solid var(--rule);border-radius:3px;
-    background:var(--surface);color:var(--ink);width:100%;
-    transition:border-color 0.15s ease;
+    padding:8px 10px;border:1px solid transparent;border-radius:3px;
+    background:var(--field-bg);color:var(--ink);width:100%;
+    box-shadow:var(--field-ring);
+    transition:box-shadow 0.15s ease;
   }
+  .field input[type="checkbox"],.field input[type="radio"]{box-shadow:none;}
+  /* 提示字（placeholder）：瀏覽器預設的灰在淺色只有 4.4:1、深色 3.4:1；Firefox 還會再打 54% 透明 */
+  input::placeholder,textarea::placeholder{color:var(--stone);opacity:1;}
   /* ---- iOS 的對焦自動放大：只要輸入框「算出來的字級」小於 16px，
      點進去的瞬間 iOS 就會把整頁放大，而且離開欄位之後不會自己縮
      回來——這正是「跑版」的主因。上面的手勢攔截擋得住使用者主動
@@ -2086,7 +2112,7 @@
   .field-hint{font-size:calc(12px*var(--fs,1));color:var(--stone);line-height:1.5;margin-top:-1px;}
   .field-hint-live{font-size:calc(12px*var(--fs,1));line-height:1.5;margin-top:2px;color:var(--stone);}
   .field-hint-live.is-error{color:var(--flag);}
-  .field input[data-kind="duration"][aria-invalid="true"]{border-color:var(--flag);box-shadow:0 0 0 3px var(--stamp-bg-flag);}
+  .field input[data-kind="duration"][aria-invalid="true"]{box-shadow:inset 0 0 0 1px var(--flag),0 0 0 3px var(--stamp-bg-flag);}
   /* 對焦狀態：除了邊框變色，再加一圈很淡的光暈。原本只有邊框換色，
      在深色底上對比不夠、不容易看出焦點在哪一格。
      顏色沿用這個 App 既有的主色（--trail 綠），不另外引進霓虹橘或青藍
@@ -2094,10 +2120,18 @@
      「PB／達成」、綠色用在「進行中的焦點」，再加一個高彩度色會讓原本
      建立好的顏色語彙失效。 */
   .field input:focus,.field select:focus,.field textarea:focus{
-    border-color:var(--trail);
-    box-shadow:0 0 0 3px var(--focus-glow);
+    box-shadow:var(--field-ring-focus);
     outline:none;
   }
+  .field input[type="checkbox"]:focus,.field input[type="radio"]:focus{box-shadow:none;}
+  /* 其他輸入框（搜尋、鞋款、補給品字典、範本、匯入表格…）對焦時一樣：框換成綠色、外面一圈光暈。
+     全站的 :focus-visible 只放光暈，會把原本的框蓋掉 */
+  #search-input:focus,.year-in-review-select:focus,.lang-switcher select:focus,
+  .import-table input:focus,.import-table select:focus,.template-bar select:focus,.template-save-row input:focus,
+  #paste-json-input:focus,.shoe-add-row input:focus,.nutrition-dict-add-row input:focus,.nutrition-dict-row input:focus,
+  .training-edit select:focus,.report-prompt-fallback-textarea:focus,.paste-transport-grid input:focus,.paste-transport-grid select:focus,
+  .kanban-card-move:focus{box-shadow:var(--field-ring-focus);outline:none;}
+  .field input[type="checkbox"]:focus-visible,.field input[type="radio"]:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
   .field input[type="number"],.field input[data-kind="duration"]{font-family:'IBM Plex Mono',monospace;}
   .field textarea{resize:vertical;min-height:60px;}
   .field-inline{flex-direction:row;align-items:center;gap:8px;min-height:44px;}
@@ -2137,7 +2171,7 @@
   .kanban-card-name{font-size:calc(13px*var(--fs,1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .kanban-card-mandatory-tag{font-size:calc(10px*var(--fs,1));color:var(--flag);font-weight:600;}
   .kanban-card-packed{flex:0 0 auto;display:flex;}
-  .kanban-card-move{flex:0 0 auto;max-width:34px;font-size:calc(10px*var(--fs,1));padding:2px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--stone);}
+  .kanban-card-move{flex:0 0 auto;max-width:34px;font-size:calc(10px*var(--fs,1));padding:2px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:3px;background:var(--field-bg);color:var(--ink-soft);}
 
   .gear-weight-dash{
     display:flex;flex-direction:column;gap:8px;padding:16px;margin-bottom:14px;
@@ -2651,7 +2685,7 @@
       background:var(--rule);margin:0 auto 16px;
     }
   }
-  .report-prompt-fallback-textarea{width:100%;min-height:260px;font:inherit;font-size:calc(13px*var(--fs,1));padding:10px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink);resize:vertical;margin-bottom:14px;}
+  .report-prompt-fallback-textarea{width:100%;min-height:260px;font:inherit;font-size:calc(13px*var(--fs,1));padding:10px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:4px;background:var(--field-bg);color:var(--ink);resize:vertical;margin-bottom:14px;}
   .modal-panel h2{font-size:calc(20px*var(--fs,1));margin-bottom:10px;}
   /* 同步診斷的對照表：本機 vs 雲端並排，數字對不上的那一列標出來。 */
   .sync-diag-table{width:100%;border-collapse:collapse;margin:14px 0 16px;font-size:calc(14px*var(--fs,1));}
@@ -2766,7 +2800,7 @@
   .paste-transport-entry{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}
   .paste-transport-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;}
   .paste-transport-grid label{display:flex;flex-direction:column;gap:3px;}
-  .paste-transport-grid input,.paste-transport-grid select{font:inherit;font-size:calc(14px*var(--fs,1));padding:7px 9px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);min-width:0;}
+  .paste-transport-grid input,.paste-transport-grid select{font:inherit;font-size:calc(14px*var(--fs,1));padding:7px 9px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:6px;background:var(--field-bg);color:var(--ink);min-width:0;}
   .paste-transport-wide{grid-column:1/-1;}
   .paste-url-preview{word-break:break-all;max-height:none;}
   .paste-url-dup{color:var(--flag);}
@@ -2788,7 +2822,7 @@
   .import-table th{text-align:left;padding:8px 8px;border-bottom:1px solid var(--rule);background:var(--paper);white-space:nowrap;position:sticky;top:0;}
   .import-table td{padding:5px 8px;border-bottom:1px solid var(--rule);vertical-align:middle;}
   .import-table input[type="text"],.import-table input[type="date"],.import-table select{
-    font:inherit;font-size:calc(14px*var(--fs,1));padding:5px 6px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);width:100%;min-width:90px;
+    font:inherit;font-size:calc(14px*var(--fs,1));padding:5px 6px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:3px;background:var(--field-bg);color:var(--ink);width:100%;min-width:90px;
   }
   .import-table input.narrow{min-width:60px;width:74px;}
   .import-table td:first-child{width:28px;}
@@ -2829,13 +2863,13 @@
   /* ---------- Equipment templates ---------- */
   .template-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
   .template-bar select{
-    font:inherit;font-size:calc(14px*var(--fs,1));padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);
+    font:inherit;font-size:calc(14px*var(--fs,1));padding:6px 8px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:3px;background:var(--field-bg);color:var(--ink);
     /* v4.1.0：手機抽屜裡原本被撐到 390px、右邊超出畫面 22px */
     box-sizing:border-box;max-width:100%;min-width:0;flex:1 1 180px;
   }
   .template-save-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
   .template-save-row input{
-    flex:1 1 200px;font:inherit;font-size:calc(15px*var(--fs,1));padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);color:var(--ink);
+    flex:1 1 200px;font:inherit;font-size:calc(15px*var(--fs,1));padding:8px 10px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:3px;background:var(--field-bg);color:var(--ink);
   }
 
   /* ---------- GPX/TCX import & paste quick-fill ---------- */
@@ -2843,8 +2877,8 @@
   .gpx-summary{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:6px;font-size:calc(15px*var(--fs,1));}
   .gpx-summary li{display:flex;justify-content:space-between;border-bottom:1px solid var(--rule);padding:5px 2px;}
   #paste-json-input{
-    width:100%;font-family:'IBM Plex Mono',monospace;font-size:calc(13px*var(--fs,1));padding:10px 12px;border:1px solid var(--rule);
-    border-radius:3px;background:var(--surface);color:var(--ink);resize:vertical;margin-bottom:8px;
+    width:100%;font-family:'IBM Plex Mono',monospace;font-size:calc(13px*var(--fs,1));padding:10px 12px;border:1px solid transparent;box-shadow:var(--field-ring);
+    border-radius:3px;background:var(--field-bg);color:var(--ink);resize:vertical;margin-bottom:8px;
   }
   .paste-error{color:var(--flag);font-size:calc(13px*var(--fs,1));min-height:18px;margin:0 0 8px;}
   /* iPhone 狀態列：這三條要放在樣式表最後面——它們原本的位置規則寫在比較
@@ -2906,32 +2940,40 @@
   }
   /* ==== v4.2：打包模式 ==== */
   .equip-head{flex-wrap:wrap;gap:10px;}
-  .equip-view-seg{display:inline-flex;height:36px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;box-sizing:border-box;}
-  .equip-view-seg button{border:none;background:var(--surface);color:var(--ink-soft);font:inherit;font-size:calc(14px*var(--fs,1));padding:0 12px;cursor:pointer;white-space:nowrap;}
-  .equip-view-seg button+button{border-left:1px solid var(--rule);}
-  .equip-view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);}
+  /* 切換鈕、篩選膠囊的外框也用 --field-ring（v4.3.3）：原本是 --rule 的細框、底色跟抽屜一樣，
+     沒選的那幾格看起來像一般文字。選中的加粗：強制深色時選中格的深色底會跟抽屜一樣深，
+     粗體還分得出來 */
+  .equip-view-seg{display:inline-flex;height:36px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:8px;overflow:hidden;box-sizing:border-box;}
+  .equip-view-seg button{border:none;background:transparent;color:var(--ink-soft);font:inherit;font-size:calc(14px*var(--fs,1));padding:0 12px;cursor:pointer;white-space:nowrap;}
+  .equip-view-seg button+button{box-shadow:inset 1px 0 0 var(--field-border);}
+  .equip-view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:600;}
   .equip-view-seg button:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
   .pack-progress{display:flex;flex-direction:column;gap:8px;margin:4px 0 12px;color:var(--ink-soft);font-size:calc(15px*var(--fs,1));}
   .pack-progress b{font-size:calc(22px*var(--fs,1));color:var(--ink);}
   .pack-bar{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;}
   .pack-bar i{display:block;height:100%;background:var(--trail);transition:width .25s ease;}
   .pack-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
-  .pack-filter{min-height:36px;padding:0 13px;border:1px solid var(--rule);border-radius:18px;background:var(--surface);color:var(--ink-soft);font:inherit;font-size:calc(14px*var(--fs,1));cursor:pointer;}
-  .pack-filter[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink);}
+  .pack-filter{min-height:36px;padding:0 13px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:18px;background:transparent;color:var(--ink-soft);font:inherit;font-size:calc(14px*var(--fs,1));cursor:pointer;}
+  .pack-filter[aria-pressed="true"]{background:var(--ink);color:var(--surface);box-shadow:none;font-weight:600;}
   .pack-row{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:0 2px;box-sizing:border-box;border:none;border-bottom:1px solid var(--rule);
     background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
   .pack-row:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
-  .pack-box{flex:none;width:26px;height:26px;box-sizing:border-box;border:2px solid var(--stone);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;}
-  .pack-row.is-packed .pack-box{background:var(--trail);border-color:var(--trail);}
-  .pack-box.is-add{border-style:dashed;color:var(--stone);}
+  /* 勾選方塊的框用 outline 畫在方塊裡面（v4.3.3）：原本 2px 的 border 在強制深色下變成
+     #4D4D49，跟抽屜只差 1.94:1，「還沒打包」的方塊幾乎看不到（使用者的截圖就是這樣）。
+     outline 跟 box-shadow 一樣照底色的規則轉，這個中灰不會被反轉；Windows 高對比模式也會畫出來 */
+  .pack-box{flex:none;width:26px;height:26px;box-sizing:border-box;border:none;outline:2px solid var(--field-border);outline-offset:-2px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;}
+  .pack-row.is-packed .pack-box{background:var(--trail);outline-color:var(--trail);}
+  .pack-box.is-add{outline:none;width:auto;color:var(--stone);font-weight:600;}
   .pack-name{flex:1;min-width:0;font-size:calc(16px*var(--fs,1));overflow-wrap:anywhere;}
   .pack-row.is-packed .pack-name{color:var(--stone);text-decoration:line-through;}
   .pack-must{flex:none;font-size:calc(12px*var(--fs,1));font-weight:700;color:var(--flag);border:1px solid var(--flag);border-radius:4px;padding:1px 6px;}
   .pack-where{flex:none;max-width:38%;font-size:calc(12px*var(--fs,1));color:var(--stone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .pack-add{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 2px;border-bottom:1px solid var(--rule);}
+  /* 「新增一件」（v4.3.3）：原本是一列沒有框的文字，跟上面的清單長得一樣，看不出是可以打字的格子。
+     現在整列是一個輸入框（框、底色同其他欄位），對焦時框變綠 */
+  .pack-add{display:flex;align-items:center;gap:10px;min-height:48px;margin:12px 0 4px;padding:0 12px;border:1px solid transparent;box-shadow:var(--field-ring);border-radius:8px;background:var(--field-bg);}
   .pack-add-input{flex:1;min-width:0;border:none;background:none;color:var(--ink);font:inherit;font-size:calc(16px*var(--fs,1));padding:12px 0;}
-  .pack-add-input:focus{outline:none;}
-  .pack-add:focus-within{border-bottom-color:var(--trail);}
+  .pack-add-input:focus,.pack-add-input:focus-visible{outline:none;box-shadow:none;}
+  .pack-add:focus-within{box-shadow:var(--field-ring-focus);}
   .pack-done summary{display:flex;align-items:center;min-height:48px;color:var(--stone);font-size:calc(15px*var(--fs,1));cursor:pointer;list-style:none;}
   .pack-done summary::-webkit-details-marker{display:none;}
   .pack-done summary::after{content:'▸';margin-left:6px;transition:transform .15s ease;}
@@ -2954,9 +2996,24 @@
   .tv-best-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:10px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
   .tv-best-card:hover{border-color:var(--ink-soft);}
   .tv-best-card:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
-  .tv-best-label{font-size:calc(12px*var(--fs,1));color:var(--stone);}
-  .tv-best-card b{font-size:calc(20px*var(--fs,1));}
+  /* 卡片窄的時候標籤要換行，只在空白處換（「226K」／「超級鐵人最佳」），不會把最後一個「佳」
+     或「速」單獨擠到第二行；連一個詞都放不下時才在詞中間斷（v4.3.2） */
+  .tv-best-label{font-size:calc(12px*var(--fs,1));color:var(--stone);word-break:keep-all;overflow-wrap:anywhere;}
+  /* 時間和賽名靠卡片底部：同一排有一張的標籤換成兩行（日文「51.5K／トライアスロン最速」）時，
+     整排的時間還是對齊在同一條線上，不會那幾張往下掉一行（v4.3.2）。標籤都一行時看起來沒有差別 */
+  .tv-best-card b{font-size:calc(20px*var(--fs,1));margin-top:auto;}
   .tv-best-race{max-width:100%;font-size:calc(12px*var(--fs,1));color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* 年份比賽名深一階：掃過一排卡片時年份先跳出來（v4.3.2） */
+  .tv-best-year{color:var(--ink);font-weight:600;}
+  /* 電腦上放得下就排成一排（v4.3.2）：多了 226K 之後最多 7 張，筆電上原本一排 5 張，
+     第 6 張會自己掉到第二排、把表格往下推。--n 是卡片數（JS 填，至少 5：張數少時卡片
+     維持原本的寬度，不會被撐成一張半個螢幕寬）。每張還有 140px（大字級跟著放大）以上就平分一整排，
+     不夠時跟原本一樣自動換行。公式裡的 10px 要跟上面 .tv-best 的 gap 一樣；
+     減 1px 是讓小數點進位後還放得下，不會因為差 0.1px 又掉一張到下一排。
+     平板寬度維持原本的 170px：那裡本來就會換行，排成 3＋3 比擠成 4＋2 好讀。 */
+  @media (min-width:1000px){
+    .tv-best{grid-template-columns:repeat(auto-fill,minmax(max(calc(140px*var(--fs,1)),calc((100% - (var(--n,5) - 1) * 10px) / var(--n,5) - 1px)),1fr));}
+  }
   /* ==== v4.2：生涯數據可以點 ==== */
   button.honor-card-value{display:inline-block;border:none;background:none;padding:0 6px;font:inherit;font-family:'IBM Plex Mono',monospace;font-size:56px;font-weight:700;color:var(--gold);line-height:1;cursor:pointer;border-radius:8px;}
   button.honor-card-value:hover{background:var(--stamp-bg-gold);}
@@ -4341,7 +4398,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／獎牌牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.3.1';
+const APP_VERSION='v4.3.3';
 
 /* ============================================================
    多語系（i18n）
@@ -4427,7 +4484,7 @@ const JA={
   'ui.navBack':'‹ 戻る',
   'ui.calNoRacesThisMonth':'今月の大会はありません','ui.calPrevRace':'前の大会','ui.calNextRace':'次の大会',
   'ui.calResultsSearch':'「{q}」の検索結果：{n} 件','ui.calResultsFilter':'「{f}」：{n} 件','ui.calResultsBoth':'「{f}」で「{q}」を検索：{n} 件',
-  'ui.calResultsNone':'該当する大会はありません','ui.calResultsClear':'検索と絞り込みを解除','ui.calUndated':'日付未定','ui.dateTbd':'日付未定','ui.done':'完了','ui.yesterday':'昨日','ui.daysAgo':'{n}日前','ui.resultPromptLabel':'走り終えましたか？','ui.resultPromptText':'記録を入れると、キャリアデータ・自己ベスト・バッジが自動で更新されます。','ui.recordResult':'記録を入れる','ui.resultDns':'出走しなかった（DNS）','ui.resultDnf':'完走できなかった（DNF）','ui.resultLater':'あとで','ui.resultBanner':'大会から{n}日経ちました。記録がまだです','ui.resultBannerOne':'大会は昨日でした。記録がまだです','ui.resultPending':'記録待ち','ui.resultVsGoalFaster':'A目標（{g}）より{n}速い','ui.resultVsGoalSlower':'A目標（{g}）より{n}遅い','ui.resultVsGoalExact':'A目標（{n}）ちょうど','ui.recordResultImport':'ウォッチの記録（GPX／TCX／FIT）から自動入力','ui.recordResultSave':'保存して「完走」にする','ui.recordResultHint':'感想・写真・スプリットはあとで追加できます。','ui.resultSaved':'記録しました','ui.resultSavedNoTime':'「完走」にしました。記録はあとで入れられます','ui.statusChangedTo':'「{n}」にしました','ui.resultLaterToast':'了解です。一覧と大会ページには「記録待ち」が残ります','ui.durHM':'{h}時間{m}分','ui.durMS':'{m}分{s}秒','ui.durS':'{s}秒','ui.rwAdd':'＋ 入力','ui.rwBib':'ゼッケン','ui.rwStart':'スタート','ui.rwPack':'荷造り','ui.rwAddList':'＋ 作成','ui.rwGoal':'A目標','ui.rwWeather':'天気','ui.rwWeatherRain':'降水 {n}%','ui.rwWeatherFetch':'予報を取得','ui.focusDaysAfter':'日後','ui.focusDaysAfterOne':'日後','ui.tableSortBar':'「{a}」で並べ替え（{b}）・{c}','ui.tableBackToYears':'年ごとの表示に戻す','ui.tableBackToNewest':'新しい順に戻す','ui.tableDirTimeAsc':'速い順','ui.tableDirTimeDesc':'遅い順','ui.tableDirDistAsc':'短い順','ui.tableDirDistDesc':'長い順','ui.tableDirElevAsc':'少ない順','ui.tableDirElevDesc':'多い順','ui.tableDirNameAsc':'昇順','ui.tableDirNameDesc':'降順','ui.tableDirDateAsc':'古い順','ui.tableDirDateDesc':'新しい順','ui.bestMarathon':'フル最速','ui.bestHalf':'ハーフ最速','ui.best10k':'10K 最速','ui.best5k':'5K 最速','ui.bestTri51':'51.5K トライアスロン最速','ui.bestTri113':'113K トライアスロン最速','ui.equipViewPack':'荷造り','ui.equipViewEdit':'編集','ui.equipViewKanban':'配置','ui.equipViewLabel':'装備リストの表示方法','ui.packAddPlaceholder':'1つ追加（入力して Enter）','ui.packAddLabel':'装備を1つ追加','ui.packMust':'必携','ui.packNoMust':'「必携」の装備はありません','ui.packAllDone':'荷造り完了 ✓','ui.packDoneGroup':'準備済み {n}件','ui.packPacked':'準備済み','ui.packFilterTodo':'未準備 {n}','ui.packFilterAll':'すべて {n}','ui.packFilterMust':'必携 {n}','ui.packHint':'行をタップするとチェックが付きます。重さ・分類・置き場所を変えるときは「編集」へ。','ui.careerPbOpen':'「{n}」を開く','ui.careerSheetCount':'完走','ui.careerSheetRaces':'{n}大会','ui.careerSheetDistance':'総距離','ui.careerSheetBestFm':'フル最速','ui.careerSheetYear':'{y}年・完走 {n}大会','ui.careerSheetMonth':'{y}年{m}月・完走 {n}大会','ui.careerSheetAll':'すべての完走記録・{n}大会','ui.yearlyChartBarLabel':'{y}年 {n}大会','ui.calResultsHint':'すべての月から表示しています',
+  'ui.calResultsNone':'該当する大会はありません','ui.calResultsClear':'検索と絞り込みを解除','ui.calUndated':'日付未定','ui.dateTbd':'日付未定','ui.done':'完了','ui.yesterday':'昨日','ui.daysAgo':'{n}日前','ui.resultPromptLabel':'走り終えましたか？','ui.resultPromptText':'記録を入れると、キャリアデータ・自己ベスト・バッジが自動で更新されます。','ui.recordResult':'記録を入れる','ui.resultDns':'出走しなかった（DNS）','ui.resultDnf':'完走できなかった（DNF）','ui.resultLater':'あとで','ui.resultBanner':'大会から{n}日経ちました。記録がまだです','ui.resultBannerOne':'大会は昨日でした。記録がまだです','ui.resultPending':'記録待ち','ui.resultVsGoalFaster':'A目標（{g}）より{n}速い','ui.resultVsGoalSlower':'A目標（{g}）より{n}遅い','ui.resultVsGoalExact':'A目標（{n}）ちょうど','ui.recordResultImport':'ウォッチの記録（GPX／TCX／FIT）から自動入力','ui.recordResultSave':'保存して「完走」にする','ui.recordResultHint':'感想・写真・スプリットはあとで追加できます。','ui.resultSaved':'記録しました','ui.resultSavedNoTime':'「完走」にしました。記録はあとで入れられます','ui.statusChangedTo':'「{n}」にしました','ui.resultLaterToast':'了解です。一覧と大会ページには「記録待ち」が残ります','ui.durHM':'{h}時間{m}分','ui.durMS':'{m}分{s}秒','ui.durS':'{s}秒','ui.rwAdd':'＋ 入力','ui.rwBib':'ゼッケン','ui.rwStart':'スタート','ui.rwPack':'荷造り','ui.rwAddList':'＋ 作成','ui.rwGoal':'A目標','ui.rwWeather':'天気','ui.rwWeatherRain':'降水 {n}%','ui.rwWeatherFetch':'予報を取得','ui.focusDaysAfter':'日後','ui.focusDaysAfterOne':'日後','ui.tableSortBar':'「{a}」で並べ替え（{b}）・{c}','ui.tableBackToYears':'年ごとの表示に戻す','ui.tableBackToNewest':'新しい順に戻す','ui.tableDirTimeAsc':'速い順','ui.tableDirTimeDesc':'遅い順','ui.tableDirDistAsc':'短い順','ui.tableDirDistDesc':'長い順','ui.tableDirElevAsc':'少ない順','ui.tableDirElevDesc':'多い順','ui.tableDirNameAsc':'昇順','ui.tableDirNameDesc':'降順','ui.tableDirDateAsc':'古い順','ui.tableDirDateDesc':'新しい順','ui.bestMarathon':'フル最速','ui.bestHalf':'ハーフ最速','ui.best10k':'10K 最速','ui.best5k':'5K 最速','ui.bestTri51':'51.5K トライアスロン最速','ui.bestTri113':'113K トライアスロン最速','ui.bestTri226':'226K トライアスロン最速','ui.equipViewPack':'荷造り','ui.equipViewEdit':'編集','ui.equipViewKanban':'配置','ui.equipViewLabel':'装備リストの表示方法','ui.packAddPlaceholder':'1つ追加（入力して Enter）','ui.packAddLabel':'装備を1つ追加','ui.packMust':'必携','ui.packNoMust':'「必携」の装備はありません','ui.packAllDone':'荷造り完了 ✓','ui.packDoneGroup':'準備済み {n}件','ui.packPacked':'準備済み','ui.packFilterTodo':'未準備 {n}','ui.packFilterAll':'すべて {n}','ui.packFilterMust':'必携 {n}','ui.packHint':'行をタップするとチェックが付きます。重さ・分類・置き場所を変えるときは「編集」へ。','ui.careerPbOpen':'「{n}」を開く','ui.careerSheetCount':'完走','ui.careerSheetRaces':'{n}大会','ui.careerSheetDistance':'総距離','ui.careerSheetBestFm':'フル最速','ui.careerSheetYear':'{y}年・完走 {n}大会','ui.careerSheetMonth':'{y}年{m}月・完走 {n}大会','ui.careerSheetAll':'すべての完走記録・{n}大会','ui.yearlyChartBarLabel':'{y}年 {n}大会','ui.calResultsHint':'すべての月から表示しています',
   'ui.showAllFields':'すべての項目を表示（あと {n} 項目）','ui.showAllFieldsFilled':'すべての項目を表示（あと {a} 項目、うち {b} 項目は入力済み）','ui.showCommonFields':'よく使う項目だけ表示',
   'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'完走した大会はまだありません。「完走」にするとここに並びます。',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
@@ -4780,7 +4837,7 @@ const JA={
         <li>キャリアの数字はタップできます：年ごとの棒グラフ、ヒートマップのマス、「完走レース数」「年間走行距離」をタップすると、下にその大会の一覧が出ます（1件タップで開き、戻る操作ではまず一覧が閉じます）。フルマラソン自己ベストのタイムをタップすると、その記録を出した大会が開きます。フルマラソンはランニング系の大会だけを数えます（42km の自転車レースは入りません）。</li>
         <li>パソコン：上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え（カレンダー表示のときだけ。メダル棚と表は月をまたいで表示するので出ません）、「今日」で当月に戻ります。隣のグリッドアイコンで「メダル棚」、表アイコンでコンパクトな表に切り替えます。</li>
         <li><strong>メダル棚</strong>：完走した大会すべてを新しい順に並べます。カバー写真がある大会は写真、ない大会はメダルになり、距離・完走タイム・年が書かれます。色は種目、自己ベスト（PB）は金の枠と「PB」です。</li>
-        <li><strong>表</strong>（パソコン）：列の見出しをクリックすると並べ替え（日付・大会名・距離・獲得標高・完走タイム）、もう一度で逆順になります。日付以外で並べ替えると年ごとのまとまりをやめて一続きになり、上に今の並べ方が出ます（「年ごとの表示に戻す」で戻ります）。検索と組み合わせることもできます。表の上には距離別の最速記録（フル・ハーフ・10K・5K・トライアスロン）が並び、タップでその大会が開きます。</li>
+        <li><strong>表</strong>（パソコン）：列の見出しをクリックすると並べ替え（日付・大会名・距離・獲得標高・完走タイム）、もう一度で逆順になります。日付以外で並べ替えると年ごとのまとまりをやめて一続きになり、上に今の並べ方が出ます（「年ごとの表示に戻す」で戻ります）。検索と組み合わせることもできます。表の上には距離別の最速記録（フル・ハーフ・10K・5K・トライアスロン 51.5K／113K／226K）が並び、大会名の前にその年が付きます。タップでその大会が開きます。</li>
         <li>スマートフォン：最初は「リスト」表示——今後の予定（日付が決まっていない予定は最後に「日付未定」と表示）、最近の5件。「過去の記録をすべて見る」で過去の大会を一覧できます。上の「リスト／カレンダー／メダル棚」で表示を切り替えます。「今後の予定」の件数は絞り込みボタンの数字と同じです。</li>
         <li>フィルターは2段階：まず「すべて／今後の予定／過去の記録」を選択し、「今後の予定」または「過去の記録」を選ぶと詳細ステータスが展開されます（ボタンが一度に多く表示されすぎないように）。</li>
         <li>検索欄でレース名や都市名で絞り込みできます。検索や絞り込み中はすべての月の結果が一覧で表示されます。日付が未定の予定は「今後の予定」の最後に、日付のない過去の大会は「日付未定」にあります。</li>
@@ -4826,7 +4883,7 @@ const JA={
       <h3>その他</h3>
       <ul>
         <li>右上の「シンプル」スイッチをオンにすると、よく使う項目と画面（記録・感想・写真・装備リスト）だけになり、分析グラフ・予算・トレーニング計画はしまわれます（データは消えません）。オフでフル表示に戻ります。この端末に記憶されます。</li>
-        <li>文字サイズ、ダークモード、言語（繁体字中国語／日本語／英語）は右上のアイコンメニューの「表示」にあり、選択内容は記憶されます。</li>
+        <li>文字サイズ、ダークモード、言語（繁体字中国語／日本語／英語）は右上のアイコンメニューの「表示」にあり、選択内容は記憶されます。</li><li>ブラウザの「ウェブページの強制ダークモード」（Chrome・Edge の Auto Dark Mode）はライトモードを自動で暗く反転するため、アプリ本来の配色とは異なります（文字が薄い緑色になるなど）。ダークで使いたいときは、アイコンメニュー「表示」の「ダークモード」をオンにしてください。パソコン自体もダーク設定なら、ブラウザが重ねて変換することはありません。</li>
         <li>使い方（このページ）とフィードバックもアイコンメニューにあります。バージョン番号はページの一番下です。</li>
         <li>スマートフォンのブラウザでサイトを開き「ホーム画面に追加」を選ぶと、専用アイコンでアプリのように使えます。</li>
         <li>サイト全体の機能一覧は <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">サイトマップ</a> をご覧ください。</li>
@@ -4951,7 +5008,7 @@ const EN={
   'ui.navBack':'‹ Back',
   'ui.calNoRacesThisMonth':'No races this month','ui.calPrevRace':'Previous','ui.calNextRace':'Next',
   'ui.calResultsSearch':'“{q}”: {n} races','ui.calResultsFilter':'{f}: {n} races','ui.calResultsBoth':'“{q}” in {f}: {n} races',
-  'ui.calResultsNone':'No matching races','ui.calResultsClear':'Clear search & filter','ui.calUndated':'No date yet','ui.dateTbd':'TBD','ui.done':'Done','ui.yesterday':'Yesterday','ui.daysAgo':'{n} days ago','ui.resultPromptLabel':'Did you finish?','ui.resultPromptText':'Log your result — career stats, PBs and badges update automatically.','ui.recordResult':'Log result','ui.resultDns':'Didn’t start (DNS)','ui.resultDnf':'Didn’t finish (DNF)','ui.resultLater':'Later','ui.resultBanner':'This race was {n} days ago — no result yet','ui.resultBannerOne':'This race was yesterday — no result yet','ui.resultPending':'Result pending','ui.resultVsGoalFaster':'{n} faster than goal A ({g})','ui.resultVsGoalSlower':'{n} slower than goal A ({g})','ui.resultVsGoalExact':'Exactly goal A ({n})','ui.recordResultImport':'Fill in from a watch file (GPX/TCX/FIT)','ui.recordResultSave':'Save and mark as finished','ui.recordResultHint':'Notes, photos and splits can come later.','ui.resultSaved':'Result saved','ui.resultSavedNoTime':'Marked as finished — add the time whenever you like','ui.statusChangedTo':'Changed to “{n}”','ui.resultLaterToast':'OK — the list and race page will keep showing “Result pending”','ui.durHM':'{h} h {m} min','ui.durMS':'{m} min {s} s','ui.durS':'{s} s','ui.rwAdd':'＋ Add','ui.rwBib':'Bib','ui.rwStart':'Start','ui.rwPack':'Packed','ui.rwAddList':'＋ List','ui.rwGoal':'Goal A','ui.rwWeather':'Weather','ui.rwWeatherRain':'Rain {n}%','ui.rwWeatherFetch':'Get forecast','ui.focusDaysAfter':'days','ui.focusDaysAfterOne':'day','ui.tableSortBar':'Sorted by “{a}” ({b}) · {c}','ui.tableBackToYears':'Back to grouping by year','ui.tableBackToNewest':'Back to newest first','ui.tableDirTimeAsc':'fastest first','ui.tableDirTimeDesc':'slowest first','ui.tableDirDistAsc':'shortest first','ui.tableDirDistDesc':'longest first','ui.tableDirElevAsc':'least climbing first','ui.tableDirElevDesc':'most climbing first','ui.tableDirNameAsc':'A → Z','ui.tableDirNameDesc':'Z → A','ui.tableDirDateAsc':'oldest first','ui.tableDirDateDesc':'newest first','ui.bestMarathon':'Best marathon','ui.bestHalf':'Best half','ui.best10k':'Best 10K','ui.best5k':'Best 5K','ui.bestTri51':'Best 51.5K triathlon','ui.bestTri113':'Best 113K triathlon','ui.equipViewPack':'Pack','ui.equipViewEdit':'Edit','ui.equipViewKanban':'Layout','ui.equipViewLabel':'Gear list view','ui.packAddPlaceholder':'Add an item (press Enter)','ui.packAddLabel':'Add a gear item','ui.packMust':'Required','ui.packNoMust':'No items marked “Required”','ui.packAllDone':'All packed ✓','ui.packDoneGroup':'Packed: {n}','ui.packPacked':'Packed','ui.packFilterTodo':'To pack {n}','ui.packFilterAll':'All {n}','ui.packFilterMust':'Required {n}','ui.packHint':'Tap a row to check it off. To change weight, category or where it goes, switch to “Edit”.','ui.careerPbOpen':'Open “{n}”','ui.careerSheetCount':'Finished','ui.careerSheetRaces':'{n}','ui.careerSheetDistance':'Distance','ui.careerSheetBestFm':'Best marathon','ui.careerSheetYear':'{y} · {n} finished','ui.careerSheetMonth':'{m}/{y} · {n} finished','ui.careerSheetAll':'All finished races · {n}','ui.yearlyChartBarLabel':'{y}: {n} races','ui.calResultsHint':'Showing all months',
+  'ui.calResultsNone':'No matching races','ui.calResultsClear':'Clear search & filter','ui.calUndated':'No date yet','ui.dateTbd':'TBD','ui.done':'Done','ui.yesterday':'Yesterday','ui.daysAgo':'{n} days ago','ui.resultPromptLabel':'Did you finish?','ui.resultPromptText':'Log your result — career stats, PBs and badges update automatically.','ui.recordResult':'Log result','ui.resultDns':'Didn’t start (DNS)','ui.resultDnf':'Didn’t finish (DNF)','ui.resultLater':'Later','ui.resultBanner':'This race was {n} days ago — no result yet','ui.resultBannerOne':'This race was yesterday — no result yet','ui.resultPending':'Result pending','ui.resultVsGoalFaster':'{n} faster than goal A ({g})','ui.resultVsGoalSlower':'{n} slower than goal A ({g})','ui.resultVsGoalExact':'Exactly goal A ({n})','ui.recordResultImport':'Fill in from a watch file (GPX/TCX/FIT)','ui.recordResultSave':'Save and mark as finished','ui.recordResultHint':'Notes, photos and splits can come later.','ui.resultSaved':'Result saved','ui.resultSavedNoTime':'Marked as finished — add the time whenever you like','ui.statusChangedTo':'Changed to “{n}”','ui.resultLaterToast':'OK — the list and race page will keep showing “Result pending”','ui.durHM':'{h} h {m} min','ui.durMS':'{m} min {s} s','ui.durS':'{s} s','ui.rwAdd':'＋ Add','ui.rwBib':'Bib','ui.rwStart':'Start','ui.rwPack':'Packed','ui.rwAddList':'＋ List','ui.rwGoal':'Goal A','ui.rwWeather':'Weather','ui.rwWeatherRain':'Rain {n}%','ui.rwWeatherFetch':'Get forecast','ui.focusDaysAfter':'days','ui.focusDaysAfterOne':'day','ui.tableSortBar':'Sorted by “{a}” ({b}) · {c}','ui.tableBackToYears':'Back to grouping by year','ui.tableBackToNewest':'Back to newest first','ui.tableDirTimeAsc':'fastest first','ui.tableDirTimeDesc':'slowest first','ui.tableDirDistAsc':'shortest first','ui.tableDirDistDesc':'longest first','ui.tableDirElevAsc':'least climbing first','ui.tableDirElevDesc':'most climbing first','ui.tableDirNameAsc':'A → Z','ui.tableDirNameDesc':'Z → A','ui.tableDirDateAsc':'oldest first','ui.tableDirDateDesc':'newest first','ui.bestMarathon':'Best marathon','ui.bestHalf':'Best half','ui.best10k':'Best 10K','ui.best5k':'Best 5K','ui.bestTri51':'Best 51.5K triathlon','ui.bestTri113':'Best 113K triathlon','ui.bestTri226':'Best 226K triathlon','ui.equipViewPack':'Pack','ui.equipViewEdit':'Edit','ui.equipViewKanban':'Layout','ui.equipViewLabel':'Gear list view','ui.packAddPlaceholder':'Add an item (press Enter)','ui.packAddLabel':'Add a gear item','ui.packMust':'Required','ui.packNoMust':'No items marked “Required”','ui.packAllDone':'All packed ✓','ui.packDoneGroup':'Packed: {n}','ui.packPacked':'Packed','ui.packFilterTodo':'To pack {n}','ui.packFilterAll':'All {n}','ui.packFilterMust':'Required {n}','ui.packHint':'Tap a row to check it off. To change weight, category or where it goes, switch to “Edit”.','ui.careerPbOpen':'Open “{n}”','ui.careerSheetCount':'Finished','ui.careerSheetRaces':'{n}','ui.careerSheetDistance':'Distance','ui.careerSheetBestFm':'Best marathon','ui.careerSheetYear':'{y} · {n} finished','ui.careerSheetMonth':'{m}/{y} · {n} finished','ui.careerSheetAll':'All finished races · {n}','ui.yearlyChartBarLabel':'{y}: {n} races','ui.calResultsHint':'Showing all months',
   'ui.showAllFields':'Show all fields ({n} more)','ui.showAllFieldsFilled':'Show all fields ({a} more, {b} filled in)','ui.showCommonFields':'Show common fields only',
   'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No finished races yet — mark a race as finished and it shows up here.',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
@@ -5292,7 +5349,7 @@ const EN={
         <li>Career numbers are tappable: tap a year’s bar, a heatmap square, “Races finished” or “Distance this year” to list those races underneath (tap one to open it; back closes the list first). Tap the marathon PB time to open the race where you set it. Only running races count as marathons (a 42 km bike race doesn’t).</li>
         <li>On a computer, use <span class="mono">‹ Year Month ›</span> to change months and "Today" to jump back (calendar view only — the trophy wall and table span all months, so they don’t show it). The grid icon next to it switches to the trophy wall; the table icon switches to a compact table.</li>
         <li><strong>Trophy wall</strong>: every finished race, newest first. Races with a cover photo show the photo; the rest become a medal with the distance, finish time and year — the color is the sport, and a personal best (PB) gets a gold rim and a “PB” mark.</li>
-        <li><strong>Table</strong> (computer): click a column header to sort (date, name, distance, elevation, finish time); click again to reverse. Sorting by anything other than date turns the year groups into one list, with a line above saying how it’s sorted (“Back to grouping by year” undoes it). It works together with search. Above the table, your fastest marathon, half, 10K, 5K and triathlon times are listed — click one to open that race.</li>
+        <li><strong>Table</strong> (computer): click a column header to sort (date, name, distance, elevation, finish time); click again to reverse. Sorting by anything other than date turns the year groups into one list, with a line above saying how it’s sorted (“Back to grouping by year” undoes it). It works together with search. Above the table, your fastest marathon, half, 10K, 5K and triathlon (51.5K, 113K, 226K) times are listed, with the year in front of each race name — click one to open that race.</li>
         <li>On a phone, you start in “List”: upcoming races (plans without a date come last, marked “TBD”) and your 5 most recent — “See all past races” lists everything before today. The “List / Calendar / Trophy wall” switch at the top changes the view. The upcoming count matches the number on the filter button.</li>
         <li>Filters have two levels: pick "All / Upcoming / History" first — tapping "Upcoming" or "History" reveals the more specific statuses underneath, so the bar isn't crowded with options at once.</li>
         <li>The search box filters by race name or city; searching or picking a filter lists matches from every month. Upcoming races without a date come last under “Upcoming”; past races without a date are listed under “No date yet”.</li>
@@ -5338,7 +5395,7 @@ const EN={
       <h3>Other</h3>
       <ul>
         <li>The “Simple” switch in the top right keeps only the everyday fields and screens (results, notes, photos, gear list) and tucks away analysis charts, budget and training plans — nothing is deleted. Turn it off for the full view. This device remembers your choice.</li>
-        <li>Text size, dark mode and language (Traditional Chinese, Japanese, English) are under “Display” in the avatar menu at the top right, and your choices are remembered.</li>
+        <li>Text size, dark mode and language (Traditional Chinese, Japanese, English) are under “Display” in the avatar menu at the top right, and your choices are remembered.</li><li>Your browser’s “force dark mode for web contents” (Auto Dark Mode in Chrome and Edge) inverts the light theme automatically, so the colors differ from the app’s design (text turns pale green, for example). For a dark look, turn on Dark mode under “Display” in the avatar menu; if your computer is also set to dark, the browser won’t convert it again.</li>
         <li>Help (this page) and feedback are in the avatar menu too; the version number is at the very bottom of the page.</li>
         <li>On mobile, open the site in your browser and choose "Add to Home Screen" for an app-like experience with a custom icon.</li>
         <li>For a quick overview of everything on this site and where to find it, see the <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">sitemap</a>.</li>
@@ -17531,7 +17588,10 @@ function tableSortDirLabel(){
 }
 /* 各距離最佳（v4.3.0）：表格上面一排，直接回答「我最快的半馬是哪一場」。只算已完賽、
    有完賽時間的；路跑距離只算跑步類（42 公里的自行車賽不是全馬），鐵人照標準距離。
-   全馬跟生涯數據的「全馬 PB」用同一個判斷（isMarathonDistance）。 */
+   全馬跟生涯數據的「全馬 PB」用同一個判斷（isMarathonDistance）。
+   226K 超級鐵人（v4.3.2）：標準是 3.8＋180＋42.2＝226 公里，但各賽道騎車段常差幾公里、
+   天候縮短游泳也會少 4 公里，所以收 220–235；下限跟徽章「三鐵傳奇」一樣是 220。
+   上限擋掉雙倍超鐵這類 450 公里的賽事——只有那一場時，不該被寫成「226K 最佳」。 */
 const BEST_DISTANCES=[
   {key:'fm',label:()=>t('ui.bestMarathon','全馬最佳'),match:r=>isMarathonDistance(r)},
   {key:'hm',label:()=>t('ui.bestHalf','半馬最佳'),match:r=>isRunningSportType(r.sportType)&&r.route.distanceKm>=20.5&&r.route.distanceKm<=21.5},
@@ -17539,6 +17599,7 @@ const BEST_DISTANCES=[
   {key:'5k',label:()=>t('ui.best5k','5K 最佳'),match:r=>isRunningSportType(r.sportType)&&r.route.distanceKm>=4.9&&r.route.distanceKm<=5.1},
   {key:'tri51',label:()=>t('ui.bestTri51','51.5K 鐵人最佳'),match:r=>r.sportType==='triathlon'&&r.route.distanceKm>=50.5&&r.route.distanceKm<=52.5},
   {key:'tri113',label:()=>t('ui.bestTri113','113K 鐵人最佳'),match:r=>r.sportType==='triathlon'&&r.route.distanceKm>=110&&r.route.distanceKm<=116},
+  {key:'tri226',label:()=>t('ui.bestTri226','226K 超級鐵人最佳'),match:r=>r.sportType==='triathlon'&&r.route.distanceKm>=220&&r.route.distanceKm<=235},
 ];
 function bestByDistance(){
   const done=state.races.filter(r=>!r.deletedAt&&r.status==='completed'&&r.results.chipTimeSeconds!=null&&r.route.distanceKm!=null);
@@ -17547,13 +17608,30 @@ function bestByDistance(){
     return r?{b,r}:null;
   }).filter(Boolean);
 }
+/* 卡片第三行「2024 大阪馬拉松」（v4.3.2）：一眼看到那個最佳是哪一年跑的。年份放在名稱
+   前面、不放後面——名稱太長會被「…」截掉，放在後面的年份會第一個不見。
+   名稱本來就是這一年開頭（「2024 臺北馬拉松」）時，把開頭那段年份換成同樣的樣式，
+   不再多加一次，免得變成「2024 2024 臺北馬拉松」；年份在名稱中間或後面的照樣加在前面，
+   因為後面那段可能被截掉。 */
+function bestRaceLineHtml(r){
+  const date=r.schedule.raceDate||'';
+  const year=/^\d{4}-/.test(date)?date.slice(0,4):'';
+  const name=String(r.name||'').trim();
+  const shown=escapeHtml(name||t('ui.unnamedRace','(未命名賽事)'));
+  if(!year) return shown;
+  const tag=`<span class="tv-best-year mono">${year}</span>`;
+  // 「20245 公里挑戰」這種開頭剛好是那四個數字、但其實不是年份的，不算
+  if(name.startsWith(year)&&!/\d/.test(name.charAt(4))) return tag+escapeHtml(name.slice(4));
+  return `${tag} ${shown}`;
+}
 function tableBestHtml(){
   const list=bestByDistance();
   if(!list.length) return '';
-  return `<div class="tv-best">${list.map(({b,r})=>`<button type="button" class="tv-best-card" data-id="${r.id}" data-best="${b.key}">
+  // title：名稱被截掉時，電腦上滑鼠停著看得到完整的日期和賽名
+  return `<div class="tv-best" style="--n:${Math.max(5,list.length)}">${list.map(({b,r})=>`<button type="button" class="tv-best-card" data-id="${r.id}" data-best="${b.key}" title="${escapeHtml([r.schedule.raceDate,String(r.name||'').trim()].filter(Boolean).join(' '))}">
       <span class="tv-best-label">${escapeHtml(b.label())}</span>
       <b class="mono">${secToHMS(r.results.chipTimeSeconds)}</b>
-      <span class="tv-best-race">${escapeHtml(r.name)||t('ui.unnamedRace','(未命名賽事)')}</span>
+      <span class="tv-best-race">${bestRaceLineHtml(r)}</span>
     </button>`).join('')}</div>`;
 }
 // 「12 場」：英文一場要寫「1 race」，不是「1 races」
@@ -21973,7 +22051,7 @@ function helpModalHtml(){
         <li>生涯數據可以點：年份長條、熱力圖的格子、「總完賽場次」「今年累計里程」點下去，下面會列出那幾場（點一場就打開，返回鍵先關掉列表）；點全馬 PB 的時間，直接打開締造 PB 的那一場。全馬只算跑步類的賽事（42 公里的自行車賽不算）。</li>
         <li>電腦：上方 <span class="mono">‹ 年 月 ›</span> 切換月份（只有月曆會顯示；獎牌牆、表格是跨月份的，不顯示），「今天」跳回當月；旁邊的方格圖示切換「獎牌牆」，表格圖示切換緊湊表格。</li>
         <li><strong>獎牌牆</strong>：所有已完賽的賽事，新的在前。有封面照的放照片；沒有的畫成一面獎牌，寫距離、完賽時間、年份，顏色是運動別，個人最佳（PB）是金框加「PB」。</li>
-        <li><strong>表格</strong>（電腦）：點欄位標題排序（日期、名稱、距離、爬升、完賽時間），再點一次反過來。不是照日期排時，年份收合改成一整串，上面寫現在怎麼排，按「回到依年份分組」回去；可以搭配搜尋，例如搜「半程」再點「完賽時間」。表格上面的「各距離最佳」列出全馬、半馬、10K、5K、鐵人三項的最快成績，點了打開那一場。</li>
+        <li><strong>表格</strong>（電腦）：點欄位標題排序（日期、名稱、距離、爬升、完賽時間），再點一次反過來。不是照日期排時，年份收合改成一整串，上面寫現在怎麼排，按「回到依年份分組」回去；可以搭配搜尋，例如搜「半程」再點「完賽時間」。表格上面的「各距離最佳」列出全馬、半馬、10K、5K、51.5K／113K／226K 鐵人三項的最快成績，賽名前面是那一場的年份，點了打開那一場。</li>
         <li>手機：預設是「清單」——即將到來（還沒定日期的計畫排在最後，寫「日期未定」）、最近的 5 場，按「看全部歷史紀錄」列出所有過去的賽事；上面的「清單／月曆／獎牌牆」切換檢視。「即將到來」的場數跟篩選鈕上的數字一樣。</li>
         <li>篩選分兩層：先選「全部／即將到來／歷史紀錄」，點「即將到來」或「歷史紀錄」後才會展開細分狀態，避免按鈕一次擠太多。</li>
         <li>搜尋框可用賽事名稱或城市過濾，搜尋或點篩選鈕時會列出所有月份的結果；還沒比、沒填日期的賽事排在「即將到來」最後，沒填日期的過去賽事列在「未定日期」。</li>
@@ -22020,6 +22098,7 @@ function helpModalHtml(){
       <ul>
         <li>右上角「簡易版」開關：打開後只留常用的欄位與畫面（成績、心得、照片、裝備清單），分析圖表、預算、訓練計畫先收起來，資料都還在；關掉就回到完整版。這台裝置會記住你的選擇。</li>
         <li>字體大小、深色模式、語言（繁體中文／日文／英文）都在右上角頭像選單的「顯示」，會記住你的選擇。</li>
+        <li>瀏覽器的「網頁強制深色」（Chrome、Edge 的 Auto Dark Mode）會把淺色模式自動反成深色，顏色跟 App 設計的不一樣（例如字變成淡綠色）。想用深色，請打開頭像選單「顯示」裡的「深色模式」；電腦本身也設成深色時，瀏覽器就不會再轉一次。</li>
         <li>使用說明（就是這一頁）和意見回饋也在頭像選單裡；版本號在頁面最下面。</li>
         <li>手機瀏覽器開啟網站後選「加入主畫面」，會使用自訂圖示，體驗跟 App 一樣。</li>
         <li>想快速瀏覽整個網站有哪些功能、各自放在哪裡，可以看 <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">網站地圖</a>。</li>

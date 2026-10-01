@@ -6737,7 +6737,480 @@ class V431Fixes(Group):
             window.__cloud=null; state.user=null; hideAppBanner();
             if(!(ok1&&ok2)) console.log('trsync: diag',ok1,ok2);
             return ok1 && ok2; }""")
-        c['version_is_v4_3_1'] = self.ev(page, "()=>APP_VERSION==='v4.3.1'")
+        # （版本號的檢查跟著最新的群組走，v4.3.2 起在 v432）
+
+
+# 各距離最佳用的賽事：名稱跟使用者截圖一樣不含年份；一場 226 公里的自行車賽比超級鐵人快，
+# 用來確認它不會搶走「226K 超級鐵人最佳」那張
+BEST_SEED_JS = r"""window.__mk=(n,sport,km,d,t,st)=>{ const r=emptyRace(n,sport,st||'completed',d); r.route.distanceKm=km; r.results.chipTimeSeconds=t==null?null:hmsToSec(t); return r; };
+window.__seedBest=async function(opts){
+  opts=opts||{};
+  const list=[
+    __mk('大阪馬拉松','road_running',42.195,'2024-02-25','3:28:41'),
+    __mk('東京馬拉松','road_running',42.195,'2023-03-05','3:35:10'),
+    __mk('萬金石馬拉松（半程）','road_running',21.0975,'2023-03-19','1:36:20'),
+    __mk('大稻埕 10K 夜跑','road_running',10,'2022-08-20','0:44:10'),
+    __mk('陽明山 5K 路跑','road_running',5,'2021-04-11','0:21:05'),
+    __mk('臺東巴歌浪鐵人三項','triathlon',113,'2023-04-15','5:58:12'),
+    __mk('澎湖超級鐵人三項','triathlon',226,'2025-10-05','12:41:09'),
+    __mk('2019 墾丁 226 單車挑戰','cycling',226,'2019-11-02','8:10:00'),
+  ];
+  if(opts.tri51) list.push(__mk('2022 臺南標準鐵人三項 51.5K','triathlon',51.5,'2022-05-08','2:31:45'));
+  state.races=list; state.selectedId=null; state.filterStatus='all'; state.searchQuery='';
+  document.getElementById('search-input').value='';
+  state.viewMode='table'; tableSort={key:'date',dir:'desc'}; await persist(); renderAll();
+};
+"""
+
+
+class V432Best(Group):
+    """v4.3.2：各距離最佳多一張「226K 超級鐵人最佳」、每張卡寫出那一場的年份；
+    筆電上 6、7 張排成一排，標籤只在空白處換行、換行時同一排的時間還是對齊。"""
+
+    ECHO = ('best:',)
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js, arg=None):
+        # 一項檢查拋出例外：記成這一項失敗、印出原因，後面照跑
+        try:
+            return pg.evaluate(js) if arg is None else pg.evaluate(js, arg)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def _ctx(self, browser, viewport, lang=None):
+        ctx = full_mode_context(browser, viewport=viewport)
+        if lang:
+            ctx.add_init_script(f"try{{localStorage.setItem('lang-pref-v1','{lang}');}}catch(e){{}}")
+        pg = ctx.new_page()
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=BEST_SEED_JS)
+        pg.add_script_tag(content=CONTRAST_JS)
+        pg.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        pg.evaluate("()=>__seedBest()")
+        pg.wait_for_timeout(300)
+        return ctx, pg
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        W = ("const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+             "const card=k=>document.querySelector('#calendar .tv-best-card[data-best=\"'+k+'\"]');"
+             "const line=k=>card(k)&&card(k).querySelector('.tv-best-race');"
+             "const byName=n=>state.races.find(r=>r.name===n);"
+             "const redraw=async()=>{ await persist(); renderCalendar(); await wait(120); };"
+             "const rows=()=>new Set([...document.querySelectorAll('#calendar .tv-best-card')].map(x=>Math.round(x.getBoundingClientRect().top))).size;"
+             "const cardW=()=>Math.round(document.querySelector('#calendar .tv-best-card').getBoundingClientRect().width);")
+        # 筆電寬度（表格區 1,056px）
+        lctx, lp = self._ctx(browser, {'width': 1280, 'height': 800})
+        # ================= 226K 超級鐵人 =================
+        c['best_226k_card_listed'] = self.ev(lp, """()=>{ """ + W + """
+            const keys=[...document.querySelectorAll('#calendar .tv-best-card')].map(x=>x.dataset.best).join();
+            const c226=card('tri226'), tri=byName('澎湖超級鐵人三項');
+            const ok=keys==='fm,hm,10k,5k,tri113,tri226' && !!c226 && c226.querySelector('.tv-best-label').textContent==='226K 超級鐵人最佳'
+              && c226.querySelector('b').textContent==='12:41:09' && c226.dataset.id===tri.id
+              && card('tri113').dataset.id===byName('臺東巴歌浪鐵人三項').id;
+            if(!ok) console.log('best: 226',keys,c226&&c226.textContent.replace(/\\s+/g,' '));
+            return ok; }""")
+        # 220–235 公里的鐵人三項才算：少 4 公里（游泳取消）、多幾公里（騎車段比較長）都算；
+        # 219.9、235.1、雙倍超鐵 452 公里不算；沒完賽的不算（就算時間比較快）
+        c['tri226_distance_window'] = self.ev(lp, """async()=>{ """ + W + """
+            const keep=state.races.slice(); const time=()=>card('tri226').querySelector('b').textContent;
+            const add=(n,km,t,st)=>{ const r=__mk(n,'triathlon',km,'2024-06-1'+state.races.length%10,t,st); state.races.push(r); return r; };
+            add('短一點的鐵人',219.9,'10:00:00'); add('雙倍超級鐵人',452,'11:00:00'); add('長一點的鐵人',235.1,'11:30:00'); add('沒完賽的超鐵',226,'9:00:00','dnf');
+            await redraw(); const out=time()==='12:41:09' && card('tri113').dataset.id===byName('臺東巴歌浪鐵人三項').id;
+            const a=add('游泳取消的超鐵',222.2,'12:00:00'); await redraw(); const lo=card('tri226').dataset.id===a.id && time()==='12:00:00';
+            const b=add('騎車段多 9 公里',235,'11:50:00'); await redraw(); const hi=card('tri226').dataset.id===b.id && time()==='11:50:00';
+            const e=add('剛好 220',220,'11:40:00'); await redraw(); const edge=card('tri226').dataset.id===e.id;
+            state.races=keep; await redraw();
+            if(!(out&&lo&&hi&&edge)) console.log('best: window',out,lo,hi,edge);
+            return out && lo && hi && edge && time()==='12:41:09'; }""")
+        c['best_226k_card_opens_race'] = self.ev(lp, """async()=>{ """ + W + """
+            const id=card('tri226').dataset.id; card('tri226').click(); await wait(500);
+            const ok=state.selectedId===id && byName('澎湖超級鐵人三項').id===id;
+            goBackFromDetail(); await wait(400);
+            return ok && state.selectedId===null && !!card('tri226'); }""")
+        # ================= 年份 =================
+        # 名稱前面是那一場的年份，年份是這一行的第一個東西（名稱太長被截掉時年份還在）
+        c['best_cards_show_race_year'] = self.ev(lp, """()=>{ """ + W + """
+            const keys=['fm','hm','10k','5k','tri113','tri226'];
+            const got=keys.map(k=>line(k).textContent);
+            const want=['2024 大阪馬拉松','2023 萬金石馬拉松（半程）','2022 大稻埕 10K 夜跑','2021 陽明山 5K 路跑','2023 臺東巴歌浪鐵人三項','2025 澎湖超級鐵人三項'];
+            const first=keys.every(k=>{ const l=line(k), y=l.firstChild; return !!y && y.nodeType===1 && y.classList.contains('tv-best-year') && y.textContent===l.textContent.slice(0,4); });
+            const ok=JSON.stringify(got)===JSON.stringify(want) && first;
+            if(!ok) console.log('best: year',got.join(' | '),first);
+            return ok; }""")
+        # 名稱本來就是這一年開頭：不再多寫一次；年份在名稱後面的照樣加在前面（後面可能被截掉）；
+        # 「20240 公尺」開頭剛好是那四個數字但不是年份
+        c['year_not_repeated_when_name_starts_with_it'] = self.ev(lp, """async()=>{ """ + W + """
+            const r=byName('大阪馬拉松'), keep=r.name, res=[];
+            for(const n of ['2024 大阪馬拉松','2024大阪馬拉松','大阪馬拉松 2024','20240 公尺大阪接力','  2024 大阪馬拉松']){
+              r.name=n; await redraw(); const l=line('fm'), y=l.firstChild;
+              res.push([l.textContent, !!y && y.nodeType===1 && y.classList.contains('tv-best-year') && y.textContent==='2024']); }
+            r.name=keep; await redraw();
+            const want=[['2024 大阪馬拉松',true],['2024大阪馬拉松',true],['2024 大阪馬拉松 2024',true],['2024 20240 公尺大阪接力',true],['2024 大阪馬拉松',true]];
+            const ok=JSON.stringify(res)===JSON.stringify(want);
+            if(!ok) console.log('best: dup',JSON.stringify(res));
+            return ok; }""")
+        c['year_stays_visible_when_name_cut'] = self.ev(lp, """async()=>{ """ + W + """
+            const r=byName('澎湖超級鐵人三項'), keep=r.name;
+            r.name='澎湖國際超級鐵人三項錦標賽暨全國鐵人三項系列賽總決賽'; await redraw();
+            const c=card('tri226'), l=line('tri226'), y=l.querySelector('.tv-best-year');
+            const cut=l.scrollWidth>l.clientWidth+1, lb=l.getBoundingClientRect(), yb=y?y.getBoundingClientRect():null;
+            const seen=!!yb && yb.width>0 && yb.left>=lb.left-0.5 && yb.right<=lb.right+0.5;
+            const title=c.getAttribute('title')==='2025-10-05 '+r.name;          // 滑鼠停著看得到完整的日期和賽名
+            r.name=keep; await redraw();
+            if(!(cut&&seen&&title)) console.log('best: cut',cut,seen,title,c.getAttribute('title'));
+            return cut && seen && title; }""")
+        c['unnamed_or_undated_race'] = self.ev(lp, """async()=>{ """ + W + """
+            const r=byName('大阪馬拉松'), kn=r.name, kd=r.schedule.raceDate;
+            r.name=''; await redraw(); const unnamed=line('fm').textContent;
+            r.name=kn; r.schedule.raceDate=''; await redraw();
+            const c=card('fm'), same=!!c && c.dataset.id===r.id;
+            const nodate=same?line('fm').textContent:'', noTag=same && !c.querySelector('.tv-best-year'), title=same?c.getAttribute('title'):'';
+            r.schedule.raceDate=kd; await redraw();
+            const ok=unnamed==='2024 (未命名賽事)' && nodate==='大阪馬拉松' && noTag && title==='大阪馬拉松';
+            if(!ok) console.log('best: blank',unnamed,nodate,noTag,title);
+            return ok; }""")
+        # 年份比賽名深一階、淺色深色都看得清楚（4.5:1 以上）
+        c['best_card_text_readable_light_and_dark'] = self.ev(lp, """async()=>{ """ + W + """
+            const st=document.createElement('style'); st.textContent='*{transition:none!important}'; document.head.appendChild(st);
+            const res={};
+            for(const th of ['light','dark']){ applyTheme(th); await wait(150);
+              const cs=[...document.querySelectorAll('#calendar .tv-best-card')];
+              const min=sel=>Math.min(...cs.map(x=>__contrast(x.querySelector(sel))));
+              res[th]={label:min('.tv-best-label'),time:min('b'),year:min('.tv-best-year'),name:min('.tv-best-race')}; }
+            applyTheme('light'); await wait(150); st.remove();
+            const ok=['light','dark'].every(th=>{ const r=res[th]; return r.label>=4.5 && r.time>=4.5 && r.year>=4.5 && r.name>=4.5 && r.year>r.name+0.5; });
+            console.log('best: contrast',JSON.stringify(res,(k,v)=>typeof v==='number'?+v.toFixed(2):v));
+            return ok; }""")
+        # ================= 筆電上一排放得下就排一排 =================
+        # 6 張、7 張都是一排（原本一排 5 張，第 6 張會自己掉到第二排）；張數少時卡片維持原本的寬度，不會被撐開
+        c['laptop_six_or_seven_cards_one_row'] = self.ev(lp, """async()=>{ """ + W + """
+            const six=[rows(),cardW()];
+            const t51=__mk('臺南標準鐵人三項','triathlon',51.5,'2022-05-08','2:31:45'); state.races.push(t51); await redraw();
+            const seven=[rows(),cardW(),document.querySelectorAll('#calendar .tv-best-card').length];
+            const keep=state.races.slice();
+            state.races=keep.filter(r=>r!==t51&&r.name!=='澎湖超級鐵人三項'); await redraw(); const five=[rows(),cardW()];
+            state.races=keep.filter(r=>r.sportType!=='triathlon'); await redraw(); const four=[rows(),cardW()];
+            state.races=keep.filter(r=>r!==t51); await redraw();
+            const ok=six[0]===1 && seven[0]===1 && seven[2]===7 && five[0]===1 && Math.abs(five[1]-203)<=2 && Math.abs(four[1]-203)<=2 && six[1]>=160;
+            if(!ok) console.log('best: rows',JSON.stringify({six,seven,five,four}));
+            return ok; }""")
+        lctx.close()
+        # ================= 各寬度 × 三種語言 × 三種字級 × 6／7 張 =================
+        # 標籤、時間不超出卡片；年份看得到；標籤只在空白處換行（不會把最後一個「佳」「速」單獨擠到下一行）；
+        # 同一排的時間對齊；沒有橫向捲動
+        FIT = """()=>{ const bad=[]; const cards=[...document.querySelectorAll('#calendar .tv-best-card')]; const byRow={};
+            cards.forEach(c=>{ const cb=c.getBoundingClientRect(), cs=getComputedStyle(c);
+              const inL=cb.left+parseFloat(cs.paddingLeft)+parseFloat(cs.borderLeftWidth)-0.5, inR=cb.right-parseFloat(cs.paddingRight)-parseFloat(cs.borderRightWidth)+0.5;
+              const lb=c.querySelector('.tv-best-label'), tm=c.querySelector('b'), ln=c.querySelector('.tv-best-race'), y=c.querySelector('.tv-best-year');
+              [lb,tm].forEach(e=>{ const r=document.createRange(); r.selectNodeContents(e); const b=r.getBoundingClientRect(); if(b.left<inL||b.right>inR) bad.push(c.dataset.best+' out:'+e.textContent); });
+              if(!y) bad.push(c.dataset.best+' noyear'); else if(y.getBoundingClientRect().right>ln.getBoundingClientRect().right+0.5) bad.push(c.dataset.best+' yearcut');
+              const tn=lb.firstChild; if(tn&&tn.nodeType===3){ const s=tn.textContent; let top=null;
+                for(let i=0;i<s.length;i++){ const r=document.createRange(); r.setStart(tn,i); r.setEnd(tn,i+1); const rc=r.getClientRects()[0]; if(!rc||rc.width===0) continue;
+                  if(top!==null&&rc.top>top+2&&s[i-1]!==' ') bad.push(c.dataset.best+' break:'+s.slice(0,i)+'|'+s.slice(i)); top=rc.top; } }
+              const k=Math.round(cb.top); (byRow[k]=byRow[k]||[]).push(tm.getBoundingClientRect().top); });
+            Object.values(byRow).forEach(ts=>{ if(Math.max(...ts)-Math.min(...ts)>1) bad.push('times '+ts.map(Math.round).join('/')); });
+            if(document.documentElement.scrollWidth>innerWidth) bad.push('hscroll');
+            return bad; }"""
+        bad = []
+        labels = {}
+        for lang in ('zh', 'ja', 'en'):
+            fctx, fp = self._ctx(browser, {'width': 1280, 'height': 900}, lang=lang)
+            # 英文、日文的標籤（含 226K）、年份一樣在名稱前面
+            labels[lang] = self.ev(fp, """()=>[...document.querySelectorAll('#calendar .tv-best-label')].map(x=>x.textContent).join('|')
+                +'#'+document.querySelector('#calendar .tv-best-card[data-best="fm"] .tv-best-race').textContent""")
+            for w in (1280, 1100, 1000, 768, 641):
+                fp.set_viewport_size({'width': w, 'height': 900})
+                for tri51 in (False, True):
+                    self.ev(fp, "(o)=>__seedBest(o)", {'tri51': tri51})
+                    fp.wait_for_timeout(150)
+                    for fs in ('small', 'medium', 'large'):
+                        got = self.ev(fp, "async(fs)=>{ applyFontScale(fs); renderCalendar(); await new Promise(s=>setTimeout(s,60)); return (" + FIT + ")(); }", fs)
+                        if got is False:
+                            got = ['eval failed']
+                        bad += [f'{lang} {w} {7 if tri51 else 6} {fs} {x}' for x in got]
+            self.ev(fp, "()=>applyFontScale('medium')")
+            fctx.close()
+        if bad:
+            print('    fit:', ' | '.join(bad[:10]))
+        c['best_strip_fits_every_width_language_font'] = not bad
+        c['english_japanese_labels_include_226'] = (
+            labels.get('en') == 'Best marathon|Best half|Best 10K|Best 5K|Best 113K triathlon|Best 226K triathlon#2024 大阪馬拉松'
+            and labels.get('ja') == 'フル最速|ハーフ最速|10K 最速|5K 最速|113K トライアスロン最速|226K トライアスロン最速#2024 大阪馬拉松')
+        if not c['english_japanese_labels_include_226']:
+            print('    labels:', labels)
+        # ================= 使用說明（三種語言都寫到 226K 和年份） =================
+        c['help_mentions_226k_and_year'] = self.ev(page, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const out={};
+            for(const [lang,word] of [['zh','那一場的年份'],['ja','大会名の前にその年'],['en','year in front of each race name']]){ setLang(lang); await wait(150); openHelpModal(); await wait(200);
+              const tx=document.querySelector('#help-modal .help-body').textContent; out[lang]=tx.includes('226K')&&tx.includes(word);
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(200); }
+            setLang('zh'); await wait(150);
+            if(!(out.zh&&out.ja&&out.en)) console.log('best: help',JSON.stringify(out));
+            return out.zh && out.ja && out.en; }""")
+        # （版本號的檢查跟著最新的群組走，v4.3.3 起在 v433）
+
+
+# 輸入框的框看不看得出來：border、box-shadow 畫的框（0 模糊）、outline、填色，取對「背後底色」最大的那個。
+# color-mix() 算出來的顏色是 color(srgb 0.98 0.98 0.97 / 0.35)（0–1 的小數），要乘 255
+FIELD_FRAME_JS = r"""
+window.__rgba=c=>{ const m=(c.match(/[\d.]+/g)||[]).map(Number); const k=/^color\(srgb/.test(c)?255:1; return [(m[0]||0)*k,(m[1]||0)*k,(m[2]||0)*k,m.length>3?m[3]:1]; };
+window.__over=(t,u)=>{ const a=t[3]; return [t[0]*a+u[0]*(1-a),t[1]*a+u[1]*(1-a),t[2]*a+u[2]*(1-a),1]; };
+window.__lum=c=>{ const v=c.slice(0,3).map(x=>{ x/=255; return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4); }); return 0.2126*v[0]+0.7152*v[1]+0.0722*v[2]; };
+window.__cr=(a,b)=>{ const x=__lum(a),y=__lum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); };
+window.__behind=el=>{ const layers=[]; let e=el.parentElement; while(e){ const b=__rgba(getComputedStyle(e).backgroundColor); if(b[3]>0) layers.push(b); if(b[3]>=1) break; e=e.parentElement; }
+  let bg=[255,255,255,1]; for(let i=layers.length-1;i>=0;i--) bg=__over(layers[i],bg); return bg; };
+window.__frame=el=>{ const cs=getComputedStyle(el), bg=__behind(el); let best=__cr(__over(__rgba(cs.backgroundColor),bg),bg);
+  ['Top','Right','Bottom','Left'].forEach(s=>{ if(parseFloat(cs['border'+s+'Width'])>0) best=Math.max(best,__cr(__over(__rgba(cs['border'+s+'Color']),bg),bg)); });
+  const parts=[]; let d=0,cur=''; for(const ch of cs.boxShadow){ if(ch==='(') d++; if(ch===')') d--; if(ch===','&&d===0){ parts.push(cur); cur=''; } else cur+=ch; } parts.push(cur);
+  parts.forEach(sh=>{ if(!sh||sh.trim()==='none') return; const col=(sh.match(/(rgba?|color)\([^)]*\)/)||[''])[0]; const n=(sh.replace(col,'').match(/-?[\d.]+px/g)||[]).map(parseFloat).concat([0,0,0,0]);
+    if(col&&n[2]===0&&(n[3]>=1||Math.abs(n[0])>=1||Math.abs(n[1])>=1)) best=Math.max(best,__cr(__over(__rgba(col),bg),bg)); });
+  if(cs.outlineStyle!=='none'&&parseFloat(cs.outlineWidth)>0) best=Math.max(best,__cr(__over(__rgba(cs.outlineColor),bg),bg));
+  return best; };
+window.__visible=el=>{ const r=el.getBoundingClientRect(), cs=getComputedStyle(el); return r.width>0&&r.height>0&&cs.visibility!=='hidden'&&cs.display!=='none'&&!el.closest('[hidden]'); };
+// 看得到的「可以打字的格子」；「新增一件」的框畫在外層 .pack-add
+window.__fieldsIn=root=>[...root.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),select,textarea')]
+  .filter(__visible).map(el=>el.classList.contains('pack-add-input')?el.closest('.pack-add'):el);
+window.__placeholderCr=el=>{ const cs=getComputedStyle(el), bg=__behind(el), fill=__over(__rgba(cs.backgroundColor),bg); return __cr(__over(__rgba(getComputedStyle(el,'::placeholder').color),fill),fill); };
+// 一場還沒比的（裝備兩件、各種清單各一列）＋一場已完賽的
+window.__seedFields=async()=>{
+  const r=emptyRace('2026 Xtrail 越野跑挑戰賽 - 福壽山站','trail_running','registered',addDaysStr(todayISO(),9));
+  r.location.city='台中市';
+  const it=(n,p,loc)=>Object.assign(LIST_META.equipmentChecklist.factory(),{itemName:n,isPacked:p,location:loc||''});
+  r.equipmentChecklist=[it('222',false,'finish_bag'),it('頭燈',true)];
+  ['checkpoints','mediaLinks','accommodations','transportation','companions'].forEach(k=>{ if(LIST_META[k]) r[k]=[LIST_META[k].factory()]; });
+  const done=emptyRace('2025 臺北馬拉松','road_running','completed','2025-12-21'); done.results.chipTimeSeconds=hmsToSec('3:20:00');
+  state.races=[r,done]; await persist(); window.__rid=r.id; window.__did=done.id; selectRace(r.id); };
+"""
+
+
+class V433Fields(Group):
+    """v4.3.3：抽屜、彈窗裡的輸入框看得出框（淺色、深色、瀏覽器強制深色）；切換鈕、篩選膠囊、
+    打包的勾選方塊、「新增一件」也是；提示字看得清楚；原生的下拉、日期、核取方塊跟著深色模式。"""
+
+    ECHO = ('fields:',)
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js, arg=None):
+        # 一項檢查拋出例外：記成這一項失敗、印出原因，後面照跑
+        try:
+            return pg.evaluate(js) if arg is None else pg.evaluate(js, arg)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def _ctx(self, browser, theme, os_scheme='light', force_dark=False, dsf=1):
+        ctx = full_mode_context(browser, viewport={'width': 1280, 'height': 860}, color_scheme=os_scheme, device_scale_factor=dsf)
+        ctx.add_init_script(f"try{{localStorage.setItem('theme-pref-v1','{theme}');}}catch(e){{}}")
+        pg = ctx.new_page()
+        if force_dark:
+            # 跟使用者的瀏覽器一樣打開「網頁強制深色」（Chrome／Edge 的 Auto Dark Mode）
+            cdp = ctx.new_cdp_session(pg)
+            cdp.send('Emulation.setAutoDarkModeOverride', {'enabled': True})
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=FIELD_FRAME_JS)
+        # 量顏色前先關掉過場：框的顏色有 0.15 秒的過場，量到的是半途的顏色
+        pg.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important} *{transition:none!important}')
+        pg.evaluate("()=>__seedFields()")
+        pg.wait_for_timeout(500)
+        return ctx, pg
+
+    @staticmethod
+    def _lum(bgr):
+        v = []
+        for x in (bgr[2], bgr[1], bgr[0]):
+            x = x / 255
+            v.append(x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4)
+        return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+    def _edge(self, pg, sel, side='left'):
+        """截圖後在元素左（或右）邊的框線位置取色：框外 8px 的底色，跟框附近最突出的那個像素比對比。
+        強制深色是畫的時候才轉的，算出來的樣式看不到，只能量畫面"""
+        box = pg.evaluate("(s)=>{ const e=document.querySelector(s); if(!e) return null; const r=e.getBoundingClientRect(); return [r.left,r.top,r.width,r.height]; }", sel)
+        if not box:
+            return None
+        img = cv2.imdecode(np.frombuffer(pg.screenshot(), np.uint8), cv2.IMREAD_COLOR)
+        k = img.shape[1] / 1280
+        x, y, w, h = [v * k for v in box]
+        cy = int(y + h / 2)
+        if side == 'left':
+            out_x, xs = int(x) - 8, range(int(x) - 2, int(x) + int(5 * k))
+        else:
+            out_x, xs = int(x + w) + 8, range(int(x + w) - int(5 * k), int(x + w) + 2)
+        outside = self._lum(img[cy, out_x])
+        best = max((max(self._lum(img[cy, xx]), outside) + .05) / (min(self._lum(img[cy, xx]), outside) + .05) for xx in xs)
+        return round(float(best), 2)
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        # ================= 抽屜裡的每一格：淺色、深色 =================
+        DRAWERS = r"""async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const secs=[['equipment','pack'],['equipment','list'],['equipment','kanban'],['basicInfo'],['schedule'],['weather'],['checkpoints'],['mediaLinks'],
+              ['nutritionPlan'],['trainingPlan'],['goals'],['route'],['logistics'],['results','done'],['review','done'],['recordResult','done']];
+            const bad=[], phBad=[]; let n=0, nPh=0, nCtl=0, minFill=99;
+            for(const [key,arg] of secs){
+              closeDrawer(); await wait(60);
+              const id=arg==='done'?__did:__rid; if(state.selectedId!==id){ selectRace(id); await wait(200); }
+              if(key==='equipment') equipmentViewMode=arg;
+              openDrawer(key); await wait(220);
+              const root=document.getElementById('drawer-content');
+              __fieldsIn(root).forEach(el=>{ n++; const f=__frame(el); if(f<3) bad.push(key+(arg?':'+arg:'')+' '+(el.dataset.path||el.className||el.tagName)+' '+f.toFixed(2));
+                const bg=__behind(el), fill=__cr(__over(__rgba(getComputedStyle(el).backgroundColor),bg),bg); minFill=Math.min(minFill,fill); });
+              // 瀏覽器自己畫的核取方塊外面不能再多一圈框（.field input 的框不套到它身上）
+              root.querySelectorAll('input[type=checkbox]').forEach(el=>{ if(__visible(el)&&getComputedStyle(el).boxShadow!=='none') bad.push(key+' checkbox ring'); });
+              // 切換鈕（外框）、沒選的篩選膠囊、還沒打包的勾選方塊
+              root.querySelectorAll('.equip-view-seg,.pack-filter:not([aria-pressed="true"]),.pack-row:not(.is-packed) .pack-box').forEach(el=>{ if(!__visible(el)) return; nCtl++; const f=__frame(el); if(f<3) bad.push(key+(arg?':'+arg:'')+' '+el.className+' '+f.toFixed(2)); });
+              root.querySelectorAll('input[placeholder],textarea[placeholder]').forEach(el=>{ if(!el.placeholder||!__visible(el)) return; nPh++; const r=__placeholderCr(el); if(r<4.5) phBad.push(key+' '+(el.dataset.path||el.className)+' '+r.toFixed(2)); });
+            }
+            closeDrawer();
+            return {n,nCtl,bad,nPh,phBad,minFill}; }"""
+        # 抽屜以外：首頁搜尋框、新增賽事、個人資料、鞋款、補給品字典、配速、貼上、恢復
+        MODALS = r"""async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const hide=()=>document.querySelectorAll('.modal-overlay').forEach(m=>m.hidden=true);
+            const steps=[['home',()=>{ closeDrawer(); state.selectedId=null; renderAll(); }],['create',()=>startCreate()],
+              ['profile',()=>{ hide(); state.creating=false; renderAll(); openProfileModal(); }],['shoes',()=>{ hide(); openShoeModal(); }],
+              ['nutrition',()=>{ hide(); openNutritionDictModal(); }],['pacing',()=>{ hide(); selectRace(__rid); openPacingModal(); }],
+              ['paste',()=>{ hide(); openPasteModal(); }],['recovery',()=>{ hide(); openRecoveryModal(); }]];
+            const bad=[], phBad=[]; let n=0;
+            for(const [name,fn] of steps){ fn(); await wait(350);
+              __fieldsIn(document).forEach(el=>{ n++; const f=__frame(el); if(f<3) bad.push(name+' '+(el.id||el.className||el.tagName)+' '+f.toFixed(2)); });
+              document.querySelectorAll('input[placeholder],textarea[placeholder]').forEach(el=>{ if(!el.placeholder||!__visible(el)) return; const r=__placeholderCr(el); if(r<4.5) phBad.push(name+' '+(el.id||el.className)+' '+r.toFixed(2)); }); }
+            hide(); state.creating=false; renderAll();
+            return {n,bad,phBad}; }"""
+        res = {}
+        for theme in ('light', 'dark'):
+            ctx, pg = self._ctx(browser, theme)
+            d = self.ev(pg, DRAWERS) or {'n': 0, 'nCtl': 0, 'bad': ['eval failed'], 'nPh': 0, 'phBad': ['eval failed'], 'minFill': 0}
+            m = self.ev(pg, MODALS) or {'n': 0, 'bad': ['eval failed'], 'phBad': ['eval failed']}
+            res[theme] = (d, m)
+            print(f"    {theme}: drawer fields {d['n']}, controls {d['nCtl']}, placeholders {d['nPh']}; other inputs {m['n']}")
+            if d['bad'] or d['phBad'] or m['bad'] or m['phBad']:
+                print(f'    {theme}:', (d['bad'] + d['phBad'] + m['bad'] + m['phBad'])[:8])
+            # 深色模式：瀏覽器自己畫的核取方塊、日期選擇器、下拉清單跟著換深色（原本是白色的方塊）
+            if theme == 'dark':
+                c['native_controls_follow_dark_mode'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+                    selectRace(__rid); await wait(200); openDrawer('schedule'); await wait(250);
+                    const cb=document.querySelector('#drawer-content input[type=checkbox]'), date=document.querySelector('#drawer-content input[type=date]');
+                    const ok=getComputedStyle(document.documentElement).colorScheme==='dark' && getComputedStyle(cb).colorScheme==='dark' && getComputedStyle(date).colorScheme==='dark';
+                    closeDrawer(); return ok; }""")
+                pg.evaluate("async()=>{ openDrawer('schedule'); await new Promise(s=>setTimeout(s,250)); document.querySelector('#drawer-content input[type=checkbox]').scrollIntoView({block:'center'}); }")
+                pg.wait_for_timeout(200)
+                box = pg.evaluate("()=>{ const r=document.querySelector('#drawer-content input[type=checkbox]').getBoundingClientRect(); return [r.left+r.width/2, r.top+r.height/2]; }")
+                img = cv2.imdecode(np.frombuffer(pg.screenshot(), np.uint8), cv2.IMREAD_COLOR)
+                cb_light = self._lum(img[int(box[1]), int(box[0])])
+                # 方塊中間是深色（原本 color-scheme 沒宣告時是白色 1.0）
+                c['native_controls_follow_dark_mode'] = bool(c['native_controls_follow_dark_mode']) and cb_light < 0.2
+                if cb_light >= 0.2:
+                    print('    checkbox center luminance', round(cb_light, 3))
+                pg.evaluate("()=>closeDrawer()")
+            ctx.close()
+        # 數量是「真的有量到」的下限：16 個抽屜畫面 129 格、抽屜以外 27 格
+        for theme in ('light', 'dark'):
+            d, m = res[theme]
+            c[f'drawer_fields_framed_{theme}'] = d['n'] >= 120 and d['nCtl'] >= 5 and not d['bad']
+            c[f'other_inputs_framed_{theme}'] = m['n'] >= 25 and not m['bad']
+        # 深色模式的格子比抽屜深一階：不是只靠框，整格看得出來是「嵌進去」的（淺色是白格子，靠框）
+        c['dark_fields_a_step_darker'] = res['dark'][0]['minFill'] >= 1.1
+        if res['dark'][0]['minFill'] < 1.1:
+            print('    dark field fill', res['dark'][0]['minFill'])
+        c['placeholders_readable'] = all(res[t][0]['nPh'] >= 3 and not res[t][0]['phBad'] and not res[t][1]['phBad'] for t in ('light', 'dark'))
+        # ================= 使用者的情況：淺色模式＋瀏覽器「網頁強制深色」 =================
+        # 量畫面上的像素：框（輸入框、下拉、勾選方塊、「新增一件」、膠囊、切換鈕）對旁邊底色至少 3:1。
+        # 原本：勾選方塊 1.94、「新增一件」1.0、切換鈕外框 1.28
+        fctx, fp = self._ctx(browser, 'light', force_dark=True, dsf=2)
+        got = {}
+        fp.evaluate("async()=>{ equipmentViewMode='pack'; openDrawer('equipment'); await new Promise(s=>setTimeout(s,400)); }")
+        fp.mouse.move(5, 5)
+        got['pack-box'] = self._edge(fp, '#drawer-content .pack-row:not(.is-packed) .pack-box')
+        got['pack-add'] = self._edge(fp, '#drawer-content .pack-add')
+        got['chip'] = self._edge(fp, '#drawer-content .pack-filter:not([aria-pressed="true"])')
+        got['seg'] = self._edge(fp, '#drawer-content .equip-view-seg', 'right')
+        fp.evaluate("async()=>{ closeDrawer(); openDrawer('basicInfo'); await new Promise(s=>setTimeout(s,400)); }")
+        got['text'] = self._edge(fp, '#drawer-content .field input[type=text]')
+        got['select'] = self._edge(fp, '#drawer-content .field select')
+        fp.evaluate("async()=>{ closeDrawer(); equipmentViewMode='list'; openDrawer('equipment'); await new Promise(s=>setTimeout(s,400)); }")
+        got['template'] = self._edge(fp, '#drawer-content .template-bar select')
+        fctx.close()
+        c['forced_dark_frames_visible'] = all(v is not None and v >= 3 for v in got.values())
+        print('    forced dark:', got)
+        # App 自己的深色＋系統也是深色：瀏覽器不會再轉一次（選中的「打包」維持淺色底；原本會被反成 #282825）
+        dctx, dp = self._ctx(browser, 'dark', os_scheme='dark', force_dark=True, dsf=1)
+        dp.evaluate("async()=>{ equipmentViewMode='pack'; openDrawer('equipment'); await new Promise(s=>setTimeout(s,400)); }")
+        dp.mouse.move(5, 5)
+        sb = dp.evaluate("()=>{ const r=document.querySelector('#drawer-content .equip-view-seg button[aria-pressed=\"true\"]').getBoundingClientRect(); return [r.left+4, r.top+4]; }")
+        img = cv2.imdecode(np.frombuffer(dp.screenshot(), np.uint8), cv2.IMREAD_COLOR)
+        sel_lum = self._lum(img[int(sb[1]), int(sb[0])])
+        c['app_dark_left_alone_by_forced_dark'] = sel_lum > 0.6
+        if sel_lum <= 0.6:
+            print('    selected segment luminance', round(sel_lum, 3))
+        dctx.close()
+        # ================= 對焦、錯誤、高對比模式 =================
+        lctx, lp = self._ctx(browser, 'light')
+        c['focus_ring_turns_green'] = self.ev(lp, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const trail=getComputedStyle(document.documentElement).getPropertyValue('--trail').trim();
+            const probe=document.createElement('i'); probe.style.color=trail; document.body.appendChild(probe); const g=getComputedStyle(probe).color; probe.remove();
+            const bd=getComputedStyle(document.documentElement).getPropertyValue('--field-border').trim();
+            const p2=document.createElement('i'); p2.style.color=bd; document.body.appendChild(p2); const b=getComputedStyle(p2).color; p2.remove();
+            openDrawer('basicInfo'); await wait(250);
+            const inp=document.querySelector('#drawer-content .field input[type=text]');
+            const rest=getComputedStyle(inp).boxShadow.includes(b);
+            inp.focus(); await wait(220); const foc=getComputedStyle(inp).boxShadow; const focOk=foc.includes(g)&&foc.split('px').length>6;
+            inp.blur(); await wait(220); const back=getComputedStyle(inp).boxShadow.includes(b);
+            closeDrawer(); equipmentViewMode='pack'; openDrawer('equipment'); await wait(250);
+            const add=document.querySelector('#drawer-content .pack-add'); const addRest=getComputedStyle(add).boxShadow.includes(b);
+            add.querySelector('input').focus(); await wait(220); const addFoc=getComputedStyle(add).boxShadow.includes(g);
+            add.querySelector('input').blur(); closeDrawer();
+            if(!(rest&&focOk&&back&&addRest&&addFoc)) console.log('fields: focus',rest,focOk,back,addRest,addFoc,foc);
+            return rest && focOk && back && addRest && addFoc; }""")
+        # 看不懂的時間格式：框變紅（原本用 border-color，框改成 box-shadow 之後要跟著改）
+        c['invalid_duration_ring_is_red'] = self.ev(lp, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const p=document.createElement('i'); p.style.color=getComputedStyle(document.documentElement).getPropertyValue('--flag').trim(); document.body.appendChild(p); const flag=getComputedStyle(p).color; p.remove();
+            selectRace(__did); await wait(250); openDrawer('results'); await wait(250);
+            const inp=document.querySelector('#drawer-content input[data-kind="duration"]'); if(!inp) return false;
+            inp.focus(); inp.value='abc'; inp.dispatchEvent(new Event('input',{bubbles:true})); await wait(150);
+            const bad=inp.getAttribute('aria-invalid')==='true' && getComputedStyle(inp).boxShadow.includes(flag);
+            inp.value=''; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.blur(); await wait(100); closeDrawer();
+            return bad; }""")
+        # Windows 高對比模式會拿掉 box-shadow：輸入框靠透明的 border 被畫成系統顏色、勾選方塊靠 outline
+        lp.emulate_media(forced_colors='active')
+        c['high_contrast_mode_keeps_frames'] = self.ev(lp, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            selectRace(__rid); await wait(250); openDrawer('basicInfo'); await wait(250);
+            const inp=document.querySelector('#drawer-content .field input[type=text]'), cs=getComputedStyle(inp);
+            const a=__rgba(cs.borderTopColor)[3]===1 && parseFloat(cs.borderTopWidth)>=1 && __cr(__rgba(cs.borderTopColor),__behind(inp))>=3;
+            closeDrawer(); equipmentViewMode='pack'; openDrawer('equipment'); await wait(250);
+            const box=document.querySelector('#drawer-content .pack-row:not(.is-packed) .pack-box'), bs=getComputedStyle(box);
+            // 方塊的框可以是 outline 或 border，看得到就好
+            const b=(bs.outlineStyle!=='none' && parseFloat(bs.outlineWidth)>0 && __rgba(bs.outlineColor)[3]===1 && __cr(__rgba(bs.outlineColor),__behind(box))>=3)
+              || (parseFloat(bs.borderTopWidth)>0 && __rgba(bs.borderTopColor)[3]===1 && __cr(__rgba(bs.borderTopColor),__behind(box))>=3);
+            const add=document.querySelector('#drawer-content .pack-add'), as=getComputedStyle(add);
+            const d=__rgba(as.borderTopColor)[3]===1 && __cr(__rgba(as.borderTopColor),__behind(add))>=3;
+            closeDrawer();
+            if(!(a&&b&&d)) console.log('fields: hc',a,b,d,cs.borderTopColor,bs.outlineColor,as.borderTopColor);
+            return a && b && d; }""")
+        lp.emulate_media(forced_colors='none')
+        lctx.close()
+        # ================= 使用說明（三種語言：瀏覽器的強制深色、改用 App 的深色模式） =================
+        c['help_explains_forced_dark'] = self.ev(page, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const out={};
+            for(const [lang,word] of [['zh','網頁強制深色'],['ja','強制ダークモード'],['en','force dark mode for web contents']]){ setLang(lang); await wait(150); openHelpModal(); await wait(200);
+              const tx=document.querySelector('#help-modal .help-body').textContent; out[lang]=tx.includes('Auto Dark Mode')&&tx.includes(word);
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(200); }
+            setLang('zh'); await wait(150);
+            if(!(out.zh&&out.ja&&out.en)) console.log('fields: help',JSON.stringify(out));
+            return out.zh && out.ja && out.en; }""")
+        c['version_is_v4_3_3'] = self.ev(page, "()=>APP_VERSION==='v4.3.3'")
 
 
 GROUPS = {
@@ -6769,6 +7242,8 @@ GROUPS = {
     'v42':        lambda: V42Flows('v42'),
     'v43':        lambda: V43Flows('v43'),
     'v431':       lambda: V431Fixes('v431'),
+    'v432':       lambda: V432Best('v432'),
+    'v433':       lambda: V433Fields('v433'),
 }
 
 
