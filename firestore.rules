@@ -1,11 +1,35 @@
 rules_version = '2';
+// 賽事紀錄的 Firestore 安全性規則（v4.3.1 起列出 App 用到的每一個路徑）。
+// 改完要整份貼到 Firebase Console → Firestore Database → 規則，按「發布」才會生效；
+// 只改 repo 裡的這個檔不會影響線上。App 新增任何雲端路徑時，這裡要跟著加一條——
+// 沒有列在這裡的路徑一律被拒絕（v3.76.0 的訓練紀錄就是漏了這條，讀寫全被擋、
+// 換一台電腦登入訓練全不見）。test_suite.py 的 rules_cover_every_cloud_path 會比對。
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 自己的資料：只有登入的本人能讀寫
     match /users/{uid}/races/{raceId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    // 訓練紀錄：一個月一份文件（users/{uid}/trainings/2026-09）
+    match /users/{uid}/trainings/{month} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // 鞋款、補給品資料庫、個人資料、裝備範本、徽章解鎖（整包在 meta/globalLists）
+    match /users/{uid}/meta/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // 推播通知的裝置代碼
     match /users/{uid}/fcmTokens/{tokenId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // 公開連結（?s=<id>）：任何人都能讀（看的人不需要帳號）；只有登入、而且文件上的
+    // owner 是自己才能建立、更新、撤銷（刪除）。更新時 owner 不能被改成別人
+    match /public/{id} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.owner == request.auth.uid;
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid
+                    && request.resource.data.owner == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
     // 功能點擊次數統計：單一共用文件，記錄「哪個功能被點了幾次」這種
     // 完全不含個資的聚合數字。寫入刻意開放給所有訪客（含未登入），這樣

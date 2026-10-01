@@ -1210,8 +1210,18 @@ FAKE_CLOUD_JS = r'''window.__makeFakeCloud=function(initialRaces,initialTraining
     async replaceAll(){ log.push(['replaceAll']); return {batches:1,oversized:[]}; },
     async fetchGlobalLists(){ return null; },
     async syncGlobalLists(){ log.push(['syncGlobalLists']); },
-    async fetchTrainings(){ log.push(['fetchTrainings']); return store.trainings.map(x=>JSON.parse(JSON.stringify(x))); },
-    async upsertTrainingMonths(uid,byMonth){ log.push(['upsertTrainingMonths',Object.keys(byMonth).sort()]); },
+    // 訓練紀錄照雲端的樣子存：一個月一份。upsertTrainingMonths 跟正式版一樣在「交易」裡
+    // 先讀雲端那個月、用 merge 合併再寫回，並回傳寫回的內容。denyTrainings 模擬安全性規則沒開放
+    denyTrainings:false,
+    async fetchTrainings(){ log.push(['fetchTrainings']); if(fc.denyTrainings) throw Object.assign(new Error('Missing or insufficient permissions.'),{code:'permission-denied'});
+      return store.trainings.map(x=>JSON.parse(JSON.stringify(x))); },
+    async upsertTrainingMonths(uid,byMonth,merge){ log.push(['upsertTrainingMonths',Object.keys(byMonth).sort()]);
+      if(fc.denyTrainings) throw Object.assign(new Error('Missing or insufficient permissions.'),{code:'permission-denied'});
+      const mon=x=>(x.date||'').slice(0,7)||'unknown', clone=x=>JSON.parse(JSON.stringify(x)), out={};
+      Object.keys(byMonth).forEach(m=>{ const cloudItems=store.trainings.filter(x=>mon(x)===m).map(clone);
+        const items=(merge?merge(cloudItems,byMonth[m]):byMonth[m]).map(clone);
+        store.trainings=store.trainings.filter(x=>mon(x)!==m).concat(items); out[m]=items.map(clone); });
+      return out; },
     async replaceTrainings(){ log.push(['replaceTrainings']); },
     onAuthChange(){}, signIn(){}, signOut(){},
   };
@@ -6426,7 +6436,7 @@ class V43Flows(Group):
             state.viewMode='grid'; renderAll(); await wait(150); const grid=!document.querySelector('.tv-best');
             state.viewMode='table'; renderAll(); await wait(150); const table=!!document.querySelector('.tv-best');
             state.viewMode='calendar'; renderAll(); return cal && grid && table; }""")
-        c['version_is_v4_3_0'] = self.ev(page, "()=>APP_VERSION==='v4.3.0'")
+        # （版本號的檢查跟著最新的群組走，v4.3.1 起在 v431）
         # ================= 手機 =================
         pctx, pp = self._ctx(page.context.browser, {'width': 390, 'height': 844}, touch=True)
         # 打開 App 的第一個畫面就看得到第一場賽事（v4.2 是 1,044px，在畫面外）
@@ -6540,6 +6550,196 @@ class V43Flows(Group):
         jctx.close()
 
 
+TRAINING_SEED_JS = r"""window.__seedTrainings=async function(){
+  const loop=[]; for(let i=0;i<=40;i++){ const a=i/40*Math.PI*2; loop.push(+(0.5+0.42*Math.cos(a)).toFixed(3),+(0.5+0.3*Math.sin(a*2)).toFixed(3)); }
+  const t=todayISO();
+  const mk=(d,st,sport,km,sec,hr,thumb,name)=>migrateTraining({date:d,startTime:st,sport,distanceKm:km,durationSeconds:sec,avgHr:hr,name:name||'',thumb,
+    fingerprint:'fp'+d+st,source:'fit',importedAt:new Date().toISOString()});
+  trainings=[mk(t,'06:10','run',10.2,3120,148,loop,'晨跑'),mk(addDaysStr(t,-1),'19:30','ride',32.5,4500,131,loop),mk(addDaysStr(t,-2),'07:00','run',5.0,1620,155,null,'跑步機'),
+    mk(addDaysStr(t,-40),'06:00','run',21.1,6900,150,loop),mk(addDaysStr(t,-400),'06:00','swim',1.5,2400,140,null)];
+  await saveJson(TRAININGS_KEY,trainings);
+};"""
+
+
+class V431Fixes(Group):
+    """v4.3.1：訓練頁跟著淺色／深色模式、字看得清楚；訓練紀錄跨裝置同步（同一個月兩台都在寫
+    不會互相洗掉、同一個檔在兩台各匯入一次只留一筆、雲端拒絕時看得到）；安全性規則涵蓋每個路徑。"""
+
+    ECHO = ('trtheme:', 'trsync:')
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js):
+        # 一項檢查拋出例外：記成這一項失敗、印出原因，後面照跑
+        try:
+            return pg.evaluate(js)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def body(self, page):
+        c = self.checks
+        page.on('console', self._echo)
+        page.add_script_tag(content=CONTRAST_JS)
+        page.add_script_tag(content=TRAINING_SEED_JS)
+        page.add_script_tag(content=FAKE_CLOUD_JS)
+        page.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        page.evaluate("()=>__seedTrainings()")
+        # ================= 訓練頁跟著主題 =================
+        # 每一段字（含按鈕、日期、分組標題）都要達 4.5:1（大字 3:1）；頁面底色就是首頁的底色
+        READ = """()=>{ const ov=document.getElementById('training-overlay'); const bad=[]; let n=0;
+            ov.querySelectorAll('*').forEach(el=>{ const r=el.getBoundingClientRect(); if(!(r.width>0&&r.height>0)) return;
+              if(![...el.childNodes].some(x=>x.nodeType===3&&x.textContent.trim())) return;
+              if(el.closest('svg')) return;   // 縮圖裡的「≈」是裝飾
+              n++; const cs=getComputedStyle(el), fs=parseFloat(cs.fontSize), bold=parseInt(cs.fontWeight)>=700;
+              const cr=__contrast(el); if(cr<((fs>=24||(fs>=18.66&&bold))?3:4.5)) bad.push(el.tagName+'.'+(el.className||'')+' '+el.textContent.trim().slice(0,10)+' '+cr.toFixed(2)); });
+            const pr=document.createElement('div'); pr.style.background='var(--paper)'; document.body.appendChild(pr); const paper=getComputedStyle(pr).backgroundColor; pr.remove();
+            return {n,bad,bg:getComputedStyle(ov).backgroundColor,paper}; }"""
+        THEME = """async(theme)=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const st=document.createElement('style'); st.id='__nt'; st.textContent='*{transition:none!important}'; document.head.appendChild(st);
+            applyTheme(theme); await wait(150); openTrainingOverlay(); await wait(150);
+            const res=[]; for(const p of ['week','all']){ document.querySelector('[data-training-period="'+p+'"]').click(); await wait(120);
+              if(p==='all'){ const m=document.querySelector('[data-training-month][aria-expanded="false"]'); if(m){ m.click(); await wait(80); } }
+              res.push((""" + READ + """)()); }
+            closeTrainingOverlay(); applyTheme('light'); await wait(150); st.remove();
+            const bad=res.flatMap(r=>r.bad); if(bad.length) console.log('trtheme:',theme,bad.slice(0,8).join(' | '));
+            return {bad:bad.length,n:res.reduce((a,r)=>a+r.n,0),bg:res[0].bg,paper:res[0].paper}; }"""
+        light = self.ev(page, "()=>(" + THEME + ")('light')")
+        dark = self.ev(page, "()=>(" + THEME + ")('dark')")
+        c['training_page_follows_light_theme'] = bool(light) and light['bad'] == 0 and light['n'] > 20 and light['bg'] == light['paper'] and light['bg'] != 'rgb(15, 19, 22)'
+        c['training_page_follows_dark_theme'] = bool(dark) and dark['bad'] == 0 and dark['n'] > 20 and dark['bg'] == dark['paper']
+        if light and dark:
+            print('    ', 'light', light['bg'], 'dark', dark['bg'])
+        # 縮圖：淺色是淺底、深一點的金色線；深色是深底亮金線；線跟底至少 3:1
+        c['training_thumb_follows_theme'] = self.ev(page, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const lum=c=>{ const v=c.match(/[\\d.]+/g).slice(0,3).map(Number).map(x=>{ x/=255; return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4); }); return 0.2126*v[0]+0.7152*v[1]+0.0722*v[2]; };
+            const read=()=>{ const th=document.querySelector('#training-overlay .training-thumb'); const line=th.querySelectorAll('path')[1];
+              const bg=getComputedStyle(th).backgroundColor, fg=getComputedStyle(line).stroke; const a=lum(bg),b=lum(fg);
+              return {bg,fg,cr:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)}; };
+            applyTheme('light'); openTrainingOverlay(); document.querySelector('[data-training-period="week"]').click(); await wait(100);
+            const l=read(); applyTheme('dark'); await wait(100); const d=read(); applyTheme('light'); closeTrainingOverlay();
+            const surf=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim();
+            if(!(l.cr>=3&&d.cr>=3&&l.bg!==d.bg&&l.fg!==d.fg)) console.log('trtheme: thumb',JSON.stringify(l),JSON.stringify(d));
+            return l.cr>=3 && d.cr>=3 && l.bg!==d.bg && l.fg!==d.fg; }""")
+        # 英文的月份：原本拿不存在的 state.lang 判斷語言，英文一直顯示「Month 9」
+        c['training_month_names_in_english'] = self.ev(page, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            setLang('en'); await wait(150); openTrainingOverlay(); document.querySelector('[data-training-period="all"]').click(); await wait(120);
+            const labels=[...document.querySelectorAll('#training-overlay [data-training-month] .training-group-label')].map(x=>x.textContent);
+            const want=new Date(todayISO()+'T00:00:00').toLocaleString('en-US',{month:'long'});
+            closeTrainingOverlay(); setLang('zh'); await wait(150);
+            if(labels[0]!==want) console.log('trtheme: months',labels.join(','));
+            return labels.length>0 && labels[0]===want && !labels.some(x=>/Month|月/.test(x)); }""")
+        # ================= 安全性規則涵蓋 App 用到的每一個雲端路徑 =================
+        # v3.76.0 新增了 users/{uid}/trainings，規則沒跟著加：讀寫全被擋，畫面上什麼都看不到
+        import pathlib as _pl, re as _re
+        src = _pl.Path(APP).read_text(encoding='utf-8')
+        rules_path = _pl.Path(os.path.dirname(os.path.abspath(__file__))) / 'firestore.rules'
+        rules = rules_path.read_text(encoding='utf-8') if rules_path.exists() else ''
+        app_paths = set()
+        for kind, args in _re.findall(r"\b(collection|doc)\(db,([^)]*)\)", src):
+            segs = [a.strip() for a in args.split(',')]
+            segs = [a[1:-1] if a[:1] in "'\"" else '*' for a in segs]
+            if kind == 'collection':
+                segs.append('*')          # 集合底下的每一份文件
+            app_paths.add('/'.join(segs))
+        rule_blocks = []
+        for m in _re.finditer(r"match\s+/([^\s{][^\s]*)\s*\{", rules):
+            path = m.group(1)
+            if path.startswith('databases/'):
+                continue
+            body = rules[m.end():rules.find('}', rules.find('allow', m.end()))]
+            rule_blocks.append(([('*' if s.startswith('{') else s) for s in path.split('/')], path, body))
+
+        def covered(p):
+            segs = p.split('/')
+            for rsegs, rpath, body in rule_blocks:
+                if len(rsegs) == len(segs) and all(r == '*' or r == s for r, s in zip(rsegs, segs)):
+                    # 使用者自己的資料：一定要限定本人（request.auth.uid == uid）
+                    if segs[0] == 'users' and 'request.auth.uid == uid' not in body:
+                        return False
+                    return True
+            return False
+        missing = sorted(p for p in app_paths if not covered(p))
+        if missing:
+            print('    rules missing:', missing)
+        c['rules_cover_every_cloud_path'] = bool(rules) and len(app_paths) >= 6 and not missing and 'users/*/trainings/*' in app_paths
+        # ================= 訓練紀錄跨裝置同步 =================
+        SETUP = """const wait=ms=>new Promise(s=>setTimeout(s,ms)); const clone=x=>JSON.parse(JSON.stringify(x));
+            const T=(id,d,o)=>Object.assign({id,date:d,startTime:'06:00',sport:'run',distanceKm:10,durationSeconds:3000,fingerprint:'fp-'+id,
+              importedAt:d+'T08:00:00.000Z',updatedAt:d+'T08:00:00.000Z'},o||{});
+            // 換一台裝置：本機沒有賽事、沒有訓練、沒有同步紀錄（雲端那份不動）
+            const device=async(local)=>{ await saveJson('cloud-sync-state-v1',null); cloudKnown=null; cloudPendingDeletes=[]; state.user=null;
+              state.races=[]; trainings=(local||[]).map(x=>migrateTraining(clone(x))); await saveJson(TRAININGS_KEY,trainings);
+              hideAppBanner(); trainingDeniedNoticeShown=false; trainingSyncError=null; };
+            const ids=list=>list.filter(x=>!x.deletedAt).map(x=>x.id).sort().join();"""
+        c['trainings_follow_account_to_new_device'] = self.ev(page, """async()=>{ """ + SETUP + """
+            const cloud=__makeFakeCloud([],[]); window.__cloud=cloud;
+            await device([T('t1','2026-08-05'),T('t2','2026-09-06')]);              // 裝置 A：本機有訓練、雲端是空的
+            await handleAuthChange({uid:'u1'}); await wait(1300);
+            const upA=ids(cloud.store.trainings);
+            await device([]);                                                          // 裝置 B：全新的瀏覽器
+            await handleAuthChange({uid:'u1'}); await wait(1300);
+            const gotB=ids(trainings), saved=ids(await loadJson(TRAININGS_KEY,[]));
+            if(!(upA==='t1,t2'&&gotB==='t1,t2'&&saved==='t1,t2')) console.log('trsync: new device',upA,gotB,saved);
+            return upA==='t1,t2' && gotB==='t1,t2' && saved==='t1,t2'; }""")
+        # 同一個月兩台裝置都在寫：B 上傳九月時，不能把別台剛寫進雲端的九月那筆洗掉，B 也要補到那一筆
+        c['two_devices_same_month_no_loss'] = self.ev(page, """async()=>{ """ + SETUP + """
+            const cloud=window.__cloud; if(!cloud) return false;
+            cloud.store.trainings.push(clone(T('t4','2026-09-20')));                    // 別台裝置剛寫進雲端
+            trainings.push(migrateTraining(clone(T('t3','2026-09-12')))); await persistTrainings(); await wait(1500);
+            const inCloud=ids(cloud.store.trainings), here=ids(trainings);
+            if(!(inCloud==='t1,t2,t3,t4'&&here==='t1,t2,t3,t4')) console.log('trsync: same month',inCloud,here);
+            return inCloud==='t1,t2,t3,t4' && here==='t1,t2,t3,t4'; }""")
+        # 同一個檔在兩台各匯入一次（另一台看起來是空的就又匯入）：留最早匯入的那筆，鞋款搬過去，另一筆的刪除同步到雲端
+        c['same_file_on_two_devices_kept_once'] = self.ev(page, """async()=>{ """ + SETUP + """
+            const a1=T('a1','2026-09-10',{fingerprint:'SAME',importedAt:'2026-09-10T08:00:00.000Z'});
+            const b1=T('b1','2026-09-10',{fingerprint:'SAME',importedAt:'2026-09-25T08:00:00.000Z',shoeId:'s1',updatedAt:'2026-09-25T08:00:00.000Z'});
+            const cloud=__makeFakeCloud([],[a1]); window.__cloud=cloud;
+            await device([b1]); await handleAuthChange({uid:'u1'}); await wait(1600);
+            const live=trainings.filter(x=>!x.deletedAt&&x.fingerprint==='SAME');
+            const ca=cloud.store.trainings.find(x=>x.id==='a1'), cb=cloud.store.trainings.find(x=>x.id==='b1');
+            const ok=live.length===1 && live[0].id==='a1' && live[0].shoeId==='s1' && !!cb && !!cb.deletedAt && !!ca && !ca.deletedAt && ca.shoeId==='s1';
+            if(!ok) console.log('trsync: dedupe',JSON.stringify(live.map(x=>[x.id,x.shoeId])),JSON.stringify(cloud.store.trainings.map(x=>[x.id,!!x.deletedAt,x.shoeId])));
+            return ok; }""")
+        # 雲端拒絕（安全性規則沒開放）：跳一次提示、本機資料還在、同步診斷寫出怎麼修
+        c['denied_sync_is_visible_once'] = self.ev(page, """async()=>{ """ + SETUP + """
+            const cloud=__makeFakeCloud([],[]); cloud.denyTrainings=true; window.__cloud=cloud;
+            await device([T('t1','2026-08-05'),T('t2','2026-09-06')]);
+            await handleAuthChange({uid:'u1'}); await wait(1300);
+            const b=document.querySelector('.app-banner');
+            const shown=!!b && b.classList.contains('is-warn') && b.textContent.includes('訓練紀錄沒有同步到雲端');
+            const kept=ids(trainings)==='t1,t2' && ids(await loadJson(TRAININGS_KEY,[]))==='t1,t2';
+            hideAppBanner();
+            trainings[0].shoeId='s9'; trainings[0].updatedAt=new Date().toISOString(); await persistTrainings(); await wait(1400);
+            const again=!document.querySelector('.app-banner');                     // 一次瀏覽只提示一次
+            await handleAuthChange({uid:'u1'}); await wait(800);                     // 再登入一次也不會重複跳
+            const again2=!document.querySelector('.app-banner');
+            trainingDeniedNoticeShown=false; await handleAuthChange({uid:'u1'}); await wait(800);
+            const how=document.querySelector('.app-banner [data-banner-action="0"]'); if(how) how.click(); await wait(300);
+            const m=document.getElementById('sync-diag-modal'); const fix=m&&!m.hidden&&m.querySelector('.sync-diag-fix');
+            const fixOk=!!fix && fix.textContent.includes('firestore.rules') && fix.textContent.includes('發布');
+            if(m){ m.hidden=true; m.innerHTML=''; }
+            if(!(shown&&kept&&again&&again2&&fixOk)) console.log('trsync: denied',shown,kept,again,again2,fixOk);
+            return shown && kept && again && again2 && fixOk; }""")
+        c['sync_diag_lists_trainings'] = self.ev(page, """async()=>{ """ + SETUP + """
+            const row=()=>[...document.querySelectorAll('#sync-diag-modal .sync-diag-table tbody tr')].find(tr=>tr.textContent.includes('訓練紀錄'));
+            const cloud=__makeFakeCloud([],[T('t1','2026-08-05'),T('t2','2026-09-06'),T('t3','2026-09-07',{deletedAt:'2026-09-08T00:00:00.000Z'})]); window.__cloud=cloud;
+            await device([T('t1','2026-08-05'),T('t2','2026-09-06')]); await handleAuthChange({uid:'u1'}); await wait(1200);
+            openSyncDiagModal(); await runSyncDiag(); await wait(100);
+            const r1=row(); const ok1=!!r1 && r1.cells[1].textContent.trim()==='2' && r1.cells[2].textContent.trim()==='2' && !r1.classList.contains('sync-diag-mismatch')
+              && !document.querySelector('#sync-diag-modal .sync-diag-fix');
+            cloud.denyTrainings=true; await runSyncDiag(); await wait(100);
+            const r2=row(); const ok2=!!r2 && r2.cells[2].textContent.trim()==='被拒絕' && r2.classList.contains('sync-diag-mismatch')
+              && !!document.querySelector('#sync-diag-modal .sync-diag-fix');
+            const m=document.getElementById('sync-diag-modal'); m.hidden=true; m.innerHTML='';
+            window.__cloud=null; state.user=null; hideAppBanner();
+            if(!(ok1&&ok2)) console.log('trsync: diag',ok1,ok2);
+            return ok1 && ok2; }""")
+        c['version_is_v4_3_1'] = self.ev(page, "()=>APP_VERSION==='v4.3.1'")
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -6568,6 +6768,7 @@ GROUPS = {
     'v41':        lambda: V41Fixes('v41'),
     'v42':        lambda: V42Flows('v42'),
     'v43':        lambda: V43Flows('v43'),
+    'v431':       lambda: V431Fixes('v431'),
 }
 
 

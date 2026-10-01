@@ -183,8 +183,14 @@
     --stamp-bg-gold:rgba(176,141,46,0.14);
     --paper-glass:rgba(230,233,230,0.85);
     --hover-overlay:rgba(22,35,28,0.06);
+    --thumb-bg:var(--surface);
+    --thumb-line:#9C7B22;
+    --thumb-glow:rgba(176,141,46,0.22);
   }
   [data-theme="dark"]{
+    --thumb-bg:#12171B;
+    --thumb-line:#E8C97A;
+    --thumb-glow:rgba(217,177,92,0.28);
     --paper:#0D1013;
     --surface:#1E232A;
     --paper-base:#0D1013;
@@ -1453,7 +1459,9 @@
   .pacing-inputs .field{flex:1 1 150px;}
 
   /* ---- 訓練紀錄（v3.76.0） ---- */
-  .training-overlay{position:fixed;inset:0;z-index:208;overflow-y:auto;background:var(--bg,#0F1316);color:var(--ink);}
+  /* 底色用 --paper（跟首頁同一個）。v4.3.0 以前寫的是 var(--bg,#0F1316)，但 --bg 從來沒定義過，
+     兩種主題都拿到後面那個深色備用值：淺色模式變成「黑底配深色字」，標題只有 1.15:1 */
+  .training-overlay{position:fixed;inset:0;z-index:208;overflow-y:auto;background:var(--paper);color:var(--ink);}
   .training-overlay[hidden]{display:none;}
   .training-inner{max-width:720px;margin:0 auto;padding:22px 18px 120px;}
   .training-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
@@ -1469,7 +1477,8 @@
   .training-kpi b{display:block;font-size:calc(19px*var(--fs,1));}
   .training-kpi span{font-size:calc(11px*var(--fs,1));color:var(--stone);}
   .training-row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--rule);}
-  .training-thumb{width:44px;height:44px;flex-shrink:0;border-radius:8px;background:#12171B;color:var(--stone);display:flex;align-items:center;justify-content:center;}
+  /* 縮圖軌跡：深色模式維持深底金線；淺色模式改成淺底、深一點的金色（亮金色在白底上看不到） */
+  .training-thumb{width:44px;height:44px;flex-shrink:0;box-sizing:border-box;border-radius:8px;border:1px solid var(--rule);background:var(--thumb-bg);color:var(--stone);display:flex;align-items:center;justify-content:center;}
   .training-main{flex:1;min-width:0;}
   .training-title{display:flex;justify-content:space-between;gap:8px;font-weight:600;font-size:calc(14px*var(--fs,1));}
   .training-date{font-weight:400;color:var(--stone);font-size:calc(12px*var(--fs,1));white-space:nowrap;}
@@ -2661,6 +2670,9 @@
   .sync-diag-mismatch td:first-child{font-weight:600;}
   .storage-usage-warn{color:var(--flag);font-weight:600;}
   .sync-diag-note{color:var(--stone);line-height:1.6;margin-top:4px;}
+  .sync-diag-fix{border:1px solid var(--flag);border-radius:8px;padding:10px 12px;margin:12px 0;background:var(--stamp-bg-flag);}
+  .sync-diag-fix p{margin:0 0 6px;line-height:1.6;}
+  .sync-diag-fix p:last-child{margin-bottom:0;}
   .gpx-overwrite-note{display:block;font-size:calc(12px*var(--fs,1));color:var(--flag);margin-top:2px;}
   .geo-photo-skipped{border-left:3px solid var(--flag);background:var(--paper);border-radius:6px;padding:8px 12px;margin:10px 0;display:flex;flex-direction:column;gap:3px;}
   .geo-photo-skipped .small{color:var(--ink-soft);}
@@ -4329,7 +4341,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／獎牌牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.3.0';
+const APP_VERSION='v4.3.1';
 
 /* ============================================================
    多語系（i18n）
@@ -4455,7 +4467,7 @@ const JA={
   'ui.syncDiagItemRaces':'レース記録','ui.syncDiagItemShoes':'シューズ','ui.syncDiagItemNutrition':'補給食データベース',
   'ui.syncDiagItemProfile':'プロフィール（体重・心拍）','ui.syncDiagItemTemplates':'装備テンプレート','ui.syncDiagItemBadges':'バッジ解除記録',
   'ui.syncDiagNotSynced':'同期なし','ui.syncDiagTrashed':'ゴミ箱に {n} 件',
-  'ui.syncDiagAllSyncedNote':'6種類すべて同期されます。結合ルールは「ローカル優先」：クラウドにあってローカルにない項目は取り込み、ローカルにすでにある値はクラウドで上書きされません。',
+  'ui.syncDiagAllSyncedNote2':'7種類すべて同期されます。大会・シューズなどの設定は「ローカル優先」：クラウドにあってローカルにない項目は取り込み、ローカルにすでにある値は上書きされません。トレーニング記録は同じ記録なら最後に変更したほうが残ります。','ui.syncDiagItemTrainings':'トレーニング記録','ui.syncDiagDenied':'拒否','ui.syncDiagTrainingsDeniedTitle':'クラウドがトレーニング記録へのアクセスを拒否しました','ui.syncDiagTrainingsDeniedFix':'Firebase のセキュリティルールでトレーニング記録（users/{uid}/trainings）が許可されていません。リポジトリの最新の firestore.rules を丸ごと Firebase Console → Firestore Database → ルール に貼り付けて「公開」し、このページを再読み込みしてください。トレーニングデータがある端末で一度開くと、クラウドにアップロードされます。','ui.trainingSyncDenied':'トレーニング記録がクラウドに同期されていません：クラウドのセキュリティルールでトレーニング記録がまだ許可されていません。データはこの端末に残っています。','ui.trainingSyncDeniedHow':'直し方',
   'ui.syncDiagCloudUpdatedAt':'クラウドの最終更新日時：','ui.syncDiagCloudEmpty':'クラウドにはこのデータがまだ存在しません（一度も正常に送信されていません）',
   'ui.importJson':'JSONを読み込む',
   'ui.errJsonNotArray':'ファイルの内容が有効なレース一覧ではありません（配列である必要があります）',
@@ -4806,6 +4818,7 @@ const JA={
       <ul>
         <li>右上のアイコンメニューの「Googleでログインして同期」でデバイス間同期（Firebaseの設定が必要、USAGE.md参照）。ログインしなくても通常利用には影響ありません。</li>
         <li>ローカル保存が常にメインのデータソースです。ログイン後に追加でクラウド同期されます。初回ログイン時はクラウドとローカルのデータを自動でマージし、データが失われることはありません。</li>
+        <li>同期されるのは7種類：大会、トレーニング記録、シューズ、補給食データベース、プロフィール、装備テンプレート、バッジ。アイコンメニューの「同期診断」で、種類ごとにローカルとクラウドの件数を確認できます。クラウドがトレーニング記録へのアクセスを拒否した場合（Firebase のセキュリティルールで未許可）は画面に通知が出て、同期診断に直し方が表示されます。データはこの端末に残っています。</li>
         <li>アイコンメニュー →「書き出しとバックアップ」→「JSONを書き出す」でいつでも全データをバックアップ可能。「すべてのデータを削除」はアイコンメニューの一番下に分けて置いてあり、2回クリックで確認します。</li>
         <li>大会を削除すると30日間ゴミ箱に保存され、アイコンメニューの「削除した大会」から復元できます。複数端末の同期で競合が検出された場合も、古いバージョンは同じ場所に保存され、黙って消えることはありません。</li>
         <li>ブラウザの保存容量には上限があります。上限に近づいた場合や保存に失敗した場合は、画面上部に通知が表示されます（保存失敗の通知は自動的には消えません）。</li>
@@ -4978,7 +4991,7 @@ const EN={
   'ui.syncDiagItemRaces':'Races','ui.syncDiagItemShoes':'Shoes','ui.syncDiagItemNutrition':'Nutrition Database',
   'ui.syncDiagItemProfile':'Profile (weight / HR)','ui.syncDiagItemTemplates':'Gear Templates','ui.syncDiagItemBadges':'Badge Unlocks',
   'ui.syncDiagNotSynced':'not synced','ui.syncDiagTrashed':'{n} more in trash',
-  'ui.syncDiagAllSyncedNote':'All six types sync. Merge rule is local-first: anything in the cloud but missing locally is pulled in, and values you already have here are never overwritten.',
+  'ui.syncDiagAllSyncedNote2':'All seven types sync. Races, shoes and settings are local-first: anything in the cloud but missing here is pulled in, and values you already have are never overwritten. For training sessions, the most recent edit to the same session wins.','ui.syncDiagItemTrainings':'Training log','ui.syncDiagDenied':'Denied','ui.syncDiagTrainingsDeniedTitle':'The cloud refused access to your training log','ui.syncDiagTrainingsDeniedFix':'Your Firebase security rules don’t allow the training log (users/{uid}/trainings). Paste the latest firestore.rules from the repo into Firebase Console → Firestore Database → Rules, press “Publish”, then reload this page. Open it once on the device that has the training data and it will upload.','ui.trainingSyncDenied':'Your training log isn’t syncing: the cloud security rules don’t allow it yet. Your data is still on this device.','ui.trainingSyncDeniedHow':'How to fix',
   'ui.syncDiagCloudUpdatedAt':'Cloud Last Updated: ','ui.syncDiagCloudEmpty':'The cloud has no data yet (never successfully pushed)',
   'ui.importJson':'Import JSON',
   'ui.errJsonNotArray':'This file is not a valid race list (expected an array)',
@@ -5317,6 +5330,7 @@ const EN={
       <ul>
         <li>"Sign in with Google to sync" in the avatar menu at the top right syncs your data across devices (requires your own Firebase setup, see USAGE.md). Not signing in has no effect on local use.</li>
         <li>Local storage is always the primary data source — signing in adds cloud sync on top. On first sign-in, cloud and local data are merged automatically, so nothing is lost.</li>
+        <li>Seven kinds of data sync: races, training sessions, shoes, the nutrition library, your profile, gear templates and badges. “Sync Diagnostics” in the avatar menu shows how many of each are on this device and in the cloud. If the cloud refuses the training log (your Firebase security rules don’t allow it), a banner tells you, and Sync Diagnostics explains the fix — your data stays on this device either way.</li>
         <li>Avatar menu → “Export & backup” → "Export JSON" backs up all your data any time. "Clear All Data" sits on its own at the bottom of the avatar menu and needs two clicks to confirm.</li>
         <li>Deleting a race keeps it in a trash bin for 30 days — restore it anytime from "Deleted Races" in the avatar menu. If a sync conflict is detected across devices, the older version is kept in the same place rather than silently disappearing.</li>
         <li>Browser storage has a limit. You'll see a banner at the top when you're approaching it, or if a save actually fails (the failure banner stays visible until the next save succeeds).</li>
@@ -6383,6 +6397,8 @@ let signInAttemptInFlight=false;
    不用開發者工具。
    ============================================================ */
 let syncDiagCloudResult=null,syncDiagCloudRaces=null,syncDiagCloudError=null,syncDiagLoading=false,syncDiagQueried=false;
+// 訓練紀錄另外查（v4.3.1）：它被拒絕時，其他六種照樣列得出來，不要整張表一起失敗
+let syncDiagCloudTrainings=null,syncDiagTrainingsError=null;
 function syncDiagModalHtml(){
   const loggedIn=!!state.user;
   const loginInfo=loggedIn
@@ -6413,7 +6429,11 @@ function syncDiagModalHtml(){
     <p class="small sync-diag-note" id="storage-usage-line"></p>
     ${loggedIn?`<button type="button" class="btn-ghost" data-action="run-sync-diag" ${syncDiagLoading?'disabled':''}>${t('ui.syncDiagRun','立即查詢雲端資料')}</button>`:''}
     ${cloudSection}
-    <p class="small sync-diag-note">${t('ui.syncDiagAllSyncedNote','六種資料都會同步。合併規則是「本機優先」：雲端有、本機沒有的會補進來，本機已經有的一律保留，不會被雲端覆蓋掉。')}</p>
+    ${(syncDiagTrainingsError==='denied'||trainingSyncError==='denied')?`<div class="sync-diag-fix">
+      <p class="small"><b>${t('ui.syncDiagTrainingsDeniedTitle','雲端拒絕存取訓練紀錄')}</b></p>
+      <p class="small">${t('ui.syncDiagTrainingsDeniedFix','Firebase 的安全性規則沒有開放訓練紀錄（users/{uid}/trainings）。把 repo 裡最新的 firestore.rules 整份貼到 Firebase Console → Firestore Database → 規則，按「發布」，再重新整理這個頁面——有訓練資料的那台裝置打開一次，就會上傳到雲端。')}</p>
+    </div>`:''}
+    <p class="small sync-diag-note">${t('ui.syncDiagAllSyncedNote2','七種資料都會同步。賽事與鞋款等設定是「本機優先」：雲端有、本機沒有的會補進來，本機已經有的一律保留；訓練紀錄同一筆以最後修改的為準。')}</p>
     <div class="modal-actions"><button class="btn-ghost" data-action="close-sync-diag">${t('ui.close','關閉')}</button></div>
   </div>`;
 }
@@ -6441,15 +6461,19 @@ function syncDiagItems(){
       local:templates.length,cloud:r?(r.templates||[]).length:null},
     {key:'badges',label:t('ui.syncDiagItemBadges','徽章解鎖紀錄'),synced:true,
       local:Object.keys(badgeUnlocks||{}).length,cloud:r?Object.keys(r.badgeUnlocks||{}).length:null},
+    {key:'trainings',label:t('ui.syncDiagItemTrainings','訓練紀錄'),synced:true,
+      local:liveTrainings().length,cloud:syncDiagCloudTrainings?syncDiagCloudTrainings.filter(x=>!x.deletedAt).length:null,
+      cloudText:syncDiagTrainingsError==='denied'?t('ui.syncDiagDenied','被拒絕'):''},
   ];
 }
 function syncDiagTableHtml(){
   const rows=syncDiagItems().map(it=>{
     const cloudCell=!it.synced
       ? `<span class="sync-diag-nosync">${t('ui.syncDiagNotSynced','不同步')}</span>`
+      : it.cloudText?`<span class="sync-diag-nosync">${escapeHtml(it.cloudText)}</span>`
       : (it.cloud==null?'<span class="sync-diag-dim">—</span>':`<span class="mono">${it.cloud}</span>`);
     // 兩邊都查過、數字卻對不上時標出來：這正是使用者開這個畫面想知道的事。
-    const mismatch=it.synced&&it.cloud!=null&&it.cloud!==it.local;
+    const mismatch=it.synced&&(!!it.cloudText||(it.cloud!=null&&it.cloud!==it.local));
     return `<tr class="${mismatch?'sync-diag-mismatch':''}">
       <td>${it.label}${it.note?`<br><span class="sync-diag-dim small">${it.note}</span>`:''}</td>
       <td class="mono">${it.local}</td>
@@ -6488,6 +6512,7 @@ async function reportStorageUsage(){
 }
 function openSyncDiagModal(){
   syncDiagCloudResult=null;syncDiagCloudRaces=null;syncDiagCloudError=null;syncDiagLoading=false;syncDiagQueried=false;
+  syncDiagCloudTrainings=null;syncDiagTrainingsError=null;
   syncDiagModalEl_getter().innerHTML=syncDiagModalHtml();
   syncDiagModalEl_getter().hidden=false;
   reportStorageUsage();
@@ -6508,6 +6533,10 @@ async function runSyncDiag(){
     syncDiagQueried=true;
   }catch(err){
     syncDiagCloudError=(err&&err.message)?err.message:String(err);
+  }
+  if(window.__cloud.fetchTrainings){
+    try{ syncDiagCloudTrainings=await window.__cloud.fetchTrainings(state.user.uid); syncDiagTrainingsError=null; }
+    catch(err){ syncDiagCloudTrainings=null; syncDiagTrainingsError=isPermissionDenied(err)?'denied':String((err&&err.message)||err); }
   }
   syncDiagLoading=false;
   syncDiagModalEl_getter().innerHTML=syncDiagModalHtml();
@@ -6613,6 +6642,7 @@ async function handleAuthChange(user){
         if(cloudKnown){ cloudKnown.trainings={}; cloudTrainings.forEach(x=>{ cloudKnown.trainings[x.id]=x.updatedAt||''; }); }
         const before=new Map(trainings.map(x=>[x.id,x.updatedAt||'']));
         mergeTrainings(cloudTrainings);
+        trainingSyncError=null;
         const changed=trainings.length!==before.size||trainings.some(x=>before.get(x.id)!==(x.updatedAt||''));
         if(changed) await saveJson(TRAININGS_KEY,trainings);
         await cloudSyncTrainings();
@@ -6620,6 +6650,7 @@ async function handleAuthChange(user){
       }
     }catch(err){
       console.error('訓練紀錄雲端讀取失敗',err);
+      noteTrainingSyncError(err);
     }
   }
 }
@@ -16432,6 +16463,7 @@ async function persistTrainings(){
   clearTimeout(trainingCloudTimer);
   trainingCloudTimer=setTimeout(()=>{ cloudSyncTrainings(); },1000);
 }
+function trainingMonthOf(x){ return (x.date||'').slice(0,7)||'unknown'; }
 async function cloudSyncTrainings(){
   if(!state.user||!cloudEnabled()||!window.__cloud||!window.__cloud.upsertTrainingMonths) return;
   if(!cloudKnown) return;   // 登入流程還沒跟雲端對過
@@ -16440,24 +16472,76 @@ async function cloudSyncTrainings(){
     const changed=trainings.filter(x=>tk[x.id]!==(x.updatedAt||''));
     if(!changed.length) return;
     // 只重寫有變動的月份（一個月一份文件，內容是那個月的全部訓練）
-    const months=new Set(changed.map(x=>(x.date||'').slice(0,7)||'unknown'));
+    const months=new Set(changed.map(trainingMonthOf));
     const byMonth={};
-    trainings.forEach(x=>{ const m=(x.date||'').slice(0,7)||'unknown'; if(months.has(m)) (byMonth[m]=byMonth[m]||[]).push(x); });
-    await window.__cloud.upsertTrainingMonths(state.user.uid,byMonth);
+    trainings.forEach(x=>{ const m=trainingMonthOf(x); if(months.has(m)) (byMonth[m]=byMonth[m]||[]).push(x); });
+    const written=await window.__cloud.upsertTrainingMonths(state.user.uid,byMonth,mergeTrainingLists);
     changed.forEach(x=>{ tk[x.id]=x.updatedAt||''; });
+    // 雲端那幾個月裡有別台裝置剛加的：一起補進本機（寫回去的就是合併後的內容）
+    if(written&&typeof written==='object'){
+      const incoming=Object.values(written).flat();
+      incoming.forEach(x=>{ if(x&&x.id) tk[x.id]=x.updatedAt||''; });
+      const before=new Map(trainings.map(x=>[x.id,x.updatedAt||'']));
+      mergeTrainings(incoming);
+      const grew=trainings.length!==before.size||trainings.some(x=>before.get(x.id)!==(x.updatedAt||''));
+      if(grew){ await persistTrainings(); refreshTrainingOverlay(); if(currentRace) renderDetailKeepOpen(); }
+    }
     await saveCloudSyncStore();
-  }catch(err){ console.error('訓練紀錄雲端同步失敗',err); }
+    trainingSyncError=null;
+  }catch(err){ console.error('訓練紀錄雲端同步失敗',err); noteTrainingSyncError(err); }
 }
-// 雲端與本機合併：同一筆以 updatedAt 新的為準（刪除也是一種更新，
-// 靠 deletedAt 這個「墓碑」跨裝置傳遞，不然 A 裝置刪掉的會被 B 裝置
-// 同步回來）。
-function mergeTrainings(incoming){
-  const byId=new Map(trainings.map(x=>[x.id,x]));
-  (incoming||[]).map(migrateTraining).forEach(x=>{
+// 兩份訓練清單合併：同一筆（同 id）留 updatedAt 新的；一樣新留前面那份的。
+// 刪除也是一種更新，靠 deletedAt 這個「墓碑」跨裝置傳遞，不然 A 裝置刪掉的
+// 會被 B 裝置同步回來。雲端交易可能重跑，所以這裡不能改動傳進來的東西
+function mergeTrainingLists(a,b){
+  const byId=new Map();
+  [...(a||[]),...(b||[])].forEach(x=>{
+    if(!x||!x.id) return;
     const cur=byId.get(x.id);
-    if(!cur||String(x.updatedAt)>String(cur.updatedAt)) byId.set(x.id,x);
+    if(!cur||String(x.updatedAt||'')>String(cur.updatedAt||'')) byId.set(x.id,x);
   });
-  trainings=[...byId.values()];
+  return [...byId.values()];
+}
+/* 同一個檔案在兩台裝置各匯入一次（例如另一台看起來是空的，就又匯入一次）：合併後會是
+   兩筆不同 id、同一個指紋。留最早匯入的那一筆（同時匯入就比 id，兩台裝置挑到同一筆），
+   其他的標成刪除，墓碑會同步到另一台；被刪的那筆有選鞋款、留下來的沒有，就把鞋款搬過去 */
+function dedupeTrainingsByFingerprint(list){
+  const keep=new Map(); const now=new Date().toISOString(); let n=0;
+  const earlier=(a,b)=>(a.importedAt||'')<(b.importedAt||'')||((a.importedAt||'')===(b.importedAt||'')&&a.id<b.id);
+  list.forEach(x=>{
+    if(x.deletedAt||!x.fingerprint) return;
+    const cur=keep.get(x.fingerprint);
+    if(!cur){ keep.set(x.fingerprint,x); return; }
+    const win=earlier(x,cur)?x:cur, lose=win===x?cur:x;
+    keep.set(x.fingerprint,win);
+    if(!win.shoeId&&lose.shoeId){ win.shoeId=lose.shoeId; win.updatedAt=now; }
+    lose.deletedAt=now; lose.updatedAt=now; lose.thumb=null;
+    n++;
+  });
+  return n;
+}
+// 雲端與本機合併（登入時、同步寫回時）；回傳因為重複而標成刪除的筆數
+function mergeTrainings(incoming){
+  trainings=mergeTrainingLists(trainings,(incoming||[]).map(migrateTraining));
+  return dedupeTrainingsByFingerprint(trainings);
+}
+/* 同步失敗要讓人看得到（v4.3.1）。原本只寫進 console：雲端的安全性規則沒有開放
+   users/{uid}/trainings 時，每一次讀寫都被拒絕，畫面上什麼都沒有，換一台電腦登入
+   才發現訓練全不見了。被拒絕（權限）時跳一次提示、同步診斷裡寫怎麼修；網路斷線這種
+   會自己好的不打擾，下次同步會再試 */
+let trainingSyncError=null;          // null／'denied'／錯誤訊息
+let trainingDeniedNoticeShown=false; // 一次瀏覽只提示一次
+function isPermissionDenied(err){
+  return !!err&&(err.code==='permission-denied'||/insufficient permissions/i.test(String(err.message||'')));
+}
+function noteTrainingSyncError(err){
+  trainingSyncError=isPermissionDenied(err)?'denied':String((err&&err.message)||err);
+  if(trainingSyncError!=='denied'||trainingDeniedNoticeShown) return;
+  trainingDeniedNoticeShown=true;
+  showAppBanner({kind:'warn',text:t('ui.trainingSyncDenied','訓練紀錄沒有同步到雲端：雲端的安全性規則還沒開放訓練紀錄。資料還在這台裝置上。'),actions:[
+    {label:t('ui.trainingSyncDeniedHow','怎麼修'),primary:true,run:()=>openSyncDiagModal()},
+    {label:t('ui.dismiss','知道了')},
+  ]});
 }
 
 /* ---- 檔案解析：沿用賽事匯入的解析器，只是要求比較寬 ----
@@ -16600,8 +16684,8 @@ function thumbSvg(thumb,size){
   let d='';
   for(let i=0;i<thumb.length;i+=2) d+=(i?'L':'M')+(pad+thumb[i]*inner).toFixed(1)+' '+(pad+thumb[i+1]*inner).toFixed(1);
   return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
-    <path d="${d}" fill="none" stroke="rgba(217,177,92,0.28)" stroke-width="${(size/44*4).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="${d}" fill="none" stroke="#E8C97A" stroke-width="${(size/44*1.5).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+    <path d="${d}" fill="none" style="stroke:var(--thumb-glow)" stroke-width="${(size/44*4).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${d}" fill="none" style="stroke:var(--thumb-line)" stroke-width="${(size/44*1.5).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 /* ---- 賽前訓練週期：比賽前 12 週，每週的訓練量 ----
    週的切法對齊比賽日：「賽前第 1 週」是比賽前 7 天（不含比賽當天），
@@ -16763,7 +16847,7 @@ function trainingGroupStatsHtml(items){
 }
 function trainingMonthLabel(ym){
   const n=parseInt(ym.slice(5),10);
-  if(state.lang==='en') return new Date(Number(ym.slice(0,4)),n-1,1).toLocaleString('en-US',{month:'long'});
+  if(currentLang==='en') return new Date(Number(ym.slice(0,4)),n-1,1).toLocaleString('en-US',{month:'long'});
   return tf('ui.trainingMonthLabel','{n} 月',n);
 }
 function trainingGroupedHtml(list,rowHtml){
@@ -21927,6 +22011,7 @@ function helpModalHtml(){
       <ul>
         <li>右上角頭像選單裡的「使用 Google 登入同步」讓資料跨裝置同步（需自行設定 Firebase，見 USAGE.md）；不登入完全不影響本機使用。</li>
         <li>本機儲存永遠是主要資料來源，登入後才會額外同步到雲端；首次登入會自動合併雲端與本機資料，不會遺失。</li>
+        <li>同步的有七種：賽事、訓練紀錄、鞋款、補給品資料庫、個人資料、裝備範本、徽章。頭像選單的「同步診斷」看得到每一種本機、雲端各有幾筆。雲端拒絕存取訓練紀錄時（Firebase 的安全性規則沒有開放），畫面上會跳出提示，同步診斷裡寫怎麼修；資料一直都還在這台裝置上。</li>
         <li>頭像選單 →「匯出與備份」→「匯出 JSON」可隨時備份全部資料；「清除全部資料」在頭像選單最下面、跟其他項目分開，需連按兩次確認。</li>
         <li>刪除賽事會先進垃圾桶保留 30 天，頭像選單的「已刪除賽事」可還原；多裝置同步若偵測到衝突版本，舊版本會保留在同一個地方，不會靜默消失。</li>
         <li>瀏覽器儲存空間有上限，接近上限或存檔真的失敗時，畫面上方會跳出提示（存檔失敗會持續顯示，不會自動消失）。</li>
@@ -23929,7 +24014,7 @@ init();
     getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
   import {
-    getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, writeBatch, increment, query, where, orderBy, limit, startAfter, documentId
+    getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, writeBatch, increment, query, where, orderBy, limit, startAfter, documentId, runTransaction
   } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
   import {
     getMessaging, getToken, onMessage
@@ -24016,15 +24101,25 @@ init();
       }
       return {batches:chunks.length,oversized};
     },
-    // 訓練紀錄：只寫入有變的月份（不先下載全部月份）
-    async upsertTrainingMonths(uid,byMonth){
+    /* 訓練紀錄：只寫入有變的月份（不先下載全部月份）。一個月一份文件，兩台裝置都在用時，
+       直接整個月覆蓋會把另一台剛加的整批洗掉（A、B 都匯入了九月，後寫的那台贏）。
+       所以每個月在交易裡先讀雲端那份、用 merge（同一筆留 updatedAt 新的）合併再寫回；
+       回傳合併後的內容，呼叫端把別台裝置加的補進本機。交易可能重跑，merge 不能有副作用 */
+    async upsertTrainingMonths(uid,byMonth,merge){
       const col=collection(db,'users',uid,'trainings');
-      const months=Object.keys(byMonth||{});
-      for(let i=0;i<months.length;i+=20){
-        const batch=writeBatch(db);
-        months.slice(i,i+20).forEach(m=>batch.set(doc(col,m),{items:byMonth[m],updatedAt:new Date().toISOString()}));
-        await batch.commit();
+      const out={};
+      for(const m of Object.keys(byMonth||{})){
+        const ref=doc(col,m);
+        out[m]=await runTransaction(db,async tx=>{
+          const snap=await tx.get(ref);
+          const cloudItems=snap.exists()?(snap.data().items||[]):[];
+          // 走一次 JSON：Firestore 不收 undefined 的欄位（整批會被拒絕），這樣也順便拿掉
+          const items=JSON.parse(JSON.stringify(merge?merge(cloudItems,byMonth[m]):byMonth[m]));
+          tx.set(ref,{items,updatedAt:new Date().toISOString()});
+          return items;
+        });
       }
+      return out;
     },
     // 分批送出，原因與門檻見 chunkRacesForSync() 上面的說明。回傳
     // 被跳過的賽事，呼叫端負責告訴使用者是哪幾場、為什麼。
@@ -24060,25 +24155,9 @@ init();
     // 寫失敗」這種各自半套的狀態。
     /* 訓練紀錄：users/{uid}/trainings/{YYYY-MM}，一個月一份文件。
        一筆約 1.5KB（含縮圖），一個月就算 100 筆也才 150KB，遠低於 1MB
-       的文件上限；一年只有 12 次寫入，不會撞到單次請求的 11MB 上限。
-       雲端已經沒有的月份要刪掉，不然刪光某個月的訓練後，下次拉回來又復活。 */
-    async replaceTrainings(uid,list){
-      const col=collection(db,'users',uid,'trainings');
-      const byMonth={};
-      (list||[]).forEach(x=>{ const m=(x.date||'').slice(0,7)||'unknown'; (byMonth[m]=byMonth[m]||[]).push(x); });
-      const snap=await getDocs(col);
-      const keep=new Set(Object.keys(byMonth));
-      const months=Object.keys(byMonth);
-      for(let i=0;i<months.length;i+=20){
-        const batch=writeBatch(db);
-        months.slice(i,i+20).forEach(m=>batch.set(doc(col,m),{items:byMonth[m],updatedAt:new Date().toISOString()}));
-        await batch.commit();
-      }
-      const stale=snap.docs.filter(d=>!keep.has(d.id));
-      if(stale.length){
-        const batch=writeBatch(db); stale.forEach(d=>batch.delete(d.ref)); await batch.commit();
-      }
-    },
+       的文件上限。刪除是留墓碑（deletedAt）的軟刪除，月份文件不用刪。
+       （v4.3.1 拿掉沒有在用的 replaceTrainings：它會刪掉本機沒有的月份，
+       哪天被接上去，另一台裝置的訓練就整個月不見） */
     async fetchTrainings(uid){
       const snap=await getDocs(collection(db,'users',uid,'trainings'));
       return snap.docs.flatMap(d=>(d.data().items)||[]);

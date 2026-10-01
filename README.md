@@ -3,7 +3,7 @@
 一個從報名到終點的個人賽事紀錄網站。純前端、主體是單一 `index.html`（另有一個 `icons/` 圖示資料夾），部署在 GitHub Pages，不需要自架後端伺服器。
 
 - **線上網址**：https://ai-sub3.github.io/Race-Day/
-- **版本**：v4.3.0（[CHANGELOG.md](./CHANGELOG.md)）
+- **版本**：v4.3.1（[CHANGELOG.md](./CHANGELOG.md)）
 - **詳細操作說明**：[USAGE.md](./USAGE.md)
 - **功能介紹頁**：https://ai-sub3.github.io/Race-Day/about/
 - **網站地圖（給訪客看）**：https://ai-sub3.github.io/Race-Day/sitemap/
@@ -59,17 +59,7 @@
 預設完全不需要 Firebase 也能正常使用（資料存在瀏覽器本機）。若要跨裝置同步，需要：
 
 1. 到 Firebase Console（console.firebase.google.com）建立專案，啟用 Authentication（Google 登入）與 Firestore Database
-2. Firestore 安全性規則設定為僅允許使用者存取自己 UID 底下的資料：
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{uid}/races/{raceId} {
-         allow read, write: if request.auth != null && request.auth.uid == uid;
-       }
-     }
-   }
-   ```
+2. Firestore 安全性規則：把 [`firestore.rules`](./firestore.rules) 整份貼到 Firebase Console → Firestore Database → 規則，按「發布」。它列出 App 用到的每一個路徑（賽事、訓練紀錄、鞋款等設定、推播代碼、公開連結、點擊統計），使用者自己的資料只有登入的本人能讀寫。**只開放賽事那一條的話，訓練紀錄、鞋款等設定、公開連結都會被拒絕**（v4.3.1 之前 repo 裡的檔案就是這樣）
 3. 在 Firebase Console 註冊一個網頁應用程式，取得 `firebaseConfig`
 4. 打開 `index.html`，搜尋 `YOUR_API_KEY`，把整組 `firebaseConfig` 換成你的設定值
 
