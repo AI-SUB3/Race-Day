@@ -24,6 +24,8 @@
 import os
 import base64
 import cv2
+import json
+import math
 import numpy as np
 import re
 import sys
@@ -2914,12 +2916,13 @@ class Offline(Group):
 
     def body(self, page, ctx):
         c = self.checks
-        # ---- 4a：sw.js 的預快取清單必須跟 index.html 的 <script src> 一字不差 ----
+        # ---- 4a：sw.js 的預快取清單必須跟 index.html 載入的 CDN 網址一字不差 ----
         # index.html 用 SRI，快取回應內容一旦跟頁面要的版本對不上，套件整個不載入。
+        # idb-keyval 是 <script src>；xlsx v4.5.0 起按「匯入 Excel」才載入，網址在 XLSX_SRC 常數
         html = open(APP, encoding='utf-8').read()
         sw_path = os.path.join(os.path.dirname(os.path.abspath(APP)), 'sw.js')
         sw = open(sw_path, encoding='utf-8').read() if os.path.exists(sw_path) else ''
-        srcs = re.findall(r'<script src="(https://[^"]+)"', html)
+        srcs = re.findall(r'<script src="(https://[^"]+)"', html) + re.findall(r"const XLSX_SRC='(https://[^']+)'", html)
         c['sw_precaches_exact_cdn_urls'] = bool(sw) and len(srcs) == 2 and all(f"'{u}'" in sw for u in srcs)
         c['sw_registered_with_app_version'] = "register('./sw.js?v='+encodeURIComponent(APP_VERSION))" in html
         # 真的註冊起來、進入 active
@@ -6059,7 +6062,7 @@ class V43Flows(Group):
         return ctx, pg
 
     # 檢查失敗時頁面裡用 console.log 印出實際拿到的值，帶到測試輸出，不用重跑一次才知道差在哪
-    ECHO = ('third:', 'fetch:', 'medal:', 'nodist:', 'sorts:', 'prompt:', 'fit:', 'medalfit:', 'en:')
+    ECHO = ('third:', 'fetch:', 'sorts:', 'prompt:', 'fit:', 'en:')
 
     def _echo(self, msg):
         if msg.text.startswith(self.ECHO):
@@ -6264,82 +6267,10 @@ class V43Flows(Group):
             const done=state.races.filter(r=>!r.deletedAt&&r.status==='completed').sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
             const ids=[...document.querySelectorAll('#calendar .photo-card')].map(b=>b.dataset.id);
             return state.viewMode==='grid' && done.length>90 && JSON.stringify(ids)===JSON.stringify(done.map(r=>r.id))
-              && document.querySelectorAll('#calendar .photo-card.is-medal').length===done.length; }""")
-        c['medal_shows_distance_time_year'] = self.ev(page, """()=>{
-            const pick=(s,km)=>state.races.find(r=>!r.deletedAt&&r.status==='completed'&&r.sportType===s&&r.route.distanceKm===km);
-            const exp=[['road_running',42.195,'42.2K','3:30:59'],['road_running',21.0975,'21.1K','1:45:29'],['road_running',10,'10K','0:50:00'],
-                       ['triathlon',51.5,'51.5K','4:17:30'],['trail_running',35,'35K','2:55:00'],['cycling',100,'100K','8:20:00']];
-            const bad=[];
-            exp.forEach(([s,km,label,time])=>{ const r=pick(s,km); const el=r&&document.querySelector('#calendar .photo-card[data-id="'+r.id+'"]');
-              if(!el){ bad.push(s+km+' missing'); return; }
-              const got=[...el.querySelectorAll('.medal-disc > span')].map(x=>x.textContent).concat(el.querySelector('.photo-card-date').textContent);
-              const want=[label,time,r.schedule.raceDate.slice(0,4),r.schedule.raceDate];
-              if(JSON.stringify(got)!==JSON.stringify(want)) bad.push(JSON.stringify(got)); });
-            if(bad.length) console.log('medal:',bad.join(' | '));
-            return bad.length===0; }""")
-        c['medal_color_is_sport_type'] = self.ev(page, """()=>{
-            const sports=['road_running','trail_running','triathlon','cycling'];
-            const probe=document.createElement('span'); document.body.appendChild(probe);
-            const res=sports.map(s=>{ const r=state.races.find(x=>!x.deletedAt&&x.status==='completed'&&x.sportType===s&&!x.results.isPb);
-              const d=document.querySelector('#calendar .photo-card[data-id="'+r.id+'"] .medal-disc');
-              probe.style.color=sportColorVar(s); return [getComputedStyle(d).borderTopColor,getComputedStyle(probe).color]; });
-            probe.remove();
-            return res.every(([a,b])=>a===b) && new Set(res.map(x=>x[0])).size===4; }""")
-        c['pb_medal_gold_frame_and_pill'] = self.ev(page, """async()=>{ """ + W + """
-            const pbs=['road_running','trail_running'].map(s=>state.races.find(x=>!x.deletedAt&&x.status==='completed'&&x.sportType===s));
-            pbs.forEach(r=>{ r.results.isPb=true; }); await persist(); renderCalendar(); await wait(150);
-            const other=state.races.find(x=>!x.deletedAt&&x.status==='completed'&&x.sportType==='trail_running'&&!x.results.isPb);
-            const check=()=>{ const probe=document.createElement('span'); probe.style.color='var(--gold)'; document.body.appendChild(probe); const gold=getComputedStyle(probe).color; probe.remove();
-              const face=r=>document.querySelector('#calendar .photo-card[data-id="'+r.id+'"] .medal-face');
-              const pbOk=pbs.every(r=>{ const f=face(r), cs=getComputedStyle(f.querySelector('.medal-disc')); const pill=f.querySelector('.medal-pb');
-                return f.classList.contains('is-pb') && cs.borderTopColor===gold && cs.borderTopWidth==='4px' && !!pill && pill.textContent==='PB'
-                  && !!f.closest('.photo-card').querySelector('.photo-card-pb'); });
-              const of=face(other), ocs=getComputedStyle(of.querySelector('.medal-disc'));
-              return pbOk && !of.classList.contains('is-pb') && !of.querySelector('.medal-pb') && ocs.borderTopWidth==='3px' && ocs.borderTopColor!==gold; };
-            const light=check(); applyTheme('dark'); await wait(150); const dark=check(); applyTheme('light'); await wait(150);
-            return light && dark; }""")
-        c['cover_race_stays_a_photo_card'] = self.ev(page, """async()=>{ """ + W + """
-            const r=state.races.filter(x=>!x.deletedAt&&x.status==='completed'&&x.results.chipTimeSeconds!=null)[5];
-            const cv=document.createElement('canvas'); cv.width=64; cv.height=64; cv.getContext('2d').fillRect(0,0,64,64);
-            r.coverImage=cv.toDataURL('image/jpeg',.7); r.coverThumb=r.coverImage; await persist(); renderCalendar(); await wait(150);
-            const el=document.querySelector('#calendar .photo-card[data-id="'+r.id+'"]');
-            const ok=!!el && !el.classList.contains('is-medal') && !!el.querySelector('.photo-card-img img') && !el.querySelector('.medal-disc')
-              && el.querySelector('.photo-card-date').textContent===r.schedule.raceDate+' · '+secToHMS(r.results.chipTimeSeconds);
-            r.coverImage=null; r.coverThumb=null; await persist(); renderCalendar(); return ok; }""")
-        # 沒填距離（少見）：不寫運動別（日文、英文的名稱放不進獎牌），成績變最大的那行；什麼都沒填就只有年份
-        c['medal_without_distance_or_time'] = self.ev(page, """async()=>{ """ + W + """
-            const a=emptyRace('沒填距離的越野賽','trail_running','completed','2025-12-30'); a.results.chipTimeSeconds=hmsToSec('6:12:00');
-            const b=emptyRace('什麼都沒填','obstacle_race','completed','2025-12-29'); state.races.push(a,b); await persist(); renderCalendar(); await wait(150);
-            const lines=r=>[...document.querySelectorAll('#calendar .photo-card[data-id="'+r.id+'"] .medal-disc > span')].map(s=>s.className.split(' ')[0]+'='+s.textContent).join('|');
-            const ta=lines(a), tb=lines(b);
-            state.races=state.races.filter(r=>r!==a&&r!==b); await persist(); renderCalendar();
-            if(ta!=='medal-main=6:12:00|medal-year=2025'||tb!=='medal-main=2025') console.log('nodist:',ta,tb);
-            return ta==='medal-main=6:12:00|medal-year=2025' && tb==='medal-main=2025'; }""")
-        # 手錶量到的距離（9.97、21.08）：四捨五入到小數一位，整數不寫「.0」
-        c['medal_distance_rounds_to_one_decimal'] = self.ev(page, """async()=>{ """ + W + """
-            const mk=(km,d)=>{ const r=emptyRace('距離 '+km,'road_running','completed',d); r.route.distanceKm=km; r.results.chipTimeSeconds=3600; state.races.push(r); return r; };
-            const rs=[mk(9.97,'2025-12-28'),mk(21.08,'2025-12-27'),mk(160.93,'2025-12-26')]; await persist(); renderCalendar(); await wait(150);
-            const got=rs.map(r=>document.querySelector('#calendar .photo-card[data-id="'+r.id+'"] .medal-main').textContent).join();
-            state.races=state.races.filter(r=>!rs.includes(r)); await persist(); renderCalendar();
-            if(got!=='10K,21.1K,160.9K') console.log('medal:',got);
-            return got==='10K,21.1K,160.9K'; }""")
-        # 卡片是 <button>：沒寫顏色的話賽名是瀏覽器預設的黑字，深色模式下看不到。淺色、深色都要 4.5:1
-        c['wall_text_readable_light_and_dark'] = self.ev(page, """async()=>{ """ + W + """
-            const r=state.races.filter(x=>!x.deletedAt&&x.status==='completed')[7];
-            const cv=document.createElement('canvas'); cv.width=64; cv.height=64; cv.getContext('2d').fillRect(0,0,64,64);
-            r.coverImage=cv.toDataURL('image/jpeg',.7); r.coverThumb=r.coverImage; renderCalendar(); await wait(150);
-            const st=document.createElement('style'); st.textContent='*{transition:none!important}'; document.head.appendChild(st);
-            const read=()=>{ const bad=[];
-              const cards=[document.querySelector('#calendar .photo-card.is-medal'),document.querySelector('#calendar .photo-card[data-id="'+r.id+'"]')];
-              cards.forEach(card=>{ if(!card){ bad.push('missing'); return; }
-                card.querySelectorAll('.photo-card-name,.photo-card-date,.medal-main,.medal-time,.medal-year').forEach(el=>{ const cr=__contrast(el); if(cr<4.5) bad.push(el.className.split(' ')[0]+' '+cr.toFixed(2)); }); });
-              return bad; };
-            const light=read(); applyTheme('dark'); await wait(150); const dark=read(); applyTheme('light'); await wait(150); st.remove();
-            r.coverImage=null; r.coverThumb=null; renderCalendar();
-            if(light.length||dark.length) console.log('medal: contrast',light.join(' | '),'/',dark.join(' | '));
-            return !light.length && !dark.length; }""")
-        c['medal_opens_race_back_to_wall'] = self.ev(page, """async()=>{ """ + W + """
-            const el=document.querySelector('#calendar .photo-card.is-medal'); const id=el.dataset.id; el.click(); await wait(500);
+              && document.querySelectorAll('#calendar .photo-card.bib-card').length===done.length; }""")
+        # v4.4.0 獎牌牆改成號碼布牆：卡片上寫什麼、運動別顏色、PB 印章、拍立得、對比、各種寬度放不放得下，都改在 v44 群組檢查
+        c['wall_card_opens_race_back_to_wall'] = self.ev(page, """async()=>{ """ + W + """
+            const el=document.querySelector('#calendar .photo-card'); const id=el.dataset.id; el.click(); await wait(500);
             const ok=state.selectedId===id; await home(); return ok && state.selectedId===null && state.viewMode==='grid' && !!document.querySelector('#calendar .photo-card'); }""")
         c['empty_wall_and_no_best_strip'] = self.ev(page, """async()=>{ """ + W + """
             const keep=state.races; state.races=keep.filter(r=>r.status!=='completed'); renderCalendar(); await wait(100);
@@ -6489,29 +6420,11 @@ class V43Flows(Group):
             setLang('zh'); applyFontScale('medium'); renderFocusPanel();
             if(bad.length) console.log('fit:',bad.slice(0,12).join(' | '));
             return bad.length===0; }"""
-        # 獎牌牆：圓盤上的字（PB、距離、成績、年份）四個角都在圓裡面
-        MEDAL_FIT = """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
-            const mk=(n,sport,km,t,pb)=>{ const r=emptyRace(n,sport,'completed','2026-0'+(1+state.races.length%8)+'-15'); r.route.distanceKm=km; r.results.chipTimeSeconds=t!=null?hmsToSec(t):null; r.results.isPb=!!pb; state.races.push(r); };
-            mk('U','ultra_marathon',160.9,'26:59:59',true); mk('T','trail_running',null,'11:50:00'); mk('Y','obstacle_race',null,null); mk('S','swimming',1.9,'0:41:12',true);
-            await persist(); state.viewMode='grid'; setPhoneView('grid'); renderAll(); await wait(300);
-            const bad=[];
-            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(150);
-              for(const fs of ['small','medium','large']){ applyFontScale(fs); renderCalendar(); await wait(50);
-                const discs=[...document.querySelectorAll('#calendar .medal-disc')].slice(0,40); if(discs.length<10) bad.push('discs='+discs.length);
-                discs.forEach(d=>{ const db=d.getBoundingClientRect(), cx=db.left+db.width/2, cy=db.top+db.height/2, R=db.width/2-3;
-                  [...d.children].forEach(ch=>{ const b=ch.getBoundingClientRect();
-                    if([[b.left,b.top],[b.right,b.top],[b.left,b.bottom],[b.right,b.bottom]].some(([x,y])=>Math.hypot(x-cx,y-cy)>R+1)||ch.scrollWidth>ch.clientWidth+1)
-                      bad.push(lang+' '+fs+' '+ch.className+' '+ch.textContent); }); });
-                if(document.documentElement.scrollWidth>innerWidth) bad.push(lang+' '+fs+' hscroll'); } }
-            setLang('zh'); applyFontScale('medium'); state.viewMode='calendar'; setPhoneView('list'); renderAll();
-            if(bad.length) console.log('medalfit:',[...new Set(bad)].slice(0,12).join(' | '));
-            return bad.length===0; }"""
         # 700：直拿的小平板、縮窄的視窗（筆電的一列排法要到 768px 才放得下）
         for w in (390, 360, 700):
             fctx, fp = self._ctx(page.context.browser, {'width': w, 'height': 800}, touch=w < 641)
             kind = 'phone' if w < 641 else 'tablet'
             c[f'{kind}{w}_card_tiles_fit'] = self.ev(fp, FIT)
-            c[f'{kind}{w}_medals_fit'] = self.ev(fp, MEDAL_FIT)
             fctx.close()
         # ================= 英文、日文 =================
         ectx, ep = self._ctx(page.context.browser, DESKTOP, lang='en')
@@ -7210,7 +7123,919 @@ class V433Fields(Group):
             setLang('zh'); await wait(150);
             if(!(out.zh&&out.ja&&out.en)) console.log('fields: help',JSON.stringify(out));
             return out.zh && out.ja && out.en; }""")
-        c['version_is_v4_3_3'] = self.ev(page, "()=>APP_VERSION==='v4.3.3'")
+        # （版本號的檢查跟著最新的群組走，v4.4.0 起在 v44）
+
+
+# 號碼布牆用的賽事：各種號碼（短、長、英文字母、中文、一位數）、有封面照的、PB、沒距離、沒成績、
+# 沒日期、很長的賽名；還有不該上牆的（還沒比、沒跑完、刪掉的）
+WALL_SEED_JS = r"""window.__seedBibWall=async function(){
+  const cv=document.createElement('canvas'); cv.width=96; cv.height=72; const g=cv.getContext('2d');
+  const gr=g.createLinearGradient(0,0,0,72); gr.addColorStop(0,'#F4C27A'); gr.addColorStop(1,'#1F4E79'); g.fillStyle=gr; g.fillRect(0,0,96,72);
+  const cover=cv.toDataURL('image/jpeg',.8);
+  const mk=o=>{ const r=emptyRace(o.n,o.s,o.st||'completed',o.d||''); r.route.distanceKm=o.km==null?null:o.km;
+    r.results.chipTimeSeconds=o.t?hmsToSec(o.t):null; r.results.isPb=!!o.pb; r.bibNumber=o.bib||'';
+    if(o.cover){ r.coverImage=cover; r.coverThumb=cover; } if(o.del) r.deletedAt=new Date().toISOString(); return r; };
+  const L=[
+    {n:'長號碼的馬拉松',s:'road_running',d:'2026-04-12',km:42.195,t:'3:15:20',bib:'M102345',pb:1},
+    {n:'英文字母號碼',s:'trail_running',d:'2026-03-08',km:50,t:'7:02:11',bib:'WM-88421'},
+    {n:'中文號碼',s:'duathlon',d:'2026-02-22',km:21.0975,t:'1:39:59',bib:'B區1234'},
+    {n:'只有距離',s:'cycling',d:'2026-01-18',km:160.93},
+    {n:'第三十八屆國際城市超級馬拉松暨全民健康路跑嘉年華',s:'ultra_marathon',d:'2026-01-04',km:246,t:'35:12:40',bib:'7',pb:1},
+    {n:'澎湖超級鐵人三項',s:'triathlon',d:'2025-10-05',km:226,t:'12:41:09',pb:1,bib:'1088',cover:1},
+    {n:'東京馬拉松',s:'road_running',d:'2025-03-02',km:42.195,t:'3:24:50',bib:'12345',cover:1},
+    {n:'合歡山越野挑戰賽',s:'trail_running',d:'2024-11-17',km:25,t:'4:12:30',cover:1},
+    {n:'神戶馬拉松',s:'road_running',d:'2024-11-10',km:42.195,t:'3:31:02',bib:'8821'},
+    {n:'臺東巴歌浪鐵人三項',s:'triathlon',d:'2024-04-14',km:113,t:'5:58:12',pb:1,bib:'356'},
+    {n:'大阪馬拉松',s:'road_running',d:'2024-02-25',km:42.195,t:'3:28:41',bib:'30412'},
+    {n:'臺北馬拉松',s:'road_running',d:'2023-12-17',km:42.195,t:'3:38:15',bib:'A1520'},
+    {n:'萬金石馬拉松（半程）',s:'road_running',d:'2023-03-19',km:21.0975,t:'1:36:20',pb:1,bib:'H3307'},
+    {n:'手錶量的 10K',s:'road_running',d:'2023-01-08',km:9.97,t:'0:47:12'},
+    {n:'臺南標準鐵人三項',s:'triathlon',d:'2022-05-08',km:51.5,t:'2:31:45',pb:1},
+    {n:'日月潭泳渡',s:'swimming',d:'2022-03-13',km:3.3,t:'1:18:22'},
+    {n:'東海岸超級馬拉松 100K',s:'ultra_marathon',d:'2019-10-27',km:100,t:'11:48:30',pb:1},
+    {n:'斯巴達障礙跑 Sprint',s:'obstacle_race',d:'2019-04-14',km:5,t:'0:58:10'},
+    {n:'公司運動會大隊接力',s:'other',d:'2019-03-10'},
+    {n:'沒填日期的比賽',s:'road_running',d:'',km:10,t:'0:48:30',bib:'2077'},
+    {n:'沒日期沒成績',s:'obstacle_race',d:''},
+    {n:'報名了還沒比',s:'road_running',st:'registered',d:'2026-11-01',km:42.195},
+    {n:'沒跑完',s:'trail_running',st:'dnf',d:'2025-06-01',km:50},
+    {n:'刪掉的',s:'road_running',d:'2025-05-01',km:10,t:'0:50:00',del:1},
+  ];
+  state.races=L.map(mk); state.selectedId=null; state.filterStatus='all'; state.searchQuery='';
+  const si=document.getElementById('search-input'); if(si) si.value='';
+  state.viewMode='grid'; await persist(); setPhoneView('grid'); renderAll(); await new Promise(s=>setTimeout(s,250));
+};
+window.__card=n=>{ const r=state.races.find(x=>x.name===n); return r&&document.querySelector('#calendar .photo-card[data-id="'+r.id+'"]'); };
+// 字底下真正的顏色：往上找第一層不透明的底；號碼布的紙是漸層，拿漸層裡的每一個顏色都比一次、取最差的
+window.__under=el=>{ let e=el; const layers=[];
+  while(e){ const cs=getComputedStyle(e);
+    if(/gradient/.test(cs.backgroundImage)&&!e.classList.contains('bib-holes')){
+      const cols=(cs.backgroundImage.match(/(rgba?|color)\([^)]*\)/g)||[]).map(__rgba).filter(c=>c[3]>=1);
+      if(cols.length) return cols.map(c=>layers.reduceRight((bg,l)=>__over(l,bg),c)); }
+    const b=__rgba(cs.backgroundColor); if(b[3]>0) layers.push(b); if(b[3]>=1) break; e=e.parentElement; }
+  let bg=[255,255,255,1]; for(let i=layers.length-1;i>=0;i--) bg=__over(layers[i],bg); return [bg]; };
+window.__textCr=el=>{ const fg=__rgba(getComputedStyle(el).color); return Math.min(...__under(el).map(bg=>__cr(__over(fg,bg),bg))); };
+"""
+
+# 號碼布牆的版面：每張號碼布的賽名帶、號碼、左下角的字、晶片條都在紙裡面；號碼沒被切掉、
+# 每一個字的中心都不在 PB 印章底下、賽名帶的字不跑到印章底下；印章裡的字在內圈裡；
+# 拍立得的距離在照片裡、日期和成績在卡片裡；沒有橫向捲動
+BIB_FIT_JS = r"""()=>{ const bad=[];
+  const st=document.createElement('style'); st.textContent='.photo-card{transform:none!important;transition:none!important}'; document.head.appendChild(st);
+  const R=e=>e.getBoundingClientRect();
+  const inside=(a,b,tol=0.5)=>a.left>=b.left-tol&&a.right<=b.right+tol&&a.top>=b.top-tol&&a.bottom<=b.bottom+tol;
+  const cut=e=>e.scrollWidth>e.clientWidth+1;
+  const name=c=>(c.title||'?').slice(0,8);
+  document.querySelectorAll('#calendar .bib-card').forEach(c=>{ const cr=R(c);
+    ['.bib-head','.bib-num','.bib-foot'].forEach(s=>{ const e=c.querySelector(s); if(!inside(R(e),cr)) bad.push(name(c)+' out '+s); });
+    const no=c.querySelector('.bib-no'); if(cut(no)) bad.push(name(c)+' number cut '+no.textContent);
+    if(!inside(R(no),R(c.querySelector('.bib-num')),1)) bad.push(name(c)+' number spills');
+    const tag=c.querySelector('.bib-tag'); if(cut(tag)) bad.push(name(c)+' tag cut '+tag.textContent);
+    const rt=c.querySelector('.bib-chip,.bib-date'); if(rt&&!inside(R(rt),cr)) bad.push(name(c)+' chip out');
+    const race=c.querySelector('.bib-race'), fz=parseFloat(getComputedStyle(race).fontSize);
+    if(race.clientWidth<Math.min(race.scrollWidth,4*fz)-1) bad.push(name(c)+' race name too narrow '+race.clientWidth);
+    const sp=c.querySelector('.bib-stamp');
+    // 印章自己轉了 -16°：外框比圓大，圓心用外框的中心、半徑用沒轉之前的寬度
+    if(sp){ const s=R(sp), cx=s.left+s.width/2, cy=s.top+s.height/2, r=parseFloat(getComputedStyle(sp).width)/2;
+      const tw=document.createTreeWalker(no,NodeFilter.SHOW_TEXT); let n;
+      while((n=tw.nextNode())){ for(let i=0;i<n.length;i++){ const rg=document.createRange(); rg.setStart(n,i); rg.setEnd(n,i+1); const b=rg.getBoundingClientRect();
+        if(b.width&&Math.hypot(b.left+b.width/2-cx,b.top+b.height/2-cy)<r) bad.push(name(c)+' stamp covers '+n.data[i]); } }
+      const rr=R(race); if(Math.hypot(rr.right-cx,Math.min(rr.bottom,cy)-cy)<r-1) bad.push(name(c)+' stamp covers race name');
+      if(cx-r<cr.left-1||cx+r>cr.right+1||cy-r<cr.top-1) bad.push(name(c)+' stamp off card');
+    }
+  });
+  document.querySelectorAll('#calendar .pola-card').forEach(c=>{ const cr=R(c);
+    const d=c.querySelector('.pola-dist'); if(d&&!inside(R(d),R(c.querySelector('.pola-photo')))) bad.push(name(c)+' dist out of photo');
+    const cap=R(c.querySelector('.pola-cap'));
+    c.querySelectorAll('.pola-meta span').forEach(e=>{ if(!inside(R(e),cap)) bad.push(name(c)+' meta out '+e.textContent); });
+    if(!inside(R(c.querySelector('.pola-cap')),cr)) bad.push(name(c)+' caption out');
+  });
+  // 印章裡的字（SVG）：getBBox 的高度是字型的整個行高、不是墨水；橫向用 bbox（textLength 固定了寬度），
+  // 直向用基線往上 0.9 個字級到往下 0.15 個字級，四個角都要在內圈（半徑 24）裡
+  document.querySelectorAll('#calendar .bib-stamp').forEach(sv=>{ sv.querySelectorAll('text').forEach(t=>{ const b=t.getBBox(), fz=parseFloat(getComputedStyle(t).fontSize), y0=t.y.baseVal[0].value;
+    const top=y0-0.9*fz, bot=y0+0.15*fz;
+    if([[b.x,top],[b.x+b.width,top],[b.x,bot],[b.x+b.width,bot]].some(([x,y])=>Math.hypot(x-30,y-30)>24)) bad.push('stamp text out '+t.textContent); }); });
+  if(document.documentElement.scrollWidth>innerWidth) bad.push('hscroll');
+  if(!document.querySelector('#calendar .bib-card')) bad.push('no bibs');
+  st.remove();
+  return [...new Set(bad)]; }"""
+
+
+class V44BibWall(Group):
+    """v4.4.0：獎牌牆改成號碼布牆——依年份分段（場數、里程、PB 數）；沒有封面照的完賽是那一場的
+    號碼布（賽名帶、號碼或距離、晶片條上的成績），有封面照的是拍立得，PB 蓋紅色印章。
+    各種寬度、語言、字級都放得下；淺色、深色、瀏覽器強制深色都看得清楚。"""
+
+    ECHO = ('wall:',)
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js, arg=None):
+        # 一項檢查拋出例外：記成這一項失敗、印出原因，後面照跑
+        try:
+            return pg.evaluate(js) if arg is None else pg.evaluate(js, arg)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def _ctx(self, browser, viewport, theme='light', touch=False, lang=None, force_dark=False, dsf=1):
+        ctx = full_mode_context(browser, viewport=viewport, is_mobile=touch, has_touch=touch, color_scheme='light', device_scale_factor=dsf)
+        init = f"localStorage.setItem('theme-pref-v1','{theme}');"
+        if lang:
+            init += f"localStorage.setItem('lang-pref-v1','{lang}');"
+        ctx.add_init_script('try{' + init + '}catch(e){}')
+        pg = ctx.new_page()
+        if force_dark:
+            cdp = ctx.new_cdp_session(pg)
+            cdp.send('Emulation.setAutoDarkModeOverride', {'enabled': True})
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=FIELD_FRAME_JS)
+        pg.add_script_tag(content=WALL_SEED_JS)
+        pg.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
+        pg.evaluate("()=>__seedBibWall()")
+        pg.wait_for_timeout(300)
+        return ctx, pg
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        W = ("const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+             "const home=async()=>{ for(let i=0;i<12;i++){ if(!document.getElementById('global-drawer').hidden){ closeDrawer(); await wait(300); continue; } if(state.selectedId||state.creating){ goBackFromDetail(); await wait(350); continue; } break; } };")
+        ctx, pg = self._ctx(browser, {'width': 1280, 'height': 900})
+        # ================= 分段、順序、統計 =================
+        c['wall_has_each_finished_race_once_newest_first'] = self.ev(pg, """()=>{
+            const done=state.races.filter(r=>!r.deletedAt&&r.status==='completed').sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
+            const ids=[...document.querySelectorAll('#calendar .photo-card')].map(b=>b.dataset.id);
+            const ok=JSON.stringify(ids)===JSON.stringify(done.map(r=>r.id)) && done.length===21;
+            if(!ok) console.log('wall: ids',ids.length,done.length);
+            return ok; }""")
+        c['sections_by_year_undated_last'] = self.ev(pg, """()=>{
+            const heads=[...document.querySelectorAll('#calendar .bib-sec')].map(s=>s.querySelector('h3 .bib-ynum').textContent);
+            const per=[...document.querySelectorAll('#calendar .bib-sec')].map(s=>[...s.querySelectorAll('.photo-card')].map(b=>{ const r=state.races.find(x=>x.id===b.dataset.id); return (r.schedule.raceDate||'').slice(0,4)||'—'; }));
+            const ok=JSON.stringify(heads)===JSON.stringify(['2026','2025','2024','2023','2022','2019','未定日期'])
+              && per.every((ys,i)=>ys.every(y=>y===(heads[i]==='未定日期'?'—':heads[i])));
+            if(!ok) console.log('wall: heads',heads.join(','));
+            return ok; }""")
+        # 每一段的標題：場數、四捨五入的總里程、PB 數（沒有 PB 就不寫；沒有里程就不寫）
+        c['year_header_counts_races_km_pb'] = self.ev(pg, """()=>{
+            const got=[...document.querySelectorAll('#calendar .bib-ystats')].map(e=>e.textContent.replace(/\\s+/g,' ').trim());
+            const want=['5 場 · 520 km · 2 PB','2 場 · 268 km · 1 PB','4 場 · 222 km · 1 PB','3 場 · 73 km · 1 PB','2 場 · 55 km · 1 PB','3 場 · 105 km · 1 PB','2 場 · 10 km'];
+            if(JSON.stringify(got)!==JSON.stringify(want)) console.log('wall: stats',got.join(' | '));
+            return JSON.stringify(got)===JSON.stringify(want) && !!document.querySelector('#calendar .bib-ystats b'); }""")
+        # ================= 號碼布上寫什麼 =================
+        # 大字：有號碼寫號碼；沒有號碼寫距離（斜體）；兩個都沒有畫運動別的圖示。左下角：大字是號碼時寫距離，
+        # 否則寫運動別。右下角：有成績寫在晶片條上，沒有成績寫日期
+        c['bib_number_else_distance_else_icon'] = self.ev(pg, """()=>{ const bad=[];
+            const read=n=>{ const c=__card(n); const num=c.querySelector('.bib-num'), right=c.querySelector('.bib-chip,.bib-date');
+              return [c.querySelector('.bib-race').textContent, num.querySelector('svg')?'[icon]':num.textContent.trim(), getComputedStyle(num).fontStyle,
+                c.querySelector('.bib-tag').textContent, right?(right.classList.contains('bib-chip')?'chip:':'date:')+right.textContent.trim():'', (c.querySelector('.bib-year')||{}).textContent||''].join('|'); };
+            const want={
+              '神戶馬拉松':'神戶馬拉松|8821|normal|42.2 KM|chip:3:31:02|2024',
+              '臺南標準鐵人三項':'臺南標準鐵人三項|51.5K|italic|三鐵|chip:2:31:45|2022',
+              '只有距離':'只有距離|160.9K|italic|自行車|date:2026.01.18|2026',
+              '公司運動會大隊接力':'公司運動會大隊接力|[icon]|normal|其他|date:2019.03.10|2019',
+              '沒日期沒成績':'沒日期沒成績|[icon]|normal|障礙賽||',
+              '中文號碼':'中文號碼|B區1234|normal|21.1 KM|chip:1:39:59|2026' };
+            Object.entries(want).forEach(([n,w])=>{ const g=read(n); if(g!==w) bad.push(g); });
+            if(bad.length) console.log('wall: bib',bad.join(' || '));
+            return bad.length===0; }""")
+        # 手錶量到的距離（9.97、21.0975、160.93）：四捨五入到小數一位，整數不寫「.0」
+        c['distance_rounds_to_one_decimal'] = self.ev(pg, """()=>{
+            const got=['手錶量的 10K','萬金石馬拉松（半程）','只有距離','東海岸超級馬拉松 100K'].map(n=>{ const c=__card(n); const num=c.querySelector('.bib-num');
+              return num.classList.contains('is-dist')?num.textContent.trim():c.querySelector('.bib-tag').textContent; }).join(',');
+            if(got!=='10K,21.1 KM,160.9K,100K') console.log('wall: round',got);
+            return got==='10K,21.1 KM,160.9K,100K'; }""")
+        # 有封面照的是拍立得：照片、照片上的距離、賽名、日期和成績；沒有號碼布的東西
+        c['cover_race_is_polaroid'] = self.ev(pg, """()=>{
+            const r=state.races.find(x=>x.name==='東京馬拉松'), c=__card('東京馬拉松'); const img=c.querySelector('img');
+            const meta=[...c.querySelectorAll('.pola-meta span')].map(s=>s.textContent);
+            return !!img && img.getAttribute('src')===coverThumbOf(r) && c.querySelector('.pola-dist').textContent==='42.2K'
+              && c.querySelector('.pola-name').textContent==='東京馬拉松' && JSON.stringify(meta)==='["2025.03.02","3:24:50"]'
+              && !c.querySelector('.bib-num,.bib-head') && document.querySelectorAll('#calendar .pola-card').length===3; }""")
+        # PB 才有印章（號碼布、拍立得都是），淺色、深色都一樣
+        c['pb_stamp_only_on_pb_light_and_dark'] = self.ev(pg, """async()=>{ """ + W + """
+            const check=()=>[...document.querySelectorAll('#calendar .photo-card')].every(b=>{ const r=state.races.find(x=>x.id===b.dataset.id);
+              const sp=b.querySelector('.bib-stamp'); return r.results.isPb ? (!!sp && sp.getBoundingClientRect().width>30 && sp.textContent.includes('PB')) : !sp; });
+            const light=check(); applyTheme('dark'); await wait(150); const dark=check(); applyTheme('light'); await wait(150);
+            return light && dark && document.querySelectorAll('#calendar .bib-stamp').length===7; }""")
+        # 賽名帶是運動別的顏色：每個運動別不一樣，白字至少 4.5:1；大字的距離用同一個顏色，紙上至少 3:1（大字）
+        c['band_color_by_sport_and_readable'] = self.ev(pg, """async()=>{ """ + W + """
+            const st=document.createElement('style'); st.textContent='*{transition:none!important}'; document.head.appendChild(st);
+            const bands=[...document.querySelectorAll('#calendar .bib-card')].map(b=>[b.dataset.sport,getComputedStyle(b.querySelector('.bib-head')).backgroundColor]);
+            const bySport={}; bands.forEach(([s,col])=>{ (bySport[s]=bySport[s]||new Set()).add(col); });
+            const oneEach=Object.values(bySport).every(s=>s.size===1), distinct=new Set(Object.values(bySport).map(s=>[...s][0])).size===Object.keys(bySport).length;
+            const read=()=>{ const bad=[];
+              document.querySelectorAll('#calendar .bib-race').forEach(e=>{ const cr=__textCr(e); if(cr<4.5) bad.push(e.textContent.slice(0,6)+' '+cr.toFixed(2)); });
+              document.querySelectorAll('#calendar .bib-num.is-dist .bib-no').forEach(e=>{ const cr=__textCr(e); if(cr<3) bad.push('dist '+e.textContent+' '+cr.toFixed(2)); });
+              return bad; };
+            const light=read(); applyTheme('dark'); await wait(150); const dark=read(); applyTheme('light'); await wait(150); st.remove();
+            if(light.length||dark.length||!oneEach||!distinct) console.log('wall: band',oneEach,distinct,light.join(' | '),'/',dark.join(' | '));
+            return oneEach && distinct && Object.keys(bySport).length>=8 && !light.length && !dark.length; }""")
+        # 紙上、晶片條上、拍立得上、段落標題的字：淺色、深色都至少 4.5:1（大字的號碼 3:1）
+        c['wall_text_readable_light_and_dark'] = self.ev(pg, """async()=>{ """ + W + """
+            const st=document.createElement('style'); st.textContent='*{transition:none!important}'; document.head.appendChild(st);
+            const read=()=>{ const bad=[];
+              document.querySelectorAll('#calendar .bib-tag,#calendar .bib-date,#calendar .bib-chip,#calendar .pola-name,#calendar .pola-meta span,#calendar .bib-ystats,#calendar .bib-ystats b,#calendar .bib-year')
+                .forEach(e=>{ const cr=__textCr(e); if(cr<4.5) bad.push(e.className+' '+e.textContent.slice(0,8)+' '+cr.toFixed(2)); });
+              document.querySelectorAll('#calendar .bib-num:not(.is-dist):not(.is-icon) .bib-no,#calendar .bib-ynum').forEach(e=>{ const cr=__textCr(e); if(cr<3) bad.push('big '+e.textContent+' '+cr.toFixed(2)); });
+              return [...new Set(bad)]; };
+            const light=read(); applyTheme('dark'); await wait(150); const dark=read(); applyTheme('light'); await wait(150); st.remove();
+            if(light.length||dark.length) console.log('wall: contrast',light.slice(0,6).join(' | '),'/',dark.slice(0,6).join(' | '));
+            return !light.length && !dark.length; }""")
+        # 報讀的名稱是一句完整的話：賽名、日期、距離、成績、號碼、PB（卡片上的版面直接唸會沒頭沒尾）
+        c['screen_reader_label_says_name_date_time_bib_pb'] = self.ev(pg, """()=>{
+            const a=__card('臺東巴歌浪鐵人三項').getAttribute('aria-label'), b=__card('合歡山越野挑戰賽').getAttribute('aria-label');
+            const ok=a==='臺東巴歌浪鐵人三項, 三鐵, 2024-04-14, 113 km, 5:58:12, 號碼布 356, 個人最佳 PB' && b==='合歡山越野挑戰賽, 越野跑, 2024-11-17, 25 km, 4:12:30'
+              && [...document.querySelectorAll('#calendar .photo-card')].every(x=>x.tagName==='BUTTON'&&x.getAttribute('aria-label'))
+              && document.querySelectorAll('#calendar .bib-yhead').length===7 && document.querySelector('#calendar .bib-yhead').tagName==='H3';
+            if(!ok) console.log('wall: label',a,'/',b);
+            return ok; }""")
+        # 每張卡的小角度每次畫都一樣（重畫、切檢視不會整面牆跳一下），而且不是每張都同一個角度
+        c['card_tilt_stable_across_rerender'] = self.ev(pg, """async()=>{ """ + W + """
+            const rots=()=>[...document.querySelectorAll('#calendar .photo-card')].map(b=>b.style.getPropertyValue('--rot'));
+            const a=rots(); state.viewMode='calendar'; renderCalendar(); await wait(50); state.viewMode='grid'; renderCalendar(); await wait(50); const b=rots();
+            return JSON.stringify(a)===JSON.stringify(b) && new Set(a).size>5 && a.every(x=>Math.abs(parseFloat(x))<=3); }""")
+        # 滑鼠移上去：扶正、浮起來（不再跟著游標轉）
+        pg.add_style_tag(content='*{transition:none!important}')
+        box = pg.evaluate("""()=>{ const c=__card('神戶馬拉松'); c.scrollIntoView({block:'center'}); const r=c.getBoundingClientRect(); return [r.left+r.width/2,r.top+r.height/2,parseFloat(c.style.getPropertyValue('--rot'))]; }""")
+        before = pg.evaluate("()=>getComputedStyle(__card('神戶馬拉松')).transform")
+        pg.mouse.move(box[0], box[1]); pg.wait_for_timeout(100)
+        pg.mouse.move(box[0] + 20, box[1] + 10); pg.wait_for_timeout(100)
+        after = pg.evaluate("()=>[getComputedStyle(__card('神戶馬拉松')).transform,__card('神戶馬拉松').style.getPropertyValue('--tilt-x')]")
+        pg.mouse.move(5, 5); pg.wait_for_timeout(50)
+        m = [float(v) for v in re.findall(r'-?[\d.e]+', before)]
+        rot_ok = len(m) == 6 and abs(math.degrees(math.atan2(m[1], m[0])) - box[2]) < 0.05 and abs(box[2]) > 0.01
+        c['hover_straightens_and_lifts_card'] = rot_ok and after[0] == 'matrix(1, 0, 0, 1, 0, -3)' and after[1] == ''
+        # 點一下打開那一場，返回回到牆上（號碼布、拍立得都是）；鍵盤：Tab 到卡片有看得到的框，Enter 打開
+        c['click_opens_race_back_returns_to_wall'] = self.ev(pg, """async()=>{ """ + W + """
+            let ok=true;
+            for(const n of ['神戶馬拉松','東京馬拉松']){ const el=__card(n); const id=el.dataset.id; el.click(); await wait(500);
+              ok=ok&&state.selectedId===id; await home(); ok=ok&&state.selectedId===null&&state.viewMode==='grid'&&!!__card(n); }
+            return ok; }""")
+        pg.keyboard.press('Tab')
+        c['keyboard_focus_ring_and_enter_opens'] = self.ev(pg, """async()=>{ """ + W + """
+            const el=__card('大阪馬拉松'); el.focus(); await wait(50); const cs=getComputedStyle(el);
+            const ring=el.matches(':focus-visible') && cs.outlineStyle==='solid' && parseFloat(cs.outlineWidth)>=2 && __cr(__rgba(cs.outlineColor),__under(el.parentElement)[0])>=3;
+            return { ring, id:el.dataset.id }; }""")
+        ring = c['keyboard_focus_ring_and_enter_opens']
+        if ring and ring.get('ring'):
+            pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
+            opened = pg.evaluate("(id)=>state.selectedId===id", ring['id'])
+            pg.evaluate("async()=>{ " + W + " await home(); }")
+            c['keyboard_focus_ring_and_enter_opens'] = bool(opened)
+        else:
+            c['keyboard_focus_ring_and_enter_opens'] = False
+        # ================= 字型 =================
+        # 大字用 Barlow Condensed（號碼布、計時看板的窄體字），載不到時有系統內建的窄體字可以接
+        c['display_font_requested_with_condensed_fallbacks'] = self.ev(pg, """()=>{
+            const href=[...document.querySelectorAll('link[rel="stylesheet"]')].map(l=>l.href).find(h=>h.includes('fonts.googleapis.com'))||'';
+            const ff=getComputedStyle(document.querySelector('#calendar .bib-no')).fontFamily;
+            return /family=Barlow\\+Condensed:ital,wght@[^&]*0,900[^&]*1,900/.test(href) && /^"?Barlow Condensed"?,/.test(ff) && /Condensed.*sans-serif$/.test(ff) && ff.split(',').length>=4; }""")
+        # ================= 三種語言 =================
+        c['stamp_and_header_in_three_languages'] = self.ev(pg, """async()=>{ """ + W + """ const out={};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(150);
+              out[lang]=[document.querySelector('#calendar .bib-stamp-sub').textContent, document.querySelector('#calendar .bib-ystats').textContent.replace(/\\s+/g,' ').trim(),
+                [...document.querySelectorAll('#calendar .bib-ynum')].pop().textContent, __card('臺南標準鐵人三項').querySelector('.bib-tag').textContent].join('|'); }
+            setLang('zh'); await wait(150);
+            const ok=out.zh==='個人最佳|5 場 · 520 km · 2 PB|未定日期|三鐵' && out.ja==='ベスト|5 レース · 520 km · 2 PB|日付未定|トライアスロン'
+              && out.en==='BEST|5 races · 520 km · 2 PB|No date yet|Triathlon';
+            if(!ok) console.log('wall: lang',JSON.stringify(out));
+            return ok; }""")
+        c['help_describes_bib_wall'] = self.ev(pg, """async()=>{ """ + W + """ const out={};
+            for(const [lang,words] of [['zh',['號碼布','拍立得','紅色印章','號碼布編號']],['ja',['ゼッケン','ポラロイド','赤いスタンプ','ゼッケン番号']],['en',['bib','polaroid','red stamp','Bib Number']]]){
+              setLang(lang); await wait(150); openHelpModal(); await wait(200);
+              const tx=document.querySelector('#help-modal .help-body').textContent; out[lang]=words.every(w=>tx.includes(w)) && !/金框|金の枠|gold rim/.test(tx);
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(200); }
+            setLang('zh'); await wait(150);
+            if(!(out.zh&&out.ja&&out.en)) console.log('wall: help',JSON.stringify(out));
+            return out.zh && out.ja && out.en; }""")
+        c['empty_wall_shows_message'] = self.ev(pg, """async()=>{ """ + W + """
+            const keep=state.races; state.races=keep.filter(r=>r.status!=='completed'); renderCalendar(); await wait(100);
+            const wrap=document.querySelector('#calendar .photo-grid-wrap');
+            const ok=!!wrap && wrap.textContent.includes('還沒有已完賽的賽事') && !wrap.querySelector('.photo-card,.bib-sec');
+            state.races=keep; renderCalendar(); return ok; }""")
+        # （版本號的檢查跟著最新的群組走，v4.5.0 起在 v45）
+        ctx.close()
+        # ================= 各種寬度 × 語言 × 字級都放得下 =================
+        # 沙盒連不到 Google Fonts：這裡量到的是備援字型（一般無襯線字，比 Barlow Condensed 寬很多），是最擠的情況
+        FIT_ALL = """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const fit=""" + BIB_FIT_JS + """; const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(120);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); await wait(80); fit().forEach(b=>bad.push(lang+' '+fs+' '+b)); } }
+            setLang('zh'); applyFontScale('medium');
+            if(bad.length) console.log('wall: fit',bad.slice(0,10).join(' | '));
+            return bad.length===0; }"""
+        for w in (360, 390, 700, 1280):
+            fctx, fp = self._ctx(browser, {'width': w, 'height': 900}, touch=w < 641)
+            c[f'fits_{w}_all_languages_and_font_sizes'] = self.ev(fp, FIT_ALL)
+            if w == 360:
+                # 手機兩欄一樣寬（拍立得不換行的日期不會把那一欄撐寬）
+                c['phone_two_equal_columns'] = self.ev(fp, """async()=>{ const r=state.races.find(x=>x.name==='東京馬拉松'); const keep=r.name;
+                    r.name='東京馬拉松 Tokyo Marathon 2025 Elite Wave'; renderCalendar(); await new Promise(s=>setTimeout(s,80));
+                    const ok=[...document.querySelectorAll('#calendar .bib-grid')].every(g=>{
+                      const ws=[...g.children].map(x=>Math.round(x.offsetWidth)); return getComputedStyle(g).gridTemplateColumns.split(' ').length===2 && new Set(ws).size===1; });
+                    r.name=keep; renderCalendar(); return ok; }""")
+                # 長按號碼布：跳出快速動作，放開手指不會順便打開那一場
+                c['long_press_bib_opens_context_sheet'] = self.ev(fp, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+                    const card=__card('神戶馬拉松'); card.scrollIntoView({block:'center'}); await wait(100); const rect=card.getBoundingClientRect();
+                    const opts={bubbles:true,pointerType:'touch',isPrimary:true,clientX:rect.x+rect.width/2,clientY:rect.y+rect.height/2,pointerId:1};
+                    card.dispatchEvent(new PointerEvent('pointerdown',opts)); await wait(700);
+                    card.dispatchEvent(new PointerEvent('pointerup',opts)); card.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:opts.clientX,clientY:opts.clientY}));
+                    await wait(150); const sheet=document.getElementById('race-context-sheet');
+                    const ok=!sheet.hidden && !!sheet.querySelector('[data-ctx="share"]') && state.selectedId===null;
+                    closeRaceContextSheet(); return ok; }""")
+            fctx.close()
+        # ================= 瀏覽器的「網頁強制深色」 =================
+        # 強制深色是畫的時候才轉的，算出來的樣式看不到，只能量畫面：PB 印章的圈跟旁邊的紙要看得出來
+        # （設計稿的 mix-blend-mode:multiply 在轉成深色的紙上整個印章都不見了）
+        for theme, force in (('light', True), ('light', False), ('dark', False)):
+            sctx, sp = self._ctx(browser, {'width': 1280, 'height': 900}, theme=theme, force_dark=force, dsf=2)
+            sp.add_style_tag(content='*{transition:none!important}')
+            geo = sp.evaluate("""()=>{ const c=__card('臺東巴歌浪鐵人三項'); c.scrollIntoView({block:'center'}); const s=c.querySelector('.bib-stamp'), r=s.getBoundingClientRect();
+                return [r.left+r.width/2, r.top+r.height/2, parseFloat(getComputedStyle(s).width)/2]; }""")
+            sp.wait_for_timeout(200)
+            img = cv2.imdecode(np.frombuffer(sp.screenshot(), np.uint8), cv2.IMREAD_COLOR)
+            k = img.shape[1] / 1280
+            cx, cy, r = geo[0] * k, geo[1] * k, geo[2] * k
+            crs = []
+            for deg in range(25, 160, 10):            # 下半圈：底下是紙，不是賽名帶
+                a = math.radians(deg)
+                best = 0
+                for rr in (r * 0.93, r * 0.95, r * 0.97):
+                    ring = img[int(cy + rr * math.sin(a)), int(cx + rr * math.cos(a))]
+                    paper = img[int(cy + (r + 6 * k) * math.sin(a)), int(cx + (r + 6 * k) * math.cos(a))]
+                    l1, l2 = V433Fields._lum(ring), V433Fields._lum(paper)
+                    best = max(best, (max(l1, l2) + .05) / (min(l1, l2) + .05))
+                crs.append(best)
+            crs.sort()
+            med = crs[len(crs) // 2]
+            label = 'pb_stamp_visible_' + ('forced_dark' if force else theme)
+            # 3:1 是 WCAG 對非文字圖形的要求；實測淺色 4.2、深色 3.7、強制深色 4.8，加回 multiply 的強制深色 1.08
+            c[label] = med >= 3
+            if med < 3:
+                print(f'    wall: stamp {label} median contrast {med:.2f}')
+            sctx.close()
+
+
+# 沙盒連不到 jsDelivr：設 CDN_MIRROR=放著 xlsx.full.min.js（npm 原檔，SRI 雜湊一樣）的資料夾，
+# Excel 那幾項就從那裡回應；沒設就照常走網路
+CDN_MIRROR = os.environ.get('CDN_MIRROR', '')
+XLSX_CDN_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+IPHONE_UA = ('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 '
+             '(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1')
+
+
+def tiny_xlsx(sheet, rows):
+    """只用標準函式庫做一個最小的 .xlsx（一張工作表、字串用 inlineStr），測試不必多裝套件。"""
+    import io, zipfile
+    from xml.sax.saxutils import escape
+
+    def col(i):
+        s = ''
+        i += 1
+        while i:
+            i, r = divmod(i - 1, 26)
+            s = chr(65 + r) + s
+        return s
+    body = ''
+    for ri, row in enumerate(rows, 1):
+        cells = ''
+        for ci, v in enumerate(row):
+            ref = f'{col(ci)}{ri}'
+            if isinstance(v, (int, float)):
+                cells += f'<c r="{ref}"><v>{v}</v></c>'
+            else:
+                cells += f'<c r="{ref}" t="inlineStr"><is><t>{escape(str(v))}</t></is></c>'
+        body += f'<row r="{ri}">{cells}</row>'
+    files = {
+        '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+            '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+        '_rels/.rels': '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+            f'<sheet name="{escape(sheet)}" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+        'xl/worksheets/sheet1.xml': '<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            f'<sheetData>{body}</sheetData></worksheet>',
+    }
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
+        for name, text in files.items():
+            z.writestr(name, text)
+    return buf.getvalue()
+
+
+# 七種資料各放一點：賽事（含一場在垃圾桶）、訓練（含一筆刪除墓碑）、鞋款、補給品、自訂範本、
+# 個人資料（含居住縣市）、徽章
+BACKUP_SEED_JS = r"""window.__seedSeven=async function(){
+  const a=emptyRace('備份測試・全馬','road_running','completed','2025-03-01'); a.results.chipTimeSeconds=12000; a.route.distanceKm=42.195;
+  const b=emptyRace('備份測試・越野','trail_running','registered','2027-05-01');
+  const c=emptyRace('備份測試・垃圾桶','road_running','registered','2027-06-01'); c.deletedAt=new Date().toISOString();
+  state.races.push(a,b,c); await persist();
+  trainings.push(migrateTraining({id:'t1',date:'2025-02-01',sport:'run',name:'輕鬆跑',distanceKm:10,durationSeconds:3600,fingerprint:'fp1',importedAt:'2025-02-01T00:00:00Z'}));
+  trainings.push(migrateTraining({id:'t2',date:'2025-02-03',sport:'ride',name:'騎車',distanceKm:40,durationSeconds:5400,fingerprint:'fp2',importedAt:'2025-02-03T00:00:00Z'}));
+  trainings.push(migrateTraining({id:'t3',date:'2025-01-03',sport:'run',name:'刪掉的',distanceKm:5,durationSeconds:1800,fingerprint:'fp3',importedAt:'2025-01-03T00:00:00Z',deletedAt:'2025-01-04T00:00:00Z',updatedAt:'2025-01-04T00:00:00Z'}));
+  await persistTrainings();
+  shoes.push(migrateShoe({id:'s1',name:'Vaporfly 3',brand:'Nike'})); await persistShoes();
+  nutritionDictionary.push(migrateNutritionDictItem({id:'n1',name:'Maurten Gel 100',carbGrams:25})); await persistNutritionDictionary();
+  templates.push({id:'tpl-own',name:'我的越野包',items:[{itemName:'頭燈',category:'mandatory_gear',isMandatory:true}]}); await persistTemplates();
+  userProfile=migrateUserProfile({weightKg:60,homeCounty:'台北市',hr:{running:{restingHr:50,maxHr:190}}}); await persistUserProfile();
+  badgeUnlocks['first_finish']={unlockedAt:'2025-03-01T10:00:00Z',seen:true,triggerRaceId:a.id}; await persistBadgeUnlocks();
+  renderAll();
+};
+// 沒登入的雲端：Firebase 回報「沒有登入」之前，跟一般打開網站一樣先不知道
+window.__signedOutCloud=function(callNow){ const c=__makeFakeCloud([],[]); c.onAuthChange=cb=>{ window.__authCb=cb; if(callNow) cb(null); };
+  window.__cloud=c; window.dispatchEvent(new Event('cloud-ready')); return c; };
+window.__addLive=function(n){ for(let i=0;i<n;i++) state.races.push(emptyRace('提醒卡測試 '+i,'road_running','completed','2025-0'+(1+i%9)+'-01')); renderAll(); };
+window.__card=()=>document.querySelector('#auth-area .backup-nudge');
+window.__dot=()=>document.getElementById('btn-account-menu').classList.contains('has-alert');
+"""
+
+# 瀏覽器的 navigator.storage.persist() 換成會記次數的假函式（真的那個在無頭瀏覽器裡一律拒絕）
+PERSIST_SPY_JS = """(()=>{ window.__persist={calls:0,granted:false,persisted:false};
+  try{ const sm=navigator.storage;
+    Object.defineProperty(sm,'persist',{configurable:true,value:async()=>{ window.__persist.calls++; return window.__persist.granted; }});
+    Object.defineProperty(sm,'persisted',{configurable:true,value:async()=>window.__persist.persisted});
+  }catch(e){} })();"""
+
+
+class V45Backup(Group):
+    """v4.5.0：完整備份（匯出七種資料、匯入合併還原、舊格式照收）；沒登入時的資料安全提醒（頭像選單的
+    提醒卡、頭像的小紅點、持久保存、iPhone 加到主畫面的提示）；Excel 解析套件按「匯入 Excel」才載入；
+    行事曆匯出不帶垃圾桶、沒東西可匯出時講一聲；生涯數據的 5 場門檻不算垃圾桶。"""
+
+    ECHO = ('v45:',)
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js, arg=None):
+        try:
+            return pg.evaluate(js) if arg is None else pg.evaluate(js, arg)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def _ctx(self, browser, viewport=None, touch=False, ua=None, init=(), lang=None, theme=None, spy=True):
+        kw = dict(viewport=viewport or {'width': 1100, 'height': 900}, is_mobile=touch, has_touch=touch, accept_downloads=True)
+        if ua:
+            kw['user_agent'] = ua
+        ctx = full_mode_context(browser, **kw)
+        if spy:
+            ctx.add_init_script(PERSIST_SPY_JS)
+        pre = ''
+        if lang:
+            pre += f"localStorage.setItem('lang-pref-v1','{lang}');"
+        if theme:
+            pre += f"localStorage.setItem('theme-pref-v1','{theme}');"
+        if pre:
+            ctx.add_init_script('try{' + pre + '}catch(e){}')
+        for s in init:
+            ctx.add_init_script(s)
+        pg = ctx.new_page()
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        return ctx, pg
+
+    def _open(self, pg):
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=FAKE_CLOUD_JS)
+        pg.add_script_tag(content=BACKUP_SEED_JS)
+        pg.add_script_tag(content=FIELD_FRAME_JS)
+
+    def _import(self, pg, text, name='backup.json', wait=700):
+        pg.set_input_files('#json-file-input', files=[{'name': name, 'mimeType': 'application/json', 'buffer': text.encode('utf-8')}])
+        pg.wait_for_timeout(wait)
+
+    def _toasts(self, pg):
+        return pg.evaluate("()=>[...document.querySelectorAll('.foreground-toast')].map(e=>e.textContent).join(' || ')")
+
+    def _clear_toasts(self, pg):
+        pg.evaluate("()=>document.querySelectorAll('.foreground-toast').forEach(e=>e.remove())")
+
+    def _serve_xlsx(self, route):
+        path = os.path.join(CDN_MIRROR, 'xlsx.full.min.js') if CDN_MIRROR else ''
+        if path and os.path.exists(path):
+            route.fulfill(status=200, body=open(path, 'rb').read(),
+                          headers={'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/javascript; charset=utf-8'})
+        else:
+            route.continue_()
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        W = "const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+
+        # ================= 完整備份：匯出 =================
+        ctx, pg = self._ctx(browser)
+        self._open(pg)
+        pg.evaluate("()=>__seedSeven()")
+        pg.wait_for_timeout(200)
+        today = pg.evaluate("todayISO()")
+        pg.click('#btn-account-menu')
+        pg.wait_for_timeout(150)
+        pg.click('#menu-group-export summary')
+        pg.wait_for_timeout(150)
+        with pg.expect_download() as dl:
+            pg.click('#btn-export')
+        d = dl.value
+        raw = open(d.path(), 'rb').read()
+        fname = d.suggested_filename
+        try:
+            data = json.loads(raw.decode('utf-8'))
+        except Exception:                              # noqa: BLE001
+            data = {}
+        races = data.get('races') or []
+        trs = data.get('trainings') or []
+        prof = data.get('userProfile') or {}
+        c['export_holds_all_seven_kinds'] = (
+            data.get('format') == 'race-log-backup' and data.get('version') == 1
+            and len(races) == 3 and any(r.get('deletedAt') for r in races)          # 垃圾桶裡的也帶
+            and len(trs) == 3 and any(x.get('deletedAt') for x in trs)              # 刪除墓碑也帶
+            and [s.get('id') for s in data.get('shoes') or []] == ['s1']
+            and [n.get('id') for n in data.get('nutritionDictionary') or []] == ['n1']
+            and any(t.get('id') == 'tpl-own' for t in data.get('templates') or [])
+            and prof.get('weightKg') == 60 and prof.get('homeCounty') == '台北市'
+            and ((prof.get('hr') or {}).get('running') or {}).get('maxHr') == 190
+            and 'first_finish' in (data.get('badgeUnlocks') or {}))
+        if not c['export_holds_all_seven_kinds']:
+            print('    v45: export keys', {k: (len(v) if isinstance(v, (list, dict)) else v) for k, v in data.items()})
+        c['export_file_named_with_date'] = fname == f'賽事紀錄備份-{today}.json'
+        c['export_records_last_backup_time'] = self.ev(pg, "()=>{ const v=lastBackupAt(); return !!v && Date.now()-v<60000; }")
+        # 其他入口也是完整備份：指令控制台、儲存空間快滿的提示
+        c['command_palette_and_storage_banner_export_full_backup'] = self.ev(pg, """()=>{
+            const a=CMDK_ACTIONS.find(x=>x.id==='export-json'); let n=0; const real=window.exportFullBackup; window.exportFullBackup=()=>{ n++; };
+            try{ a.run(); showStorageWarning(0.9); document.querySelector('.app-banner [data-banner-action="0"]').click(); }
+            finally{ window.exportFullBackup=real; hideAppBanner(); }
+            return n===2 && t(a.labelKey,a.labelFallback)==='匯出完整備份（JSON）'; }""")
+        ctx.close()
+
+        # ================= 完整備份：在一台新裝置還原 =================
+        ctx, pg = self._ctx(browser)
+        self._open(pg)
+        c['restore_on_new_device_brings_back_all_seven'] = False
+        before = self.ev(pg, "()=>({tpl:templates.map(x=>x.name).sort().join('|')})")
+        self._import(pg, raw.decode('utf-8'), fname)
+        got = self.ev(pg, """()=>({races:state.races.length, live:state.races.filter(r=>!r.deletedAt).map(r=>r.name).sort().join('|'),
+            tr:trainings.length, liveTr:liveTrainings().map(x=>x.name).sort().join('|'), shoes:shoes.map(s=>s.name).join('|'),
+            nut:nutritionDictionary.map(n=>n.name).join('|'), tpl:templates.map(x=>x.name).sort().join('|'),
+            w:userProfile.weightKg, county:userProfile.homeCounty, maxHr:userProfile.hr.running.maxHr, badge:!!badgeUnlocks.first_finish})""") or {}
+        builtin = (before or {}).get('tpl', '')
+        c['restore_on_new_device_brings_back_all_seven'] = (
+            got.get('races') == 3 and got.get('live') == '備份測試・全馬|備份測試・越野'
+            and got.get('tr') == 3 and got.get('liveTr') == '輕鬆跑|騎車'
+            and got.get('shoes') == 'Vaporfly 3' and got.get('nut') == 'Maurten Gel 100'
+            and got.get('w') == 60 and got.get('county') == '台北市' and got.get('maxHr') == 190 and got.get('badge') is True)
+        if not c['restore_on_new_device_brings_back_all_seven']:
+            print('    v45: restore', got)
+        # 新裝置一打開就有一套內建範本（id 是新的）：還原時另一台那套一樣的不再多一份，自訂的照樣補進來
+        c['restore_keeps_one_set_of_builtin_templates'] = got.get('tpl') == '|'.join(sorted(builtin.split('|') + ['我的越野包']))
+        c['restore_is_saved'] = self.ev(pg, """async()=>{
+            const r=await loadJson('races-v1',[]), t=await loadJson('trainings-v1',[]), s=await loadJson('shoes-v1',[]),
+              n=await loadJson('nutrition-dictionary-v1',[]), tp=await loadJson('equipment-templates-v1',[]), p=await loadJson('user-profile-v1',null), b=await loadJson('badges-v1',{});
+            return r.length===3 && t.length===3 && s.length===1 && n.length===1 && tp.some(x=>x.id==='tpl-own') && p&&p.weightKg===60 && !!b.first_finish; }""")
+        toast = self._toasts(pg)
+        c['restore_says_what_was_added'] = all(w in toast for w in ('備份匯入完成', '賽事 2 場', '訓練 2 筆', '鞋款 1 雙', '補給品 1 項', '裝備範本 1 個'))
+        if not c['restore_says_what_was_added']:
+            print('    v45: toast', toast[:200])
+        self._clear_toasts(pg)
+        self._import(pg, raw.decode('utf-8'), fname)
+        toast2 = self._toasts(pg)
+        c['restoring_twice_adds_nothing'] = ('沒有新增' in toast2) and self.ev(pg, "()=>state.races.length===3&&trainings.length===3&&shoes.length===1&&templates.filter(x=>x.id==='tpl-own').length===1")
+        # 拖進來的檔案走同一條路
+        self._clear_toasts(pg)
+        c['dropped_backup_file_goes_to_restore'] = self.ev(pg, """async(txt)=>{ const keep=state.races.length;
+            state.races=state.races.filter(r=>r.name!=='備份測試・越野'); renderAll();
+            await routeDroppedFiles([new File([txt],'備份.json',{type:'application/json'})]); await new Promise(s=>setTimeout(s,300));
+            return state.races.length===keep && state.races.some(r=>r.name==='備份測試・越野'); }""", raw.decode('utf-8'))
+        ctx.close()
+
+        # ================= 還原是合併，不會蓋掉這台比較新的 =================
+        ctx, pg = self._ctx(browser)
+        self._open(pg)
+        conflict = self.ev(pg, """async()=>{
+            const mk=(id,name,at)=>Object.assign(emptyRace(name,'road_running','registered','2027-01-01'),{id,updatedAt:at});
+            state.races=[mk('shared-1','這台比較新','2026-09-01T00:00:00Z'), mk('shared-2','這台比較舊','2020-01-01T00:00:00Z')]; await persist();
+            userProfile=migrateUserProfile({weightKg:70}); await persistUserProfile(); syncOverwrites=[];
+            return JSON.stringify({format:'race-log-backup',version:1,races:[mk('shared-1','備份比較舊','2025-01-01T00:00:00Z'),mk('shared-2','備份比較新','2026-01-01T00:00:00Z')],
+              userProfile:{weightKg:60,homeCounty:'台北市'}}); }""")
+        if conflict:
+            self._import(pg, conflict)
+        c['restore_never_overwrites_newer_local'] = self.ev(pg, """()=>{
+            const n=id=>state.races.find(r=>r.id===id).name, rec=syncOverwrites.map(x=>x.raceName).sort().join('|');
+            const ok=n('shared-1')==='這台比較新' && n('shared-2')==='備份比較新' && rec==='備份比較舊|這台比較舊'
+              && userProfile.weightKg===70 && userProfile.homeCounty==='台北市';
+            if(!ok) console.log('v45: merge',n('shared-1'),n('shared-2'),rec,userProfile.weightKg,userProfile.homeCounty);
+            return ok; }""")
+        c['restore_toast_points_to_recovery_for_conflicts'] = '資料復原' in self._toasts(pg)
+        self._clear_toasts(pg)
+        # 壞掉／空的備份：講清楚、什麼都不動
+        self._import(pg, json.dumps({'format': 'race-log-backup', 'version': 1}))
+        c['empty_backup_says_so_and_changes_nothing'] = ('沒有資料' in self._toasts(pg)) and self.ev(pg, "()=>state.races.length===2")
+        self._clear_toasts(pg)
+        # 舊版（v4.4 以前）匯出的賽事陣列照樣能匯入
+        old = self.ev(pg, "()=>JSON.stringify([emptyRace('舊格式匯出的賽事','road_running','completed','2024-11-03')])")
+        if old:
+            self._import(pg, old, 'races-export.json')
+        c['old_race_array_export_still_imports'] = self.ev(pg, "()=>state.races.some(r=>r.name==='舊格式匯出的賽事') && state.races.length===3")
+        # 訓練頁「匯出訓練紀錄」的檔案：進訓練、不會變成一堆空白賽事
+        tr_export = json.dumps([
+            {'id': 'tx1', 'date': '2025-05-01', 'startTime': None, 'sport': 'run', 'name': '匯出的訓練', 'distanceKm': 8, 'durationSeconds': 2700, 'elevationGainM': None,
+             'avgHr': None, 'shoeId': None, 'thumb': None, 'fingerprint': 'fpx1', 'source': 'fit', 'importedAt': '2025-05-01T00:00:00Z', 'updatedAt': '2025-05-01T00:00:00Z', 'deletedAt': None}])
+        self._clear_toasts(pg)
+        self._import(pg, tr_export, '訓練紀錄-2025-05-02.json')
+        c['training_export_file_imports_as_trainings'] = self.ev(pg, "()=>state.races.length===3 && liveTrainings().some(x=>x.name==='匯出的訓練')") and ('訓練紀錄匯入完成' in self._toasts(pg))
+        # 開著一場賽事時貼上整份備份：還原，不是把七種資料塞進這一場
+        self._clear_toasts(pg)
+        c['pasting_backup_with_race_open_restores_instead_of_quickfill'] = self.ev(pg, """async(txt)=>{
+            const r=state.races.find(x=>x.id==='shared-1'); selectRace(r.id); await new Promise(s=>setTimeout(s,200));
+            const before=JSON.stringify(Object.keys(state.races.find(x=>x.id==='shared-1')).sort());
+            const backup=JSON.parse(txt); backup.races.push(emptyRace('貼上的備份','road_running','registered','2027-02-02'));
+            const dt=new DataTransfer(); dt.setData('text', JSON.stringify(backup));
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); await new Promise(s=>setTimeout(s,400));
+            const cur=state.races.find(x=>x.id==='shared-1');
+            const ok=state.races.some(x=>x.name==='貼上的備份') && cur.name==='這台比較新' && !('format' in cur) && !('races' in cur)
+              && JSON.stringify(Object.keys(cur).sort())===before;
+            goBackFromDetail(); return ok; }""", conflict or '{}')
+        ctx.close()
+
+        # ================= 沒登入：頭像選單的提醒卡、頭像的紅點 =================
+        ctx, pg = self._ctx(browser, viewport={'width': 390, 'height': 844}, touch=True)
+        self._open(pg)
+        pg.add_style_tag(content='.foreground-toast,.app-banner{display:none!important} *{transition:none!important}')
+        # Firebase 還沒回報登入狀態之前（已登入的人也是這樣開始的）：不能先閃提醒卡和紅點
+        c['nothing_flashes_before_login_state_is_known'] = self.ev(pg, """async()=>{ __addLive(3); __signedOutCloud(false); await new Promise(s=>setTimeout(s,150));
+            return !__card() && !__dot() && !!document.querySelector('#auth-area #btn-signin'); }""")
+        c['signed_out_with_races_shows_card'] = self.ev(pg, """async()=>{ window.__authCb(null); await new Promise(s=>setTimeout(s,200));
+            const card=__card(); if(!card) return false;
+            return card.querySelector('.backup-nudge-title').textContent==='資料只存在這台裝置' && !!card.querySelector('#btn-signin')
+              && !!card.querySelector('[data-action="backup-export"]') && card.querySelector('.backup-nudge-last').textContent==='還沒備份過'
+              && !card.querySelector('.backup-nudge-ios'); }""")
+        c['dot_and_accessible_name_when_3_races_never_backed_up'] = self.ev(pg, """()=>{ const b=document.getElementById('btn-account-menu');
+            return __dot() && b.getAttribute('aria-label')==='帳號與設定（資料還沒備份）' && getComputedStyle(b,'::before').content!=='none'; }""")
+        c['dot_follows_race_count_and_backup_age'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            const live=()=>state.races.filter(r=>!r.deletedAt);
+            const keep=state.races.slice(); state.races=live().slice(0,2); renderAll(); await wait(50);
+            const two=__dot(); state.races=keep; renderAll(); await wait(50); const three=__dot();
+            localStorage.setItem('last-backup-v1',JSON.stringify(Date.now()-3*86400000)); renderAuthArea();
+            const recent=!__dot() && __card().querySelector('.backup-nudge-last').textContent==='上次備份：3 天前'
+              && document.getElementById('btn-account-menu').getAttribute('aria-label')==='帳號與設定';
+            localStorage.setItem('last-backup-v1',JSON.stringify(Date.now()-31*86400000)); renderAuthArea(); const stale=__dot();
+            localStorage.removeItem('last-backup-v1'); renderAuthArea();
+            if(!( !two && three && recent && stale )) console.log('v45: dot',two,three,recent,stale);
+            return !two && three && recent && stale; }""")
+        c['empty_device_gets_plain_signin_button'] = self.ev(pg, """async()=>{ const keep=state.races; state.races=keep.map(r=>Object.assign({},r,{deletedAt:new Date().toISOString()})); renderAll();
+            await new Promise(s=>setTimeout(s,50)); const ok=!__card() && !__dot() && !!document.querySelector('#auth-area > #btn-signin');
+            state.races=keep; renderAll(); return ok && !!__card(); }""")
+        # 從提醒卡匯出：真的下載、選單留著、看得到「上次備份：今天」、紅點消失
+        pg.click('#btn-account-menu')
+        pg.wait_for_timeout(200)
+        try:
+            with pg.expect_download(timeout=4000) as dl2:
+                pg.click('#auth-area [data-action="backup-export"]')
+            got_dl = dl2.value.suggested_filename.endswith('.json')
+        except Exception:                              # noqa: BLE001
+            got_dl = False
+        pg.wait_for_timeout(200)
+        c['card_export_downloads_keeps_menu_and_clears_dot'] = got_dl and self.ev(pg, """()=>!document.getElementById('account-menu-panel').hidden
+            && __card().querySelector('.backup-nudge-last').textContent==='上次備份：今天' && !__dot()""")
+        pg.keyboard.press('Escape')
+        # 選單比畫面高、在裡面捲動時，分隔線不能被擠到看不見
+        c['menu_dividers_survive_scrolling_menu'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            localStorage.removeItem('last-backup-v1'); renderAuthArea();
+            // 匯入、匯出兩組都展開：選單一定比手機畫面高，要在裡面捲動
+            const groups=['menu-group-import','menu-group-export'].map(id=>document.getElementById(id)); groups.forEach(g=>g.open=true);
+            document.getElementById('btn-account-menu').click(); await wait(200);
+            const p=document.getElementById('account-menu-panel'); const scrolls=p.scrollHeight>p.clientHeight+20;
+            const hs=[...p.querySelectorAll('.action-menu-divider')].map(d=>d.getBoundingClientRect().height);
+            document.getElementById('btn-account-menu').click(); await wait(100); groups.forEach(g=>g.open=false);
+            if(!(scrolls&&hs.every(h=>h>=1))) console.log('v45: dividers',scrolls,hs.join(','));
+            return scrolls && hs.length>=4 && hs.every(h=>h>=1); }""")
+        # 卡片上的字在淺色、深色都看得清楚（4.5:1）
+        contrast = """()=>{ const card=__card(); const els=[...card.querySelectorAll('.backup-nudge-title,.backup-nudge-body,.backup-nudge-last,button')];
+            const low=els.map(el=>{ const cs=getComputedStyle(el); const own=__rgba(cs.backgroundColor); const bg=own[3]>0?__over(own,__behind(el)):__behind(el);
+              return [el.className||el.id, __cr(__over(__rgba(cs.color),bg),bg)]; }).filter(x=>x[1]<4.5);
+            if(low.length) console.log('v45: contrast',JSON.stringify(low)); return els.length>=5 && low.length===0; }"""
+        light_ok = self.ev(pg, contrast)
+        pg.evaluate("()=>applyTheme('dark')")
+        pg.wait_for_timeout(100)
+        dark_ok = self.ev(pg, contrast)
+        pg.evaluate("()=>applyTheme('light')")
+        c['card_text_readable_light_and_dark'] = bool(light_ok and dark_ok)
+        # 登入之後：提醒卡、紅點都不見；登出又回來
+        c['signing_in_hides_card_and_dot'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            await handleAuthChange({uid:'u45',displayName:'測試者',email:'',photoURL:''}); await wait(200);
+            const inOk=!__card() && !__dot() && !!document.querySelector('#auth-area .auth-user');
+            await handleAuthChange(null); await wait(200);
+            return inOk && !!__card(); }""")
+        c['card_and_dot_translated'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const out={};
+            for(const lang of ['ja','en']){ setLang(lang); await wait(150);
+              out[lang]=[__card().querySelector('.backup-nudge-title').textContent, document.querySelector('#auth-area #btn-signin').textContent,
+                document.querySelector('#auth-area [data-action="backup-export"]').textContent, document.getElementById('btn-account-menu').getAttribute('aria-label')].join('|'); }
+            setLang('zh'); await wait(150);
+            const ok=out.ja==='データはこの端末にしかありません|Google でログインしてバックアップ|バックアップを書き出す|アカウントと設定（データ未バックアップ）'
+              && out.en==='Your data is only on this device|Sign in with Google to back up|Export backup file|Account & settings (data not backed up)';
+            if(!ok) console.log('v45: lang',JSON.stringify(out)); return ok; }""")
+        ctx.close()
+
+        # iPhone 的 Safari（還沒加到主畫面）：提醒卡多講 7 天會被清；加到主畫面的提示也講資料
+        ctx, pg = self._ctx(browser, viewport={'width': 390, 'height': 844}, touch=True, ua=IPHONE_UA)
+        self._open(pg)
+        c['iphone_card_mentions_7_day_clearing'] = self.ev(pg, """async()=>{ __addLive(1); __signedOutCloud(true); await new Promise(s=>setTimeout(s,200));
+            const ios=__card()&&__card().querySelector('.backup-nudge-ios'); return !!ios && ios.textContent.includes('7 天') && ios.textContent.includes('加入主畫面'); }""")
+        c['iphone_install_hint_mentions_data'] = self.ev(pg, """()=>{ localStorage.setItem('open-count-v1','3'); localStorage.removeItem('install-hint-v1'); hideAppBanner();
+            maybeShowInstallHint(); const b=document.querySelector('.app-banner .app-banner-text'); const tx=b?b.textContent:''; hideAppBanner();
+            return tx.includes('7 天') && tx.includes('Safari') && tx.includes('加入主畫面'); }""")
+        ctx.close()
+
+        # ================= 持久保存 =================
+        ctx, pg = self._ctx(browser)
+        self._open(pg)
+        c['persist_not_requested_without_data'] = self.ev(pg, "()=>window.__persist.calls===0 && localStorage.getItem('persist-asked-v1')===null")
+        c['persist_requested_once_when_first_race_saved'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            state.races.push(emptyRace('第一場','road_running','registered','2027-01-01')); await persist(); await wait(50);
+            const one=window.__persist.calls; await persist(); await persist(); await wait(50);
+            return one===1 && window.__persist.calls===1 && typeof JSON.parse(localStorage.getItem('persist-asked-v1'))==='number'; }""")
+        race_json = self.ev(pg, "()=>JSON.stringify([emptyRace('已經有的賽事','road_running','registered','2027-01-01')])") or '[]'
+        ctx.close()
+        seed_races = "try{ localStorage.setItem('races-v1', %s); }catch(e){}" % json.dumps(race_json)
+        res = []
+        for label, extra in (('asked_yesterday', "localStorage.setItem('persist-asked-v1', String(Date.now()-86400000));"),
+                             ('asked_8_days_ago', "localStorage.setItem('persist-asked-v1', String(Date.now()-8*86400000));"),
+                             ('already_persisted', "window.__persist.persisted=true;")):
+            ctx, pg = self._ctx(browser, init=(seed_races, 'try{' + extra + '}catch(e){}'))
+            pg.goto(APP_URL)
+            pg.wait_for_timeout(900)
+            res.append(self.ev(pg, "()=>[state.races.length, window.__persist.calls]"))
+            ctx.close()
+        # 有資料時一打開就問；問過、沒拿到的 7 天內不再問；已經是持久的不用問
+        c['persist_asked_at_startup_with_data_but_not_nagging'] = res == [[1, 0], [1, 1], [1, 0]]
+        if not c['persist_asked_at_startup_with_data_but_not_nagging']:
+            print('    v45: persist', res)
+        # 加到主畫面的（standalone）：每次打開都問（那時候瀏覽器幾乎一定會給），一次瀏覽還是只問一次
+        ctx, pg = self._ctx(browser, init=(seed_races, "try{ localStorage.setItem('persist-asked-v1', String(Date.now()-86400000));"
+                                           " Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>true}); }catch(e){}"))
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        c['installed_app_asks_each_launch_once_per_session'] = self.ev(pg, """async()=>{ const atStart=window.__persist.calls;
+            state.races.push(emptyRace('再一場','road_running','registered','2027-02-01')); await persist(); await persist(); await new Promise(s=>setTimeout(s,50));
+            return atStart===1 && window.__persist.calls===1; }""")
+        ctx.close()
+
+        # ================= Excel 解析套件延後載入 =================
+        ctx, pg = self._ctx(browser)
+        reqs = []
+        pg.on('request', lambda r: reqs.append(r.url))
+        pending = []
+        # 按下「匯入 Excel」之後的請求先扣著（模擬網路慢），之前的照常回應——萬一開頁就載入，
+        # 頁面也開得起來、由下一項乾淨地失敗，不會整組卡在等頁面載入完
+        hold = {'on': False}
+
+        def held(route):
+            if hold['on']:
+                pending.append(route)
+            else:
+                self._serve_xlsx(route)
+        pg.route(XLSX_CDN_URL, held)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        c['xlsx_not_loaded_at_startup'] = (not any('xlsx' in u for u in reqs)) and self.ev(pg, "()=>typeof XLSX==='undefined' && !document.querySelector('script[src*=\"xlsx\"]')")
+        hold['on'] = True
+        c['excel_button_starts_loading_with_sri'] = self.ev(pg, """async()=>{ const inp=document.getElementById('import-file-input'); const real=inp.click; let picked=false; inp.click=()=>{ picked=true; };
+            document.getElementById('btn-import').click(); inp.click=real; await new Promise(s=>setTimeout(s,100));
+            const s=[...document.querySelectorAll('script')].find(x=>x.src===XLSX_SRC);
+            return picked && !!s && s.integrity===XLSX_SRI && s.getAttribute('crossorigin')==='anonymous' && /^sha384-/.test(s.integrity) && /@\\d+\\.\\d+\\.\\d+\\//.test(s.src); }""")
+        pg.wait_for_timeout(200)
+        c['xlsx_requested_only_after_click'] = any(u == XLSX_CDN_URL for u in reqs) and len(pending) == 1
+        # 套件還在路上就選好了檔案：先出現「正在載入」，等到了再到選工作表
+        xbytes = tiny_xlsx('2026', [['日期', '賽事名稱', '距離'], ['2026-11-01', '測試馬拉松', '42.195']])
+        pg.set_input_files('#import-file-input', files=[{'name': '賽事.xlsx', 'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'buffer': xbytes}])
+        pg.wait_for_timeout(250)
+        c['loading_message_while_parser_downloads'] = self.ev(pg, """()=>{ const m=document.getElementById('import-modal');
+            return !m.hidden && m.textContent.includes('正在載入 Excel 解析工具') && !!m.querySelector('[data-action="close-import"]'); }""")
+        if pending:
+            self._serve_xlsx(pending[0])
+        pg.wait_for_timeout(1500)
+        c['excel_import_continues_once_parser_arrives'] = self.ev(pg, """()=>{ const m=document.getElementById('import-modal');
+            const ok=typeof XLSX!=='undefined' && !m.hidden && m.querySelector('h2').textContent.includes('選擇工作表') && m.textContent.includes('2026');
+            if(!ok) console.log('v45: excel',typeof XLSX, m.hidden, m.textContent.slice(0,80)); closeImportModal(); return ok; }""")
+        ctx.close()
+        # 載入失敗（離線、被擋）：選了檔案講清楚；網路好了再按一次就能用，不必重新整理
+        ctx, pg = self._ctx(browser)
+        mode = {'fail': True}
+
+        def flaky(route):
+            if mode['fail']:
+                route.abort()
+            else:
+                self._serve_xlsx(route)
+        pg.route(XLSX_CDN_URL, flaky)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.evaluate("()=>{ const inp=document.getElementById('import-file-input'); inp.click=()=>{}; document.getElementById('btn-import').click(); }")
+        pg.wait_for_timeout(300)
+        pg.set_input_files('#import-file-input', files=[{'name': '賽事.xlsx', 'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'buffer': xbytes}])
+        pg.wait_for_timeout(500)
+        c['parser_failure_explains_and_suggests_retry'] = self.ev(pg, """()=>{ const m=document.getElementById('import-modal');
+            const ok=!m.hidden && m.textContent.includes('Excel 解析工具載入失敗') && m.textContent.includes('再按一次') && !document.querySelector('script[src*="xlsx"]');
+            closeImportModal(); return ok; }""")
+        mode['fail'] = False
+        pg.evaluate("()=>document.getElementById('btn-import').click()")
+        pg.wait_for_timeout(1500)
+        pg.set_input_files('#import-file-input', files=[{'name': '賽事.xlsx', 'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'buffer': xbytes}])
+        pg.wait_for_timeout(600)
+        c['retry_after_failure_works_without_reload'] = self.ev(pg, """()=>{ const m=document.getElementById('import-modal');
+            const ok=typeof XLSX!=='undefined' && !m.hidden && m.querySelector('h2').textContent.includes('選擇工作表'); closeImportModal(); return ok; }""")
+        ctx.close()
+        # 等套件的時候按了「取消」：套件到了也不要自己再跳出來
+        ctx, pg = self._ctx(browser)
+        pending = []
+        hold = {'on': False}
+
+        def held2(route):
+            if hold['on']:
+                pending.append(route)
+            else:
+                self._serve_xlsx(route)
+        pg.route(XLSX_CDN_URL, held2)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        hold['on'] = True
+        pg.evaluate("()=>{ const inp=document.getElementById('import-file-input'); inp.click=()=>{}; document.getElementById('btn-import').click(); }")
+        pg.wait_for_timeout(200)
+        pg.set_input_files('#import-file-input', files=[{'name': '賽事.xlsx', 'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'buffer': xbytes}])
+        pg.wait_for_timeout(250)
+        self.ev(pg, "()=>document.querySelector('#import-modal [data-action=\"close-import\"]').click()")
+        if pending:
+            self._serve_xlsx(pending[0])
+        pg.wait_for_timeout(1200)
+        c['cancel_while_loading_stays_closed'] = self.ev(pg, "()=>typeof XLSX!=='undefined' && document.getElementById('import-modal').hidden")
+        ctx.close()
+
+        # ================= 行事曆匯出、生涯數據門檻 =================
+        ctx, pg = self._ctx(browser)
+        self._open(pg)
+        pg.evaluate("""()=>{ const a=emptyRace('還在的報名','road_running','registered',addDaysStr(todayISO(),30));
+            const b=emptyRace('丟進垃圾桶的報名','road_running','registered',addDaysStr(todayISO(),40)); b.deletedAt=new Date().toISOString();
+            state.races.push(a,b); renderAll(); }""")
+        try:
+            with pg.expect_download(timeout=4000) as dl3:
+                pg.evaluate("()=>document.getElementById('btn-export-ics').click()")
+            ics = open(dl3.value.path(), 'rb').read().decode('utf-8')
+        except Exception:                              # noqa: BLE001
+            ics = ''
+        c['calendar_export_skips_trashed_races'] = ('還在的報名' in ics) and ('丟進垃圾桶的報名' not in ics)
+        downloads = []
+        pg.on('download', lambda d: downloads.append(d))
+        self._clear_toasts(pg)
+        pg.evaluate("()=>{ state.races=state.races.filter(r=>r.deletedAt||r.status==='completed'); renderAll(); document.getElementById('btn-export-ics').click(); }")
+        pg.wait_for_timeout(600)
+        c['calendar_export_with_nothing_upcoming_says_so'] = (not downloads) and ('沒有已排定日期' in self._toasts(pg))
+        c['career_threshold_ignores_trash'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            state.races=[]; for(let i=0;i<4;i++) state.races.push(emptyRace('生涯 '+i,'road_running','completed','2025-0'+(i+1)+'-01'));
+            for(let i=0;i<3;i++){ const r=emptyRace('垃圾桶 '+i,'road_running','completed','2024-0'+(i+1)+'-01'); r.deletedAt=new Date().toISOString(); state.races.push(r); }
+            renderAll(); setHomeTab('career'); await wait(200);
+            const four=!document.querySelector('#calendar .career-summary-wrap') && (document.querySelector('#calendar .career-empty')||{textContent:''}).textContent.includes('目前 4 場');
+            state.races.push(emptyRace('第五場','road_running','completed','2025-06-01')); renderAll(); await wait(200);
+            const five=!!document.querySelector('#calendar .career-summary-wrap');
+            setHomeTab('races'); return four && five; }""")
+        # ================= 說明、選單文字、版本 =================
+        c['menu_says_full_backup_in_three_languages'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const out={};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(100);
+              out[lang]=document.getElementById('btn-export').textContent+'|'+document.getElementById('btn-import-json').textContent; }
+            setLang('zh'); await wait(100);
+            return out.zh==='匯出完整備份（JSON）|匯入備份（JSON）' && out.ja==='完全バックアップを書き出す（JSON）|バックアップを読み込む（JSON）'
+              && out.en==='Export full backup (JSON)|Import backup (JSON)'; }""")
+        c['help_explains_backup_and_signed_out_risk'] = self.ev(pg, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const out={};
+            const words={zh:['匯出完整備份','七種','資料只存在這台裝置','7 天','匯入備份','持久保存'],
+              ja:['完全バックアップを書き出す','7種類','データはこの端末にしかありません','7 日','バックアップを読み込む','永続'],
+              en:['Export full backup','seven','Your data is only on this device','7 days','Import backup','persistent']};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(120); openHelpModal(); await wait(200);
+              const tx=document.querySelector('#help-modal .help-body').textContent; const miss=words[lang].filter(w=>!tx.includes(w));
+              out[lang]=miss; document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(150); }
+            setLang('zh'); await wait(100);
+            const ok=Object.values(out).every(m=>m.length===0); if(!ok) console.log('v45: help missing',JSON.stringify(out)); return ok; }""")
+        c['version_is_v4_5_0'] = self.ev(pg, "()=>APP_VERSION==='v4.5.0'")
+        ctx.close()
+
+        # 雲端合併也不再複製內建範本（同一個合併函式）
+        ctx, pg = self._ctx(browser)
+        self._open(pg)
+        c['cloud_merge_skips_identical_builtin_templates'] = self.ev(pg, """()=>{
+            const n=templates.length; const copy=templates.map(x=>Object.assign({},x,{id:'other-device-'+x.id}));
+            mergeGlobalListsIntoState({templates:copy.concat([{id:'cloud-own',name:'雲端自訂',items:[]}])});
+            return templates.length===n+1 && templates.some(x=>x.id==='cloud-own'); }""")
+        ctx.close()
 
 
 GROUPS = {
@@ -7244,6 +8069,8 @@ GROUPS = {
     'v431':       lambda: V431Fixes('v431'),
     'v432':       lambda: V432Best('v432'),
     'v433':       lambda: V433Fields('v433'),
+    'v44':        lambda: V44BibWall('v44'),
+    'v45':        lambda: V45Backup('v45'),
 }
 
 

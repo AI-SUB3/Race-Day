@@ -1,6 +1,6 @@
 # 賽事紀錄 — 進度交接摘要
 
-> 貼到新對話開頭即可接續。最後更新：v4.3.3
+> 貼到新對話開頭即可接續。最後更新：v4.5.0
 
 ---
 
@@ -46,7 +46,7 @@ repo 根目錄/
 
 ### 測試套件
 
-`test_suite.py`（644 項檢查，30 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport sync`、`security mobile i18n data`、`share share_touch offline climate publink`、`pubview paste feedback training`、`multisport`、`radar`、`journey simple simple_phone`、`ux v4 v41`、`v42 v431`、`v43`、`v432 v433`）取代原本散落的 219 支臨時腳本，
+`test_suite.py`（707 項檢查，32 個群組；suite 變大後單次執行常超過工具的單指令時間上限，建議分批跑，例如 `python3 test_suite.py core drawers sport sync`、`security mobile i18n data`、`share share_touch offline climate publink`、`pubview paste feedback training`、`multisport`、`radar`、`journey simple simple_phone`、`ux v4 v41`、`v42 v431`、`v43`、`v432 v433 v44`、`v45`）取代原本散落的 219 支臨時腳本，
 **請跟 index.html 一起保存並持續增補**。
 
 ```bash
@@ -58,7 +58,7 @@ python3 test_suite.py --list          # 列出群組
 APP=/path/to/index.html python3 test_suite.py
 ```
 
-群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate` `publink` `pubview` `paste` `feedback` `training` `radar` `journey` `simple`（不預設完整版，測新裝置的預設）`simple_phone`（360／390 × 簡易／完整 × 中英日，一行頂列）`ux`（v3.98 起的使用者體驗修正，107 場固定種子資料）`v4`（v4.0 版面：歡迎卡、頂列三樣、頭像選單、首頁分頁、手機清單、賽事頁頁首）`v41`（v4.1 修正：返回鍵關最上面那一層、生涯數據網址、即將到來數字、月份箭頭、對比、圖表字、點擊範圍、範例資料日期；重新整理那一項自起本機 http）`v42`（v4.2：比完賽之後記錄成績、打包模式、賽前四格與區段順序、生涯數據可以點；手機那兩項要跑中日英 × 三種字級，最好單獨一批）`v43`（v4.3：精簡的「下一場」卡、獎牌牆、表格排序與各距離最佳、全馬只算跑步；fit 三項跑 360／390／700 × 中日英 × 三種字級）`v431`（v4.3.1：訓練頁跟著淺色／深色模式、訓練紀錄跨裝置同步〔換裝置、同一個月兩台都在寫、同一個檔兩台各匯入、雲端拒絕時看得到〕、安全性規則涵蓋每個雲端路徑）`v432`（v4.3.2：各距離最佳的 226K 超級鐵人、每張卡的年份、筆電一排、標籤只在空白處換行；fit 那一項跑 1280／1100／1000／768／641 × 中日英 × 三種字級 × 6／7 張）`v433`（v4.3.3：抽屜與彈窗的輸入框框線、深色模式的原生控制項、瀏覽器強制深色下量像素、高對比模式；版本號）
+群組：`core` `drawers` `sport` `multisport` `sync` `security` `mobile` `i18n` `data` `share` `share_touch` `offline`（自起本機 http 伺服器，SW 不能在 file:// 跑）`climate` `publink` `pubview` `paste` `feedback` `training` `radar` `journey` `simple`（不預設完整版，測新裝置的預設）`simple_phone`（360／390 × 簡易／完整 × 中英日，一行頂列）`ux`（v3.98 起的使用者體驗修正，107 場固定種子資料）`v4`（v4.0 版面：歡迎卡、頂列三樣、頭像選單、首頁分頁、手機清單、賽事頁頁首）`v41`（v4.1 修正：返回鍵關最上面那一層、生涯數據網址、即將到來數字、月份箭頭、對比、圖表字、點擊範圍、範例資料日期；重新整理那一項自起本機 http）`v42`（v4.2：比完賽之後記錄成績、打包模式、賽前四格與區段順序、生涯數據可以點；手機那兩項要跑中日英 × 三種字級，最好單獨一批）`v43`（v4.3：精簡的「下一場」卡、獎牌牆、表格排序與各距離最佳、全馬只算跑步；fit 三項跑 360／390／700 × 中日英 × 三種字級）`v431`（v4.3.1：訓練頁跟著淺色／深色模式、訓練紀錄跨裝置同步〔換裝置、同一個月兩台都在寫、同一個檔兩台各匯入、雲端拒絕時看得到〕、安全性規則涵蓋每個雲端路徑）`v432`（v4.3.2：各距離最佳的 226K 超級鐵人、每張卡的年份、筆電一排、標籤只在空白處換行；fit 那一項跑 1280／1100／1000／768／641 × 中日英 × 三種字級 × 6／7 張）`v433`（v4.3.3：抽屜與彈窗的輸入框框線、深色模式的原生控制項、瀏覽器強制深色下量像素、高對比模式）`v44`（v4.4：號碼布牆——分段與統計、號碼布上寫什麼、拍立得、PB 印章、對比、報讀、滑鼠與鍵盤；fit 四項跑 360／390／700／1280 × 中日英 × 三種字級；強制深色下量印章的像素）`v45`（v4.5：完整備份的匯出與還原〔真的下載檔案、在另一個 context 匯入〕、沒登入的提醒卡與紅點〔假的雲端：`__signedOutCloud(false)` 先不回報登入狀態〕、持久保存〔`navigator.storage.persist` 換成記次數的假函式〕、Excel 解析套件延後載入〔`page.route` 扣住請求模擬網路慢、`abort` 模擬離線〕、行事曆與生涯數據兩個小錯；版本號。**沙盒連不到 jsDelivr：跑之前 `export CDN_MIRROR=<放 xlsx.full.min.js 的資料夾>`**，沒設就走網路）
 
 離開碼：0 通過 / 1 有失敗 / 2 參數錯誤（可直接接 CI）。
 已用「故意注入 XSS 漏洞」驗證過它真的抓得到回歸，不是只會印綠勾。
@@ -76,9 +76,11 @@ APP=/path/to/index.html python3 test_suite.py
 - **v4.0 版面**：`#main-content` 依序是 `.home-tabs` → `#focus-panel-slot` → `.topbar-row2` → `#calendar` → `#detail` → `.app-footer`（版本號、版權）。頂列只有 `#btn-mode-toggle`、`#btn-new`（手機藏起來，用右下角 `#btn-new-fab`）、頭像選單；字體、深色模式（`#btn-theme-toggle` 是 role=switch）、語言、匯入匯出（兩組 `<details>`）、`#btn-help`、`#btn-feedback`、清除全部資料（`#btn-clear`，v4.1 起移到最下面自己一區）、登出（`#auth-signout`，選單最底下）都在 `#account-menu-panel` 裡。原本的 `.topbar-row3`、`#data-mgmt-menu`、說明與回饋懸浮鈕都拿掉了
 - **詳情頁五個區段**（v3.42.0 合併、v3.43.0 對調順序）：基本資訊與時間／路線與氣象（子標題：官方路線、當日氣象）／裝備補給與戰略／預算與行程規劃／賽後紀錄與個人數據。`section-weather` 這個 id 已不存在；改區段順序時 `QUICK_NAV_SECTIONS` 要一起改，測試會比對兩者；空抽屜卡片帶 `is-empty`，由各卡片自行判斷
 - **抽屜面板化**：13 個抽屜（equipment / results / review / basicInfo / schedule / weather / checkpoints / mediaLinks / nutritionPlan / trainingPlan / goals / route / logistics），詳情頁全部變成「摘要卡片 + 點開編輯」
-- **雲端同步六種資料**：賽事、鞋款、補給品資料庫、個人資料、裝備範本、徽章解鎖。合併規則「本機優先」，不覆蓋本機已有值
+- **雲端同步七種資料**：賽事、訓練紀錄、鞋款、補給品資料庫、個人資料、裝備範本、徽章解鎖。合併規則「本機優先」，不覆蓋本機已有值（v4.5.0 起個人資料也補居住縣市；內容一樣的內建範本不重複加）
 - **同步診斷**：本機 vs 雲端對照表，數字不一致標警示色，另顯示儲存空間用量（>80% 轉紅）
 - **儲存失敗一定跳警示**（七種資料全涵蓋）
+- **完整備份（v4.5.0）**：`buildFullBackup()` 一個物件裝七種資料（`format:'race-log-backup'`、`version:1`）；匯入走 `importParsedJson()` 分流——完整備份 → `importFullBackup()`（合併）、App 匯出的訓練陣列 → `importTrainingArray()`、其他陣列 → 舊的 `importRacesArray()`。檔案、拖放、貼上三個入口都走它；貼上時完整備份比「快速填入」先判
+- **沒登入的提醒（v4.5.0）**：`signedOutWithData()`（雲端可用、`authKnown`、沒登入、有一場以上）→ `renderAuthArea()` 畫提醒卡；`backupAlertWanted()` → 頭像 `.has-alert` 紅點與報讀名稱；`renderAll()` 每次呼叫 `syncBackupNudge()` 對一次。上次匯出時間在 localStorage `last-backup-v1`
 
 ### 功能
 - **生涯回顧主卡**：長按 PB 卡 1.5 秒解鎖（或 Cmd+K → `wrap`、PB 卡上的「打開生涯回顧 ›」），含軌跡畫廊（GPX→SVG 霓虹線條）、戰靴排行、能量補給統計。v4.2 起很快點一下 PB 的時間是打開締造 PB 的那一場
@@ -88,7 +90,7 @@ APP=/path/to/index.html python3 test_suite.py
 - **動態回顧輪播（Story Mode）入口在 Cmd+K**（v3.25.0 移除導覽列按鈕）。手機在搜尋框打 `>` 即可開指令面板（v3.29.0）
 
 ### 視覺／互動
-- 獎牌牆 3D 傾斜與反光、懸浮按鈕磁性吸附、iOS 空間景深（彈窗時主畫面退後失焦）
+- 懸浮按鈕磁性吸附、iOS 空間景深（彈窗時主畫面退後失焦）。獎牌牆的 3D 傾斜與反光 v4.4.0 拿掉（號碼布牆的卡片本來就有固定的小角度）
 - 畫面縮放鎖定只針對觸控（iOS 的 JS 手勢攔截、連點兩下）；桌機 Ctrl/⌘＋滾輪不攔（v3.33.0）
 - 表格去 Excel 化，分段表固定高度內捲
 
@@ -112,6 +114,8 @@ APP=/path/to/index.html python3 test_suite.py
 - **CSP**：JS 全行內，有意義的 CSP 需先拆出獨立 .js，屬架構級改動
 
 ### 下一步候選
+- **UX 審查第三輪的第二批（導覽一致）**：要先出設計稿再做。第三批（賽事的一生：報名／抽籤提醒、比賽當天的模式）也還沒開始
+- **空的圖表**：資料不夠時有幾張圖還是畫出空的座標軸（審查第三輪列過，不在第一批）
 - 筆電首頁預設仍是月曆（v4.3 設計稿②你選了照舊）。之後若覺得空月份太多，設計稿的方案 A（筆電也預設清單）、C（這個月沒比賽就跳到下一場的月份）可以再拿出來
 - 行為追蹤型徽章（連續鍵盤操作、停留時間等）需 session 級追蹤機制，獨立一輪
 - 其他表格（賽事清單、系列比較、鞋款分析）尚未做高度處理
@@ -160,7 +164,7 @@ APP=/path/to/index.html python3 test_suite.py
 | 賽前四格與區段順序（v4.2） | `raceWeekTilesHtml()` 只在 `registered` 且還沒過比賽日。欄寬 `1fr .9fr 1fr 1.3fr`、≤380px 值縮到 14px、字級「大」在 ≤420px 排兩排兩格——這是用 360／375／390／414 × 小中大 × 中日英 × 最寬的值（12/12、A12345、11:50:00、日文空格子「＋ 作成」）量出來的，改欄寬或文字前先跑 `v42` 手機那兩項；全部打包好時勾勾放標籤上（`is-done`），值本身不加，兩位數才放得下；格子是 `open-drawer`＋`data-focus-path`，`detailEl` 的點擊處理在欄位**是空的**時才 focus（有值還搶焦點，手機會跳鍵盤蓋住畫面）。`renderDetail()` 把五個區段放進物件，依 `isDoneStatus`（completed／dns／dnf）決定順序；導覽列 `quickNavHtml({postFirst})` 跟著調。`simple` 與 `v42` 兩邊都鎖住順序 |
 | 生涯數據可以點（v4.2） | `.yc-col`、熱力圖格子、「總完賽場次」「今年累計里程」都是 `<button>`，經 `openCareerSheet(kind,key)`（`year`／`month`／`all`）畫進 `#career-sheet`；統計一律 `completedRacesFor()`（只算已完賽，跟長條一致）。`#career-sheet` 登記在 `BACK_LAYER_IDS`／`BACK_LAYER_CLOSERS`／Esc 的 `modalIds`，返回鍵先關它。列表直接用清單的 `.cal-list-item`：點了先 `closeCareerSheet()` 再 `selectRace()`，網址從 `#career` 推一筆 `#race=`，返回回到 `#career`。PB 時間：`pointerdown` 記下按下的時間，`click` 的 `detail>0` 且按住超過 450ms 就不跳（那是想長按）；鍵盤的 click（`detail` 是 0）一律打開——v4.2 開發時抓到「上一次按住留下的時間讓鍵盤怎麼按都打不開」 |
 | 「下一場」卡（v4.3） | `focusPanelHtml()`：`.focus-panel-compact`，上半部 `.nx-head`（`button.nx-main` 是 `focus-view-race`），下半部 `.nx-tiles` 三格用跟賽事頁四格同一組 `rwTileHtml()`／`rwPackTileHtml()`／`rwGoalTileHtml()`／`rwBibTileHtml()`。首頁卡的格子是 `data-action="focus-tile"`（先 `selectRace()` 再 `openDrawer()`，欄位是空的才 `focusDrawerFieldIfEmpty()`），賽事頁是 `open-drawer`（`detailEl` 接）。第三格 `focusThirdTileHtml()`：7 天內有軌跡、還沒抓過 → 「抓取預報」；`focusWeatherNow()` 有值 → 天氣（只有歷年平均自動帶進 `climateForecast.avgTempC` 的不算）；都沒有 → 號碼布。`renderFocusPanel()`：手機清單上有「比完了嗎？」就不放卡片（`currentCalendarView()==='list'`）。筆電一列從 768px 起（641–767 排兩欄每格只剩 73px）；字級「大」≤420px 排兩欄、第三格整列。改格子文字或欄寬先跑 `v43` 的 fit 三項。封面照頁首的漸層最上面 .58：`v43` 用「全白的照片」算每一行字的對比，調淡會被抓到 |
-| 獎牌牆（v4.3） | `renderPhotoGrid()` 是全部已完賽、新到舊；`photoCardHtml()` 有封面照 → 照片卡，沒有 → `.is-medal`（`.medal-face` 的 `--medal`／`--medal-bg` 用 `sportColorVar()`／`sportBgVar()`；PB 加 `.is-pb`：金框、4px、`.medal-pb`——路跑本來就是金色，只換顏色分不出來）。最大的那行 `.medal-main`：距離 → 沒距離用成績 → 都沒有用年份，**不放運動別名稱**（日英放不進圓）；超過 6 個字加 `.is-long` 縮字。`.medal-disc` 的 `line-height:1.2` 不能拿掉：沿用 body 的 1.6，字級「大」時 PB 標記會超出圓（`v43` 量四個角都在圓裡） |
+| 號碼布牆（v4.4） | `renderPhotoGrid()`：全部已完賽、新到舊，依 `raceDate` 前四碼分段（已經排好，同一年一定連在一起；沒日期的最後一段，標題 `ui.calUndated`）；每段 `h3.bib-yhead`＋`.bib-grid`。沒有封面照 → `bibCardHtml()`，有 → `polaroidCardHtml()`；兩種都是 `button.photo-card`（點擊、長按的 `RACE_CARD_SELECTOR` 都靠這個 class）＋`data-id`＋`data-sport`（賽名帶顏色 `--band`）＋`--rot`（`wallTilt()` 照 id 算，**不要用亂數**：每次重畫整面牆會跳）＋`aria-label`（`wallCardLabel()` 整理成一句）。大字的順序：號碼 → 距離（`.is-dist`）→ 運動別圖示（`.is-icon`，不放名稱，日英放不進）。號碼的字級 `min(26cqi, (100cqi − 左右留白) / --w)`：`--w` 是 `wallTextEm()` 用**最寬的備援字型**估的字寬（數字 0.7），改字型或改號碼布尺寸先跑 `v44` 的 fit 四項。`.bib-card` 是 `container-type:inline-size`（`@container (max-width:165px)` 拿掉賽名帶的年份）。PB 印章 `wallStampSvg()`：SVG、`textLength` 固定字寬；**不要加 `mix-blend-mode:multiply`**（強制深色下整個印章不見，`v44` 量像素）。安全別針是 `BIB_WALL_DEFS` 裡的一個 `<symbol>`，每支用 `<use>` 指過去（漸層 id 只有一份）。手機欄寬 `repeat(2,minmax(0,1fr))`，不要寫 `1fr 1fr` |
 | 表格排序與各距離最佳（v4.3） | `tableSort`（記憶體）、`TABLE_SORT_FIRST_DIR`、`sortTableRaces()`（空值不論方向都在最後、同值新的在前）。照日期以外的欄位排時不分年份（`byDate`）。表格上面那行是整句的字典 `ui.tableSortBar`（`{a}` 欄位、`{b}` 方向、`{c}` 場數）——**不要拆成幾段拼**：英文要半形括號和「·」。場數用 `tableRaceCount()`（英文單數）。`BEST_DISTANCES`／`bestByDistance()`：跑步距離要 `isRunningSportType()`，全馬用 `isMarathonDistance()`——跟 `computeCareerStats()`、`marathonPbRace()`、`computeHallOfFameData()` 同一個判斷，v4.3 起只算跑步類（原本 42 公里的自行車賽會變成全馬 PB）。226K（v4.3.2）是 220–235 公里的 `triathlon`（下限跟徽章「三鐵傳奇」一樣；上限擋雙倍超鐵）。卡片第三行 `bestRaceLineHtml()`：年份 `.tv-best-year` 放賽名**前面**（後面會被 ellipsis 截掉）；賽名是那一年開頭（後面不是數字）就把那段包成年份，不重複寫。`.tv-best` 的 `--n`（卡片數，至少 5）給 ≥1000px 的「一排放得下就排一排」公式用：`max(140px×字級, (100%−(n−1)×gap)/n−1px)`，gap 改了公式也要改；`.tv-best-label` 的 `word-break:keep-all` 讓日文只在空白處換行、`b` 的 `margin-top:auto` 讓同一排的時間對齊——改卡片寬度或標籤文字先跑 `v432` 的 fit 那一項 |
 | **安全性規則要涵蓋 App 用到的每一個雲端路徑**（v4.3.1） | Firestore 對沒列在規則裡的路徑一律拒絕，而 App 端的錯誤原本只寫 console。v3.76.0 的訓練紀錄（`users/{uid}/trainings`）漏了這條，換一台電腦登入訓練全不見。`firestore.rules` 現在列出每一條：races、trainings、meta（globalLists）、fcmTokens、public、analytics/featureCounts；`v431` 的 rules_cover_every_cloud_path 會掃 `index.html` 裡所有 `collection(db,…)`／`doc(db,…)`，找不到對應規則（或 users 底下沒限定本人）就失敗。**新增雲端路徑時一定要加規則，並提醒使用者到 Console 發布**——只改 repo 的檔案不會生效 |
 | 訓練紀錄同步（v4.3.1） | 一個月一份文件。`cloudSyncTrainings()` → `upsertTrainingMonths(uid,byMonth,mergeTrainingLists)`：每個月在 `runTransaction` 裡先讀雲端那份、合併（同 id 留 updatedAt 新的）再寫回，回傳寫回的內容讓本機也補上別台的。**不要改回整月覆蓋**：兩台都在寫同一個月時，後寫的會把先寫的洗掉。merge 函式在交易裡可能重跑，不能改動傳進去的物件。`mergeTrainings()` 合併後跑 `dedupeTrainingsByFingerprint()`：同一個指紋留最早匯入的（同時就比 id，兩台挑到同一筆）、其他標墓碑、鞋款搬到留下來的那筆。被拒絕（`permission-denied`）時 `noteTrainingSyncError()` 跳一次提示（`trainingDeniedNoticeShown`），同步診斷的「訓練紀錄」列寫「被拒絕」與修法 |
@@ -227,6 +231,12 @@ APP=/path/to/index.html python3 test_suite.py
 | QR 自己產不用套件 | 單檔＋離線＋SRI 的成本高於一個 200 行的編碼器。正確性用 OpenCV 編碼器逐格比對、解碼器實掃驗證 |
 | 外部套件走 jsDelivr 的 npm 路徑並鎖死版號 | SRI 雜湊要驗得出來才敢用。jsDelivr 逐位元組轉送 npm 原檔，雜湊能從官方 tarball 算出並比對；cdnjs 自行重新打包無從驗證。浮動版號（`@6`）配 SRI 則是定時炸彈，上游一發版就整包被擋 |
 | 破壞性操作用兩段式確認 | 沿用既有模式，5 秒自動解除，狀態各自獨立 |
+| 備份還原一律合併、不覆蓋（v4.5.0） | 用登入時合併雲端的同一套函式（`mergeRacesIntoState`／`mergeTrainings`／`mergeGlobalListsIntoState`）：拿一份舊備份還原，不能把這台比較新的資料蓋掉；同一場兩邊不同時另一份進「資料復原」。想要「整個換成備份」的人，先「清除全部資料」再匯入 |
+| 備份帶垃圾桶與訓練的刪除墓碑、不帶「資料復原」與偏好 | 垃圾桶 30 天內還能救，備份不該讓它提早消失；墓碑讓刪除跟著到另一台。資料復原是這台裝置的安全網（整份賽事的舊版本，很大），語言字體不是資料 |
+| 沒登入的提醒要等 Firebase 回報登入狀態（`authKnown`） | 在那之前 `state.user` 是 null，已登入的人每次打開都會先閃提醒卡和紅點。`cloudEnabled()` 是 false（離線、gstatic 被擋、還沒載入）時也不提醒：分不出是不是已登入的人在離線 |
+| 紅點：三場以上、30 天沒匯出；一場以上才有提醒卡 | 一兩場的新使用者先不吵；一場都沒有的新裝置沒有東西會不見。登入或匯出一次就消失——紅點是提醒，不是每次打開都要按掉的通知 |
+| xlsx 按「匯入 Excel」才載入，但 sw.js 照樣預先快取 | 每次打開不用再下載、解析 880KB（慢速 4G 第一次打開的第一個畫面快 3 秒多）；預先快取是為了離線也能匯入。代價是每次改版 SW 還是會在背景抓一次（跟以前一樣） |
+| `persist()` 有資料才問、7 天內不重問 | Firefox 會跳詢問視窗；Chrome、Safari 不跳但也是看使用程度決定，每週再問一次就夠。加到主畫面的每次都問（那時一定給） |
 
 ---
 
@@ -263,7 +273,7 @@ APP=/path/to/index.html python3 test_suite.py
 - **`d ? 加天數 : ''` 會把 0 天（今天）當成沒有日期**：`v42` 的反例驗證抓到「比賽當天不問」那一項原本是空測（今天的賽事根本沒有日期）。天數參數一律 `d!=null`
 - **一項檢查在頁面裡拋例外，整組會當掉**：`page.evaluate` 丟出例外 → `GROUP_CRASHED`，後面的項目全部沒跑，反例驗證也看不出是哪一項抓到的。`v43` 用 `self.ev()` 包起來（例外＝這一項失敗、印出原因、後面照跑），新群組照這樣寫
 - **歷年平均會自動寫進預報欄位**：打開有軌跡的賽事，背景查到的歷年平均會填進 `climateForecast.avgTempC`。拿 `climateForecast` 判斷「有沒有預報」要先排除這種情況（`focusWeatherNow()` 比對 `historicalAverageWeather.avgTempC`）
-- **卡片做成 `<button>` 時一定要寫 `color`**：不寫就是瀏覽器預設的黑字，深色模式下看不到。獎牌牆的照片卡一直有這個問題，v4.3 每一場完賽都上牆才看出來（`v43` 的 wall_text_readable 量淺色、深色的對比）。新增按鈕式的卡片照這樣寫
+- **卡片做成 `<button>` 時一定要寫 `color`**：不寫就是瀏覽器預設的黑字，深色模式下看不到。獎牌牆的照片卡一直有這個問題，v4.3 每一場完賽都上牆才看出來（現在由 `v44` 的 wall_text_readable 量淺色、深色的對比）。新增按鈕式的卡片照這樣寫
 - **641–767px 是筆電版面，但很窄**：直拿的平板、縮窄的視窗。兩欄排法最容易在這裡擠爆；版面測試除了 360／390 也量一個 700px（`v43` 的 tablet700）
 - **`var(--x, 備用值)` 的 `--x` 沒定義時，會靜靜拿備用值**：訓練頁寫 `var(--bg,#0F1316)`，但 `--bg` 從來沒定義過，兩種主題都拿到深色備用值，淺色模式變成黑底深字（v4.3.1 修）。主題相關的顏色一律用 `:root`／`[data-theme="dark"]` 裡真的有的變數（`--paper`、`--surface`、`--ink`…），不要寫備用色
 - **`state.lang` 不存在**，語言在 `currentLang`（v4.3.1 修了訓練頁的英文月份；`countryDisplayName()` 還有一處 `state.lang`，那裡永遠退回中文——國家名稱要沿用使用者既有寫法，暫時不動）
@@ -271,12 +281,24 @@ APP=/path/to/index.html python3 test_suite.py
 - **`auto-fill` 的一排卡片，多一張就多一排**：表格區 1,056px、每張至少 170px 時一排 5 張，第 6 張自己掉到第二排、把下面的內容往下推。張數會變的一排卡片，要量 5／6／7 張（v4.3.2 用卡片數 `--n` 算最小寬度）
 - **使用者說的「深色模式」可能是瀏覽器強制深色**：字變淡綠色（#EBFDF3＝淺色主題的墨綠 #16231C 反過來）、抽屜 #1F1F1E，就是 Chrome／Edge 的 Auto Dark Mode 在轉 App 的淺色模式。重現：Playwright 開 CDP session，`Emulation.setAutoDarkModeOverride({enabled:true})`（`--enable-features=WebContentsForceDark` 在 headless 沒效果）。強制深色是「畫的時候」才轉，`getComputedStyle` 看不到，只能截圖量像素（`v433` 的 `_edge()`）
 - **color-mix() 的計算值是 `color(srgb 0.98 0.98 0.97 / 0.35)`**：0–1 的小數，拿 `match(/[\d.]+/g)` 當 0–255 解析會變成接近黑色。`v433` 的 `__rgba` 有處理；舊的 `CONTRAST_JS` 沒有，量到 color-mix 的底色時要小心
+- **`mix-blend-mode:multiply` 在瀏覽器強制深色下會讓東西整個不見**：白紙上 multiply 一層紅色跟直接畫紅色看起來一樣，紙被轉成深色之後，乘上去就是一片深色（v4.4 的 PB 印章，設計稿用了 multiply）。要疊在「紙」上的東西直接畫顏色就好
+- **grid 的 `1fr` 最小是內容的寬度**：`1fr` 等於 `minmax(auto,1fr)`，裡面有不換行的字（`white-space:nowrap` 加 `overflow:hidden` 也一樣）時，那一欄會被撐寬、兩欄不一樣寬。要等寬寫 `minmax(0,1fr)`（v4.4 手機的號碼布牆；只有長賽名＋字級「大」才看得出來）
+- **沙盒的備援字型比網頁字型寬很多**：沙盒連不到 Google Fonts，Barlow Condensed（數字 0.47 字寬）會換成 DejaVu Sans（0.7）。版面測試在沙盒量到的是最擠的情況；要看設計原本的樣子，把 fontsource 的字型內嵌進頁面再截圖
+- **SVG 的 `getBBox()` 高度是整個字型的行高，不是字的墨水**：Barlow 的上緣留很多空，拿 bbox 檢查「字在圓裡」會誤判。`v44` 用基線往上 0.9、往下 0.15 個字級
 - **沙盒連不到 Firebase 規則模擬器**（storage.googleapis.com 被擋，下載不了 emulator jar），規則只能用 `v431` 的靜態比對檢查路徑；語法在 Console 按「發布」時才會驗
 - **選賽事可能跳出徽章解鎖動畫蓋住整頁**（`.badge-unbox-overlay`），測試要點頁面上的按鈕前先收掉
-- **升級 xlsx / idb-keyval 時必須同時換 `integrity` 雜湊**，只改版號會被瀏覽器擋掉。作法：`npm pack <套件>@<版本>` 解開後 `openssl dgst -sha384 -binary <檔案> | openssl base64 -A`
+- **升級 xlsx / idb-keyval 時必須同時換 `integrity` 雜湊**，只改版號會被瀏覽器擋掉。作法：`npm pack <套件>@<版本>` 解開後 `openssl dgst -sha384 -binary <檔案> | openssl base64 -A`。v4.5.0 起 xlsx 的網址與雜湊在 `XLSX_SRC`／`XLSX_SRI` 兩個常數（不在 `<head>`），`sw.js` 的預快取清單一樣要跟著改（`offline` 的 `sw_precaches_exact_cdn_urls` 兩處都比對）
+- **flex 直欄＋限高捲動時，1px 的分隔線會被擠成 0**：`.action-menu-panel` 是 `display:flex;flex-direction:column`，選單比畫面高時 `positionActionMenuPanel` 設 `max-height`，flex 項目預設 `flex-shrink:1`，沒有內容的分隔線最小高度是 0，整條消失（v4.5.0 多了提醒卡才在手機上常出現）。固定高度的裝飾元素寫 `flex:none`
+- **`countFilledProfileFields(p)` 的 p 是 null 時會拿這台的個人資料來數**：要數「另一份」個人資料（雲端、備份）一定要傳物件進去（`migrateUserProfile(x)`），不要傳可能是 null 的值
+- **新裝置一打開就建一套內建裝備範本（id 是新的）**：任何「依 id 聯集」的合併（登入、還原備份）都會多一套。v4.5.0 起 `mergeGlobalListsIntoState` 另外比內容（名稱＋每一項），一模一樣的不加
+- **測「網路慢」：`page.route` 的 handler 先把 route 存起來不回應**，之後在主流程呼叫 `route.fulfill()`；同步版 Playwright 可以這樣做。但開頁就會載入的資源不要扣——同步的 `<script>` 會讓 `goto` 一直等不到 load、整組卡住（`v45` 只在按下「匯入 Excel」之後才扣）
+- **`offline` 群組固定開 `index.html`**：反例驗證要跑它時，每個反例放一個資料夾（index.html＋sw.js＋icons/），不能像其他群組一樣把反例存成 `名稱.html`（`navigator.serviceWorker.ready` 會永遠等不到、整個卡住）
 
 ---
 
 ## 待你回報
 
+- 「資料只存在這台裝置」提醒卡與頭像紅點（v4.5.0）的用詞和頻率：三場以上、30 天沒匯出才有紅點，覺得太吵或太安靜都可以調 `BACKUP_ALERT_MIN_RACES`／`BACKUP_ALERT_DAYS`。Firefox 第一次會跳「允許這個網站使用持久儲存空間？」的詢問，按允許即可
+- 實機按「匯入 Excel」第一次要等多久（v4.5.0 起才下載解析套件；jsDelivr 用 brotli 壓縮約 200KB，4G 下通常 1–2 秒，挑檔案的時間就抓完了）
+- 號碼布牆（v4.4.0）在你手機上的樣子：沙盒連不到 Google Fonts，截圖用的是內嵌的 Barlow Condensed；實機第一次打開要下載字型（三種粗細約 65KB），下載完之前是系統的窄體字。上百場一起捲動順不順也請回報（每張卡都有陰影和小角度，舊手機如果卡，可以先拿掉角度）
 - 手機上獎牌牆與搜尋的實際流暢度。v3.26.0 把縮圖從 320px 提到 480px 換畫質，沙盒量到首屏 75ms→100ms，**實機是否還順要你回報**；太卡的話把 `COVER_THUMB_PX` 調回 420 或 360 就好，重產是自動的

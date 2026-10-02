@@ -18,9 +18,11 @@ const PRECACHE=[
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
   './icons/help-avatar.png',
-  // 這兩行必須跟 index.html 的 <script src> 一模一樣（含版號）——
-  // index.html 用 SRI 驗證內容，快取的回應若不是 CORS 模式取得的
-  // （opaque），SRI 會判定失敗、套件整個不載入。test_suite 有檢查。
+  // 這兩行必須跟 index.html 載入的網址一模一樣（含版號）：idb-keyval 是
+  // <script src>，xlsx 是 XLSX_SRC 常數（v4.5.0 起按「匯入 Excel」才載入，
+  // 仍然先快取，離線時一樣能匯入）。index.html 用 SRI 驗證內容，快取的
+  // 回應若不是 CORS 模式取得的（opaque），SRI 會判定失敗、套件整個不載入。
+  // test_suite 有檢查。
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/idb-keyval@6.3.0/dist/umd.js',
 ];
