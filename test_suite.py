@@ -8603,6 +8603,14 @@ window.__dqHardDays=()=>{ const pick=f=>DAILY_QUOTES.map((q,i)=>[f(q),i]).sort((
     pick(q=>q.role.zh.length), pick(q=>q.role.ja.length), pick(q=>q.role.en.length), pick(q=>q.who.en.length), pick(q=>-q.text.zh.length)])]; };
 """
 
+# v4.7.1：模擬手機上載到的 Noto Sans TC／JP。沙盒連不到 Google Fonts，平常退回 DejaVu Sans（字比較寬、字框比較矮），
+# 換行跟字落的高度都跟手機不一樣——v4.7.1 的副標題被切，在沙盒裡只差 1 個像素、幾乎看不出來。
+# 本機的 Noto Sans CJK TC／JP 跟 Google 的 Noto Sans TC／JP 是同一套字，垂直度量一樣（hhea 1160/-288、沒開 USE_TYPO_METRICS，
+# iOS 跟 Linux 的 Chromium 都用這組），拿來冒充
+NOTO_AS_WEBFONT_CSS = ''.join(
+    f"@font-face{{font-family:'Noto Sans {fam}';font-weight:{w};src:local('Noto Sans CJK {fam}{full}'),local('NotoSansCJK{fam.lower()}-{ps}');}}"
+    for fam in ('TC', 'JP') for w, full, ps in (('400', '', 'Regular'), ('500', ' Medium', 'Medium'), ('700', ' Bold', 'Bold')))
+
 
 class V47DailyQuote(Group):
     """v4.7.0：今日一句。「賽事」分頁最上面每天一句跑者說過的話——筆電放在「下一場」卡右邊（360px、
@@ -8847,7 +8855,7 @@ class V47DailyQuote(Group):
             for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(80); out[lang]=document.getElementById('daily-quote-row-label').textContent.trim(); }
             setLang('zh'); await __wait(80);
             return out.zh==='今日一句' && out.ja==='今日の名言' && out.en==='Quote of the day'; }""")
-        c['version_is_v4_7_0'] = self.ev(pg, "()=>APP_VERSION==='v4.7.0'")
+        # （版本號的檢查跟著最新的群組走，v4.7.1 起在 v471）
         # ================= 只在「賽事」首頁 =================
         c['hidden_on_search_career_and_race_page'] = self.ev(pg, r"""async()=>{ const vis=()=>{ const d=__dq(); return !!d && d.getClientRects().length>0; };
             const base=vis();
@@ -8968,6 +8976,374 @@ class V47DailyQuote(Group):
             fctx.close()
 
 
+class V471TaglineFit(V47DailyQuote):
+    """v4.7.1：手機頂列的副標題，字級「大」時下半截被切掉（收合動畫的 max-height 寫死 20px，一行字 25.8px）。
+    改成跟著字級走；放不下一行時換行，不再截成「…」。往下捲時照樣收起來。"""
+
+    ECHO = ('v471:',)
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        # 每一種寬度 × 中日英 × 三種字級：副標題整句都看得到（沒被切、沒有「…」），最多兩行，在頂列裡、
+        # 不壓到首頁分頁；標題那一行照樣是一行（簡易版、頭像跟標題同一行）；沒有橫向捲動
+        FIT = r"""async()=>{ const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(80); await document.fonts.ready;
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); window.scrollTo(0,0); await __wait(120);
+                const e=document.querySelector('.app-tagline'), tag=lang+' '+fs, cs=getComputedStyle(e), lh=parseFloat(cs.lineHeight);
+                const r=e.getBoundingClientRect(), tb=document.getElementById('topbar').getBoundingClientRect(), tabs=document.querySelector('.home-tabs').getBoundingClientRect();
+                if(e.scrollHeight>e.clientHeight+1) bad.push(tag+' cut '+e.scrollHeight+'>'+e.clientHeight);
+                if(e.scrollWidth>e.clientWidth+1) bad.push(tag+' ellipsis');
+                if(r.height>lh*2+1) bad.push(tag+' >2 lines');
+                if(r.height<lh-1) bad.push(tag+' squashed '+r.height.toFixed(1));
+                if(r.bottom>tb.bottom+0.5||r.top<tb.top) bad.push(tag+' outside topbar');
+                if(tabs.top<tb.bottom-0.5) bad.push(tag+' overlaps tabs');
+                const t=document.querySelector('.app-title').getBoundingClientRect(), sw=document.getElementById('btn-mode-toggle').getBoundingClientRect(), av=document.getElementById('btn-account-menu').getBoundingClientRect();
+                if(innerWidth<=860&&(sw.top>=t.bottom||av.top>=t.bottom||sw.right>av.left)) bad.push(tag+' title row breaks');
+                if(document.documentElement.scrollWidth>innerWidth) bad.push(tag+' hscroll'); } }
+            setLang('zh'); applyFontScale('medium');
+            if(bad.length) console.log('v471: tagline '+innerWidth,bad.slice(0,8).join(' | ')); return bad.length===0; }"""
+        for w in (320, 360, 390, 430, 700, 860, 1100):
+            touch = w < 641
+            fctx, fp = self._ctx(browser, viewport={'width': w, 'height': 844}, touch=touch)
+            c[f'tagline_whole_{w}_all_languages_font_sizes'] = self.ev(fp, FIT)
+            fctx.close()
+        # 手機寬度再用手機上的字型度量跑一次（NOTO_AS_WEBFONT_CSS）：字框高度、字落的位置、英文要換幾行都跟手機一樣
+        for w in (320, 360, 390):
+            fctx, fp = self._ctx(browser, viewport={'width': w, 'height': 844}, touch=True)
+            fp.add_style_tag(content=NOTO_AS_WEBFONT_CSS)
+            c[f'tagline_whole_{w}_with_phone_font_metrics'] = self.ev(fp, r"""async()=>{ await document.fonts.ready; await __wait(100);
+                const e=document.querySelector('.app-tagline'), rg=document.createRange(); rg.selectNodeContents(e);
+                const h=rg.getClientRects()[0].height/parseFloat(getComputedStyle(e).fontSize);
+                if(h<1.3){ console.log('v471: phone font metrics not applied, glyph box '+h.toFixed(2)+'em'); return false; }
+                return (""" + FIT + """)(); }""")
+            fctx.close()
+        # 往下捲：副標題收起來（頂列變矮）；捲回最上面：整句回來、沒被切
+        sctx, sp = self._ctx(browser, viewport={'width': 390, 'height': 844}, touch=True)
+        c['tagline_collapses_on_scroll_and_comes_back'] = self.ev(sp, r"""async()=>{ applyFontScale('large'); await __wait(100);
+            const e=document.querySelector('.app-tagline'), tb=document.getElementById('topbar');
+            window.scrollTo(0,0); window.dispatchEvent(new Event('scroll')); await __wait(200); const h0=e.getBoundingClientRect().height, b0=tb.getBoundingClientRect().height;
+            window.scrollTo(0,600); window.dispatchEvent(new Event('scroll')); await __wait(300);
+            const compact=tb.classList.contains('topbar-compact'), h1=e.getBoundingClientRect().height, b1=tb.getBoundingClientRect().height;
+            window.scrollTo(0,0); window.dispatchEvent(new Event('scroll')); await __wait(300);
+            const h2=e.getBoundingClientRect().height, cut=e.scrollHeight>e.clientHeight+1;
+            applyFontScale('medium');
+            const back=!tb.classList.contains('topbar-compact');
+            const ok=compact && h1<1 && b1<b0-20 && Math.abs(h2-h0)<1 && h0>25 && !cut && back;
+            if(!ok) console.log('v471: scroll',h0,b0,compact,h1,b1,h2,cut,back,document.documentElement.scrollHeight); return ok; }""")
+        # （版本號的檢查跟著最新的群組走，v4.8.0 起在 v48）
+        sctx.close()
+
+
+# v4.8.0：Spotify 的嵌入播放器在沙盒裡連不到——用一個灰色的替身頁面代替，順便數播放器被載入了幾次
+EMBED_STUB_HTML = ('<!doctype html><meta charset="utf-8"><body style="margin:0;height:100vh;display:flex;align-items:center;'
+                   'justify-content:center;background:#C9CCC6;color:#2B2F2C;font:13px sans-serif">Spotify 播放器（測試替身）</body>')
+
+V48_JS = r"""
+// 22 碼的 Spotify ID（格式對就好，替身頁不管是哪一首）
+window.__SP={ track:'4uLU6hMCjMI75M1A2tKUQC', track2:'7ouMYWpwJ422jRcDASZB7P', album:'1DFixLWuPkv3KT3TnV35m3',
+  playlist:'37i9dQZF1DXcBWIGoYBM5M', episode:'512ojhOuo1ktJprKbVcKyQ', show:'5CfCWKI5pZ28U0uOzXkDHe', artist:'0OdUWJ0sBjDrqHygGUXeCF' };
+window.__bgmRace=()=>state.races.find(x=>x.id==='example-alishan-trail');
+window.__setLinks=async(links,r)=>{ r=r||__bgmRace(); r.mediaLinks=links.map(l=>Object.assign({type:'other',url:'',notes:''},l));
+  r.updatedAt=new Date().toISOString(); await persist(); return r; };
+window.__open=async r=>{ r=r||__bgmRace(); if(state.selectedId===r.id&&currentRace&&currentRace.id===r.id) renderDetail(); else selectRace(r.id,{scroll:false});
+  await __wait(250); return document.querySelector('.detail-header'); };
+window.__bgm=()=>document.querySelector('.detail-header .dh-bgm');
+window.__frame=()=>document.querySelector('.detail-header iframe.dh-bgm-frame');
+window.__pasteText=async txt=>{ const dt=new DataTransfer(); dt.setData('text',txt);
+  document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); await __wait(300);
+  return document.getElementById('paste-note-modal'); };
+window.__setField=async(id,val)=>{ const e=document.getElementById(id); e.value=val; e.dispatchEvent(new Event('change',{bubbles:true})); await __wait(350); return e; };
+"""
+
+
+class V48RaceBgm(V47DailyQuote):
+    """v4.8.0：賽事 BGM。多媒體與連結裡的 Spotify 連結（類型「賽事 BGM」的優先），在賽事名稱、日期地點下面
+    放 Spotify 官方的嵌入播放器：網址各種寫法都認得（intl-ja、embed、舊式 user、spotify: URI），播放器網址自己組；
+    改欄位重畫頁首時不重新載入（支援 moveBefore 的瀏覽器）；深淺色跟著 App；離線、短網址、其他音樂平台放連結；
+    貼上或填 Spotify 連結自動歸成「賽事 BGM」；相簿不重複列；手機各寬度、三種語言、三種字級放得下。"""
+
+    ECHO = ('v48:',)
+
+    def _bgm_ctx(self, browser, viewport=None, touch=False, **kw):
+        ctx, pg = self._ctx(browser, viewport=viewport, touch=touch, **kw)
+        self.embeds = []
+
+        def embed(route):
+            self.embeds.append(route.request.url)
+            route.fulfill(status=200, body=EMBED_STUB_HTML, headers={'content-type': 'text/html; charset=utf-8'})
+        ctx.route('https://open.spotify.com/embed/**', embed)
+        pg.add_script_tag(content=V48_JS)
+        return ctx, pg
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        ctx, pg = self._bgm_ctx(browser, viewport={'width': 390, 'height': 844}, touch=True)
+        # ================= 認得哪些連結 =================
+        # 各種寫法的 Spotify 連結都變成播放器：網址由類型＋ID 自己組（?si= 那些追蹤參數不帶過去），放在頁首、日期地點下面
+        c['spotify_link_forms_become_player_under_race_name'] = self.ev(pg, r"""async()=>{ const S=__SP, bad=[];
+            const cases=[
+              ['https://open.spotify.com/track/'+S.track+'?si=1a2b3c4d','track/'+S.track],
+              ['https://open.spotify.com/intl-ja/track/'+S.track,'track/'+S.track],
+              ['https://open.spotify.com/intl-zh-tw/album/'+S.album+'?si=x','album/'+S.album],
+              ['https://open.spotify.com/embed/playlist/'+S.playlist+'?utm_source=generator','playlist/'+S.playlist],
+              ['https://open.spotify.com/user/spotify/playlist/'+S.playlist,'playlist/'+S.playlist],
+              ['spotify:episode:'+S.episode,'episode/'+S.episode],
+              ['https://open.spotify.com/show/'+S.show,'show/'+S.show],
+              ['https://open.spotify.com/artist/'+S.artist,'artist/'+S.artist],
+              ['http://open.spotify.com/track/'+S.track,'track/'+S.track]];
+            for(const [url,want] of cases){ await __setLinks([{type:'music',url}]); const h=await __open(), f=__frame(), box=__bgm();
+              if(!f){ bad.push('no player '+url); continue; }
+              if(f.src!=='https://open.spotify.com/embed/'+want+'?utm_source=generator') bad.push(url+' -> '+f.src);
+              const after=(a,b)=>!!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING);
+              if(!h.contains(box)||!after(h.querySelector('h1'),box)||!after(h.querySelector('.dh-meta'),box)) bad.push('position '+url); }
+            if(bad.length) console.log('v48: forms',bad.slice(0,6).join(' | ')); return bad.length===0; }""")
+        # 畫面上：日期地點那一行正下方，倒數和賽前四格在它下面
+        c['player_sits_between_meta_line_and_countdown'] = self.ev(pg, r"""async()=>{
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); const h=await __open(); window.scrollTo(0,0); await __wait(60);
+            const m=h.querySelector('.dh-meta').getBoundingClientRect(), b=__bgm().getBoundingClientRect(), tiles=h.querySelector('.rw-tiles'), prog=h.querySelector('.progress-block,.countdown,.dh-progress');
+            const below=b.top>=m.bottom-0.5&&b.top-m.bottom<24, above=(!tiles||tiles.getBoundingClientRect().top>=b.bottom)&&(!prog||prog.getBoundingClientRect().top>=b.bottom);
+            if(!(below&&above)) console.log('v48: geometry',m.bottom,b.top,b.bottom,tiles&&tiles.getBoundingClientRect().top); return below&&above; }""")
+        # 不是 Spotify、ID 不對、危險的網址：不放播放器，也不會變成 javascript:／data: 連結或插進 HTML
+        c['non_spotify_or_unsafe_links_never_become_player'] = self.ev(pg, r"""async()=>{ const S=__SP, bad=[];
+            const cases=['https://evil.example/open.spotify.com/track/'+S.track,'https://open.spotify.com.evil.example/track/'+S.track,
+              'https://open.spotify.com/track/abc','javascript:alert(1)//open.spotify.com/track/'+S.track,
+              'https://open.spotify.com/track/'+S.track+'"><img src=x onerror=alert(1)>','data:text/html,<script>alert(1)</script>'];
+            for(const url of cases){ await __setLinks([{type:'music',url}]); const h=await __open();
+              if(__frame()) bad.push('player '+url);
+              if(h.querySelector('a[href^="javascript:"],a[href^="data:"],img[src="x"],script')) bad.push('unsafe '+url); }
+            if(bad.length) console.log('v48: unsafe',bad.join(' | ')); return bad.length===0; }""")
+        # 頁首放類型是「賽事 BGM」的那一筆；其他連結（包括別的 Spotify）留在賽後紀錄的相簿，放在頁首的不重複列
+        c['bgm_typed_link_wins_and_others_stay_in_gallery'] = self.ev(pg, r"""async()=>{ const S=__SP, bad=[];
+            const A='https://open.spotify.com/track/'+S.track, B='https://open.spotify.com/track/'+S.track2;
+            await __setLinks([{type:'other',url:A},{type:'photo_album',url:'https://photos.example.org/album'},{type:'music',url:B,notes:'終點那首'}]);
+            const h=await __open(), f=__frame();
+            if(!f||!f.src.includes(S.track2)) bad.push('header not the BGM one '+(f&&f.src));
+            if(h.querySelector('.dh-bgm-cap').textContent.trim()!=='終點那首') bad.push('caption');
+            const hrefs=[...document.querySelectorAll('#section-post .media-gallery-card')].map(a=>a.href);
+            if(hrefs.some(x=>x.includes(S.track2))) bad.push('BGM repeated in gallery');
+            if(!hrefs.some(x=>x.includes(S.track))||!hrefs.some(x=>x.includes('photos.example.org'))) bad.push('others missing '+hrefs.join(','));
+            // 沒有「賽事 BGM」類型的：第一筆 Spotify 連結上頁首
+            await __setLinks([{type:'photo_album',url:'https://photos.example.org/album'},{type:'other',url:A}]); await __open();
+            if(!__frame()||!__frame().src.includes(S.track)) bad.push('first spotify link');
+            if(bad.length) console.log('v48: pick',bad.join(' | ')); return bad.length===0; }""")
+        # 沒有音樂連結的賽事：頁首完全沒有這一塊
+        c['no_music_link_no_block'] = self.ev(pg, r"""async()=>{
+            await __setLinks([{type:'photo_album',url:'https://photos.example.org/a'},{type:'official_site',url:'https://race.example.org/'}]); await __open();
+            return !__bgm(); }""")
+        # 播放器本身：延後載入、有讀螢幕唸的標題、官方的權限（加密媒體、全螢幕）、官方精簡尺寸 152px
+        c['player_lazy_titled_official_size'] = self.ev(pg, r"""async()=>{
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open(); const f=__frame(); if(!f) return false;
+            const ok=f.loading==='lazy'&&(f.getAttribute('allow')||'').includes('encrypted-media')&&f.hasAttribute('allowfullscreen')
+              &&Math.round(f.getBoundingClientRect().height)===152&&f.title.trim().length>0;
+            if(!ok) console.log('v48: attrs',f.outerHTML.slice(0,300)); return ok; }""")
+        # 小字（備註，沒寫就是「賽事 BGM」）、播放器的標題跟著語言；換語言不重新載入播放器
+        c['caption_and_title_follow_language_without_reload'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const want={zh:['賽事 BGM','賽事 BGM（Spotify 播放器）'],ja:['レースBGM','レースBGM（Spotifyプレーヤー）'],en:['Race BGM','Race BGM (Spotify player)']};
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open(); const first=__frame();
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(150); const f=__frame(), cap=__bgm()&&__bgm().querySelector('.dh-bgm-cap').textContent.trim();
+              if(cap!==want[l][0]) bad.push(l+' caption '+cap); if(!f||f.title!==want[l][1]) bad.push(l+' title '+(f&&f.title));
+              if(f!==first) bad.push(l+' reloaded'); }
+            setLang('zh'); await __wait(100);
+            if(bad.length) console.log('v48: lang',bad.join(' | ')); return bad.length===0; }""")
+        # 深色模式用 Spotify 的深色款（theme=0），淺色不帶；切換時跟著換
+        c['player_theme_follows_app'] = self.ev(pg, r"""async()=>{ const bad=[];
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open();
+            const light=__frame().src; applyTheme('dark'); await __wait(150); const dark=__frame().src; applyTheme('light'); await __wait(150); const back=__frame().src;
+            if(light.includes('theme=')) bad.push('light '+light); if(!dark.includes('theme=0')) bad.push('dark '+dark); if(back.includes('theme=')) bad.push('back '+back);
+            if(bad.length) console.log('v48: theme',bad.join(' | ')); return bad.length===0; }""")
+        # ================= 改別的欄位，播放器不重新載入 =================
+        self.ev(pg, r"""async()=>{ await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open(); await __wait(200); }""")
+        n0 = len(self.embeds)
+        kept = self.ev(pg, r"""async()=>{ const bad=[], f0=__frame(); if(!f0) return false;   // 沒有播放器就不算「沒被換掉」
+            // 只重畫頁首的欄位（抽屜裡改起跑時間）、整頁重畫的欄位（改名字會帶出系列，整頁重畫）、直接整頁重畫
+            openDrawer('schedule'); await __wait(250); await __setField('f-schedule-startTime','06:15');
+            if(__frame()!==f0) bad.push('header redraw');
+            closeDrawer(); await __wait(150); openDrawer('basicInfo'); await __wait(250);
+            await __setField('f-name','2026 阿里山森林越野賽'); if(__frame()!==f0) bad.push('name change');
+            closeDrawer(); await __wait(150); renderDetail(); await __wait(150); if(__frame()!==f0) bad.push('renderDetail');
+            const keeper=document.getElementById('bgm-keeper'); if(keeper&&keeper.children.length) bad.push('left in keeper');
+            if(bad.length) console.log('v48: keep',bad.join(' | ')); return bad.length===0; }""")
+        c['editing_other_fields_keeps_player_loaded'] = bool(kept) and len(self.embeds) == n0
+        # 不支援 moveBefore 的瀏覽器（Safari）：重新載入，但播放器照樣在、暫存處沒有留下東西
+        n1 = len(self.embeds)
+        c['without_moveBefore_player_reloads_cleanly'] = self.ev(pg, r"""async()=>{ const f0=__frame(), mb=Element.prototype.moveBefore; delete Element.prototype.moveBefore;
+            try{ updateDetailHeaderBits(); await __wait(200); renderDetail(); await __wait(200); const f1=__frame(), keeper=document.getElementById('bgm-keeper');
+              return !!f1&&f1!==f0&&!(keeper&&keeper.children.length); }
+            finally{ Element.prototype.moveBefore=mb; } }""") and len(self.embeds) == n1 + 2
+        # ================= 在抽屜裡改、清掉、新增 =================
+        c['changing_or_clearing_bgm_link_updates_header'] = self.ev(pg, r"""async()=>{ const S=__SP, bad=[];
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+S.track}]); await __open(); openDrawer('mediaLinks'); await __wait(250);
+            await __setField('f-mediaLinks-0-url','https://open.spotify.com/album/'+S.album);
+            if(!__frame()||!__frame().src.includes('/album/'+S.album)) bad.push('not updated '+(__frame()&&__frame().src));
+            await __setField('f-mediaLinks-0-url','');
+            if(__bgm()) bad.push('still shown after clearing');
+            closeDrawer(); await __wait(120);
+            // 兩筆 Spotify：把「賽事 BGM」那筆改成「其他」，頁首換成第一筆，相簿也跟著換（不重複、不漏）
+            await __setLinks([{type:'other',url:'https://open.spotify.com/track/'+S.track},{type:'music',url:'https://open.spotify.com/track/'+S.track2}]); await __open();
+            openDrawer('mediaLinks'); await __wait(250); await __setField('f-mediaLinks-1-type','other'); closeDrawer(); await __wait(150);
+            const hrefs=[...document.querySelectorAll('#section-post .media-gallery-card')].map(a=>a.href);
+            if(!__frame()||!__frame().src.includes(S.track+'?')) bad.push('header after type change '+(__frame()&&__frame().src));
+            if(hrefs.some(x=>x.includes(S.track+''))&&!hrefs.some(x=>x.includes(S.track2))) bad.push('gallery stale '+hrefs.join(','));
+            if(bad.length) console.log('v48: edit',bad.join(' | ')); return bad.length===0; }""")
+        # 新增一筆、填 Spotify 網址：類型還是預設的「其他」就自動改成「賽事 BGM」（有提示動畫）；
+        # 不是音樂的網址、使用者自己選了別的類型，都不動
+        c['typing_music_url_sets_type_to_bgm'] = self.ev(pg, r"""async()=>{ const S=__SP, bad=[]; const r=await __setLinks([]); await __open();
+            openDrawer('mediaLinks'); await __wait(250);
+            const add=async()=>{ drawerEl.querySelector('[data-action="add-item"][data-list="mediaLinks"]').click(); await __wait(250); return r.mediaLinks.length-1; };
+            let n=await add(); await __setField('f-mediaLinks-'+n+'-url','https://open.spotify.com/intl-ja/playlist/'+S.playlist+'?si=z');
+            const sel=document.getElementById('f-mediaLinks-'+n+'-type');
+            if(r.mediaLinks[n].type!=='music'||!sel||sel.value!=='music') bad.push('type '+r.mediaLinks[n].type);
+            if(!sel||!sel.closest('.field-smart-filled')) bad.push('no highlight');
+            if(!__frame()) bad.push('no player');
+            n=await add(); await __setField('f-mediaLinks-'+n+'-url','https://results.example.org/2026');
+            if(r.mediaLinks[n].type!=='other') bad.push('non-music changed '+r.mediaLinks[n].type);
+            n=await add(); await __setField('f-mediaLinks-'+n+'-type','photo_album'); await __setField('f-mediaLinks-'+n+'-url','https://open.spotify.com/track/'+S.track);
+            if(r.mediaLinks[n].type!=='photo_album') bad.push('user choice overridden '+r.mediaLinks[n].type);
+            closeDrawer(); await __wait(120);
+            if(bad.length) console.log('v48: smart',bad.join(' | ')); return bad.length===0; }""")
+        # ================= 組不出播放器的：放連結 =================
+        c['short_link_shows_open_link_with_hint'] = self.ev(pg, r"""async()=>{ const bad=[];
+            await __setLinks([{type:'music',url:'https://spotify.link/AbCdEf1234'}]); await __open();
+            const a=__bgm()&&__bgm().querySelector('a.dh-bgm-link');
+            if(__frame()) bad.push('player');
+            if(!a||a.getAttribute('href')!=='https://spotify.link/AbCdEf1234'||a.target!=='_blank'||!/noopener/.test(a.rel)) bad.push('link');
+            if(!a||!a.textContent.includes('在 Spotify 開啟')||!a.textContent.includes('短網址')) bad.push('zh '+(a&&a.textContent.trim()));
+            setLang('en'); await __wait(150); const a2=__bgm().querySelector('a.dh-bgm-link');
+            if(!a2.textContent.includes('Open in Spotify')||!a2.textContent.includes('Short links')||__cjk.test(a2.textContent)) bad.push('en '+a2.textContent.trim());
+            setLang('zh'); await __wait(100);
+            if(bad.length) console.log('v48: short',bad.join(' | ')); return bad.length===0; }""")
+        c['other_music_services_show_open_link'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const cases=[['https://music.apple.com/tw/album/run/1440841363','Apple Music'],['https://music.youtube.com/watch?v=abc123','YouTube Music'],
+              ['https://www.kkbox.com/tw/tc/song/abc','KKBOX'],['https://music.example.org/song/1','music.example.org']];
+            for(const [url,name] of cases){ await __setLinks([{type:'music',url}]); await __open(); const a=__bgm()&&__bgm().querySelector('a.dh-bgm-link');
+              if(__frame()||!a||a.getAttribute('href')!==url||!a.textContent.includes('在 '+name+' 開啟')) bad.push(name+' '+(a&&a.textContent.trim())); }
+            if(bad.length) console.log('v48: services',bad.join(' | ')); return bad.length===0; }""")
+        # 離線：放連結、寫明連上網路就有播放器；連上網路自己換回播放器
+        self.ev(pg, r"""async()=>{ await __setLinks([{type:'music',url:'https://open.spotify.com/intl-ja/track/'+__SP.track+'?si=q'}]); }""")
+        # 已經在播的時候斷線：改別的欄位，播放器留著（緩衝好的還能播），不換成連結
+        self.ev(pg, r"""async()=>{ await __open(); await __wait(200); window.__f0=__frame(); }""")
+        pg.context.set_offline(True)
+        c['going_offline_keeps_loaded_player'] = self.ev(pg, r"""async()=>{ await __wait(100); updateDetailHeaderBits(); await __wait(150);
+            const ok=!!__f0&&__frame()===__f0&&__bgm().dataset.bgmState==='player'; if(!ok) console.log('v48: offline keep',navigator.onLine); return ok; }""")
+        # 離線時打開（新的播放器）：放連結
+        self.ev(pg, r"""async()=>{ goBackFromDetail&&goBackFromDetail(); await __wait(200); }""")
+        c['offline_shows_link_instead_of_player'] = self.ev(pg, r"""async()=>{ await __wait(100); await __open(); const b=__bgm(), a=b&&b.querySelector('a.dh-bgm-link');
+            const ok=!!b&&b.dataset.bgmState==='offline'&&!__frame()&&!!a&&a.getAttribute('href')==='https://open.spotify.com/track/'+__SP.track&&b.textContent.includes('離線中');
+            if(!ok) console.log('v48: offline',navigator.onLine,b&&b.outerHTML.slice(0,200)); return ok; }""")
+        pg.context.set_offline(False)
+        c['back_online_brings_player_back'] = self.ev(pg, r"""async()=>{ await __wait(400); const ok=!!__frame()&&__bgm().dataset.bgmState==='player';
+            if(!ok) console.log('v48: online',navigator.onLine,__bgm()&&__bgm().dataset.bgmState); return ok; }""")
+        # ================= 貼上 =================
+        c['url_classifier_files_music_sources_as_bgm'] = self.ev(pg, r"""()=>{ const got=k=>{ const r=classifyPastedUrl(k); return r?r.type:null; };
+            const ok=got('https://open.spotify.com/track/'+__SP.track)==='music' && got('https://spotify.link/x1')==='music'
+              && got('https://music.apple.com/tw/album/a/1')==='music' && got('https://music.youtube.com/watch?v=a')==='music'
+              && got('https://www.kkbox.com/tw/tc/song/a')==='music'
+              && got('https://www.youtube.com/watch?v=a')==='other'                 // 一般 YouTube 照舊
+              && got('https://developer.spotify.com/documentation/embeds')!=='music' // 說明文件不是歌
+              && got('spotify:track:'+__SP.track)==='music' && classifyPastedUrl('spotify:track:short')===null;
+            if(!ok) console.log('v48: classify'); return ok; }""")
+        # 在賽事頁貼上 Spotify 連結：確認視窗預設「賽事 BGM」、說明播放器會出現在哪；存了之後頁首就有播放器。
+        # 電腦版的 spotify: URI 換成網址；短網址先講清楚只會是連結
+        c['paste_spotify_link_saved_as_bgm_player'] = self.ev(pg, r"""async()=>{ const S=__SP, bad=[]; await __setLinks([]); await __open();
+            let el=await __pasteText('https://open.spotify.com/intl-ja/track/'+S.track+'?si=abc');
+            if(el.hidden||pasteNoteState.kind!=='url') bad.push('modal');
+            if(el.querySelector('[data-paste-url-field="type"]').value!=='music') bad.push('type '+el.querySelector('[data-paste-url-field="type"]').value);
+            const hint=el.querySelector('.paste-url-bgm'); if(!hint||!hint.textContent.includes('賽事名稱下面')) bad.push('hint');
+            el.querySelector('[data-action="confirm-paste-url"]').click(); await __wait(450);
+            const ml=__bgmRace().mediaLinks; if(ml.length!==1||ml[0].type!=='music') bad.push('saved '+JSON.stringify(ml));
+            if(!__frame()||!__frame().src.includes('/track/'+S.track)) bad.push('no player after paste');
+            el=await __pasteText('spotify:album:'+S.album);
+            if(el.hidden||!el.querySelector('.paste-url-preview').textContent.includes('https://open.spotify.com/album/'+S.album)) bad.push('uri');
+            el.querySelector('[data-action="close-paste-note"]').click(); await __wait(120);
+            el=await __pasteText('https://spotify.link/AbCdEf1234'); const h2=el.querySelector('.paste-url-bgm');
+            if(!h2||!h2.textContent.includes('短網址')) bad.push('short hint');
+            el.querySelector('[data-action="close-paste-note"]').click(); await __wait(120);
+            if(bad.length) console.log('v48: paste',bad.join(' | ')); return bad.length===0; }""")
+        # ================= 其他 =================
+        c['media_type_option_translated'] = self.ev(pg, r"""async()=>{ const bad=[], want={zh:'賽事 BGM',ja:'レースBGM',en:'Race BGM'};
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open();
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(120); openDrawer('mediaLinks'); await __wait(220);
+              const sel=document.getElementById('f-mediaLinks-0-type'), o=sel&&sel.querySelector('option[value="music"]');
+              if(!o||o.textContent.trim()!==want[l]||sel.value!=='music') bad.push(l+' '+(o&&o.textContent));
+              closeDrawer(); await __wait(120); }
+            setLang('zh'); await __wait(100);
+            if(bad.length) console.log('v48: option',bad.join(' | ')); return bad.length===0; }""")
+        c['caption_and_link_text_contrast_light_dark'] = self.ev(pg, r"""async()=>{ const bad=[];
+            // 播放器那一款只有小字；短網址那一款小字＋連結的兩行。少了哪一個也算失敗
+            for(const [v,sels] of [[[{type:'music',url:'https://open.spotify.com/track/'+__SP.track,notes:'終點那首'}],['.dh-bgm-cap span']],
+                                   [[{type:'music',url:'https://spotify.link/AbCdEf1234'}],['.dh-bgm-cap span','.dh-bgm-link-main','.dh-bgm-link-sub']]]){
+              await __setLinks(v); await __open();
+              for(const th of ['light','dark']){ applyTheme(th); await __wait(120);
+                sels.forEach(s=>{ const e=document.querySelector('.detail-header '+s); if(!e){ bad.push(th+' missing '+s); return; }
+                  const cr=__textCr(e); if(cr<4.5) bad.push(th+' '+s+' '+cr.toFixed(2)); }); } }
+            applyTheme('light'); await __wait(80);
+            if(bad.length) console.log('v48: contrast',bad.join(' | ')); return bad.length===0; }""")
+        c['simple_mode_also_shows_player'] = self.ev(pg, r"""async()=>{
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); setUiMode('simple'); await __wait(150); await __open();
+            const ok=isSimpleMode()&&!!__frame(); setUiMode('full'); await __wait(150); return ok; }""")
+        # 比完的賽事：播放器在頁首（成績總覽在頁首下面），不是在賽後紀錄裡
+        c['finished_race_player_in_header_above_results'] = self.ev(pg, r"""async()=>{ const r=state.races.find(x=>x.id==='example-sunmoonlake-half');
+            r.status='completed'; r.schedule.raceDate='2026-09-20'; r.results.chipTimeSeconds=5400; r.results.gunTimeSeconds=5460;
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}],r); await __open(r);
+            const h=document.querySelector('.detail-header'), hero=document.querySelector('.hero-results');
+            const ok=!!__frame()&&h.contains(__frame())&&!document.querySelector('#section-post iframe')&&(!hero||!!(h.compareDocumentPosition(hero)&Node.DOCUMENT_POSITION_FOLLOWING));
+            if(!ok) console.log('v48: finished',!!__frame(),!!hero); return ok; }""")
+        # 公開分享頁的快照是白名單：BGM 這次沒有加進去
+        c['public_snapshot_leaves_bgm_out'] = self.ev(pg, r"""async()=>{ const r=await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]);
+            const snap=JSON.stringify(await buildPublicSnapshot(r)); return !snap.includes(__SP.track)&&!snap.includes('mediaLinks'); }""")
+        c['help_mentions_bgm_three_languages'] = self.ev(pg, r"""async()=>{ const bad=[], key={zh:'賽事 BGM',ja:'レースBGM',en:'Race BGM'};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(100); openHelpModal(); await __wait(200);
+              const txt=document.getElementById('help-modal').innerText;
+              if(!txt.includes(key[l])||!txt.includes('Spotify')||!txt.includes('30')||!txt.includes('intl-ja')) bad.push(l);
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(100); }
+            setLang('zh'); await __wait(80); if(bad.length) console.log('v48: help',bad.join(' | ')); return bad.length===0; }""")
+        c['version_is_v4_8_0'] = self.ev(pg, "()=>APP_VERSION==='v4.8.0'")
+        ctx.close()
+        # ================= 手機各寬度 × 中日英 × 三種字級 =================
+        FIT = r"""async()=>{ const S=__SP, bad=[];
+            const variants=[[{type:'music',url:'https://open.spotify.com/track/'+S.track,notes:'終點線前最後一公里，腦中一直循環的那首歌 the final kilometre song'}],
+                            [{type:'music',url:'https://spotify.link/AbCdEf1234'}]];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(80);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs);
+                for(const v of variants){ await __setLinks(v); await __open(); window.scrollTo(0,0); await __wait(60);
+                  const h=document.querySelector('.detail-header'), b=__bgm(), tag=lang+' '+fs+' '+(v[0].url.includes('spotify.link')?'short':'player');
+                  if(!b){ bad.push(tag+' missing'); continue; }
+                  const hr=h.getBoundingClientRect(), br=b.getBoundingClientRect();
+                  if(br.left<hr.left-0.5||br.right>hr.right+0.5) bad.push(tag+' outside header');
+                  b.querySelectorAll('.dh-bgm-cap,.dh-bgm-cap span,.dh-bgm-link,.dh-bgm-link-main,.dh-bgm-link-sub').forEach(e=>{ if(e.scrollWidth>e.clientWidth+1) bad.push(tag+' overflow '+e.className); });
+                  if(document.documentElement.scrollWidth>innerWidth) bad.push(tag+' hscroll'); } } }
+            setLang('zh'); applyFontScale('medium');
+            if(bad.length) console.log('v48: fit '+innerWidth,bad.slice(0,8).join(' | ')); return bad.length===0; }"""
+        STEPPER = r"""async()=>{ const bad=[];
+            for(const lang of ['en','ja','zh']){ setLang(lang); await __wait(60);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs);
+                for(const st of ['considering','lottery_pending','registered']){ const r=__bgmRace(); r.status=st; await __setLinks([]); await __open(); await __wait(40);
+                  const tr=document.querySelector('.detail-header .lc-track'), tag=lang+' '+fs+' '+st; if(!tr){ bad.push(tag+' no track'); continue; }
+                  const t=tr.getBoundingClientRect(), labs=[...tr.querySelectorAll('.lc-node-label')].map(l=>{ const g=document.createRange(); g.selectNodeContents(l); return [...g.getClientRects()]; });
+                  if(document.documentElement.scrollWidth>innerWidth) bad.push(tag+' hscroll');
+                  labs.flat().forEach(q=>{ if(q.left<t.left-0.5||q.right>t.right+0.5) bad.push(tag+' label outside'); });
+                  for(let i=0;i<labs.length-1;i++){ if(Math.max(...labs[i].map(q=>q.right))>Math.min(...labs[i+1].map(q=>q.left))-2) bad.push(tag+' labels touch '+i); }
+                  tr.querySelectorAll('.lc-node').forEach(n=>{ if(n.getBoundingClientRect().width<43.5) bad.push(tag+' node <44px'); }); } } }
+            __bgmRace().status='registered'; await persist(); setLang('zh'); applyFontScale('medium');
+            if(bad.length) console.log('v48: stepper '+innerWidth,bad.slice(0,8).join(' | ')); return bad.length===0; }"""
+        for w in (320, 360, 390):
+            fctx, fp = self._bgm_ctx(browser, viewport={'width': w, 'height': 844}, touch=True)
+            c[f'fits_{w}_all_languages_font_sizes'] = self.ev(fp, FIT)
+            # 賽事頁頁首的狀態條：英文加大字級在 320px 原本比軌道寬、整頁左右滑（v4.8.0 量到的舊問題）
+            if w == 320:
+                c['status_track_fits_320_every_language_font_size'] = self.ev(fp, STEPPER)
+            fctx.close()
+        # 電腦：不拉滿整欄（520px 以內），跟日期地點那一行左邊對齊
+        lctx, lp = self._bgm_ctx(browser, viewport={'width': 1280, 'height': 900})
+        c['laptop_player_aligned_not_full_width'] = self.ev(lp, r"""async()=>{
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open();
+            const fr=__frame().getBoundingClientRect(), mr=document.querySelector('.detail-header .dh-meta').getBoundingClientRect();
+            const ok=fr.width<=520.5&&fr.width>=300&&Math.abs(fr.left-mr.left)<=1; if(!ok) console.log('v48: laptop',fr.width,fr.left,mr.left); return ok; }""")
+        lctx.close()
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -9004,6 +9380,8 @@ GROUPS = {
     'v451':       lambda: V451WallFold('v451'),
     'v46':        lambda: V46FinisherWall('v46'),
     'v47':        lambda: V47DailyQuote('v47'),
+    'v471':       lambda: V471TaglineFit('v471'),
+    'v48':        lambda: V48RaceBgm('v48'),
 }
 
 

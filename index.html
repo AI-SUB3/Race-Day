@@ -1979,6 +1979,11 @@
     100%{transform:scale(1.9);opacity:0;}
   }
   .lc-connector{flex:1;height:4px;background:var(--rule);margin:12px -2px 0;min-width:8px;}
+  /* 英文的狀態名稱長（Lottery Pending），320px 加大字級時四個加起來比軌道寬，整頁會左右滑（v4.8.0 量到的，原本就有）。
+     英文的節點可以縮到最長那個字的寬度（每個英文標籤都比 44px 寬，點擊範圍不變），兩個字的標籤就折成兩行；
+     中文、日文本來就放得下，不動 */
+  :root[data-lang="en"] .lc-node{flex-shrink:1;min-width:auto;}
+  :root[data-lang="en"] .lc-node-label{white-space:normal;text-align:center;line-height:1.25;}
   .lc-connector-done{background:var(--trail);}
   .lc-exception-row{display:flex;gap:14px;margin-top:6px;}
   .lc-exception-link{background:none;border:none;padding:0;font-family:inherit;font-size:calc(12px*var(--fs,1));color:var(--stone);text-decoration:underline;cursor:pointer;}
@@ -2211,6 +2216,22 @@
   .dh-spark{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--ink-soft);font-size:calc(12px*var(--fs,1));}
   .dh-spark .spark{display:block;width:140px;height:22px;flex:none;color:var(--trail);overflow:visible;}
   .dh-spark .spark polyline{vector-effect:non-scaling-stroke;}
+  /* 賽事 BGM（v4.8.0）：賽事名稱、日期地點下面的 Spotify 播放器。播放器裡面是 Spotify 的（條款規定不能改），
+     我們只管外面：上面一行小字（備註，沒寫就是「賽事 BGM」）；高度 152px 是 Spotify 官方產生器的「精簡」尺寸。
+     電腦上不拉滿整欄：太寬的播放器中間一大片空白 */
+  .dh-bgm{margin-top:12px;max-width:520px;}
+  .dh-bgm-cap{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:var(--ink-soft);font-size:calc(12.5px*var(--fs,1));line-height:1.4;}
+  .dh-bgm-cap span{min-width:0;overflow-wrap:anywhere;}
+  .dh-bgm-icon{flex:none;}
+  /* 還沒載入（或載入中）時看到的是這個底色，深色模式不會先閃一塊白 */
+  .dh-bgm-frame{display:block;width:100%;height:152px;border:0;border-radius:12px;background:var(--surface);}
+  .dh-bgm-link{display:flex;flex-direction:column;justify-content:center;gap:2px;min-height:44px;padding:10px 14px;
+    border:1px solid var(--rule);border-radius:12px;background:var(--surface);color:var(--ink);text-decoration:none;}
+  .dh-bgm-link-main{font-weight:700;font-size:calc(14px*var(--fs,1));}
+  .dh-bgm-link:hover .dh-bgm-link-main{text-decoration:underline;}
+  .dh-bgm-link-sub{color:var(--ink-soft);font-size:calc(12.5px*var(--fs,1));line-height:1.45;}
+  /* 重畫頁首時播放器暫放的地方：畫面外、留 1px，跟一般顯示中的 iframe 一樣（不用 display:none，免得瀏覽器把它當成隱藏的 iframe 另外處理） */
+  .bgm-keeper{position:fixed;left:-10000px;top:0;width:1px;height:1px;overflow:hidden;}
 
   details.section{
     background:var(--surface);border-radius:8px;
@@ -2466,7 +2487,9 @@
     #topbar{padding:16px 18px 12px;transition:padding 0.2s ease;}
     #main-content{padding:18px 18px 80px;}
     .topbar-actions{gap:8px;}
-    .app-tagline{transition:opacity 0.15s ease,max-height 0.15s ease,margin 0.15s ease;max-height:20px;overflow:hidden;}
+    /* 收合用 max-height 做動畫，高度要跟著字級走（v4.7.1）：原本寫死 20px，字級「大」時一行字 25.8px（16.1px × 行高 1.6），
+       字的下半截被切掉。用 em 算，最多兩行 */
+    .app-tagline{transition:opacity 0.15s ease,max-height 0.15s ease,margin 0.15s ease;max-height:3.4em;overflow:hidden;}
     #topbar.topbar-compact{padding-top:10px;padding-bottom:8px;}
     #topbar.topbar-compact .app-tagline{opacity:0;max-height:0;margin:0;}
     /* v4.0 手機頂列一行：標題跟「簡易版／頭像」同一行，副標題獨佔下面一整行
@@ -2474,7 +2497,8 @@
     .topbar-row1{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title actions" "tagline tagline";gap:0 12px;}
     .topbar-brand{display:contents;}
     .topbar-brand .app-title{grid-area:title;min-width:0;}
-    .topbar-brand .app-tagline{grid-area:tagline;white-space:nowrap;text-overflow:ellipsis;}
+    /* 放不下一行就換行（v4.7.1），不再用「…」截掉：日文、英文在窄手機加大字級時原本只看得到半句 */
+    .topbar-brand .app-tagline{grid-area:tagline;text-wrap:balance;}
     .topbar-actions{grid-area:actions;}
     .cal-cell{min-height:64px;padding:4px 4px 3px;}
     .cal-weekdays span{font-size:calc(12px*var(--fs,1));}
@@ -3493,7 +3517,7 @@ const BOOKING_OPTIONS=[{value:'considering',label:'考慮中'},{value:'booked',l
 const WEATHER_OPTIONS=[{value:'sunny',label:'晴'},{value:'cloudy',label:'陰'},{value:'rainy',label:'雨'},{value:'foggy',label:'霧'},{value:'other',label:'其他'}];
 const ROLE_OPTIONS=[{value:'partner',label:'同行夥伴'},{value:'cheer_squad',label:'加油團'},{value:'emergency_contact',label:'緊急聯絡人'},{value:'pacer',label:'配速員'},{value:'other',label:'其他'}];
 const EQUIP_CATEGORY_OPTIONS=[{value:'shoes',label:'跑鞋/戰靴'},{value:'apparel',label:'服裝'},{value:'vest',label:'背心'},{value:'headlamp',label:'頭燈'},{value:'nutrition',label:'補給品'},{value:'mandatory_gear',label:'強制裝備'},{value:'other',label:'其他'}];
-const MEDIA_TYPE_OPTIONS=[{value:'official_site',label:'官方網站'},{value:'brochure_pdf',label:'賽事簡章 PDF'},{value:'gpx_track',label:'GPX 軌跡'},{value:'photo_album',label:'個人相簿'},{value:'certificate',label:'證書照片'},{value:'medal_photo',label:'獎牌照片'},{value:'other',label:'其他'}];
+const MEDIA_TYPE_OPTIONS=[{value:'official_site',label:'官方網站'},{value:'brochure_pdf',label:'賽事簡章 PDF'},{value:'gpx_track',label:'GPX 軌跡'},{value:'photo_album',label:'個人相簿'},{value:'certificate',label:'證書照片'},{value:'medal_photo',label:'獎牌照片'},{value:'music',label:'賽事 BGM'},{value:'other',label:'其他'}];
 // 交通工具（v3.51.0 補齊）：原本只有高鐵／接駁／自駕／飛機，火車、客運、
 // 捷運、船、計程車都得選「其他」。貼上票券自動判別需要對到明確的種類。
 const TRANSPORT_MODE_OPTIONS=[
@@ -4485,6 +4509,8 @@ const SPORT_ICON_INNER={
     <path d="M2 18.3 Q4.5 15.8 7 18.3 T12 18.3 T17 18.3 T22 18.3" stroke-width="1.5"/>`,
 };
 const EMPTY_STATE_ICONS={
+  // 賽事 BGM（v4.8.0）：多媒體相簿裡音樂連結的圖示
+  music:`<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>`,
   checkpoints:`<path d="M6 21V3"/><path d="M6 4h11l-2.5 3L17 10H6"/>`,
   accommodations:`<path d="M3 20V9l9-6 9 6v11"/><path d="M9 20v-7h6v7"/>`,
   transportation:`<path d="M5 11l1.5-4A2 2 0 0 1 8.4 5.5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="3" y="11" width="18" height="5" rx="1.5"/><circle cx="7.5" cy="18" r="1.6" fill="currentColor" stroke="none"/><circle cx="16.5" cy="18" r="1.6" fill="currentColor" stroke="none"/>`,
@@ -4524,12 +4550,15 @@ function mediaTypeIconSvg(type){
   let key='mediaLinks';
   if(type==='photo_album') key='photos';
   else if(type==='brochure_pdf'||type==='gpx_track'||type==='certificate') key='document';
+  else if(type==='music') key='music';
   const inner=(type==='medal_photo')?CAREER_TROPHY_ICON.replace('<svg','<svg class="media-trophy"'):
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${EMPTY_STATE_ICONS[key]||''}</svg>`;
   return inner;
 }
 function mediaGalleryHtml(race){
-  const items=(race.mediaLinks||[]).filter(m=>m.url);
+  // 已經在賽事名稱下面放成播放器（或連結）的 BGM（v4.8.0），這裡不再重複列一張卡
+  const bgm=raceBgm(race);
+  const items=(race.mediaLinks||[]).filter((m,i)=>m.url&&!(bgm&&i===bgm.index));
   if(!items.length) return '';
   const cards=items.map(m=>{
     const label=escapeHtml(m.notes||t('opt.mediatype.'+m.type,labelFor(MEDIA_TYPE_OPTIONS,m.type,'mediatype')));
@@ -4550,6 +4579,133 @@ function mediaGalleryHtml(race){
     <div class="media-gallery-head small">${t('ui.mediaGalleryTitle','多媒體相簿')}</div>
     <div class="media-gallery-strip">${cards}</div>
   </div>`;
+}
+/* ============================================================
+   賽事 BGM（v4.8.0）：多媒體與連結裡的 Spotify 連結，在賽事名稱下面放 Spotify 官方的嵌入播放器。
+   - 連結存在 mediaLinks（類型「賽事 BGM」），不另開欄位：一場可以放好幾首，備份、同步、Excel 都不用改
+   - 頁首只放一個：先找類型是「賽事 BGM」的那一筆，沒有的話任何一筆 Spotify 連結都算；其他的照樣在
+     賽後紀錄的多媒體相簿裡
+   - 播放器網址由我們自己組（類型＋22 碼 ID），不拿使用者貼的字串直接當 iframe 的 src
+   - 播放器的外觀是 Spotify 的，條款規定不能改（不能遮、不能裁），我們只決定高度和外面那一行小字
+   - 手機瀏覽器 Spotify 只給試聽 30 秒，完整播放只在電腦版瀏覽器、登入 Spotify 時才有（Spotify 的限制）
+   ============================================================ */
+const SPOTIFY_KINDS=['track','album','playlist','episode','show','artist'];
+const SPOTIFY_ID_RE=/^[A-Za-z0-9]{22}$/;
+/* parseSpotifyLink(raw)：不是 Spotify 的連結回傳 null；是的話回傳 {kind,id}，
+   認得是 Spotify 但組不出播放器時回傳 {kind:null,short}。收的寫法：
+   - open.spotify.com/track/ID?si=…（App 的「分享 → 複製連結」）
+   - open.spotify.com/intl-ja/track/ID：中日文介面複製的連結常帶這一段，少了這一步播放器就出不來
+   - open.spotify.com/embed/track/ID、舊式的 open.spotify.com/user/某人/playlist/ID
+   - spotify:track:ID（電腦版的「複製 Spotify URI」）
+   spotify.link／spoti.fi 短網址要連上去才知道轉到哪一首，前端讀不到，只能當成一般連結 */
+function parseSpotifyLink(raw){
+  const s=String(raw||'').trim();
+  if(!s) return null;
+  const uri=s.match(/^spotify:(?:user:[^:\s]+:)?([a-z]+):([A-Za-z0-9]+)$/i);
+  if(uri){
+    const kind=uri[1].toLowerCase();
+    return (SPOTIFY_KINDS.includes(kind)&&SPOTIFY_ID_RE.test(uri[2]))?{kind,id:uri[2]}:{kind:null,short:false};
+  }
+  let u;
+  try{ u=new URL(s); }catch(e){ return null; }
+  if(!/^https?:$/.test(u.protocol)) return null;
+  const host=u.hostname.toLowerCase();
+  if(host==='spotify.link'||host.endsWith('.spotify.link')||host==='spoti.fi') return {kind:null,short:true};
+  if(host!=='open.spotify.com'&&host!=='play.spotify.com') return null;
+  const parts=u.pathname.split('/').filter(Boolean);
+  let i=0;
+  if(parts[i]&&/^intl-[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(parts[i])) i++;
+  if(parts[i]==='embed') i++;
+  if(parts[i]==='user'&&parts.length>i+3) i+=2;
+  const kind=(parts[i]||'').toLowerCase(), id=parts[i+1]||'';
+  return (SPOTIFY_KINDS.includes(kind)&&SPOTIFY_ID_RE.test(id))?{kind,id}:{kind:null,short:false};
+}
+// 深色模式用 Spotify 的深色款（theme=0）；淺色不帶參數，底色是專輯封面的主色（官方產生器的預設）
+function spotifyEmbedSrc(sp){
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  return `https://open.spotify.com/embed/${sp.kind}/${sp.id}?utm_source=generator${dark?'&theme=0':''}`;
+}
+function spotifyOpenUrl(sp){ return `https://open.spotify.com/${sp.kind}/${sp.id}`; }
+// 認得出來的音樂平台回傳平台名稱（貼上時歸成「賽事 BGM」、頁首寫「在 ○○ 開啟」），其他回傳 null
+function musicServiceOf(raw){
+  if(parseSpotifyLink(raw)) return 'Spotify';
+  let host='';
+  try{ host=new URL(String(raw||'').trim()).hostname.toLowerCase(); }catch(e){ return null; }
+  const hit=URL_SOURCE_RULES.find(r=>r.type==='music'&&r.re.test(host));
+  return hit?hit.label:null;
+}
+// 這一場放在頁首的 BGM：類型是「賽事 BGM」的第一筆，沒有的話第一筆 Spotify 連結
+function raceBgm(race){
+  const links=((race&&race.mediaLinks)||[]).map((m,index)=>({m,index})).filter(x=>x.m&&String(x.m.url||'').trim());
+  const pick=links.find(x=>x.m.type==='music')||links.find(x=>parseSpotifyLink(x.m.url));
+  if(!pick) return null;
+  const url=String(pick.m.url).trim(), sp=parseSpotifyLink(url);
+  return {index:pick.index, link:pick.m, url, sp:(sp&&sp.kind)?sp:null, short:!!(sp&&sp.short), service:musicServiceOf(url)};
+}
+const BGM_ICON='<svg class="dh-bgm-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>';
+// 重畫頁首時暫時搬開的播放器（見 bgmHoldFrame）
+let bgmKeptFrame=null;
+function bgmFrameTitle(){ return t('ui.bgmFrameTitle','賽事 BGM（Spotify 播放器）'); }
+function bgmBlockHtml(race){
+  const b=raceBgm(race);
+  if(!b) return '';
+  const note=String(b.link.notes||'').trim();
+  const cap=`<div class="dh-bgm-cap">${BGM_ICON}<span>${escapeHtml(note||t('ui.bgmTitle','賽事 BGM'))}</span></div>`;
+  const linkHtml=(href,main,sub)=>`<a class="dh-bgm-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
+      <span class="dh-bgm-link-main">${escapeHtml(main)}</span>${sub?`<span class="dh-bgm-link-sub">${escapeHtml(sub)}</span>`:''}</a>`;
+  if(b.sp){
+    const src=spotifyEmbedSrc(b.sp);
+    // 同一個播放器剛被搬開（重畫前）：只留位子讓它搬回來，不重新載入。
+    // 離線也一樣留著——已經載入的播放器，緩衝好的部分還能繼續播
+    if(bgmKeptFrame&&bgmKeptFrame.dataset.bgmSrc===src){
+      return `<div class="dh-bgm" data-bgm-state="player">${cap}<div class="dh-bgm-slot" data-bgm-slot></div></div>`;
+    }
+    // 離線時新的 iframe 只會是一塊錯誤頁：先放連結，連上網路再換回播放器（見下面的 online 監聽）
+    if(navigator.onLine===false){
+      return `<div class="dh-bgm" data-bgm-state="offline">${cap}${linkHtml(spotifyOpenUrl(b.sp),tf('ui.bgmOpenIn','在 {n} 開啟','Spotify'),t('ui.bgmOffline','離線中，連上網路後會顯示播放器'))}</div>`;
+    }
+    return `<div class="dh-bgm" data-bgm-state="player">${cap}<iframe class="dh-bgm-frame" src="${escapeHtml(src)}" data-bgm-src="${escapeHtml(src)}" title="${escapeHtml(bgmFrameTitle())}" height="152" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
+  }
+  // 組不出播放器（短網址、其他音樂平台）：放一個連結。網址要過 safeUrl，不是 http(s) 的就不放
+  const href=safeUrl(b.url);
+  if(!href) return '';
+  let service=b.service;
+  if(!service){ try{ service=new URL(href).hostname.replace(/^www\./,''); }catch(e){ service=''; } }
+  return `<div class="dh-bgm" data-bgm-state="link">${cap}${linkHtml(href,tf('ui.bgmOpenIn','在 {n} 開啟',service),b.short?t('ui.bgmShortLink','短網址看不出是哪一首，貼上完整連結就會顯示播放器'):'')}</div>`;
+}
+/* 頁首會整塊重畫——改任何欄位時的 updateDetailHeaderBits()、renderDetail()——iframe 被拿掉，正在播的音樂就斷了。
+   支援 moveBefore 的瀏覽器（Chrome／Edge 133 起）可以「搬」節點而不重新載入：重畫前先把播放器搬到頁面外的暫存處，
+   重畫後再搬回新的位子。不支援的（Safari、Firefox）照舊重新載入 */
+function bgmHoldFrame(scope){
+  bgmKeptFrame=null;
+  const f=scope&&scope.querySelector('iframe.dh-bgm-frame');
+  if(!f||typeof Element.prototype.moveBefore!=='function') return;
+  let keeper=document.getElementById('bgm-keeper');
+  if(!keeper){
+    keeper=document.createElement('div');
+    keeper.id='bgm-keeper'; keeper.className='bgm-keeper'; keeper.setAttribute('aria-hidden','true');
+    document.body.appendChild(keeper);
+  }
+  try{ keeper.moveBefore(f,null); bgmKeptFrame=f; }catch(e){ bgmKeptFrame=null; }
+}
+function bgmRestoreFrame(){
+  const f=bgmKeptFrame; bgmKeptFrame=null;
+  if(!f) return;
+  const slot=detailEl.querySelector('[data-bgm-slot]');
+  if(slot&&slot.parentNode){
+    try{
+      slot.parentNode.moveBefore(f,slot); slot.remove();
+      f.title=bgmFrameTitle();   // 換了語言，標題跟著換（改 title 不會重新載入）
+      return;
+    }catch(e){
+      // 搬不回去就放一個新的（會重新載入，但至少有播放器）
+      f.remove();
+      const box=slot.closest('.dh-bgm');
+      if(box&&currentRace) box.outerHTML=bgmBlockHtml(currentRace);
+      return;
+    }
+  }
+  f.remove();   // 換了一場、或這一場的 BGM 拿掉了
 }
 function sportIconKey(sportType){
   if(sportType==='trail_running'||sportType==='ultra_marathon') return 'trail';
@@ -4633,7 +4789,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／完賽牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.7.0';
+const APP_VERSION='v4.8.0';
 
 /* ============================================================
    多語系（i18n）
@@ -5110,6 +5266,7 @@ const JA={
         <li><strong>レース前の4項目</strong>：エントリー済みでまだ走っていない大会は、タイトルの下にゼッケン・スタート時刻・荷造りの進み具合・A目標が並び、タップするとすぐ入力できます（「荷造り」は荷造りリストが開きます）。大会日を過ぎると「大会から N 日経ちました。記録がまだです」のお知らせに替わります。</li>
         <li><strong>セクションの順番</strong>：完走・DNS・DNF の大会は「レース後の記録とデータ」が一番上になり、上のジャンプボタンも同じ順番です。レース前の大会はこれまでどおり「基本情報」から始まります。</li>
         <li><strong>カバー写真</strong>：詳細画面の「その他の操作」→「カバー写真を追加」からアップロードでき、タイトル部分の淡いブランド背景になります（縦長の写真は自動的に高さを調整し、潰れないようにします）。同じ写真がカレンダーのマスやスマホの一覧の小さなサムネイル、完走ウォール、ホームの「次の大会」カードの背景にも使われます。</li>
+        <li><strong>レースBGM</strong>：Spotifyで「共有 → リンクをコピー」して、この大会の画面に貼り付けると（または「関連リンク」で種類「レースBGM」を追加）、大会名の下にSpotifyのプレーヤーが表示されます。メモはプレーヤーの上に表示されます。日本語・中国語表示でコピーしたリンク（URLに intl-ja などが入るもの）にも対応しています。spotify.link の短縮URLはどの曲かわからないため、リンクとしてだけ表示されます。スマホのブラウザではSpotifyの仕様で30秒の試聴のみで、全曲はSpotifyアプリで聴けます。パソコンのブラウザでSpotifyにログインしていれば全曲再生できます。1つの大会に複数ある場合は、種類が「レースBGM」の最初の1曲を大会名の下に、ほかはレース後の記録のメディアに表示します。Apple Music・YouTube Music・KKBOX のリンクは「○○で開く」リンクになります。</li>
         <li><strong>基本情報</strong>：大会名、シリーズ（同じ名前なら自動で年別比較）、ステータス、日程、抽選情報。</li>
         <li><strong>コースと地形</strong>：距離、標高、標高変化グラフ、CP詳細、ITRA/UTMBポイント（要手動入力）。</li>
         <li><strong>装備・補給・戦略</strong>：装備リスト（ロード／トレイル／トライアスロン標準装備テンプレート対応）、補給計画、ペース計算＆リストバンド作成。装備リストは最初「荷造り」表示です：1行1アイテムで、行をタップするとチェックが付き、準備済みは「準備済み N件」にまとまります。一番下の欄に入力して Enter で追加。重さ・分類・置き場所を変えるときは「編集」、置き場所ごとに並べるときは「配置」に切り替えます。ホームの「次の大会」カードの「荷造り」マスをタップしても開きます。</li>
@@ -5163,7 +5320,13 @@ const JA={
   'opt.equipcat.shoes':'シューズ','opt.equipcat.apparel':'ウェア','opt.equipcat.vest':'ベスト','opt.equipcat.headlamp':'ヘッドライト',
   'opt.equipcat.nutrition':'補給食','opt.equipcat.mandatory_gear':'必携装備','opt.equipcat.other':'その他',
   'opt.mediatype.official_site':'公式サイト','opt.mediatype.brochure_pdf':'要項PDF','opt.mediatype.gpx_track':'GPXトラック',
-  'opt.mediatype.photo_album':'アルバム','opt.mediatype.certificate':'完走証','opt.mediatype.medal_photo':'メダル写真','opt.mediatype.other':'その他',
+  'opt.mediatype.photo_album':'アルバム','opt.mediatype.certificate':'完走証','opt.mediatype.medal_photo':'メダル写真','opt.mediatype.music':'レースBGM','opt.mediatype.other':'その他',
+  // 賽事 BGM（v4.8.0）
+  'ui.bgmTitle':'レースBGM','ui.bgmFrameTitle':'レースBGM（Spotifyプレーヤー）','ui.bgmOpenIn':'{n}で開く',
+  'ui.bgmOffline':'オフラインです。接続するとプレーヤーが表示されます',
+  'ui.bgmShortLink':'短縮URLでは曲がわからないため、プレーヤーを表示できません。完全なURLを貼ると表示されます',
+  'ui.pasteUrlBgmHint':'「レースBGM」として保存すると、レース名の下にSpotifyのプレーヤーが表示されます。',
+  'ui.pasteUrlBgmShortHint':'Spotifyの短縮URLです。どの曲かわからないため、リンクとしてだけ保存されます。ブラウザで開き、アドレスバーの完全なURLをコピーして貼り直すと、プレーヤーが表示されます。',
   'opt.transportmode.hsr':'新幹線／高鉄','opt.transportmode.shuttle':'シャトルバス','opt.transportmode.self_drive':'自家用車',
   'opt.transportmode.flight':'飛行機','opt.transportmode.other':'その他','opt.transportmode.train':'鉄道／在来線','opt.transportmode.metro':'地下鉄／メトロ','opt.transportmode.bus':'高速バス／バス','opt.transportmode.ferry':'フェリー／船','opt.transportmode.taxi':'タクシー／配車',
   'opt.direction.outbound':'往路','opt.direction.return':'復路',
@@ -5646,6 +5809,7 @@ const EN={
         <li><strong>Race-week tiles</strong>: for a race you’re registered for and haven’t run yet, bib, start time, packing progress and goal A sit under the title — tap one to fill it in (“Packed” opens the packing list). Once race day has passed, they’re replaced by a “no result yet” note.</li>
         <li><strong>Section order</strong>: for finished, DNS and DNF races, “Results & Post-race Data” comes first, and so do the jump buttons at the top; upcoming races still start with “Basic Info”.</li>
         <li><strong>Cover Photo</strong>: upload one from “More Actions” → “+ Add Cover Photo” on the race page — it becomes a faded background for the title block (portrait photos automatically get a taller block so they aren't squeezed thin), and the same photo shows as a small thumbnail on the calendar and mobile list, on the finisher wall, and as the background of the next-race card.</li>
+        <li><strong>Race BGM</strong>: in Spotify, tap Share → Copy link, then paste it on this race (or add a row under “Media Links” with the type “Race BGM”). A Spotify player appears under the race name, with your note above it. Links copied from a Japanese or Chinese Spotify (with something like intl-ja in the address) work too; spotify.link short links do not say which track they point to, so they show as a plain link. Spotify only plays 30-second previews in phone browsers, so listen to the full track in the Spotify app; in a desktop browser signed in to Spotify, full tracks play. If a race has several, the first one typed “Race BGM” goes under the name and the rest stay in the post-race media; Apple Music, YouTube Music and KKBOX links show as “Open in …” links.</li>
         <li><strong>Basic Info</strong>: name, series (same-name series get automatic year-over-year PB comparison), status, schedule, lottery info.</li>
         <li><strong>Course & Terrain</strong>: distance, elevation, an elevation profile chart, checkpoint details, ITRA/UTMB points (enter manually).</li>
         <li><strong>Gear, Nutrition & Strategy</strong>: gear checklist (with built-in road/trail/triathlon starter templates), a nutrition schedule, and a pace calculator with wristband generator. The gear checklist opens in “Pack”: one item per row — tap a row to check it off, packed items fold into “Packed: N”, and typing in the last row then pressing Enter adds an item. Switch to “Edit” to change weight, category or where it goes, or to “Layout” to arrange by location. Tapping “Packed” on the next-race card on the home page opens it too.</li>
@@ -5699,7 +5863,13 @@ const EN={
   'opt.equipcat.shoes':'Shoes','opt.equipcat.apparel':'Apparel','opt.equipcat.vest':'Vest','opt.equipcat.headlamp':'Headlamp',
   'opt.equipcat.nutrition':'Nutrition','opt.equipcat.mandatory_gear':'Mandatory Gear','opt.equipcat.other':'Other',
   'opt.mediatype.official_site':'Official Site','opt.mediatype.brochure_pdf':'Race Brochure PDF','opt.mediatype.gpx_track':'GPX Track',
-  'opt.mediatype.photo_album':'Photo Album','opt.mediatype.certificate':'Certificate','opt.mediatype.medal_photo':'Medal Photo','opt.mediatype.other':'Other',
+  'opt.mediatype.photo_album':'Photo Album','opt.mediatype.certificate':'Certificate','opt.mediatype.medal_photo':'Medal Photo','opt.mediatype.music':'Race BGM','opt.mediatype.other':'Other',
+  // 賽事 BGM（v4.8.0）。英文不用 ’：台灣字型的 ’ 是全形（見 HANDOFF）
+  'ui.bgmTitle':'Race BGM','ui.bgmFrameTitle':'Race BGM (Spotify player)','ui.bgmOpenIn':'Open in {n}',
+  'ui.bgmOffline':'You are offline. The player will appear when you are back online.',
+  'ui.bgmShortLink':'Short links do not say which track they point to, so the player cannot be shown. Paste the full link to get the player.',
+  'ui.pasteUrlBgmHint':'Saved as Race BGM, it shows as a Spotify player under the race name.',
+  'ui.pasteUrlBgmShortHint':'This is a Spotify short link. The app cannot tell which track it points to, so it will be saved as a plain link. Open it in a browser, copy the full address from the address bar and paste that instead to get the player.',
   'opt.transportmode.hsr':'High-speed Rail','opt.transportmode.shuttle':'Shuttle','opt.transportmode.self_drive':'Self-drive','opt.transportmode.train':'Train / Rail','opt.transportmode.metro':'Metro / Subway','opt.transportmode.bus':'Bus / Coach','opt.transportmode.ferry':'Ferry','opt.transportmode.taxi':'Taxi / Ride-hail',
   'opt.transportmode.flight':'Flight','opt.transportmode.other':'Other',
   'opt.direction.outbound':'Outbound','opt.direction.return':'Return',
@@ -7408,6 +7578,12 @@ function applySmartDefaults(race,changedPath){
   }
   if(changedPath==='lottery.wasSelected'&&race.lottery.wasSelected&&(race.status==='considering'||race.status==='lottery_pending')){
     race.status='registered'; filled.push('status');
+  }
+  // 多媒體與連結填了 Spotify 等音樂平台的網址（v4.8.0）：類型還是預設的「其他」就改成「賽事 BGM」
+  const ml=/^mediaLinks\.(\d+)\.url$/.exec(changedPath||'');
+  if(ml){
+    const it=(race.mediaLinks||[])[Number(ml[1])];
+    if(it&&(!it.type||it.type==='other')&&musicServiceOf(it.url)){ it.type='music'; filled.push(`mediaLinks.${ml[1]}.type`); }
   }
   return filled;
 }
@@ -11986,6 +12162,12 @@ function classifyNewRaceText(text){
    需要後端），只做能誠實做到的部分：認出網址、依網域猜一個類型、
    讓使用者確認後存起來。 */
 const URL_SOURCE_RULES=[
+  // 音樂平台（v4.8.0）：歸成「賽事 BGM」；Spotify 的會在賽事名稱下面放播放器。
+  // Spotify 只認 open／play 這兩個網域——developer、support 那些是說明文件，不是歌
+  {re:/^(?:open|play)\.spotify\.com$|(?:^|\.)spotify\.link$|^spoti\.fi$/i,type:'music',label:'Spotify'},
+  {re:/^music\.apple\.com$/i,          type:'music',        label:'Apple Music'},
+  {re:/^music\.youtube\.com$/i,        type:'music',        label:'YouTube Music'},
+  {re:/(?:^|\.)kkbox\.com$/i,          type:'music',        label:'KKBOX'},
   {re:/(?:^|\.)instagram\.com$/i,       type:'photo_album',  label:'Instagram'},
   {re:/(?:^|\.)strava\.com$/i,          type:'gpx_track',    label:'Strava'},
   {re:/(?:^|\.)garmin(?:\.\w+)*\.com$/i,type:'gpx_track',    label:'Garmin Connect'},
@@ -12001,6 +12183,11 @@ const URL_SOURCE_RULES=[
 function classifyPastedUrl(text){
   const body=String(text||'').trim();
   if(!body||/\s/.test(body)) return null;      // 有空白就不是「單純一個網址」
+  // Spotify 電腦版「複製 Spotify URI」得到的是 spotify:track:…（v4.8.0）：換成網址再存
+  if(/^spotify:/i.test(body)){
+    const sp=parseSpotifyLink(body);
+    return (sp&&sp.kind)?{url:spotifyOpenUrl(sp),host:'open.spotify.com',type:'music',sourceLabel:'Spotify'}:null;
+  }
   if(!/^https?:\/\//i.test(body)) return null; // 只收 http(s)，safeUrl 也是這個標準
   if(safeUrl(body)!==body) return null;
   let host='';
@@ -12378,6 +12565,10 @@ function pasteUrlModalHtml(){
         <input type="text" data-paste-url-field="notes" value="${escapeHtml(st.notes)}" placeholder="${escapeHtml(t('ui.pasteUrlNotesHint','例如：官方成績查詢'))}"></label>
     </div>
     ${existing?`<p class="small paste-note-facts-hint paste-url-dup">${t('ui.pasteUrlDuplicate','這場已經有一模一樣的連結了，再存一次會變成兩筆。')}</p>`:''}
+    ${(()=>{ const sp=parseSpotifyLink(st.url); if(!sp) return '';
+      const hint=sp.kind?t('ui.pasteUrlBgmHint','存成「賽事 BGM」後，賽事名稱下面會出現 Spotify 播放器。')
+        :(sp.short?t('ui.pasteUrlBgmShortHint','這是 Spotify 的短網址，看不出是哪一首，存起來只會是一個連結。在瀏覽器打開它，複製網址列的完整網址再貼上，就會顯示播放器。'):'');
+      return hint?`<p class="small paste-note-facts-hint paste-url-bgm">${escapeHtml(hint)}</p>`:''; })()}
     <div class="modal-actions">
       <button class="btn-primary" data-action="confirm-paste-url">${t('ui.pasteUrlApply','存成連結')}</button>
       <button class="btn-ghost" data-action="close-paste-note">${t('ui.cancel','取消')}</button>
@@ -18815,6 +19006,7 @@ function detailHeaderHtml(race){
       <h1>${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')} ${race.alias?`<span class="alias">/ ${escapeHtml(race.alias)}</span>`:''}</h1>
       ${isDone?'':lifecycleStepperHtml(race,{noExceptionLinks:true})}
       <div class="dh-meta mono">${escapeHtml(detailMetaLine(race))}</div>
+      ${bgmBlockHtml(race)}
       ${S?'':sparklineSvg(race)}
       ${progressBlockHtml(race)}
       ${raceWeekTilesHtml(race)}
@@ -18871,6 +19063,8 @@ function renderDetail(){
   // 資料一個都沒動，頁尾的提示會列出這一場被收起來、而且真的有填的東西。
   const S=isSimpleMode();
   const isDoneStatus=['completed','dns','dnf'].includes(race.status);
+  // 賽事 BGM 的播放器先搬開，換完內容再搬回來，正在播的不會斷（v4.8.0，見 bgmHoldFrame）
+  bgmHoldFrame(detailEl);
   detailEl.innerHTML=`
     ${quickNavHtml({backOnly:S,postFirst:isDoneStatus})}
     ${detailHeaderHtml(race)}
@@ -18946,6 +19140,7 @@ function renderDetail(){
   const sameRace=prevRenderedId===race.id;
   detailEl.dataset.raceId=race.id;
   if(sameRace) keepOpenIds.forEach(id=>{ const el=document.getElementById(id); if(el&&el.tagName==='DETAILS') el.open=true; });
+  bgmRestoreFrame();
   destroyRouteMap();
   renderRouteMapIfNeeded(race);
   setupElevationScrubbing(race);
@@ -19029,7 +19224,10 @@ function applyScrollFadeClasses(){
 function updateDetailHeaderBits(){
   if(!currentRace) return;
   const header=detailEl.querySelector('.detail-header');
-  if(header) header.outerHTML=detailHeaderHtml(currentRace);
+  if(!header) return;
+  bgmHoldFrame(header);
+  header.outerHTML=detailHeaderHtml(currentRace);
+  bgmRestoreFrame();
 }
 
 
@@ -20075,6 +20273,8 @@ function applyTheme(theme){
   const metaTheme=document.querySelector('meta[name="theme-color"]');
   if(metaTheme) metaTheme.setAttribute('content', theme==='dark' ? '#12161A' : '#2E6B49');
   redrawThemeDependentCanvases();
+  // 賽事 BGM 的播放器有深淺兩款（v4.8.0）：換一個（會重新載入）
+  if(document.querySelector('.detail-header .dh-bgm[data-bgm-state="player"]')) updateDetailHeaderBits();
 }
 /* Canvas 不像 SVG／CSS 會跟著變數自動換色——畫上去就是畫上去了。
    切主題時把還在畫面上的雷達圖用新的變數值重畫一次（直接畫完成狀態，
@@ -22967,6 +23167,7 @@ function helpModalHtml(){
         <li><strong>賽前四格</strong>：已報名、還沒比的賽事，標題下面有號碼布、起跑時間、打包進度、A 目標，點一下就能填（「打包」打開打包清單）。比賽日過了，換成「比賽已經過了 N 天，成績還沒填」的提示。</li>
         <li><strong>區段順序</strong>：已完賽、DNS、DNF 的賽事，「賽後紀錄」排第一個，上面的跳轉鈕也一樣；還沒比的照舊從「基本資訊」開始。</li>
         <li><strong>封面照片</strong>：賽事頁「更多操作」→「新增封面照片」上傳，會變成標題區塊的淡化背景底圖（直式照片會自動加高區塊避免被壓扁），同一張圖也會出現在行事曆格子與手機清單的小縮圖、完賽牆，以及首頁「下一場」卡的底圖。</li>
+        <li><strong>賽事 BGM</strong>：在 Spotify 按「分享 → 複製連結」，回到這場賽事直接貼上（或在「多媒體與連結」新增一筆、類型選「賽事 BGM」），賽事名稱下面就會出現 Spotify 的播放器，備註會寫在播放器上面。中日文介面複製的連結（網址裡有 intl-ja 這種）也可以；spotify.link 短網址看不出是哪一首，只會是一個連結。手機瀏覽器 Spotify 只給試聽 30 秒，完整的要到 Spotify App 聽；電腦版瀏覽器登入 Spotify 可以聽完整首。一場有好幾首時，頁首放類型是「賽事 BGM」的第一首，其他的在賽後紀錄的多媒體相簿；Apple Music、YouTube Music、KKBOX 的連結會是「在 ○○ 開啟」。</li>
         <li><strong>基本資訊</strong>：名稱、系列（同名系列會自動跨年比較 PB）、狀態、時間、抽籤資訊。</li>
         <li><strong>地理與路線</strong>：距離、爬升、海拔變化圖、CP 明細、ITRA/UTMB 點數（需自行查詢填入）。</li>
         <li><strong>裝備補給與戰略</strong>：裝備清單（可套用路跑／越野／三鐵標配範本）、補給時程規劃、配速試算與手環產生器。裝備清單預設是「打包」：一列一件，點整列就打勾，打包好的收進「已打包 N 件」，最下面一格打字按 Enter 直接新增；要改重量、分類、放在哪裡切到「編輯」，依放置位置排列切到「佈署」。首頁「下一場」卡的「打包」格點下去也會打開。</li>
@@ -24261,6 +24462,8 @@ function offerWorkerUpdate(reg){
 }
 window.addEventListener('offline',()=>showToast(t('ui.nowOffline','目前離線：資料仍會存在本機，恢復連線後再同步')));
 window.addEventListener('online',()=>showToast(t('ui.backOnline','已恢復連線')));
+// 離線時賽事 BGM 是一個連結（v4.8.0），連上網路換回播放器
+window.addEventListener('online',()=>{ if(document.querySelector('.detail-header .dh-bgm[data-bgm-state="offline"]')) updateDetailHeaderBits(); });
 
 /* ============================================================
    加入主畫面提示（4b）：第三次開啟才問，按「稍後」30 天內不再問。
