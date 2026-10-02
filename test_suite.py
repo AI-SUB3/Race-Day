@@ -6106,7 +6106,10 @@ class V43Flows(Group):
             // 一列：三格在倒數的右邊、上下範圍重疊；v4.2 的圓環、三張卡、「查看完整賽事」都不在了
             const oneRow=tl.left>=head.right-1 && tl.top<head.bottom && tl.bottom>head.top;
             const old=f.querySelector('.focus-panel-card,.focus-panel-grid,.focus-hero,.focus-panel-view-btn,.progress-ring-wrap,svg');
-            return f.classList.contains('focus-panel-compact') && f.getBoundingClientRect().height<=150 && oneRow && !old
+            // v4.7.0 起筆電上右邊有一張今日一句，兩張卡一樣高：句子長的那幾天卡片的框會被拉高（內容置中），
+            // 所以量內容本身——原本「卡片 ≤150px」扣掉上下 14px 的內距
+            const content=Math.max(head.bottom,tl.bottom)-Math.min(head.top,tl.top);
+            return f.classList.contains('focus-panel-compact') && content<=122 && oneRow && !old
               && f.querySelectorAll('.rw-tile').length===3; }""")
         c['card_name_date_time_place_countdown'] = self.ev(page, """async()=>{ """ + W + """
             near.schedule.startTime='06:30'; await persist(); renderAll(); await wait(100);
@@ -8509,7 +8512,7 @@ class V46FinisherWall(Group):
               document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(150); }
             setLang('zh'); await wait(100);
             const ok=Object.values(out).every(m=>m.length===0); if(!ok) console.log('v46: help missing',JSON.stringify(out)); return ok; }""")
-        c['version_is_v4_6_0'] = self.ev(pg, "()=>APP_VERSION==='v4.6.0'")
+        # （版本號的檢查跟著最新的群組走，v4.7.0 起在 v47）
         # 公開頁會把整頁換掉：放在這個頁面的最後
         if pub and isinstance(pub, dict):
             c['public_view_and_report_prompt_in_meters'] = self.ev(pg, """(o)=>{ renderPublicShareView(o.snap); const tx=document.body.textContent;
@@ -8573,6 +8576,398 @@ class V46FinisherWall(Group):
             fctx.close()
 
 
+# v4.7.0：假時鐘（開頁前裝好，App 裡所有 new Date()／Date.now() 都走它）。
+# 時區用 Asia/Taipei：台北 10/3 00:30 是 UTC 10/2 16:30——用 UTC 算天數的寫法會在這裡露餡
+V47_CLOCK_JS = r"""(()=>{ const _D=Date; let off=0;
+  class D extends _D{ constructor(...a){ if(a.length===0) super(_D.now()+off); else super(...a); } static now(){ return _D.now()+off; } }
+  window.Date=D; window.__RealDate=_D;
+  window.__setNowMs=ms=>{ off=ms-_D.now(); };
+  window.__setNow=iso=>{ window.__setNowMs(new _D(iso).getTime()); };
+  window.__setNow('%s');
+})();"""
+
+V47_JS = r"""
+window.__wait=ms=>new Promise(s=>setTimeout(s,ms));
+window.__dq=()=>document.querySelector('#focus-panel-slot .dq-card');
+// 第 i 天（2026/10/2 是第 0 天）早上 9 點
+window.__dayMs=i=>new __RealDate(2026,9,2+i,9,0,0).getTime();
+window.__showDay=async i=>{ __setNowMs(__dayMs(i)); renderFocusPanel(); await __wait(15); return __dq(); };
+window.__qt=(s,l)=>l==='en'?'“'+s+'”':'「'+s+'」';
+window.__cjk=/[぀-ヿ㐀-鿿＀-￯　-〿]/;
+window.__sheet=()=>document.getElementById('daily-quote-sheet');
+window.__openSheet=async i=>{ const c=await __showDay(i); c.click(); await __wait(60); return __sheet(); };
+window.__closeSheet=async()=>{ const b=__sheet().querySelector('[data-action="close-daily-quote"]'); if(b) b.click(); await __wait(60); };
+// 最長、最短的幾句（版面檢查用）
+window.__dqHardDays=()=>{ const pick=f=>DAILY_QUOTES.map((q,i)=>[f(q),i]).sort((a,b)=>b[0]-a[0])[0][1];
+  return [...new Set([pick(q=>q.text.zh.length+(q.lang!=='zh'?q.text[q.lang].length/2:0)), pick(q=>q.text.ja.length), pick(q=>q.text.en.length),
+    pick(q=>q.role.zh.length), pick(q=>q.role.ja.length), pick(q=>q.role.en.length), pick(q=>q.who.en.length), pick(q=>-q.text.zh.length)])]; };
+"""
+
+
+class V47DailyQuote(Group):
+    """v4.7.0：今日一句。「賽事」分頁最上面每天一句跑者說過的話——筆電放在「下一場」卡右邊（360px、
+    一樣高），平板、手機放在它上面；一天一句（當地日期，過午夜換），中文版面＝中文翻譯＋原文，
+    日文／英文版面只顯示那個語言；點開看說話者、情境、出處和連結；頭像選單可以關掉。"""
+
+    ECHO = ('v47:',)
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js, arg=None):
+        try:
+            return pg.evaluate(js) if arg is None else pg.evaluate(js, arg)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def _ctx(self, browser, viewport=None, touch=False, theme='light', lang='zh', now='2026-10-02T09:00:00',
+             seed=True, force_dark=False, tz='Asia/Taipei', url=None):
+        ctx = full_mode_context(browser, viewport=viewport or {'width': 1280, 'height': 900}, is_mobile=touch, has_touch=touch,
+                                color_scheme='dark' if force_dark else 'light', timezone_id=tz)
+        ctx.add_init_script(V47_CLOCK_JS % now)
+        ctx.add_init_script("try{localStorage.setItem('theme-pref-v1','%s');localStorage.setItem('lang-pref-v1','%s');}catch(e){}" % (theme, lang))
+        pg = ctx.new_page()
+        if force_dark:
+            cdp = ctx.new_cdp_session(pg)
+            cdp.send('Emulation.setAutoDarkModeOverride', {'enabled': True})
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(url or APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=FIELD_FRAME_JS)
+        pg.add_script_tag(content=WALL_SEED_JS)
+        pg.add_script_tag(content=V47_JS)
+        pg.add_style_tag(content='.badge-unbox-overlay{display:none!important} *{transition:none!important;animation:none!important}')
+        if seed:
+            self.ev(pg, """async()=>{ if(!state.races.length){ state.races.push(...buildExampleRaces()); }
+                state.selectedId=null; state.creating=false; await persist(); renderAll(); await __wait(200); window.scrollTo(0,0); }""")
+        return ctx, pg
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        ctx, pg = self._ctx(browser)
+        # ================= 資料 =================
+        c['quotes_data_complete'] = self.ev(pg, r"""()=>{ const bad=[], ids=new Set(), L=['zh','ja','en'];
+            if(DAILY_QUOTES.length!==56) bad.push('count '+DAILY_QUOTES.length);
+            DAILY_QUOTES.forEach(q=>{ if(ids.has(q.id)) bad.push('dup '+q.id); ids.add(q.id);
+              if(!L.includes(q.lang)) bad.push(q.id+' lang');
+              L.forEach(l=>{ if(!(q.text[l]||'').trim()) bad.push(q.id+' text.'+l);
+                ['who','role','ctx'].forEach(k=>{ if(!((q[k]||{})[l]||'').trim()) bad.push(q.id+' '+k+'.'+l); });
+                // 括號是畫面加的，資料裡不帶
+                if(/^[「“"]/.test(q.text[l])) bad.push(q.id+' bracket '+l); });
+              if(!/^https:\/\//.test(q.src.url)) bad.push(q.id+' url');
+              if(!q.src.pub||!q.src.date) bad.push(q.id+' src');
+              // 原文：text[原文語言] 就是原文；只有字跟顯示的不同（簡體原文）才另外帶 orig
+              if(q.orig&&q.orig===q.text[q.lang]) bad.push(q.id+' orig redundant');
+              // 英文的撇號、引號用彎的（直的 ' 在明體裡很突兀）
+              if(/['"]/.test(q.text.en)) bad.push(q.id+' straight quote'); });
+            L.forEach(l=>{ if(DAILY_QUOTES.filter(q=>q.lang===l).length<10) bad.push('few '+l); });
+            if(bad.length) console.log('v47: data',bad.slice(0,8).join(' | ')); return bad.length===0; }""")
+        # 輪播順序：同一個人兩週內不重複出現，不會連三天同一種原文語言（含輪完一圈接回開頭）
+        c['rotation_spreads_speakers_and_languages'] = self.ev(pg, r"""()=>{ const n=DAILY_QUOTES.length, bad=[];
+            for(let i=0;i<n;i++){ for(let k=1;k<14;k++){ const a=DAILY_QUOTES[i], b=DAILY_QUOTES[(i+k)%n]; if(a.who.en===b.who.en) bad.push(a.id+'~'+b.id); }
+              const l=[0,1,2].map(k=>DAILY_QUOTES[(i+k)%n].lang); if(l[0]===l[1]&&l[1]===l[2]) bad.push('3x '+l[0]+' @'+i); }
+            if(bad.length) console.log('v47: spread',bad.slice(0,6).join(' | ')); return bad.length===0; }""")
+        # ================= 一天一句 =================
+        c['one_quote_per_local_day_changes_at_midnight'] = self.ev(pg, r"""async()=>{
+            const at=async iso=>{ __setNow(iso); renderFocusPanel(); await __wait(15); const d=__dq(); return d&&d.dataset.quoteId; };
+            const Q=DAILY_QUOTES, n=Q.length;
+            const r={ a:await at('2026-10-02T00:00:30'), b:await at('2026-10-02T23:59:30'), c:await at('2026-10-03T00:00:30'),
+              d:await at('2026-11-27T09:00:00'), e:await at('2026-10-01T09:00:00'), f:await at('2027-03-15T12:00:00') };
+            // 10/2 第 1 句、整天不變；台北 10/3 00:00 就換（UTC 這時還是 10/2）；+56 天回到第 1 句；錨點前一天是最後一句
+            const f=Math.round((Date.UTC(2027,2,15)-Date.UTC(2026,9,2))/864e5)%n;
+            const ok=r.a===Q[0].id && r.b===Q[0].id && r.c===Q[1].id && r.d===Q[0].id && r.e===Q[n-1].id && r.f===Q[f].id;
+            __setNow('2026-10-02T09:00:00'); renderFocusPanel();
+            if(!ok) console.log('v47: rotation',JSON.stringify(r)); return ok; }""")
+        # 開著不動過了午夜：切回分頁就換成新的一句，只換那張卡（下一場卡不重畫）
+        c['midnight_rollover_swaps_card_in_place'] = self.ev(pg, r"""async()=>{
+            __setNow('2026-10-02T23:59:50'); renderFocusPanel(); await __wait(30);
+            const fp=document.querySelector('#focus-panel-slot .focus-panel'), before=__dq().dataset.quoteId;
+            __setNow('2026-10-03T00:00:20'); document.dispatchEvent(new Event('visibilitychange')); await __wait(30);
+            const after=__dq().dataset.quoteId, same=!!fp&&fp===document.querySelector('#focus-panel-slot .focus-panel');
+            const ok=before===DAILY_QUOTES[0].id && after===DAILY_QUOTES[1].id && same;
+            __setNow('2026-10-02T09:00:00'); renderFocusPanel();
+            if(!ok) console.log('v47: midnight',before,after,same); return ok; }""")
+        # ================= 語言（使用者指定的規則），每一句都看 =================
+        LANG_RULES = r"""async(lang)=>{ const bad=[], tag={zh:'zh-Hant',ja:'ja',en:'en'};
+            setLang(lang); await __wait(60);
+            for(let i=0;i<DAILY_QUOTES.length;i++){ const q=DAILY_QUOTES[i], card=await __showDay(i);
+              if(!card||card.dataset.quoteId!==q.id){ bad.push(i+' wrong card'); continue; }
+              const main=card.querySelector('.dq-quote'), orig=card.querySelector('.dq-orig');
+              if(main.textContent!==__qt(q.text[lang],lang)) bad.push(q.id+' main');
+              if(main.getAttribute('lang')!==tag[lang]) bad.push(q.id+' main lang');
+              if(lang==='zh'&&q.lang!=='zh'){
+                // 中文版面：先中文翻譯，下面附原文
+                if(!orig||orig.textContent!==__qt(q.text[q.lang],q.lang)||orig.getAttribute('lang')!==tag[q.lang]) bad.push(q.id+' orig');
+                else if(orig.getBoundingClientRect().top<main.getBoundingClientRect().bottom-1) bad.push(q.id+' orig not below'); }
+              else if(orig) bad.push(q.id+' extra orig');
+              if(card.querySelector('.dq-by b').textContent!==q.who[lang]) bad.push(q.id+' who');
+              // 日文、英文版面只顯示那個語言：英文整張卡沒有中日文字；日文不出現原文
+              if(lang==='en'&&__cjk.test(card.textContent)) bad.push(q.id+' has CJK');
+              if(lang==='ja'&&q.lang!=='ja'&&(card.textContent.includes(q.text[q.lang])||(q.orig&&card.textContent.includes(q.orig)))) bad.push(q.id+' shows original'); }
+            setLang('zh'); await __wait(60); __setNow('2026-10-02T09:00:00'); renderFocusPanel();
+            if(bad.length) console.log('v47: lang '+lang,bad.slice(0,8).join(' | ')); return bad.length===0; }"""
+        c['zh_ui_translation_then_original_below'] = self.ev(pg, LANG_RULES, 'zh')
+        c['ja_ui_shows_only_japanese'] = self.ev(pg, LANG_RULES, 'ja')
+        c['en_ui_shows_only_english'] = self.ev(pg, LANG_RULES, 'en')
+        # 讀螢幕：日曆紙是裝飾，日期用一句看不見的話唸；接著是句子、原文、說話者
+        c['screen_reader_text_date_quote_author'] = self.ev(pg, r"""async()=>{ const out={};
+            for(const lang of ['zh','en']){ setLang(lang); await __wait(60); const card=await __showDay(0);
+              out[lang]=[...card.querySelectorAll('.dq-body > *')].map(e=>e.textContent).join('').replace(/\s+/g,' ').trim();
+              if(card.querySelector('.dq-page').getAttribute('aria-hidden')!=='true') out[lang]='page not hidden'; }
+            setLang('zh'); await __wait(60); const q=DAILY_QUOTES[0];
+            const ok=out.zh.startsWith('今日一句，10 月 2 日（週五）：'+__qt(q.text.zh,'zh')+__qt(q.text.en,'en')+q.who.zh+'，'+q.role.zh)
+              && out.en.startsWith('Quote of the day, Fri, Oct 2: '+__qt(q.text.en,'en')+q.who.en+', '+q.role.en);
+            if(!ok) console.log('v47: sr',JSON.stringify(out)); return ok; }""")
+        c['calendar_page_date_three_languages'] = self.ev(pg, r"""async()=>{ const out={};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(60); const c=await __showDay(0);
+              out[lang]=['.dq-month','.dq-day','.dq-wd'].map(s=>c.querySelector(s).textContent).join('|'); }
+            setLang('zh'); await __wait(60);
+            const ok=out.zh==='10 月|2|週五' && out.ja==='10月|2|金曜日' && out.en==='OCT|2|FRI'; if(!ok) console.log('v47: page',JSON.stringify(out)); return ok; }""")
+        # ================= 筆電：下一場卡右邊、一樣高、360px；DOM 順序跟畫面一致 =================
+        c['laptop_beside_next_race_same_height'] = self.ev(pg, r"""async()=>{ renderFocusPanel(); await __wait(40);
+            const card=__dq(), fp=document.querySelector('#focus-panel-slot .focus-panel'); if(!card||!fp) return false;
+            const a=fp.getBoundingClientRect(), b=card.getBoundingClientRect(), after=!!(fp.compareDocumentPosition(card)&Node.DOCUMENT_POSITION_FOLLOWING);
+            const ok=b.left>=a.right+12 && Math.abs(a.top-b.top)<1 && Math.abs(a.height-b.height)<1.5 && Math.abs(b.width-360)<1 && after;
+            if(!ok) console.log('v47: laptop',JSON.stringify([a,b,after])); return ok; }""")
+        # 長句子讓今日一句比較高：下一場卡跟著一樣高，不會一長一短
+        c['laptop_long_quote_next_race_matches_height'] = self.ev(pg, r"""async()=>{ const i=__dqHardDays()[0]; await __showDay(i);
+            // 換了日期，範例賽事可能變成「比完了嗎？」：還沒比的移到新的今天之後 10 天，左邊只有下一場卡
+            const moved=state.races.filter(r=>r.status==='registered').map(r=>[r,r.schedule.raceDate]); moved.forEach(([r])=>{ r.schedule.raceDate=addDaysStr(todayISO(),10); });
+            renderFocusPanel(); await __wait(30);
+            const card=__dq(), fp=document.querySelector('#focus-panel-slot .focus-panel'); const a=fp.getBoundingClientRect(), b=card.getBoundingClientRect();
+            moved.forEach(([r,d])=>{ r.schedule.raceDate=d; }); __setNow('2026-10-02T09:00:00'); renderFocusPanel();
+            const ok=Math.abs(a.height-b.height)<1.5 && b.height>a.height-1; if(!ok) console.log('v47: tall',a.height,b.height); return ok; }""")
+        # 「比完了嗎？」和下一場卡疊在左邊：今日一句維持自己的高度、靠上
+        c['laptop_with_result_prompt_keeps_own_height'] = self.ev(pg, r"""async()=>{
+            const y=new Date(); y.setDate(y.getDate()-1); const ys=y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');
+            const r=emptyRace('V47 昨天的比賽','road_running','registered',ys); state.races.push(r); renderAll(); await __wait(80);
+            const card=__dq(), pr=document.querySelector('#focus-panel-slot .result-prompt'), fp=document.querySelector('#focus-panel-slot .focus-panel');
+            const ok=!!(card&&pr&&fp) && (()=>{ const b=card.getBoundingClientRect(), p=pr.getBoundingClientRect(), f=fp.getBoundingClientRect();
+              return Math.abs(b.top-p.top)<1 && b.left>p.right && b.height<f.bottom-p.top-40; })();
+            state.races=state.races.filter(x=>x!==r); renderAll(); await __wait(60);
+            if(!ok) console.log('v47: prompt'); return ok; }""")
+        # 沒有下一場卡：單獨一張、整排寬
+        c['no_next_race_card_full_width'] = self.ev(pg, r"""async()=>{ const fr=computeFocusRace(); state.focusDismissedId=fr&&fr.id; renderFocusPanel(); await __wait(40);
+            const card=__dq(), slot=document.getElementById('focus-panel-slot'); const ok=!!card && !slot.querySelector('.focus-panel') && Math.abs(card.getBoundingClientRect().width-slot.getBoundingClientRect().width)<1;
+            state.focusDismissedId=null; renderFocusPanel(); return ok; }""")
+        # 用鍵盤：Tab 到卡片按 Enter 打開
+        pg.focus('#focus-panel-slot .dq-card')
+        pg.keyboard.press('Enter')
+        pg.wait_for_timeout(150)
+        c['keyboard_enter_opens_sheet'] = self.ev(pg, "()=>!__sheet().hidden && document.activeElement && document.activeElement.dataset.action==='close-daily-quote'")
+        # ================= 詳細頁 =================
+        c['sheet_dialog_semantics'] = self.ev(pg, r"""()=>{ const p=__sheet().querySelector('[role="dialog"]'); if(!p) return false;
+            const lb=document.getElementById(p.getAttribute('aria-labelledby')); return p.getAttribute('aria-modal')==='true' && !!lb && lb.textContent.trim()==='今日一句'; }""")
+        pg.keyboard.press('Escape')
+        pg.wait_for_timeout(150)
+        c['esc_closes_sheet_focus_back_on_card'] = self.ev(pg, "()=>__sheet().hidden && document.activeElement===__dq()")
+        c['backdrop_and_back_button_close_sheet'] = self.ev(pg, r"""async()=>{ let sh=await __openSheet(0); const a=!sh.hidden;
+            sh.dispatchEvent(new MouseEvent('click',{bubbles:true})); await __wait(80); const b=sh.hidden;
+            sh=await __openSheet(0); await __wait(120); history.back(); await __wait(500); const c=sh.hidden;
+            return a&&b&&c; }""")
+        c['sheet_zh_every_quote_who_context_source'] = self.ev(pg, r"""async()=>{ const bad=[];
+            for(let i=0;i<DAILY_QUOTES.length;i++){ const q=DAILY_QUOTES[i], sh=await __openSheet(i);
+              if(sh.hidden){ bad.push(q.id+' not open'); continue; }
+              const t=s=>{ const e=sh.querySelector(s); return e?e.textContent.trim():null; };
+              if(t('.dq-sheet-main')!==__qt(q.text.zh,'zh')) bad.push(q.id+' main');
+              const o=sh.querySelector('.dq-sheet-orig [lang]');
+              if(q.lang!=='zh'){ if(!o||o.textContent!==__qt(q.text[q.lang],q.lang)) bad.push(q.id+' orig'); } else if(o) bad.push(q.id+' orig shown');
+              const who=t('.dq-sheet-who')||''; if(!who.includes(q.who.zh)||!who.includes(q.role.zh)) bad.push(q.id+' who');
+              if(t('.dq-sheet-ctx')!==q.ctx.zh) bad.push(q.id+' ctx');
+              const pub=t('.dq-sheet-src-pub')||''; if(!pub.includes(q.src.pub)||!pub.includes(q.src.date.replace(/-/g,'/'))) bad.push(q.id+' pub');
+              const a=sh.querySelector('a.dq-sheet-link'); if(!a||a.getAttribute('href')!==q.src.url||a.target!=='_blank'||!/noopener/.test(a.rel)) bad.push(q.id+' link');
+              // 中文是翻譯的才註明
+              const note=t('.dq-sheet-note'); if((note==='中文是本站翻譯的')!==(q.lang!=='zh')||(q.lang==='zh'&&note)) bad.push(q.id+' note');
+              await __closeSheet(); }
+            if(bad.length) console.log('v47: sheet zh',bad.slice(0,8).join(' | ')); return bad.length===0; }""")
+        SHEET_ONLY = r"""async(lang)=>{ const bad=[]; setLang(lang); await __wait(60);
+            const noteText={ja:'日本語訳はこのアプリによるものです',en:'English translation by this app'}[lang];
+            for(let i=0;i<DAILY_QUOTES.length;i++){ const q=DAILY_QUOTES[i], sh=await __openSheet(i);
+              const t=s=>{ const e=sh.querySelector(s); return e?e.textContent.trim():null; };
+              if(t('.dq-sheet-main')!==__qt(q.text[lang],lang)) bad.push(q.id+' main');
+              if(sh.querySelector('.dq-sheet-orig')) bad.push(q.id+' orig shown');
+              const who=t('.dq-sheet-who')||''; if(!who.includes(q.who[lang])||!who.includes(q.role[lang])) bad.push(q.id+' who');
+              if(t('.dq-sheet-ctx')!==q.ctx[lang]) bad.push(q.id+' ctx');
+              const note=t('.dq-sheet-note'); if((note===noteText)!==(q.lang!==lang)) bad.push(q.id+' note');
+              if(lang==='en'&&__cjk.test(sh.textContent)) bad.push(q.id+' CJK in sheet');
+              if(lang==='ja'&&q.lang!=='ja'&&sh.textContent.includes(q.text[q.lang])) bad.push(q.id+' original shown');
+              await __closeSheet(); }
+            setLang('zh'); await __wait(60);
+            if(bad.length) console.log('v47: sheet '+lang,bad.slice(0,8).join(' | ')); return bad.length===0; }"""
+        c['sheet_ja_only_japanese'] = self.ev(pg, SHEET_ONLY, 'ja')
+        c['sheet_en_only_english'] = self.ev(pg, SHEET_ONLY, 'en')
+        # 英文的撇號不是全形：句子用拉丁明體；說話者那一行模擬正式站載入 Noto Sans TC（這裡用本機同一套 Noto Sans CJK TC）
+        c['english_apostrophes_not_full_width'] = self.ev(pg, r"""async()=>{ setLang('en'); await __wait(60);
+            const w=(el,ch)=>{ const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT); let n; while((n=walker.nextNode())){ const k=n.textContent.indexOf(ch);
+                if(k>=0){ const r=document.createRange(); r.setStart(n,k); r.setEnd(n,k+1); return r.getBoundingClientRect().width/parseFloat(getComputedStyle(el).fontSize); } } return null; };
+            const keep=document.body.style.fontFamily; document.body.style.fontFamily="'Noto Sans CJK TC',sans-serif";
+            const i=DAILY_QUOTES.findIndex(q=>q.text.en.includes('’')), j=DAILY_QUOTES.findIndex(q=>q.role.en.includes('’'));
+            const a=w((await __showDay(i)).querySelector('.dq-quote'),'’'), b=w((await __showDay(j)).querySelector('.dq-role'),'’');
+            const sh=await __openSheet(j); const d=w(sh.querySelector('.dq-sheet-who'),'’'); await __closeSheet();
+            document.body.style.fontFamily=keep; setLang('zh'); await __wait(60); __setNow('2026-10-02T09:00:00'); renderFocusPanel();
+            const ok=a!==null&&a<0.45&&b!==null&&b<0.45&&d!==null&&d<0.45; if(!ok) console.log('v47: apostrophe',a,b,d); return ok; }""")
+        # ================= 對比：淺色、深色 =================
+        c['card_text_contrast_light_dark'] = self.ev(pg, r"""async()=>{ const bad=[]; await __showDay(0);
+            for(const th of ['light','dark']){ applyTheme(th); await __wait(80);
+              ['.dq-quote','.dq-orig','.dq-by b','.dq-role','.dq-month','.dq-day','.dq-wd'].forEach(s=>{ const e=document.querySelector('#focus-panel-slot '+s);
+                if(!e){ bad.push(th+' missing '+s); return; } const cr=__textCr(e); if(cr<4.5) bad.push(th+' '+s+' '+cr.toFixed(2)); }); }
+            applyTheme('light'); if(bad.length) console.log('v47: contrast',bad.join(' | ')); return bad.length===0; }""")
+        c['sheet_text_contrast_light_dark'] = self.ev(pg, r"""async()=>{ const bad=[];
+            for(const th of ['light','dark']){ applyTheme(th); await __wait(80); const sh=await __openSheet(0);
+              ['.dq-sheet-head h2','.dq-sheet-main','.dq-sheet-orig-label','.dq-sheet-orig [lang]','.dq-sheet-who b','.dq-sheet-who','.dq-sheet-ctx','.dq-sheet-src-label','.dq-sheet-src-pub','.dq-sheet-link','.dq-sheet-note','.dq-sheet-hide'].forEach(s=>{
+                const e=sh.querySelector(s); if(!e){ bad.push(th+' missing '+s); return; } const cr=__textCr(e); if(cr<4.5) bad.push(th+' '+s+' '+cr.toFixed(2)); });
+              await __closeSheet(); }
+            applyTheme('light'); if(bad.length) console.log('v47: sheet contrast',bad.join(' | ')); return bad.length===0; }""")
+        c['calendar_page_white_in_dark_mode'] = self.ev(pg, r"""async()=>{ const read=()=>{ const p=document.querySelector('#focus-panel-slot .dq-page'); return [getComputedStyle(p).backgroundColor,getComputedStyle(p).colorScheme,getComputedStyle(p.querySelector('.dq-day')).color]; };
+            const light=read(); applyTheme('dark'); await __wait(80); const dark=read(); applyTheme('light'); await __wait(60);
+            const ok=JSON.stringify(light)===JSON.stringify(dark) && light[0]==='rgb(255, 255, 255)' && /only/.test(light[1]) && /light/.test(light[1]) && !/dark/.test(light[1]);
+            if(!ok) console.log('v47: page dark',JSON.stringify([light,dark])); return ok; }""")
+        # ================= 字型 =================
+        c['serif_fonts_per_language'] = self.ev(pg, r"""async()=>{ const href=[...document.querySelectorAll('link[rel="stylesheet"]')].map(l=>l.href).filter(h=>h.includes('fonts.googleapis.com')).join(' ');
+            const out={}; for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(60); out[lang]=getComputedStyle((await __showDay(0)).querySelector('.dq-quote')).fontFamily; }
+            setLang('zh'); await __wait(60);
+            const ok=/family=Noto\+Serif\+TC:wght@600/.test(href) && /family=Noto\+Serif\+JP:wght@600/.test(href)
+              && /^"?Noto Serif TC"?,/.test(out.zh) && /^"?Noto Serif JP"?,/.test(out.ja) && /^Georgia,/.test(out.en) && /serif$/.test(out.zh) && /serif$/.test(out.en);
+            if(!ok) console.log('v47: fonts',JSON.stringify(out)); return ok; }""")
+        # ================= 說明、選單 =================
+        c['help_describes_daily_quote'] = self.ev(pg, r"""async()=>{ const out={};
+            const words={zh:['今日一句','過了午夜換下一句','下面附原文','頭像選單「顯示」裡的「今日一句」'],
+              ja:['今日の名言','日付が変わると次の言葉','日本語だけを表示','「今日の名言」をオフ'],
+              en:['Quote of the day','changes at midnight','In English you only see English','turn off “Quote of the day”']};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(120); openHelpModal(); await __wait(200);
+              const tx=document.querySelector('#help-modal .help-body').textContent; out[lang]=words[lang].filter(w=>!tx.includes(w));
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(150); }
+            setLang('zh'); await __wait(100);
+            const ok=Object.values(out).every(m=>m.length===0); if(!ok) console.log('v47: help missing',JSON.stringify(out)); return ok; }""")
+        c['menu_toggle_label_three_languages'] = self.ev(pg, r"""async()=>{ const out={};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(80); out[lang]=document.getElementById('daily-quote-row-label').textContent.trim(); }
+            setLang('zh'); await __wait(80);
+            return out.zh==='今日一句' && out.ja==='今日の名言' && out.en==='Quote of the day'; }""")
+        c['version_is_v4_7_0'] = self.ev(pg, "()=>APP_VERSION==='v4.7.0'")
+        # ================= 只在「賽事」首頁 =================
+        c['hidden_on_search_career_and_race_page'] = self.ev(pg, r"""async()=>{ const vis=()=>{ const d=__dq(); return !!d && d.getClientRects().length>0; };
+            const base=vis();
+            const si=document.getElementById('search-input'); si.value='範例'; si.dispatchEvent(new Event('input',{bubbles:true})); await __wait(300); const search=vis();
+            si.value=''; si.dispatchEvent(new Event('input',{bubbles:true})); await __wait(300); const back=vis();
+            document.querySelector('.home-tab[data-home-tab="career"]').click(); await __wait(200); const career=vis();
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await __wait(200);
+            selectRace(state.races[0].id,{scroll:false}); await __wait(300); const detail=vis(); goBackFromDetail(); await __wait(350);
+            const ok=base && !search && back && !career && !detail && vis(); if(!ok) console.log('v47: places',base,search,back,career,detail); return ok; }""")
+        # ================= 開關 =================
+        c['sheet_hide_turns_off_with_toast'] = self.ev(pg, r"""async()=>{ const sh=await __openSheet(0);
+            sh.querySelector('[data-action="hide-daily-quote"]').click(); await __wait(150);
+            const toast=[...document.querySelectorAll('.foreground-toast')].map(e=>e.textContent).join('|');
+            const ok=sh.hidden && !__dq() && document.getElementById('btn-daily-quote-toggle').getAttribute('aria-checked')==='false' && toast.includes('頭像選單');
+            if(!ok) console.log('v47: hide',sh.hidden,!!__dq(),toast); return ok; }""")
+        ctx.close()
+        # 頭像選單的開關、重新整理之後還是關的：用本機 http 開（headless Chromium 在 file:// 下重新整理，
+        # 偶爾會把整個 localStorage 弄丟——v41 也是這樣做；反例驗證時這兩項在 file:// 下會隨機失敗）
+        import http.server, socketserver, threading, functools
+
+        class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *a, **k):
+                pass
+        socketserver.TCPServer.allow_reuse_address = True
+        srv = socketserver.TCPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=os.path.dirname(os.path.abspath(APP))))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        hctx, hp = self._ctx(browser, url=f'http://127.0.0.1:{srv.server_address[1]}/' + os.path.basename(APP))
+        c['menu_toggle_turns_off_menu_stays_open'] = self.ev(hp, r"""async()=>{ const had=!!__dq();
+            document.getElementById('btn-account-menu').click(); await __wait(150);
+            document.getElementById('btn-daily-quote-toggle').click(); await __wait(150);
+            return had && !__dq() && document.getElementById('btn-daily-quote-toggle').getAttribute('aria-checked')==='false' && !document.getElementById('account-menu-panel').hidden; }""")
+        hp.reload()
+        hp.wait_for_function("()=>typeof state!=='undefined' && state.races.length>0", timeout=30000)
+        hp.wait_for_timeout(400)
+        hp.add_script_tag(content=V47_JS)
+        c['hidden_preference_survives_reload'] = self.ev(hp, "()=>!__dq() && document.getElementById('btn-daily-quote-toggle').getAttribute('aria-checked')==='false'")
+        c['menu_toggle_turns_back_on'] = self.ev(hp, r"""async()=>{ document.getElementById('btn-account-menu').click(); await __wait(150);
+            document.getElementById('btn-daily-quote-toggle').click(); await __wait(150);
+            return !!__dq() && document.getElementById('btn-daily-quote-toggle').getAttribute('aria-checked')==='true' && !document.getElementById('account-menu-panel').hidden; }""")
+        hctx.close()
+        srv.shutdown()
+        # 第一次使用（還沒有賽事）：只有歡迎卡
+        fctx, fp = self._ctx(browser, seed=False)
+        c['not_on_first_run_welcome'] = self.ev(fp, "()=>!__dq() && !!document.querySelector('#calendar .welcome-card')")
+        fctx.close()
+        # ================= 平板、手機：在下一場卡上面、一樣寬；換斷點會重排 =================
+        for w, touch in ((1099, False), (390, True)):
+            sctx, sp = self._ctx(browser, viewport={'width': w, 'height': 900}, touch=touch)
+            c[f'stacked_{w}_above_next_race_same_width'] = self.ev(sp, r"""()=>{ const card=__dq(), fp=document.querySelector('#focus-panel-slot .focus-panel'); if(!card||!fp) return false;
+                const a=fp.getBoundingClientRect(), b=card.getBoundingClientRect(), first=!!(card.compareDocumentPosition(fp)&Node.DOCUMENT_POSITION_FOLLOWING);
+                const ok=b.bottom<=a.top-8 && Math.abs(a.left-b.left)<1 && Math.abs(a.right-b.right)<1 && first;
+                if(!ok) console.log('v47: stacked',innerWidth,JSON.stringify([a,b,first])); return ok; }""")
+            if w == 390:
+                # 手機只寫名字（身分在詳細頁）
+                c['phone_card_name_only'] = self.ev(sp, "()=>{ const r=__dq().querySelector('.dq-role'); return !!r && r.getClientRects().length===0 && __dq().querySelector('.dq-by b').getClientRects().length>0; }")
+            sctx.close()
+        rctx, rp = self._ctx(browser, viewport={'width': 1280, 'height': 900})
+        side = lambda: self.ev(rp, r"""()=>{ const card=__dq(), fp=document.querySelector('#focus-panel-slot .focus-panel'); const a=fp.getBoundingClientRect(), b=card.getBoundingClientRect();
+            return {side:b.left>=a.right, cardFirst:!!(card.compareDocumentPosition(fp)&Node.DOCUMENT_POSITION_FOLLOWING)}; }""")
+        s1 = side()
+        rp.set_viewport_size({'width': 1000, 'height': 900}); rp.wait_for_timeout(300)
+        s2 = side()
+        rp.set_viewport_size({'width': 1280, 'height': 900}); rp.wait_for_timeout(300)
+        s3 = side()
+        c['resize_across_1100_reorders'] = bool(s1 and s2 and s3 and s1['side'] and not s1['cardFirst'] and not s2['side'] and s2['cardFirst'] and s3['side'] and not s3['cardFirst'])
+        rctx.close()
+        # ================= 瀏覽器強制深色：日曆紙還是白的 =================
+        dctx, dp = self._ctx(browser, viewport={'width': 1280, 'height': 900}, force_dark=True)
+        geo = self.ev(dp, "()=>{ const p=__dq().querySelector('.dq-page').getBoundingClientRect(); return [p.left+4, p.top+p.height*0.62]; }")
+        dp.wait_for_timeout(200)
+        ok = False
+        if geo:
+            img = cv2.imdecode(np.frombuffer(dp.screenshot(), np.uint8), cv2.IMREAD_COLOR)
+            px = img[int(geo[1]), int(geo[0])]
+            ok = V433Fields._lum(px) > 0.8
+            if not ok:
+                print('    v47: forced dark page', px)
+        c['forced_dark_calendar_page_stays_white'] = ok
+        dctx.close()
+        # ================= 版面：各種寬度 × 語言 × 字級都放得下 =================
+        FIT = r"""async(o)=>{ const bad=[]; const days=o.all?DAILY_QUOTES.map((q,i)=>i):__dqHardDays();
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(60);
+              for(const fs of o.fs){ applyFontScale(fs); await __wait(30);
+                for(const i of days){ const card=await __showDay(i); if(!card){ bad.push('no card'); continue; }
+                  const cr=card.getBoundingClientRect(), tag=lang+' '+fs+' '+DAILY_QUOTES[i].id;
+                  if(cr.left<-0.5||cr.right>innerWidth+0.5) bad.push(tag+' card out');
+                  card.querySelectorAll('.dq-page,.dq-quote,.dq-orig,.dq-by').forEach(e=>{ const r=e.getBoundingClientRect(); if(!r.width) return;
+                    if(r.left<cr.left-0.5||r.right>cr.right+0.5||r.bottom>cr.bottom+0.5) bad.push(tag+' '+e.className+' out'); });
+                  // 每一行字都在卡片裡（中日文行尾的「。」」會壓成半形擠進最後一格，字框可能伸進右邊內距幾 px，
+                  // 那是全形標點空白的半邊；超出卡片才算擠壞）
+                  card.querySelectorAll('.dq-quote,.dq-orig,.dq-by').forEach(e=>{ const rg=document.createRange(); rg.selectNodeContents(e);
+                    if([...rg.getClientRects()].some(r=>r.width&&(r.right>cr.right-2||r.left<cr.left+2))) bad.push(tag+' '+e.className+' line out'); });
+                  ['.dq-month','.dq-wd','.dq-day'].forEach(s=>{ const e=card.querySelector(s); if(e.scrollWidth>e.clientWidth+1) bad.push(tag+' '+s+' clipped'); });
+                  if(document.documentElement.scrollWidth>innerWidth) bad.push(tag+' hscroll');
+                  if(o.tiles) document.querySelectorAll('#focus-panel-slot .rw-tile-value').forEach(v=>{ if(v.scrollWidth>v.clientWidth+1) bad.push(tag+' tile '+v.textContent); }); } } }
+            setLang('zh'); applyFontScale('medium'); __setNow('2026-10-02T09:00:00'); renderFocusPanel();
+            if(bad.length) console.log('v47: fit '+innerWidth,bad.slice(0,8).join(' | ')); return bad.length===0; }"""
+        for w in (320, 360, 390):
+            jctx, jp = self._ctx(browser, viewport={'width': w, 'height': 900}, touch=True, lang='ja')
+            c[f'ja_phone_{w}_prompt_and_view_switch_no_sideways_scroll'] = self.ev(jp, r"""async()=>{ const bad=[];
+                const y=new Date(); y.setDate(y.getDate()-1); const ys=y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');
+                state.races.push(emptyRace('V47 昨日の大会','road_running','registered',ys)); renderAll(); await __wait(100);
+                for(const fs of ['small','medium','large']){ applyFontScale(fs); await __wait(60);
+                  const pr=document.querySelector('#focus-panel-slot .result-prompt'); if(!pr){ bad.push(fs+' no prompt'); continue; }
+                  pr.querySelectorAll('.result-prompt-alt .btn-ghost').forEach(b=>{ const r=b.getBoundingClientRect(); if(b.scrollWidth>b.clientWidth+1||r.right>innerWidth) bad.push(fs+' '+b.textContent.trim()+' spills'); if(r.height<44) bad.push(fs+' short'); });
+                  const seg=document.querySelector('.view-seg'); if(seg.getBoundingClientRect().right>innerWidth+0.5) bad.push(fs+' view switch out');
+                  if(document.documentElement.scrollWidth>innerWidth) bad.push(fs+' hscroll '+document.documentElement.scrollWidth); }
+                applyFontScale('medium'); if(bad.length) console.log('v47: ja phone '+innerWidth,bad.join(' | ')); return bad.length===0; }""")
+            jctx.close()
+        # V47_QUICK=1：反例驗證時跳過這一段（7 種寬度 × 中日英 × 三種字級，佔這一組一半以上的時間）；針對版面的反例照樣跑完整的
+        for w in (() if os.environ.get('V47_QUICK') else (320, 360, 390, 700, 1099, 1100, 1280)):
+            touch = w < 641
+            fctx, fpg = self._ctx(browser, viewport={'width': w, 'height': 900}, touch=touch)
+            every = w in (320, 1100)
+            c[f'fits_{w}_languages_font_sizes'] = self.ev(fpg, FIT, {'fs': ['small', 'medium', 'large'], 'all': False, 'tiles': w >= 1100})
+            if every:
+                c[f'fits_{w}_every_quote'] = self.ev(fpg, FIT, {'fs': ['large'], 'all': True, 'tiles': w >= 1100})
+            fctx.close()
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -8608,6 +9003,7 @@ GROUPS = {
     'v45':        lambda: V45Backup('v45'),
     'v451':       lambda: V451WallFold('v451'),
     'v46':        lambda: V46FinisherWall('v46'),
+    'v47':        lambda: V47DailyQuote('v47'),
 }
 
 

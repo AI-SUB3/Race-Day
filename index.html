@@ -119,6 +119,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,800;0,900;1,900&display=swap" rel="stylesheet">
+<!-- 今日一句的明體（v4.7.0）另外一條、不擋畫面（media="print" 載完才換成 all）：只有那張卡用得到，
+     中日文字型的 CSS 一套就有上百個分片宣告，放進上面那條會拖慢第一個畫面；晚一點換上明體沒關係 -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600&family=Noto+Serif+JP:wght@600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <!-- 外部套件一律鎖「確切版本 + SRI 雜湊」：SRI 比對的是檔案內容，版本寫成 @6 這種浮動範圍時，
      上游一發新版雜湊就對不上、套件會被瀏覽器直接擋掉，等於埋了一顆定時炸彈。
      xlsx 從 cdnjs 換到 jsDelivr 的 npm 路徑，是因為 jsDelivr 逐位元組轉送 npm 套件原檔，
@@ -1404,6 +1407,86 @@
     .focus-panel-compact.has-cover .nx-head{margin:0;padding:16px 18px;align-self:stretch;}
     .focus-panel-compact.has-cover .nx-tiles{padding:12px 0;}
   }
+  /* ==== 今日一句（v4.7.0）：左邊一頁撕下來的日曆（月、日、星期），右邊明體的句子和說話者 ====
+     筆電（≥1100px）放在「下一場」卡右邊 360px 一欄，兩張一樣高；比這窄（平板、手機）放在
+     下一場卡上面。1,100px 以下還並排的話，下一場卡剩不到 660px，裡面三格的「11:50:00」
+     會被截掉。沒有下一場卡（也沒有「比完了嗎？」）時單獨一張、整排寬。 */
+  .home-top{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:18px;}
+  .home-top-main>:last-child{margin-bottom:0;}
+  @media (min-width:1100px){
+    .home-top.has-side{grid-template-columns:minmax(0,1fr) 360px;gap:18px;}
+    .home-top.has-side .home-top-main{display:flex;flex-direction:column;}
+    .home-top.has-side .home-top-main>.focus-panel:last-child{flex:1 1 auto;}
+    /* 左邊疊了「比完了嗎？」和下一場卡兩張時，今日一句不拉長，維持自己的高度 */
+    .home-top.has-prompt>.dq-card{align-self:start;}
+  }
+  .dq-card{
+    display:grid;grid-template-columns:60px minmax(0,1fr);gap:14px;align-items:start;width:100%;box-sizing:border-box;
+    padding:14px 16px 14px 14px;border:1px solid var(--rule);border-radius:10px;background:var(--surface);
+    color:inherit;font:inherit;text-align:left;cursor:pointer;
+  }
+  .dq-card:hover{border-color:var(--field-border);}
+  .dq-card:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  /* 日曆紙在深色模式也是白紙黑字：跟完賽牆的號碼布同一個道理，紙本來就是白的。
+     color-scheme:only light 擋掉瀏覽器的強制深色（Chrome「網頁內容一律深色」會把它反成黑的） */
+  .dq-page{
+    display:flex;flex-direction:column;align-items:center;width:60px;box-sizing:border-box;overflow:hidden;
+    border:1px solid #D8DAD3;border-radius:6px;background:#FFFFFF;color-scheme:only light;
+    box-shadow:0 1px 0 #D8DAD3,0 3px 0 -1px #FFFFFF,0 3px 0 0 #D8DAD3;
+  }
+  .dq-month{width:100%;padding:2px 0;background:#2E6B49;color:#FFFFFF;font-size:12px;font-weight:700;letter-spacing:.08em;line-height:1.5;text-align:center;white-space:nowrap;}
+  .dq-day{padding-top:2px;font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:36px;font-weight:800;line-height:1.05;color:#16231C;}
+  .dq-wd{padding-bottom:5px;font-size:11.5px;line-height:1.4;color:#676860;white-space:nowrap;}
+  .dq-body{display:flex;flex-direction:column;gap:6px;min-width:0;}
+  /* 句子用 balance 平均分行：中文一行可以斷在任何字之間，不然常常最後一行只剩「限。」」兩個字 */
+  .dq-quote{font-family:'Noto Serif TC','Noto Serif CJK TC','Noto Serif JP',serif;font-size:calc(17px*var(--fs,1));font-weight:600;line-height:1.6;color:var(--ink);overflow-wrap:anywhere;text-wrap:balance;text-spacing-trim:trim-start;}
+  .dq-quote:lang(ja){font-family:'Noto Serif JP','Noto Serif CJK JP','Noto Serif TC',serif;}
+  /* 英文不用中日文的明體：中日文字型的 ’ “ ” 是全形（實測 Noto Sans／Serif CJK TC 的 ’ 寬 1em，
+     會變成「Taiwan’ s」）。句子和原文改用拉丁明體 Georgia，其他英文字（說話者、身分、情境）
+     加 proportional-width，標點回到比例寬度 */
+  .dq-quote:lang(en),.dq-sheet-main:lang(en){font-family:Georgia,'Noto Serif','Times New Roman',serif;font-weight:400;}
+  .dq-orig:lang(en),.dq-sheet-orig :lang(en){font-family:Georgia,'Noto Serif','Times New Roman',serif;font-style:italic;}
+  :root[data-lang="en"] .dq-card,:root[data-lang="en"] .dq-sheet-panel{font-variant-east-asian:proportional-width;}
+  .dq-orig{font-size:calc(13px*var(--fs,1));line-height:1.55;color:var(--ink-soft);overflow-wrap:anywhere;text-wrap:pretty;}
+  .dq-orig:lang(ja){font-family:'Noto Sans JP','Noto Sans TC',sans-serif;}
+  /* 說話者用 --ink-soft 不用 --stone：深色模式的 --stone 在卡片底色上只有 4.53:1，剛好壓線，12.5px 的小字留點餘裕 */
+  .dq-by{font-size:calc(12.5px*var(--fs,1));line-height:1.5;color:var(--ink-soft);text-wrap:pretty;}
+  .dq-by b{margin-right:6px;font-weight:700;color:var(--ink);}
+  .dq-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;}
+  @media (max-width:640px){
+    .dq-card{grid-template-columns:52px minmax(0,1fr);gap:12px;padding:14px 14px 14px 12px;}
+    .dq-page{width:52px;}
+    .dq-month{padding:1px 0;font-size:11px;letter-spacing:.06em;}
+    .dq-day{padding-top:1px;font-size:30px;}
+    .dq-wd{padding-bottom:4px;font-size:11px;}
+    .dq-body{gap:4px;}
+    .dq-quote{font-size:calc(16px*var(--fs,1));}
+    /* 手機只寫名字：身分在點開之後的詳細頁 */
+    .dq-role{display:none;}
+    .dq-by b{margin-right:0;}
+  }
+  /* 點開的詳細頁：句子、原文、說話者、情境、出處和連結 */
+  .dq-sheet-panel{max-width:520px;}
+  .dq-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  .dq-sheet-head h2{margin:0;font-size:calc(16px*var(--fs,1));font-weight:600;color:var(--ink-soft);}
+  .dq-sheet-fig{margin:0 0 14px;}
+  .dq-sheet-quote{margin:0;padding:0 0 0 14px;border-left:3px solid var(--trail);}
+  .dq-sheet-main{margin:0;font-family:'Noto Serif TC','Noto Serif CJK TC','Noto Serif JP',serif;font-size:calc(21px*var(--fs,1));font-weight:600;line-height:1.55;color:var(--ink);overflow-wrap:anywhere;text-wrap:balance;text-spacing-trim:trim-start;}
+  .dq-sheet-main:lang(ja){font-family:'Noto Serif JP','Noto Serif CJK JP','Noto Serif TC',serif;}
+  .dq-sheet-orig{margin:10px 0 0;font-size:calc(15px*var(--fs,1));line-height:1.6;color:var(--ink-soft);overflow-wrap:anywhere;text-wrap:pretty;}
+  .dq-sheet-orig-label{display:inline-block;margin-right:8px;padding:0 6px;border:1px solid var(--rule);border-radius:4px;font-size:calc(11px*var(--fs,1));line-height:1.6;color:var(--ink-soft);vertical-align:2px;}
+  .dq-sheet-who{margin-top:14px;font-size:calc(14px*var(--fs,1));line-height:1.5;color:var(--ink-soft);}
+  .dq-sheet-who b{display:block;font-size:calc(15px*var(--fs,1));color:var(--ink);}
+  .dq-sheet-ctx{margin:0 0 14px;font-size:calc(14px*var(--fs,1));line-height:1.7;color:var(--ink-soft);text-wrap:pretty;}
+  .dq-sheet-src{padding:12px 14px;border-radius:8px;background:var(--paper);font-size:calc(13px*var(--fs,1));line-height:1.6;}
+  .dq-sheet-src-label{font-size:calc(11px*var(--fs,1));font-weight:700;letter-spacing:.06em;color:var(--ink-soft);}
+  .dq-sheet-src-pub{color:var(--ink);overflow-wrap:anywhere;}
+  .dq-sheet-link{display:inline-flex;align-items:center;min-height:32px;color:var(--trail);font-weight:600;text-decoration:underline;text-underline-offset:3px;}
+  .dq-sheet-link:focus-visible{outline:2px solid var(--trail);outline-offset:2px;border-radius:3px;}
+  .dq-sheet-note{margin:10px 0 0;font-size:calc(12px*var(--fs,1));color:var(--ink-soft);}
+  .dq-sheet-foot{margin-top:16px;padding-top:12px;border-top:1px solid var(--rule);text-align:center;}
+  .dq-sheet-hide{min-height:36px;padding:0 12px;border:none;background:none;color:var(--ink-soft);font:inherit;font-size:calc(13px*var(--fs,1));text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+  .dq-sheet-hide:focus-visible{outline:2px solid var(--trail);outline-offset:2px;border-radius:4px;}
   .focus-weather-row{display:flex;gap:12px;flex-wrap:wrap;font-size:calc(15px*var(--fs,1));font-weight:600;}
   .focus-weather-live-note{color:var(--stone);margin-top:4px;}
   .weather-action-row{margin:6px 0 10px;}
@@ -2055,6 +2138,8 @@
     font:inherit;font-size:calc(14px*var(--fs,1));padding:0 14px;white-space:nowrap;
   }
   .view-seg button+button{border-left:1px solid var(--rule);}
+  /* 很窄的手機（≤360px）按鈕左右留白縮小（v4.7.0）：日文「リスト／カレンダー／完走ウォール」字級「大」時比 320px 的畫面寬 */
+  @media (max-width:360px){ .view-seg button{padding:0 9px;} }
   .view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);}
   .view-seg button:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
   .cal-month-nav{display:inline-flex;align-items:center;gap:6px;}
@@ -3029,7 +3114,8 @@
   .result-prompt-text{color:var(--ink-soft);font-size:calc(15px*var(--fs,1));line-height:1.55;margin:10px 0 14px;}
   .result-prompt-main{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;font-size:calc(16px*var(--fs,1));font-weight:600;border-radius:8px;}
   .result-prompt-alt{display:flex;gap:10px;margin-top:10px;}
-  .result-prompt-alt .btn-ghost{flex:1 1 0;min-width:0;min-height:44px;border-radius:8px;white-space:nowrap;font-size:calc(15px*var(--fs,1));}
+  /* 字太長時換行（v4.7.0）：日文「完走できなかった（DNF）」在手機上原本 nowrap，字跑出按鈕、整頁可以左右滑 */
+  .result-prompt-alt .btn-ghost{flex:1 1 0;min-width:0;min-height:44px;border-radius:8px;white-space:normal;line-height:1.3;padding:6px 8px;text-wrap:balance;font-size:calc(15px*var(--fs,1));}
   .result-prompt-later{display:block;margin:12px auto 2px;min-height:32px;padding:0 10px;color:var(--stone);}
   .result-tag{display:inline-block;flex:none;margin-left:6px;padding:1px 7px;border-radius:4px;font-size:calc(12px*var(--fs,1));font-weight:700;color:#7A4E00;background:rgba(196,128,0,.16);white-space:nowrap;}
   [data-theme="dark"] .result-tag{color:#F0B54A;background:rgba(240,181,74,.16);}
@@ -3197,7 +3283,7 @@
             <button id="btn-open-profile" type="button" class="action-menu-item" data-action="open-profile-modal" data-i18n="ui.createProfile">建立個人資訊</button>
             <div class="action-menu-divider"></div>
             <div class="menu-section-label" data-i18n="ui.menuDisplay">顯示</div>
-            <!-- 這三列點了之後選單要留著：調完字體大小，馬上就想看看其他字的效果 -->
+            <!-- 這幾列點了之後選單要留著：調完字體大小，馬上就想看看其他字的效果 -->
             <div class="menu-row" data-keep-menu-open>
               <span class="menu-row-label" data-i18n="ui.menuFontSize">字體大小</span>
               <div class="font-scale" role="group" aria-label="字體大小" data-i18n-aria="ui.menuFontSize">
@@ -3209,6 +3295,13 @@
             <div class="menu-row" data-keep-menu-open>
               <span class="menu-row-label" id="theme-row-label" data-i18n="ui.menuDarkMode">深色模式</span>
               <button id="btn-theme-toggle" type="button" class="menu-switch" role="switch" aria-checked="false" aria-labelledby="theme-row-label">
+                <span class="menu-switch-thumb" aria-hidden="true"></span>
+              </button>
+            </div>
+            <!-- 今日一句（v4.7.0）：預設打開；關掉後「賽事」分頁最上面只剩下一場卡 -->
+            <div class="menu-row" data-keep-menu-open>
+              <span class="menu-row-label" id="daily-quote-row-label" data-i18n="ui.menuDailyQuote">今日一句</span>
+              <button id="btn-daily-quote-toggle" type="button" class="menu-switch" role="switch" aria-checked="true" aria-labelledby="daily-quote-row-label">
                 <span class="menu-switch-thumb" aria-hidden="true"></span>
               </button>
             </div>
@@ -3357,6 +3450,7 @@
 <div id="help-modal" class="modal-overlay" hidden></div>
 <div id="recovery-modal" class="modal-overlay" hidden></div>
 <div id="career-sheet" class="modal-overlay career-sheet" hidden></div>
+<div id="daily-quote-sheet" class="modal-overlay" hidden></div>
 <div id="focal-point-modal" class="modal-overlay" hidden></div>
 <button id="btn-new-fab" class="new-race-fab" data-action="start-create" aria-label="新增賽事" title="新增賽事">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -4539,7 +4633,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／完賽牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.6.0';
+const APP_VERSION='v4.7.0';
 
 /* ============================================================
    多語系（i18n）
@@ -4613,6 +4707,10 @@ const JA={
   'ui.viewList':'リスト','ui.viewCalendar':'カレンダー','ui.viewPhotoWall':'完走ウォール','ui.viewSegLabel':'表示方法',
   'ui.listRecent':'最近の大会','ui.listSeeAllHistory':'過去の記録をすべて見る（{n} 件）›',
   'ui.menuDisplay':'表示','ui.menuFontSize':'文字サイズ','ui.menuDarkMode':'ダークモード','ui.menuLanguage':'言語',
+  // 今日一句（v4.7.0）
+  'ui.menuDailyQuote':'今日の名言','ui.dailyQuoteTitle':'今日の名言','ui.dailyQuoteSrPrefix':'今日の名言、{d}：','ui.dailyQuoteMoreSr':'（出典を見る）',
+  'ui.dailyQuoteOrigLabel':'原文','ui.dailyQuoteSource':'出典','ui.dailyQuoteOpenSource':'出典を見る ↗','ui.dailyQuoteTranslatedNote':'日本語訳はこのアプリによるものです',
+  'ui.dailyQuoteHide':'今日の名言を表示しない','ui.dailyQuoteHiddenToast':'今日の名言を非表示にしました。アカウントメニューから再表示できます',
   'ui.menuData':'データ','ui.menuImport':'読み込み（Excel／JSON）','ui.menuExport':'書き出しとバックアップ（JSON／CSV／カレンダー）',
   'ui.accountMenuTitle':'アカウントと設定','ui.accountSub':'Google でログイン中 · {n} 件',
   'ui.careerOpenHof':'キャリア総括を開く','ui.careerEmpty':'大会を 5 件以上記録すると、ここにキャリアのデータ（フルマラソン自己ベスト、年ごとの完走数、累積獲得標高）が表示されます。現在 {n} 件。',
@@ -4987,8 +5085,9 @@ const JA={
   'ui.helpBodyHtml':`
       <h3>ホーム：大会／キャリア／トレーニング</h3>
       <ul>
-        <li>ホームは3つのタブに分かれています。「大会」は「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。</li>
+        <li>ホームは3つのタブに分かれています。「大会」は今日の名言、「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。</li>
         <li><strong>「次の大会」カード</strong>：14日以内に大会があると、「大会」タブの一番上にカウントダウン・日時・場所、その下に3つのマス（荷造り・A目標・ゼッケン）が出ます。大会ページの「レース前の4項目」と同じで、タップするとそのマスの入力欄が開きます（空のマスはカーソルがその欄に入ります）。天気予報（取得したライブ予報か、自分で入れた予報）があると3つ目は天気に、7日以内で GPS 軌跡があってまだ取得していないときは「予報を取得」になります。大会名をタップすると大会ページが開き、カバー写真があればカードの背景になります。「一時的に隠す」で閉じられます。スマホのリストで「走り終えましたか？」が出ている間は、このカードは出ません（次の大会はリストの一番上にあります）。</li>
+        <li><strong>今日の名言</strong>：「大会」タブの一番上に、ランナーたちが実際に口にした言葉を毎日ひとつ表示します。パソコンでは「次の大会」カードの右、スマートフォンやタブレットではその上です。1日にひとつで、日付が変わると次の言葉になり、同じ日ならどの端末でも同じ言葉です。日本語表示では日本語だけを表示します（元の言葉が日本語ならそのまま、英語や中国語なら日本語訳）。タップすると、誰がどんな場面で言ったのか、出典とリンクが見られます。どの言葉も出典を確認済みで、翻訳はこのアプリによるものです。表示したくない場合は、アカウントメニューの「表示」にある「今日の名言」をオフにしてください。</li>
         <li>キャリアの数字はタップできます：年ごとの棒グラフ、ヒートマップのマス、「完走レース数」「年間走行距離」をタップすると、下にその大会の一覧が出ます（1件タップで開き、戻る操作ではまず一覧が閉じます）。フルマラソン自己ベストのタイムをタップすると、その記録を出した大会が開きます。フルマラソンはランニング系の大会だけを数えます（42km の自転車レースは入りません）。</li>
         <li>パソコン：上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え（カレンダー表示のときだけ。完走ウォールと表は月をまたいで表示するので出ません）、「今日」で当月に戻ります。隣のグリッドアイコンで「完走ウォール」、表アイコンでコンパクトな表に切り替えます。</li>
         <li><strong>完走ウォール</strong>：完走した大会すべてを年ごとに区切って新しい順に並べ、各年の最初にその年の大会数・距離・PB の数を表示します。カバー写真がある大会はポラロイド写真、ない大会はその大会のゼッケンになります。上の帯の色は種目、真ん中の大きな数字はゼッケン番号（未入力なら距離）、下の黒い計測帯には完走タイム・平均・獲得標高が印字され、自己ベスト（PB）には赤いスタンプが押されます。平均は種目ごとの単位で表示します：ランニング系は 1km あたりのペース、自転車は時速、水泳は 100m あたりのタイム。トライアスロン・デュアスロンはタイムだけ、水泳とトライアスロンは獲得標高を表示しません。ポラロイドの下にも同じ計測帯があります。ゼッケン番号は「大会の基本情報」の「ゼッケン番号」に入力します。各年の見出しをタップすると開閉でき、最初は今年だけ開いています（今年の完走がまだなければ最新の年）。閉じた年も大会数・距離・PB の数は見えます。上の「すべて開く」でまとめて全部開けます。</li>
@@ -5156,6 +5255,10 @@ const EN={
   'ui.viewList':'List','ui.viewCalendar':'Calendar','ui.viewPhotoWall':'Finisher wall','ui.viewSegLabel':'View',
   'ui.listRecent':'Recent races','ui.listSeeAllHistory':'See all {n} past races ›',
   'ui.menuDisplay':'Display','ui.menuFontSize':'Text size','ui.menuDarkMode':'Dark mode','ui.menuLanguage':'Language',
+  // Quote of the day (v4.7.0)
+  'ui.menuDailyQuote':'Quote of the day','ui.dailyQuoteTitle':'Quote of the day','ui.dailyQuoteSrPrefix':'Quote of the day, {d}: ','ui.dailyQuoteMoreSr':' (see the source)',
+  'ui.dailyQuoteOrigLabel':'Original','ui.dailyQuoteSource':'Source','ui.dailyQuoteOpenSource':'Read the original ↗','ui.dailyQuoteTranslatedNote':'English translation by this app',
+  'ui.dailyQuoteHide':'Hide quote of the day','ui.dailyQuoteHiddenToast':'Quote of the day is hidden. You can turn it back on in the account menu.',
   'ui.menuData':'Data','ui.menuImport':'Import (Excel / JSON)','ui.menuExport':'Export & backup (JSON / CSV / calendar)',
   'ui.accountMenuTitle':'Account & settings','ui.accountSub':'Signed in with Google · {n} races',
   'ui.careerOpenHof':'Open career review','ui.careerEmpty':'Once you have 5 or more races, your career stats show up here: marathon PB, races finished per year, total elevation. You have {n} so far.',
@@ -5518,8 +5621,9 @@ const EN={
   'ui.helpBodyHtml':`
       <h3>Home: Races / Career / Training</h3>
       <ul>
-        <li>The home page has three tabs. “Races” holds the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log.</li>
+        <li>The home page has three tabs. “Races” holds the quote of the day, the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log.</li>
         <li><strong>Next-race card</strong>: when a race is within 14 days, the top of “Races” shows the countdown, date, start time and place, with three tiles underneath — Packed, Goal A and Bib. They’re the same tiles as on the race page: tap one to open where you fill it in (an empty tile puts the cursor right in that field). When there’s a forecast (a live one you fetched, or one you typed in), the third tile shows the weather; within 7 days, with a GPS track and no forecast yet, it says “Get forecast”. Tap the race name to open the race; a cover photo becomes the card’s background; “Hide for now” tucks the card away. In a phone’s list, while “Did you finish?” is showing, the card steps aside — the next race is the first row of the list.</li>
+        <li><strong>Quote of the day</strong>: the top of “Races” shows one thing a runner actually said, every day — to the right of the next-race card on a computer, above it on phones and tablets. It changes at midnight, and every device shows the same quote on the same day. In English you only see English: the original words if they were said in English, otherwise an English translation. Tap it to see who said it and when, with the source and a link. Every quote has been checked against its source; the translations are ours. To hide it, turn off “Quote of the day” under Display in the account menu.</li>
         <li>Career numbers are tappable: tap a year’s bar, a heatmap square, “Races finished” or “Distance this year” to list those races underneath (tap one to open it; back closes the list first). Tap the marathon PB time to open the race where you set it. Only running races count as marathons (a 42 km bike race doesn’t).</li>
         <li>On a computer, use <span class="mono">‹ Year Month ›</span> to change months and "Today" to jump back (calendar view only — the finisher wall and table span all months, so they don’t show it). The grid icon next to it switches to the finisher wall; the table icon switches to a compact table.</li>
         <li><strong>Finisher wall</strong>: every finished race, grouped by year with the newest first; each year opens with its race count, distance and number of PBs. Races with a cover photo are a polaroid; the rest become that race’s bib — the band color is the sport, the big number is your bib number (or the distance if you haven’t entered one), the black timing strip along the bottom shows your finish time, average and elevation gain, and a personal best (PB) gets a red stamp. The average uses each sport’s usual unit: pace per km for running, km/h for cycling, time per 100 m for swimming; triathlons and duathlons show just the time, and swims and triathlons don’t show elevation. Polaroids carry the same strip under the photo. Enter your bib number under “Bib Number” in “Race Details”. Tap a year’s heading to open or close it: at first only this year is open (or the latest year if you haven’t finished a race this year yet), closed years still show their race count, distance and PBs, and “Expand all” at the top opens every year at once.</li>
@@ -15602,6 +15706,232 @@ function focusMetaLine(race){
   // 英文用半形的「·」，「・」是中日文的標點
   return [[date,race.schedule.startTime].filter(Boolean).join(' '),place].filter(Boolean).join(currentLang==='en'?' · ':' ・ ');
 }
+/* ============================================================
+   今日一句（v4.7.0）
+   「賽事」分頁最上面每天一句跑者說過的話。筆電（≥1100px）放在「下一場」卡右邊，
+   手機、平板放在它上面；沒有下一場卡時單獨一張。點開看說話者、情境、出處和連結。
+   - 一天一句：用「當地日期」算第幾天，同一天每台裝置都一樣，過了午夜才換。
+     2026/10/2 是第 1 句。DAILY_QUOTES 的順序就是輪播順序：三種語言按比例穿插，同一個人
+     的兩句至少隔兩週（含輪完一圈接回開頭；排法和產生方式見 HANDOFF）。
+   - 語言（使用者指定）：中文版面先寫中文翻譯、下面附原文（原文是日文或英文時）；日文、
+     英文版面只顯示那個語言——原文是那個語言就顯示原文，不是就顯示翻譯。
+   - 只收公開說過的話（訪談、演講、記者會、隊伍口號、座右銘），每一句都打開出處核對過；
+     書裡、專欄裡寫的句子不收。原文照出處逐字，翻譯是本站翻的（詳細頁會註明）。
+     完整清單（出處標題、全文、查證沒過的常見名言）在交付的 Excel 清單，跟這裡是同一份資料。
+   - 首次使用（還沒有賽事）、搜尋篩選中、生涯數據分頁不放：那幾個畫面各有自己要看的東西
+   ============================================================ */
+const DAILY_QUOTES=[
+{"id":"en01","lang":"en","text":{"zh":"我可以告訴大家：人類沒有極限。","ja":"人間に限界はないと、みんなに伝えられる。","en":"I can tell people that no human is limited."},"who":{"zh":"埃利烏德・基普喬蓋","ja":"エリウド・キプチョゲ","en":"Eliud Kipchoge"},"role":{"zh":"肯亞馬拉松選手，兩屆奧運金牌","ja":"ケニアのマラソン選手。五輪2大会連続金メダル","en":"Kenyan marathoner, two-time Olympic champion"},"ctx":{"zh":"2019 年在維也納以 1 小時 59 分 40 秒跑完馬拉松距離（非正式紀錄賽）後受訪。","ja":"2019年、ウィーンでマラソンの距離を1時間59分40秒で走った直後に（公認記録ではない）。","en":"Speaking right after covering the marathon distance in 1:59:40 in Vienna, 2019 (not record-eligible)."},"src":{"pub":"NBC Sports (OlympicTalk)","date":"2019-10-12","url":"https://www.nbcsports.com/olympics/news/eliud-kipchoge-marathon-two-hours-ineos-159-challenge"}},
+{"id":"ja05","lang":"ja","text":{"zh":"馬拉松不會辜負你在練習中跑過的距離。","ja":"マラソンは、練習で走った距離を裏切らない。","en":"The marathon never betrays the distance you’ve run in training."},"who":{"zh":"野口水木","ja":"野口みずき","en":"Mizuki Noguchi"},"role":{"zh":"日本馬拉松選手，2004 年雅典奧運金牌","ja":"マラソン。2004年アテネ五輪金メダル","en":"Marathoner, 2004 Olympic champion"},"ctx":{"zh":"2002 年名古屋國際（初馬）、2003 年大阪國際女子馬拉松連勝時期的話（《Number》583 號）。","ja":"2002年名古屋国際（初マラソン）、2003年大阪国際女子と連勝した頃の言葉（Number 583号）。","en":"From when she won her debut marathon in Nagoya (2002) and then Osaka (2003) (Number, 2003)."},"src":{"pub":"Number Web（文藝春秋）","date":"2003-08-21","url":"https://number.bunshun.jp/articles/-/497860","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"zh01","lang":"zh","text":{"zh":"不會享受孤獨，你無法實踐你的夢想","ja":"孤独を楽しめなければ、夢はかなえられない。","en":"If you can’t enjoy solitude, you can’t make your dream come true."},"who":{"zh":"陳彥博","ja":"陳彦博","en":"Tommy Chen"},"role":{"zh":"台灣極地超馬選手，2016 年四大極地超馬大滿貫總冠軍","ja":"台湾の極地ウルトラランナー。2016年4デザーツ総合優勝","en":"Taiwanese ultrarunner, 2016 4 Deserts Grand Slam champion"},"ctx":{"zh":"2014 年接受《遠見》專訪，談七、八天的多日極地賽裡只能跟自己對話的孤獨。","ja":"2014年、台湾誌『遠見』の取材で。7〜8日間続く極地レースで、自分としか話せない孤独について。","en":"Global Views interview, 2014, on the solitude of week-long stage races where you only have yourself to talk to."},"src":{"pub":"遠見雜誌","date":"2014-05-05","url":"https://www.gvm.com.tw/article/52379","pubEn":"Global Views Monthly"}},
+{"id":"en03","lang":"en","text":{"zh":"只要有身體，你就是運動員。","ja":"体があるなら、あなたはアスリートだ。","en":"If you have a body, you’re an athlete."},"who":{"zh":"比爾・鮑爾曼","ja":"ビル・バウワーマン","en":"Bill Bowerman"},"role":{"zh":"美國田徑教練，Nike 共同創辦人","ja":"米国の陸上コーチ。ナイキ共同創業者","en":"US track coach and Nike co-founder"},"ctx":{"zh":"Nike 在 2001 年年報裡引用他常說的話；現在是 Nike 使命宣言的註腳。","ja":"ナイキが2001年の年次報告書で紹介した彼の口癖。今もナイキのミッションに注釈として添えられている。","en":"A saying Nike quoted in its 2001 annual report; it now footnotes Nike’s mission statement."},"src":{"pub":"Nike, Inc.","date":"2001","url":"https://s1.q4cdn.com/806093406/files/doc_financials/2001/perspectives.html"}},
+{"id":"ja03","lang":"ja","text":{"zh":"這是非常快樂的 42 公里！","ja":"すごく楽しい42キロでした！","en":"That was a really fun 42 kilometers!"},"who":{"zh":"高橋尚子","ja":"高橋尚子","en":"Naoko Takahashi"},"role":{"zh":"日本馬拉松選手，2000 年雪梨奧運金牌","ja":"マラソン。2000年シドニー五輪金メダル","en":"Marathoner, 2000 Olympic champion"},"ctx":{"zh":"2000 年雪梨奧運女子馬拉松奪金後，笑著說的話。","ja":"2000年シドニー五輪の女子マラソンで優勝した後、笑顔で語った言葉。","en":"Said with a smile after winning the women’s marathon at the 2000 Sydney Olympics."},"src":{"pub":"KADOKAWA（高橋尚子『笑顔で生きる魔法の言葉』書籍頁）","date":"2012-04-09","url":"https://www.kadokawa.co.jp/product/200911000122/","pubEn":"KADOKAWA (book page)"}},
+{"id":"en05","lang":"en","text":{"zh":"就再撐一英里，再撐一分鐘。","ja":"あと1マイルだけ続けよう。あと1分だけ続けよう。","en":"Just show up for one more mile. Show up for one more minute."},"who":{"zh":"德西蕾・林登","ja":"デジレ・リンデン","en":"Des Linden"},"role":{"zh":"美國馬拉松選手，2018 年波士頓馬拉松冠軍","ja":"米国のマラソン選手。2018年ボストンマラソン優勝","en":"US marathoner, 2018 Boston Marathon champion"},"ctx":{"zh":"2018 年波士頓馬拉松奪冠後接受 NPR 訪問，說這是她整段備戰期和比賽當天的口頭禪。","ja":"2018年のボストンマラソン優勝後、米NPRのインタビューで。準備期間からレース当日まで唱え続けた言葉だという。","en":"Her mantra through training and race day, she told NPR after winning the 2018 Boston Marathon."},"src":{"pub":"NPR","date":"2018-04-17","url":"https://www.npr.org/2018/04/17/603189901/runner-tells-herself-just-show-up-for-one-more-mile-and-wins-the-boston-marathon"}},
+{"id":"ja01","lang":"ja","text":{"zh":"我第一次，想要稱讚自己。","ja":"初めて自分で自分をほめたいと思います","en":"For the first time, I want to praise myself."},"who":{"zh":"有森裕子","ja":"有森裕子","en":"Yuko Arimori"},"role":{"zh":"日本馬拉松選手，奧運銀牌（1992）、銅牌（1996）","ja":"マラソン。バルセロナ五輪銀、アトランタ五輪銅","en":"Marathoner; Olympic silver (1992) and bronze (1996)"},"ctx":{"zh":"1996 年亞特蘭大奧運女子馬拉松奪銅後受訪。「自分で自分をほめたい」是當年日本流行語大賞的年度大獎之一。","ja":"1996年アトランタ五輪女子マラソンで銅メダルを獲得した直後のインタビュー。「自分で自分をほめたい」は同年の新語・流行語大賞（年間大賞）に選ばれた。","en":"Right after winning bronze in the women’s marathon at the 1996 Atlanta Olympics. The phrase was one of three grand-prize winners of Japan’s 1996 buzzword awards."},"src":{"pub":"笹川スポーツ財団","date":"2013","url":"https://www.ssf.or.jp/files/story_15.pdf","pubEn":"Sasakawa Sports Foundation"}},
+{"id":"zh03","lang":"zh","text":{"zh":"沒有放棄就沒有遺憾","ja":"あきらめなければ、悔いは残らない。","en":"If you don’t give up, you won’t have regrets."},"who":{"zh":"林義傑","ja":"林義傑","en":"Kevin Lin"},"role":{"zh":"台灣極地超馬選手，曾徒步橫越撒哈拉沙漠","ja":"台湾の極地ウルトラランナー。サハラ砂漠を走って横断","en":"Taiwanese ultrarunner who crossed the Sahara on foot"},"ctx":{"zh":"2016 年《經理人》專訪，被問到有沒有跑完後覺得遺憾的比賽時的回答。","ja":"2016年、台湾誌『經理人』の取材で、悔いの残ったレースはあるかと聞かれて。","en":"Asked by Manager Today in 2016 whether any race had left him with regrets."},"src":{"pub":"經理人 Manager Today","date":"2016-11-15","url":"https://www.managertoday.com.tw/articles/view/61055","pubEn":"Manager Today"}},
+{"id":"en07","lang":"en","text":{"zh":"馬拉松是人生的隱喻，而人生並不容易。","ja":"マラソンは人生のたとえだ。そして人生は楽じゃない。","en":"A marathon is a metaphor for life, and life is not easy."},"who":{"zh":"梅布・凱夫萊齊吉","ja":"メブ・ケフレジギ","en":"Meb Keflezighi"},"role":{"zh":"美國馬拉松選手，2004 年奧運銀牌","ja":"米国のマラソン選手。2004年アテネ五輪銀メダル","en":"US marathoner, 2004 Olympic silver medalist"},"ctx":{"zh":"2019 年接受 WBUR《Here & Now》訪問。","ja":"2019年、米WBURの番組「Here & Now」のインタビューで。","en":"WBUR Here & Now interview, 2019."},"src":{"pub":"WBUR / NPR Here & Now","date":"2019-04-12","url":"https://www.wbur.org/hereandnow/2019/04/12/meb-keflezighi-marathon-running"}},
+{"id":"ja12","lang":"ja","text":{"zh":"馬拉松不是朋友。","ja":"マラソンは友達じゃないんです。","en":"The marathon is not your friend."},"who":{"zh":"大迫傑","ja":"大迫傑","en":"Suguru Osako"},"role":{"zh":"日本馬拉松選手，2020 年東京馬拉松刷新日本紀錄","ja":"マラソン。2020年東京マラソンで日本記録を更新","en":"Marathoner; set a Japanese record at the 2020 Tokyo Marathon"},"ctx":{"zh":"2019 年 9 月東京奧運選拔賽 MGC 失利後受訪；他說之前三場跑得順，讓他誤以為自己跟馬拉松很合。","ja":"2019年9月のMGCで苦い結果に終わった後に。好調だった過去3戦で、マラソンとの相性がいいと思い込んでいたと振り返って。","en":"After a disappointing MGC Olympic trial in September 2019; three good races had made him think he and the marathon got along."},"src":{"pub":"Number Web（文藝春秋）","date":"2019-09-26","url":"https://number.bunshun.jp/articles/-/843603","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en17","lang":"en","text":{"zh":"跑步靠的是心理。大家以為靠身體，其實真的是靠心理。","ja":"ランニングはメンタルだ。みんなフィジカルだと思っているけど、本当はメンタルなんだ。","en":"Running is mental. People think it’s physical. It’s really mental."},"who":{"zh":"比爾・羅傑斯","ja":"ビル・ロジャース","en":"Bill Rodgers"},"role":{"zh":"美國馬拉松選手，波士頓與紐約馬拉松各奪冠四次","ja":"米国のマラソン選手。ボストンとニューヨークで各4勝","en":"US marathoner, four-time winner of both Boston and New York"},"ctx":{"zh":"2025 年重回波士頓賽道，回想 1975 年首度奪冠時的心碎坡（WBUR）。","ja":"2025年、ボストンのコース上で、1975年の初優勝時の「心臓破りの丘」を振り返って（WBUR）。","en":"Back on the Boston course in 2025, recalling Heartbreak Hill in his 1975 win (WBUR)."},"src":{"pub":"WBUR","date":"2025-04-17","url":"https://www.wbur.org/news/2025/04/17/bill-rodgers-boston-marathon-50-years"}},
+{"id":"zh06","lang":"zh","text":{"zh":"不管別人多快多慢，我就是跑我自己的跑道","ja":"ほかの人が速くても遅くても、僕は自分のレーンを走るだけ。","en":"However fast or slow others are, I just run my own lane."},"who":{"zh":"陳傑","ja":"陳傑","en":"Chen Chieh"},"role":{"zh":"台灣 400 公尺跨欄國手，三屆奧運選手","ja":"台湾の400mハードル代表。五輪3大会に出場","en":"Taiwanese 400 m hurdler, three-time Olympian"},"ctx":{"zh":"2020 年接受《台北畫刊》專訪，談比賽中被超越時，怎麼穩住自己的節奏。","ja":"2020年、『台北画刊』の取材で、レース中に抜かれても自分のリズムを守ることについて。","en":"Taipei Pictorial interview, 2020, on holding his own rhythm when others pass him."},"src":{"pub":"關鍵評論網（經台北畫刊授權轉載）","date":"2020-12-20","url":"https://www.thenewslens.com/article/144858","pubEn":"The News Lens (from Taipei Pictorial)"}},
+{"id":"ja10","lang":"ja","text":{"zh":"做不到 100 的練習，50 也好，30 也行。","ja":"100の練習ができなければ、50でもいいし、30でもいい。","en":"If you can’t do 100 percent of the training, 50 is fine. So is 30."},"who":{"zh":"川內優輝","ja":"川内優輝","en":"Yuki Kawauchi"},"role":{"zh":"日本馬拉松選手，2018 年波士頓馬拉松冠軍","ja":"マラソン。2018年ボストンマラソン優勝","en":"Marathoner, 2018 Boston Marathon champion"},"ctx":{"zh":"談練習哲學：無法照計畫練時不拘泥，十趟間歇也可能三趟就收（《Number Do》，2019）。","ja":"予定通りに練習できない時は計画にとらわれず、10本のインターバルを3本で終えることもあるという練習哲学（Number Do、2019年）。","en":"On not being bound by the plan: some days he stops 10 intervals at 3 (Number Do, 2019)."},"src":{"pub":"Number Web（文藝春秋）","date":"2019-09-26","url":"https://number.bunshun.jp/articles/-/869480","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en24","lang":"en","text":{"zh":"別期待一切都完美，因為美就在不完美裡。","ja":"すべてが完璧にいくとは思わないで。美しさは不完全さの中にあるから。","en":"Don’t expect things to go perfectly because the beauty is in the imperfections."},"who":{"zh":"克莉絲・威靈頓","ja":"クリッシー・ウェリントン","en":"Chrissie Wellington"},"role":{"zh":"英國鐵人三項選手，四屆 Ironman 世界冠軍","ja":"英国のトライアスリート。アイアンマン世界選手権4度優勝","en":"British triathlete, four-time Ironman world champion"},"ctx":{"zh":"給第一次參賽者的建議（英國《Women’s Running》，2022）。","ja":"初めてレースに出る人へのアドバイス（英『Women’s Running』、2022年）。","en":"Her advice for someone running their first race (Women’s Running UK, 2022)."},"src":{"pub":"Women’s Running UK","date":"2022-06-07","url":"https://www.womensrunning.co.uk/motivation/chrissie-wellington-interview/"}},
+{"id":"en06","lang":"en","text":{"zh":"很多人跑比賽，是為了看誰最快。我跑，是為了看誰最敢拚……","ja":"多くの人は、誰が一番速いかを見るために走る。僕は、誰が一番根性があるかを見るために走る……","en":"A lot of people run a race to see who is the fastest. I run to see who has the most guts…"},"who":{"zh":"史蒂夫・普利方坦","ja":"スティーブ・プリフォンテーン","en":"Steve Prefontaine"},"role":{"zh":"美國長跑選手，1972 年慕尼黑奧運 5000 公尺第四名","ja":"米国の長距離選手。1972年ミュンヘン五輪5000m4位","en":"US distance runner, 4th in the 5000 m at the 1972 Olympics"},"ctx":{"zh":"備戰 1972 年慕尼黑奧運時說的話，記載於 1975 年《密西根日報》的專欄。","ja":"1972年ミュンヘン五輪に向けた準備中の言葉。1975年の米『ミシガン・デイリー』のコラムに記録が残る。","en":"Said while preparing for the 1972 Munich Olympics, as quoted in a 1975 Michigan Daily column."},"src":{"pub":"The Michigan Daily (Bentley Historical Library archive)","date":"1975-06-12","url":"https://digital.bentley.umich.edu/midaily/mdp.39015071754639/323"}},
+{"id":"ja07","lang":"ja","text":{"zh":"馬拉松就像活的東西。每次跑都輕飄飄的，讓人捉摸不定。","ja":"マラソンは生き物みたいです。走るたびにふわふわして、つかみどころがないのですよ。","en":"The marathon is like a living thing. Every time I run it, it feels vague and floaty, impossible to pin down."},"who":{"zh":"君原健二","ja":"君原健二","en":"Kenji Kimihara"},"role":{"zh":"日本馬拉松選手，1968 年墨西哥奧運銀牌","ja":"マラソン。1968年メキシコ五輪銀メダル","en":"Marathoner, 1968 Olympic silver medalist"},"ctx":{"zh":"跑了 50 多場全馬從未棄賽的他，談對馬拉松的感受（《Number》13 號，1980）。","ja":"50回以上のフルマラソンで一度も棄権しなかった君原が、マラソンについて（Number 13号、1980年）。","en":"From a runner who finished every one of his 50-plus marathons (Number, 1980)."},"src":{"pub":"Number Web（文藝春秋）","date":"1980-10-03","url":"https://number.bunshun.jp/articles/-/7977","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"zh08","lang":"zh","text":{"zh":"放棄只是一句話，但堅持做一件事需要的卻是一輩子。","ja":"あきらめるのは一言で済む。でも、ひとつのことをやり抜くには一生かかる。","en":"Giving up takes just a word, but sticking with something takes a lifetime."},"who":{"zh":"李筱瑜","ja":"李筱瑜","en":"Li Shiao-yu"},"role":{"zh":"台灣第一位女子職業鐵人三項選手","ja":"台湾初の女子プロトライアスリート","en":"Taiwan’s first female professional triathlete"},"ctx":{"zh":"2014 年接受關鍵評論網論壇專訪，談挑戰與堅持。","ja":"2014年、台湾のニュースサイト「關鍵評論網」の取材で、挑戦とやり抜くことについて。","en":"The News Lens interview, 2014, on challenges and perseverance."},"src":{"pub":"關鍵評論網 The News Lens","date":"2014-06-19","url":"https://www.thenewslens.com/article/4720","pubEn":"The News Lens"}},
+{"id":"en11","lang":"en","text":{"zh":"我現在一定要跑完，因為如果我退賽，就沒有人會相信女人是認真的。","ja":"このレースは何としても完走しなきゃ。ここでやめたら、女性が本気だなんて誰も信じてくれない。","en":"I have to finish this race now because if I drop out of this race, nobody’s going to believe that women are serious."},"who":{"zh":"凱瑟琳・斯威策","ja":"キャスリン・スウィッツァー","en":"Kathrine Switzer"},"role":{"zh":"1967 年第一位掛號碼布跑波士頓馬拉松的女性","ja":"1967年、ゼッケンを付けてボストンマラソンを走った初の女性","en":"First woman to run the Boston Marathon as a numbered entrant (1967)"},"ctx":{"zh":"2017 年接受 NPR 訪問，回憶 1967 年波士頓馬拉松大會人員想把她拉出賽道後，她對教練說的話。","ja":"2017年、米NPRのインタビューで。1967年のボストンで大会役員にコースから引きずり出されそうになった後、コーチに言った言葉を振り返って。","en":"Recalling on NPR in 2017 what she told her coach after an official tried to pull her out of the 1967 Boston Marathon."},"src":{"pub":"NPR","date":"2017-04-17","url":"https://www.npr.org/sections/thetwo-way/2017/04/17/524381271/first-woman-to-wear-a-boston-bib-races-again-50-years-later"}},
+{"id":"ja06","lang":"ja","text":{"zh":"半路上摔了一跤呢。","ja":"途中でこけちゃいました","en":"I took a tumble along the way."},"who":{"zh":"谷口浩美","ja":"谷口浩美","en":"Hiromi Taniguchi"},"role":{"zh":"日本馬拉松選手，1991 年世界田徑錦標賽金牌","ja":"マラソン。1991年世界陸上東京大会金メダル","en":"Marathoner, 1991 world champion"},"ctx":{"zh":"1992 年巴塞隆納奧運，他被後方選手踩到鞋子而跌倒，撿回脫落的鞋子後仍跑進第八名；賽後笑著這樣說。","ja":"1992年バルセロナ五輪。後ろの選手に靴を踏まれて転倒し、脱げた靴を拾って8位入賞。ゴール後に笑顔で。","en":"Barcelona 1992: his shoe was stepped on and he fell, went back for the shoe and still finished 8th. He said this with a smile."},"src":{"pub":"Web Sportiva（集英社）","date":"2025-04-16","url":"https://sportiva.shueisha.co.jp/clm/othersports/rikujo/2025/04/16/1992/?page=4","pubEn":"Web Sportiva (Shueisha)"}},
+{"id":"en09","lang":"en","text":{"zh":"但願我還沒接近自己潛能的上限，但願還有很多等著我去發掘。","ja":"自分の可能性の限界には、まだ近づいていないといいな。まだまだ発見があるといい。","en":"I hope I’m not getting close to my potential. I hope there’s plenty more to discover."},"who":{"zh":"寇特妮・道沃特","ja":"コートニー・ドウォルター","en":"Courtney Dauwalter"},"role":{"zh":"美國超馬跑者，UTMB 冠軍","ja":"米国のウルトラランナー。UTMB優勝","en":"US ultrarunner, UTMB champion"},"ctx":{"zh":"2020 年接受香港《南華早報》訪問。","ja":"2020年、香港紙『サウスチャイナ・モーニング・ポスト』の取材で。","en":"South China Morning Post interview, 2020."},"src":{"pub":"South China Morning Post","date":"2020","url":"https://www.scmp.com/sport/outdoor/trail-running/article/3078790/courtney-dauwalter-utmb-winner-says-she-has-not-reached"}},
+{"id":"ja19","lang":"ja","text":{"zh":"把距離想得短一點就好。","ja":"距離はちょっと短めに考えるといい。","en":"It helps to think of the distance as a little shorter."},"who":{"zh":"間寬平","ja":"間寛平","en":"Kanpei Hazama"},"role":{"zh":"日本藝人，以跑步和帆船環繞地球一周","ja":"タレント。マラソンとヨットで地球を一周する「アースマラソン」を完走","en":"Entertainer who circled the globe running and sailing"},"ctx":{"zh":"「地球馬拉松」接近尾聲時談長跑心法：讓腦袋把跑過的距離算短一點，到終點時就會覺得「咦，這麼快！」","ja":"アースマラソン終盤、長い距離を走る時の考え方について。頭をだまして距離を短めに数えれば、ゴールで「あれ、早っ！」と思える（Number Do、2011年）。","en":"Near the end of his round-the-world run: trick your head into counting the distance short, and at the finish you’ll think, “Huh, that was quick!”"},"src":{"pub":"Number Web（Number Do）","date":"2011-04-21","url":"https://number.bunshun.jp/articles/-/115364","pubEn":"Number Web (Number Do)"}},
+{"id":"zh04","lang":"zh","text":{"zh":"這是我的選擇，所以就是享受它","ja":"これは自分で選んだこと。だから、楽しむだけ。","en":"This is my choice, so I just enjoy it."},"who":{"zh":"羅維銘","ja":"羅維銘","en":"Lo Wei-ming"},"role":{"zh":"台灣超馬跑者，2021 年紐約 3100 英里賽亞軍","ja":"台湾のウルトラランナー。2021年3100マイルレース2位","en":"Taiwanese ultrarunner, 2021 3,100-mile race runner-up"},"ctx":{"zh":"2021 年跑完紐約「超越自我 3100 英里賽」（約 5000 公里）後受訪，談熬過極端痛苦時對自己說的話（中央社）。","ja":"2021年、ニューヨークの「セルフ・トランセンデンス3100マイルレース」（約5000km）を走り終えて。極限の痛みを越えた時、自分に言い聞かせた言葉（中央社）。","en":"After finishing the Self-Transcendence 3100 Mile Race (about 5,000 km) in New York, 2021: what he told himself to get through extreme pain (CNA)."},"src":{"pub":"數位時代（轉載中央社）","date":"2021-10-24","url":"https://www.bnext.com.tw/article/65767/ultramarathon-taiwan-player","pubEn":"Business Next (via CNA)"}},
+{"id":"en20","lang":"en","text":{"zh":"我退出的是競技，不是跑步。跑步是停不下來的，這就是我的人生。","ja":"引退するのは競技からで、走ることからではない。走るのはやめられない。これが僕の人生だから。","en":"I’m retiring from competitive running, not from running. You cannot stop running, this is my life."},"who":{"zh":"海爾・格布雷西拉西耶","ja":"ハイレ・ゲブレセラシェ","en":"Haile Gebrselassie"},"role":{"zh":"衣索比亞長跑選手，奧運 10000 公尺兩屆金牌","ja":"エチオピアの長距離選手。五輪10000m2連覇","en":"Ethiopian distance runner, two-time Olympic 10,000 m champion"},"ctx":{"zh":"2015 年在英國曼徹斯特跑完生涯最後一場比賽後，對記者說的話。","ja":"2015年、英マンチェスターで現役最後のレースを終えて記者に。","en":"To reporters after his final competitive race, in Manchester, 2015."},"src":{"pub":"World Athletics","date":"2015-05-10","url":"https://worldathletics.org/news/feature/haile-gebrselassie-retires"}},
+{"id":"ja20","lang":"ja","text":{"zh":"離金牌，只差 39 秒。","ja":"金メダルまで、39秒なんです。","en":"I’m 39 seconds from a gold medal."},"who":{"zh":"上田藍","ja":"上田藍","en":"Ai Ueda"},"role":{"zh":"日本鐵人三項選手，2008 年北京奧運代表","ja":"トライアスロン。2008年北京五輪代表","en":"Triathlete, 2008 Olympian"},"ctx":{"zh":"2011 年 8 月在與倫敦奧運同一條賽道舉行的 ITU 世界錦標賽系列賽倫敦站，她以落後冠軍 39 秒拿下第 11 名，談怎麼追上這段差距（《Number》796 號）。","ja":"ロンドン五輪と同じコースで行われた2011年8月のITU世界選手権シリーズ・ロンドン大会で、1位と39秒差の11位。その差をどう詰めるかを語って（Number 796号）。","en":"At the August 2011 ITU World Championship Series race in London, on the Olympic course, she was 11th, 39 seconds behind the winner, and was working out how to close the gap (Number, 2012)."},"src":{"pub":"Number Web（文藝春秋）","date":"2012-01-26","url":"https://number.bunshun.jp/articles/-/213867","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en14","lang":"en","text":{"zh":"每一次受傷都有它好的一面，只是在受傷當下，你未必看得出那是什麼。","ja":"どんなケガにも良い面がある。ただ、ケガをした時には、それが何なのかわからないこともある。","en":"There’s a silver lining in every injury, and sometimes you don’t understand what the silver lining is at the time of injury."},"who":{"zh":"瓊・貝諾伊特・薩繆森","ja":"ジョーン・ベノイト・サミュエルソン","en":"Joan Benoit Samuelson"},"role":{"zh":"美國馬拉松選手，首屆奧運女子馬拉松金牌（1984）","ja":"米国のマラソン選手。1984年、初の五輪女子マラソンで金メダル","en":"US marathoner, winner of the first women’s Olympic marathon (1984)"},"ctx":{"zh":"談傷後復出；她在 1984 年奧運選拔賽前 17 天才動過膝蓋手術（《Outside》，2014）。","ja":"ケガからの復帰について。1984年の五輪選考会の17日前に膝を手術していた（『Outside』、2014年）。","en":"On coming back from injury; she had knee surgery 17 days before the 1984 Olympic Trials (Outside, 2014)."},"src":{"pub":"Outside","date":"2014-07-30","url":"https://www.outsideonline.com/health/running/9-questions-joan-benoit-samuelson"}},
+{"id":"zh10","lang":"zh","text":{"zh":"我跑步，不只是為了自己，而是希望讓更多人找到重新出發的勇氣。","ja":"私が走るのは自分のためだけじゃない。もっと多くの人に、もう一度踏み出す勇気を見つけてほしい。","en":"I don’t run just for myself. I hope to help more people find the courage to start over."},"who":{"zh":"林冠汝","ja":"林冠汝","en":"Lin Kuan-ju"},"role":{"zh":"台灣超馬跑者，2022 年 24 小時賽亞洲暨大洋洲女子冠軍","ja":"台湾のウルトラランナー。2022年24時間走アジア・オセアニア女子王者","en":"Taiwanese ultrarunner, 2022 Asia & Oceania 24-hour champion"},"ctx":{"zh":"2025 年《財訊》人物報導的結尾，談運動改變了她，她想把這份正向力量傳給學生與更多人。","ja":"2025年、台湾誌『財訊』の人物記事の結びで、運動に変えてもらった経験を教え子やもっと多くの人に伝えたいと語って。","en":"Closing a 2025 Wealth Magazine profile, on wanting to pass on what running has given her to her students and others."},"src":{"pub":"工商時報（財訊雙週刊報導）","date":"2025-12-14","url":"https://www.ctee.com.tw/news/20251214700339-431401","pubEn":"Commercial Times (Wealth Magazine)"}},
+{"id":"ja04","lang":"ja","text":{"zh":"就是想改變這個軟弱的自己，這四年我才一直跑下去。","ja":"この弱い自分を何とかしたいと思ってこの4年走り続けてきたんです。","en":"I’ve kept running these four years because I wanted to do something about this weak self of mine."},"who":{"zh":"高橋尚子","ja":"高橋尚子","en":"Naoko Takahashi"},"role":{"zh":"日本馬拉松選手，2000 年雪梨奧運金牌","ja":"マラソン。2000年シドニー五輪金メダル","en":"Marathoner, 2000 Olympic champion"},"ctx":{"zh":"回顧四年前還沒跑過馬拉松、被說「練習強、比賽弱」的自己（《Number》505 號）。","ja":"4年前はマラソン未経験で、「練習で強いけれども勝負のかかったレースでは弱虫」と言われていた自分を振り返って（Number 505号）。","en":"Looking back four years, to when she had never run a marathon and was called strong in training but weak in big races (Number, 2000)."},"src":{"pub":"Number Web（文藝春秋）","date":"2000-09-07","url":"https://number.bunshun.jp/articles/-/772480","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en16","lang":"en","text":{"zh":"成為很棒的跑者固然好，但成為好人更重要。","ja":"すごいランナーになるのは素晴らしい。でも、いい人であることのほうが大切。","en":"It’s great to be a great runner, but it’s more important to be a good person."},"who":{"zh":"夏蘭・弗拉納根","ja":"シャレーン・フラナガン","en":"Shalane Flanagan"},"role":{"zh":"美國長跑選手，2017 年紐約馬拉松冠軍","ja":"米国の長距離選手。2017年ニューヨークシティマラソン優勝","en":"US distance runner, 2017 New York City Marathon champion"},"ctx":{"zh":"被問到有這麼多女性崇拜她、想成為她，心裡有什麼感受（CBS，2018）。","ja":"多くの女性が彼女に憧れ、彼女のようになりたいと思っていることをどう感じるかと聞かれて（米CBS、2018年）。","en":"Asked on CBS how it feels that so many women admire her and want to be like her (2018)."},"src":{"pub":"CBS News","date":"2018-08-29","url":"https://www.cbsnews.com/news/shalane-flanagan-new-york-city-marathon-new-cookbook-run-fast-cook-fast-eat-slow"}},
+{"id":"en02","lang":"en","text":{"zh":"人生中，只有自律的人才是自由的。","ja":"人生で自由なのは、自分を律する人だけだ。","en":"Only the disciplined ones are free in life."},"who":{"zh":"埃利烏德・基普喬蓋","ja":"エリウド・キプチョゲ","en":"Eliud Kipchoge"},"role":{"zh":"肯亞馬拉松選手，兩屆奧運金牌","ja":"ケニアのマラソン選手。五輪2大会連続金メダル","en":"Kenyan marathoner, two-time Olympic champion"},"ctx":{"zh":"2017 年 11 月在牛津大學辯論社（Oxford Union）的演講與問答中所說。","ja":"2017年11月、英オックスフォード・ユニオンでの講演と質疑応答から。","en":"From his address and Q&A at the Oxford Union, November 2017."},"src":{"pub":"Outside","date":"2018-02-10","url":"https://www.outsideonline.com/health/running/wisdom-worlds-best-marathoner"}},
+{"id":"ja13","lang":"ja","text":{"zh":"這一季，輪到你們當英雄了。","ja":"今季はお前たちがヒーローになる番だ。","en":"This season, it’s your turn to be the heroes."},"who":{"zh":"原晉","ja":"原晋","en":"Susumu Hara"},"role":{"zh":"青山學院大學田徑隊教練，帶隊多次奪得箱根驛傳冠軍","ja":"青山学院大学陸上競技部監督。箱根駅伝で何度も優勝","en":"Aoyama Gakuin University coach, multiple Hakone Ekiden titles"},"ctx":{"zh":"2016 年箱根驛傳連霸那一季，對學生說的話；他希望不是教練出鋒頭，而是學生當主角拿下冠軍。","ja":"2016年の箱根駅伝で連覇したシーズンに学生たちへ。「監督が目立つのではなく、学生が主役になって優勝を勝ち取って欲しい」と続けた。","en":"To his runners in the season Aoyama Gakuin won its second straight Hakone Ekiden (2016). He wanted the students, not the coach, to be the stars."},"src":{"pub":"Number Web（文藝春秋）","date":"2016-01-07","url":"https://number.bunshun.jp/articles/-/826810","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"zh05","lang":"zh","text":{"zh":"台灣高山是我的訓練場，是訓練我心志、勇氣、技巧、以及謙卑的地方。","ja":"台湾の高い山々は私の練習場。心と勇気と技術、そして謙虚さを鍛えてくれる場所です。","en":"Taiwan’s high mountains are my training ground, where I train my resolve, courage, skill and humility."},"who":{"zh":"古明政","ja":"古明政","en":"Ku Ming-cheng"},"role":{"zh":"台灣越野跑者，2022 年創中央山脈全縱走最速紀錄","ja":"台湾のトレイルランナー。2022年に中央山脈全縦走の最速記録","en":"Taiwanese trail runner; fastest Central Range traverse (2022)"},"ctx":{"zh":"2025 年 4 月，61 歲的他出發挑戰 30 天速攀台灣百岳時說。","ja":"2025年4月、61歳で台湾百名山を30日で登る挑戦に出発する際に。","en":"Setting out at 61, in April 2025, to climb Taiwan’s 100 Peaks in 30 days."},"src":{"pub":"關鍵評論網 The News Lens","date":"2025-04-14","url":"https://www.thenewslens.com/article/251510","pubEn":"The News Lens"}},
+{"id":"en22","lang":"en","text":{"zh":"跑步的一大樂趣，就是邊跑邊讓思緒自由奔馳。","ja":"走りながら、心を自由に遊ばせる。それがランニングの大きな楽しみのひとつだ。","en":"One of the great pleasures of running is to allow your mind to freewheel while you run."},"who":{"zh":"哈爾・希格登","ja":"ハル・ヒグドン","en":"Hal Higdon"},"role":{"zh":"美國跑步作家、教練，以馬拉松課表聞名","ja":"米国のランニング作家・コーチ。マラソン練習計画で知られる","en":"US running writer and coach, known for his marathon training plans"},"ctx":{"zh":"被問到「跑步時通常都在想什麼」時的回答（WBEZ，2013）。","ja":"「走っているとき、何を考えている？」と聞かれて（WBEZ、2013年）。","en":"Asked what he usually thinks about while running (WBEZ, 2013)."},"src":{"pub":"WBEZ Chicago","date":"2013-02-01","url":"https://www.wbez.org/culture/2013/02/01/the-hal-higdon-interview"}},
+{"id":"ja02","lang":"ja","text":{"zh":"我想，獎牌的價值，是由之後怎麼活來決定的。","ja":"メダルの価値はその後の生き方で決まるんだろうと思います。","en":"I think a medal’s worth is decided by how you live afterward."},"who":{"zh":"有森裕子","ja":"有森裕子","en":"Yuko Arimori"},"role":{"zh":"日本馬拉松選手，奧運銀牌（1992）、銅牌（1996）","ja":"マラソン。バルセロナ五輪銀、アトランタ五輪銅","en":"Marathoner; Olympic silver (1992) and bronze (1996)"},"ctx":{"zh":"談兩屆奧運獎牌，以及之後成為日本第一位職業跑者的歷程（《Number》977 號）。","ja":"2大会連続の五輪メダルと、その後プロランナー第1号となった歩みについて（Number 977号）。","en":"On her two Olympic medals and becoming Japan’s first professional runner (Number, 2019)."},"src":{"pub":"Number Web（文藝春秋）","date":"2019-04-25","url":"https://number.bunshun.jp/articles/-/839520","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en12","lang":"en","text":{"zh":"我覺得馬拉松的心態，是走過人生的絕佳預習。","ja":"マラソンの心構えは、人生を歩んでいくための最高の予行演習だと思う。","en":"I think the mindset of the marathon is a great precursor for going through life."},"who":{"zh":"寶拉・瑞德克里夫","ja":"ポーラ・ラドクリフ","en":"Paula Radcliffe"},"role":{"zh":"英國馬拉松選手，前女子馬拉松世界紀錄保持人","ja":"英国のマラソン選手。元女子マラソン世界記録保持者","en":"British marathoner, former women’s marathon world record holder"},"ctx":{"zh":"2025 年接受英國 PA 通訊社訪問。","ja":"2025年、英PA通信のインタビューで。","en":"PA Media interview, 2025."},"src":{"pub":"The Irish News (PA Media)","date":"2025-07-30","url":"https://www.irishnews.com/life/paula-radcliffe-the-mindset-of-a-marathon-is-a-great-precursor-for-going-through-life-LLJU6PDD2ZNMLC72JLBVODP5G4/"}},
+{"id":"ja09","lang":"ja","text":{"zh":"妳這傢伙……真的很愛跑步呢。","ja":"お前ってヤツは……本当に走るのが好きなんだな。","en":"You… you really do love to run, don’t you."},"who":{"zh":"小出義雄","ja":"小出義雄","en":"Yoshio Koide"},"role":{"zh":"日本田徑教練，帶領高橋尚子奪得奧運金牌","ja":"陸上指導者。高橋尚子をシドニー五輪金メダルに導く","en":"Coach who guided Naoko Takahashi to Olympic gold"},"ctx":{"zh":"雅典奧運前在美國博爾德集訓，高橋尚子說要去「散步」，一個多小時後額頭微微冒汗地回來，他苦笑著說。","ja":"アテネ五輪に向けた米ボルダー合宿で、「ウォーキングに出かける」と言って外出し1時間以上戻らず、額にうっすらと汗を浮かべて帰ってきた高橋尚子に、苦笑しながら。","en":"At a camp in Boulder, Colorado, Naoko Takahashi said she was going for a walk and came back more than an hour later with a light sweat on her forehead. He said this with a wry smile."},"src":{"pub":"Number Web（文藝春秋）","date":"2003-08-07","url":"https://number.bunshun.jp/articles/-/298316","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"zh11","lang":"zh","text":{"zh":"紀錄本來就是留給人去破的。","ja":"記録は、破られるためにあるものです。","en":"Records are there to be broken."},"who":{"zh":"謝千鶴","ja":"謝千鶴","en":"Hsieh Chien-ho"},"role":{"zh":"台灣長跑選手，2016 年里約奧運女子馬拉松國手","ja":"台湾の長距離選手。2016年リオ五輪女子マラソン代表","en":"Taiwanese distance runner, 2016 Olympic marathoner"},"ctx":{"zh":"談到曹純玉 2019 年在東京馬拉松打破高懸多年的女子馬拉松全國紀錄，她說心情有失落、也有歡喜（摘自鄭匡寓《我跑，故我在》）。","ja":"曹純玉が2019年の東京マラソンで、長年破られていなかった女子マラソンの台湾記録を更新したことについて。悔しさもうれしさもあったと語って（鄭匡寓『我跑，故我在』より）。","en":"On Tsao Chun-yu breaking the long-standing national women’s marathon record at the 2019 Tokyo Marathon: a little disappointed it wasn’t her, glad to see it fall (from a book by Cheng Kuang-yu)."},"src":{"pub":"遠見雜誌（摘自鄭匡寓《我跑，故我在》，時報出版）","date":"2020-07-24","url":"https://www.gvm.com.tw/article/73783","pubEn":"Global Views Monthly (book excerpt)"}},
+{"id":"en08","lang":"en","text":{"zh":"我覺得不適和痛苦是超馬的一部分，但那也是人生的一部分。","ja":"不快感や痛みはウルトラマラソンの一部だと思う。でも、それは人生の一部でもある。","en":"I think discomfort and pain are part of ultramarathoning, but it’s also part of life."},"who":{"zh":"史考特・傑瑞克","ja":"スコット・ジュレク","en":"Scott Jurek"},"role":{"zh":"美國超馬跑者，西部 100 英里耐力賽七連霸","ja":"米国のウルトラランナー。ウエスタンステイツ100を7連覇","en":"US ultrarunner, seven-time Western States 100 champion"},"ctx":{"zh":"2012 年談回憶錄《Eat and Run》時，接受明尼蘇達公共廣播（MPR）訪問。","ja":"2012年、回想録『EAT & RUN』について米ミネソタ公共ラジオ（MPR）の取材で。","en":"MPR News interview about his memoir Eat and Run, 2012."},"src":{"pub":"MPR News","date":"2012-06-19","url":"https://www.mprnews.org/story/2012/06/19/memoir-chronicles-vegan-extreme-runners-journey-and-evolution"}},
+{"id":"ja08","lang":"ja","text":{"zh":"勝負師的眼神一旦變得溫柔，就結束了。","ja":"勝負師の目が、優しくなったら、もう終わりなんです。","en":"Once a competitor’s eyes turn gentle, it’s over."},"who":{"zh":"瀨古利彥","ja":"瀬古利彦","en":"Toshihiko Seko"},"role":{"zh":"日本馬拉松選手，波士頓馬拉松兩屆冠軍","ja":"マラソン。ボストンマラソン2勝","en":"Marathoner, two-time Boston Marathon champion"},"ctx":{"zh":"1988 年 12 月跑完千葉國際驛傳最後一棒、無憾引退後，談引退的時機（《Number》211 號）。","ja":"1988年12月、国際千葉駅伝のアンカーを最後に悔いなく現役を退いたことについて（Number 211号）。","en":"On retiring with no regrets after anchoring the Chiba International Ekiden in December 1988 (Number, 1989)."},"src":{"pub":"Number Web（文藝春秋）","date":"1989-01-06","url":"https://number.bunshun.jp/articles/-/8053","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en23","lang":"en","text":{"zh":"我在跑步裡找到了一種自由。","ja":"走ることの中に、ある種の自由を見つけたの。","en":"I found in running a kind of freedom."},"who":{"zh":"芭比・吉布","ja":"ボビー・ギブ","en":"Bobbi Gibb"},"role":{"zh":"1966 年第一位跑完波士頓馬拉松全程的女性","ja":"1966年、ボストンマラソンを初めて完走した女性","en":"First woman to run the full Boston Marathon (1966)"},"ctx":{"zh":"1966 年首跑波士頓 50 週年前夕，接受《Here & Now》訪問。","ja":"1966年のボストン完走から50年を前に、「Here & Now」のインタビューで。","en":"Here & Now interview ahead of the 50th anniversary of her 1966 run."},"src":{"pub":"WBUR Here & Now","date":"2016-04-15","url":"https://www.wbur.org/hereandnow/2016/04/15/bobbi-gibb-boston-marathon"}},
+{"id":"zh02","lang":"zh","text":{"zh":"就像今天吃過飯，明天就不吃了嗎？跑步對我來說和吃飯一樣。","ja":"今日ご飯を食べたら、明日は食べないのか？僕にとって走ることは、食事と同じです。","en":"You ate today, so you won’t eat tomorrow? For me, running is just like eating."},"who":{"zh":"陳彥博","ja":"陳彦博","en":"Tommy Chen"},"role":{"zh":"台灣極地超馬選手，2016 年四大極地超馬大滿貫總冠軍","ja":"台湾の極地ウルトラランナー。2016年4デザーツ総合優勝","en":"Taiwanese ultrarunner, 2016 4 Deserts Grand Slam champion"},"ctx":{"zh":"2020 年接受《換日線》專訪，談隨年紀增長，心態從「征服賽事」轉為把訓練當成日常。","ja":"2020年、『換日線』の取材で。年齢とともに「レースを征服する」から「練習を日常にする」へ考えが変わったことについて。","en":"Crossing interview, 2020: with age, his mindset moved from conquering races to making training part of daily life."},"src":{"pub":"換日線 Crossing（天下雜誌）","date":"2020-09-04","url":"https://crossing.cw.com.tw/article/13888","pubEn":"Crossing (CommonWealth Magazine)"}},
+{"id":"ja17","lang":"ja","text":{"zh":"沒跑出成績，不是任何人的責任，是自己的責任。","ja":"結果が出なかったらそれは誰の責任でもなく、自分の責任。","en":"If the results don’t come, it’s nobody’s responsibility but mine."},"who":{"zh":"新谷仁美","ja":"新谷仁美","en":"Hitomi Niiya"},"role":{"zh":"日本長跑選手，2020 年創女子半程馬拉松日本紀錄","ja":"長距離。2020年にハーフマラソン日本記録","en":"Distance runner; set a Japanese half-marathon record in 2020"},"ctx":{"zh":"把跑步當工作的她，談就算換了跑鞋，也不拿來當藉口（Number Web，2021）。","ja":"「走ることは仕事」と語る新谷が、シューズが変わっても言い訳にしないという考えを語って（Number Web、2021年）。","en":"She treats running as her job, and won’t blame a change of shoes for a bad result (Number Web, 2021)."},"src":{"pub":"Number Web（文藝春秋）","date":"2021-12-25","url":"https://number.bunshun.jp/articles/-/851147","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en04","lang":"en","text":{"zh":"運動員是自己成就的，不是教練造就的。","ja":"アスリートは自分で自分をつくる。コーチがつくるのではない。","en":"The athlete makes himself, the coach doesn’t make the athlete."},"who":{"zh":"比爾・鮑爾曼","ja":"ビル・バウワーマン","en":"Bill Bowerman"},"role":{"zh":"美國田徑教練，Nike 共同創辦人","ja":"米国の陸上コーチ。ナイキ共同創業者","en":"US track coach and Nike co-founder"},"ctx":{"zh":"他不肯把奧勒岡大學成為田徑強權歸功於自己時，常這麼說（美聯社，1999）。","ja":"オレゴン大学を陸上の強豪に育てた功績を誇らず、よくこう言っていた（AP通信、1999年）。","en":"What he would say when refusing credit for building Oregon into a track power (AP, 1999)."},"src":{"pub":"The Seattle Times (Associated Press)","date":"1999-12-26","url":"https://archive.seattletimes.com/archive/19991226/A19991227010356/track-and-field-legendary-coach-bill-bowerman-dies-at-age-88-he-trained-champions-invented-waffle-sole"}},
+{"id":"en18","lang":"en","text":{"zh":"很多人以為想進步就得一直全力衝，其實不然。","ja":"強くなるには常に全力で走らなければ、と多くの人が思っている。でも、それは違う。","en":"Many people think to improve they have to be going as hard as they can, which is not true."},"who":{"zh":"法蘭克・修特","ja":"フランク・ショーター","en":"Frank Shorter"},"role":{"zh":"美國馬拉松選手，1972 年奧運金牌","ja":"米国のマラソン選手。1972年ミュンヘン五輪金メダル","en":"US marathoner, 1972 Olympic champion"},"ctx":{"zh":"談訓練觀念。他接著說，八到九成的跑量都是任何人都跑得來的輕鬆配速（《基督教科學箴言報》，1991）。","ja":"練習について。「走る量の8〜9割は、誰でも走れる楽なペースだ」と続けた（『クリスチャン・サイエンス・モニター』、1991年）。","en":"On training. He added that 80 to 90 percent of your running is at a pace anybody could do (Christian Science Monitor, 1991)."},"src":{"pub":"The Christian Science Monitor","date":"1991-12-06","url":"https://www.csmonitor.com/1991/1206/06142.html"}},
+{"id":"ja14","lang":"ja","text":{"zh":"不拿個第一名，我可沒辦法告別馬拉松（笑）。","ja":"1等賞とらないと、マラソンやめられないですから（笑）。","en":"I can’t quit the marathon until I win one (laughs)."},"who":{"zh":"福士加代子","ja":"福士加代子","en":"Kayoko Fukushi"},"role":{"zh":"日本長跑選手，2013 年大阪國際女子馬拉松冠軍","ja":"長距離。2013年大阪国際女子マラソン優勝","en":"Distance runner, 2013 Osaka International Women’s Marathon winner"},"ctx":{"zh":"2008 年剛轉戰馬拉松時她說「不在意輸贏」，後來改口：現在是為了拿第一而跑。之後她在 2013 年大阪國際女子馬拉松首度奪冠。","ja":"2008年のマラソン転向当初は「勝ち負けは意識しない」と語っていたが、今は1等賞のために走ると語って。この発言の後、2013年の大阪国際女子でマラソン初優勝。","en":"When she took up the marathon in 2008 she said winning didn’t matter; later she said she was running to win. She then won her first marathon, Osaka 2013."},"src":{"pub":"Number Web（文藝春秋）","date":"2013-02-21","url":"https://number.bunshun.jp/articles/-/831675","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"zh07","lang":"zh","text":{"zh":"你一直固執地堅持做一件事情的話，就會成功。","ja":"ひとつのことを頑固にやり続ければ、成功する。","en":"If you stubbornly keep at one thing, you will succeed."},"who":{"zh":"蘇炳添","ja":"蘇炳添","en":"Su Bingtian"},"role":{"zh":"中國短跑選手，男子 100 公尺亞洲紀錄保持人","ja":"中国の短距離選手。男子100mアジア記録保持者","en":"Chinese sprinter, men’s 100 m Asian record holder"},"ctx":{"zh":"2025 年 12 月宣布退役時接受新華社專訪，說自己能堅持這麼久，靠的就是「固執」兩個字。","ja":"2025年12月、引退を表明した際の新華社の取材で。ここまで続けられたのは「頑固さ」のおかげだと語った。","en":"Xinhua interview on his retirement, December 2025: he said stubbornness was what kept him going."},"src":{"pub":"新華網","date":"2025-12-09","url":"https://www.news.cn/20251209/13df185cc54841e5bec1de7e3de0957d/c.html","pubEn":"Xinhua"},"orig":"你一直固执地坚持做一件事情的话，就会成功。"},
+{"id":"en21","lang":"en","text":{"zh":"我把『不要放棄』換成了『跟住』。","ja":"『あきらめるな』をやめて、『食らいつけ』に変えたんです。","en":"Instead of ‘don’t give up,’ I changed it to ‘maintain contact.’"},"who":{"zh":"蒂娜・卡斯特","ja":"ディーナ・カスター","en":"Deena Kastor"},"role":{"zh":"美國馬拉松選手，2004 年奧運銅牌","ja":"米国のマラソン選手。2004年アテネ五輪銅メダル","en":"US marathoner, 2004 Olympic bronze medalist"},"ctx":{"zh":"她發現自己的口令用了「不要」「放棄」這類負面字眼，便換成真正想要身體做到的事（WBUR，2018）。","ja":"自分への掛け声に「don’t」「give up」という否定的な言葉を使っていると気づき、体に本当に求めていることに言い換えた（WBUR、2018年）。","en":"She noticed her mantra used negative words, so she switched to what she actually wanted from her body (WBUR, 2018)."},"src":{"pub":"WBUR / NPR Here & Now","date":"2018-04-13","url":"https://www.wbur.org/hereandnow/2018/04/13/deena-kastor-marathon-running"}},
+{"id":"ja18","lang":"ja","text":{"zh":"身體看起來還很能動，現在挑戰 100 英里賽一點也不晚。","ja":"まだまだ身体は動きそうですから、100マイルレースへ挑戦するのはちっとも遅くないです。","en":"Your body still looks like it has plenty of go, so it’s not at all too late to take on a 100-mile race."},"who":{"zh":"鏑木毅","ja":"鏑木毅","en":"Tsuyoshi Kaburaki"},"role":{"zh":"日本越野跑者，40 歲轉職業那年拿下 UTMB 第三","ja":"トレイルランナー。プロ転向した40歳の年にUTMB3位","en":"Trail runner; 3rd at UTMB the year he turned pro at 40"},"ctx":{"zh":"和年過五十、說 100 英里賽是「未竟之事」的宮坂學對談時，他這樣回應（Number Web，2018）。","ja":"50代を迎え、100マイルレースへの挑戦を「やり残したこと」と語った宮坂学氏に、対談で返した言葉（Number Web、2018年）。","en":"His reply, in a conversation, to Manabu Miyasaka, then in his 50s, who called a 100-miler unfinished business (Number Web, 2018)."},"src":{"pub":"Number Web（文藝春秋）","date":"2018-11-25","url":"https://number.bunshun.jp/articles/-/832537","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en13","lang":"en","text":{"zh":"只要夠渴望，一切都有可能……","ja":"ハングリーでいれば、何だってできる……","en":"If you are hungry anything is possible…"},"who":{"zh":"莫・法拉","ja":"モー・ファラー","en":"Mo Farah"},"role":{"zh":"英國長跑選手，奧運四面金牌","ja":"英国の長距離選手。五輪金メダル4個","en":"British distance runner, four-time Olympic champion"},"ctx":{"zh":"2018 年在杜拜健身挑戰的路跑活動上說；他接著說，自己曾夢想拿一次奧運冠軍，後來拿了四次。","ja":"2018年、ドバイ・フィットネス・チャレンジの市民ランで。「五輪王者を夢見て、結局4度の五輪王者になった」と続けた。","en":"At a Dubai Fitness Challenge run in 2018. He went on: he once dreamed of one Olympic title and went on to win four."},"src":{"pub":"Gulf News","date":"2018-11-04","url":"https://gulfnews.com/sport/athletics/believe-in-yourself-says-mo-farah-1.2297713"}},
+{"id":"ja11","lang":"ja","text":{"zh":"削出那一秒。","ja":"その1秒をけずりだせ","en":"Carve out that one second."},"who":{"zh":"酒井俊幸","ja":"酒井俊幸","en":"Toshiyuki Sakai"},"role":{"zh":"東洋大學田徑隊長距離教練","ja":"東洋大学陸上競技部長距離部門監督","en":"Head distance coach at Toyo University"},"ctx":{"zh":"2011 年箱根驛傳，東洋大學以 21 秒之差輸給早稻田大學、錯失三連霸後，他提出的隊伍口號。","ja":"2011年の箱根駅伝で早稲田大学に21秒差で敗れ、3連覇を逃した悔しさから掲げたチームスローガン。","en":"The team slogan he adopted after Toyo lost the 2011 Hakone Ekiden to Waseda by 21 seconds."},"src":{"pub":"マイナビニュース（TECH+）","date":"2018-12-06","url":"https://news.mynavi.jp/techplus/kikaku/20181206-728200/","pubEn":"Mynavi News (TECH+)"}},
+{"id":"zh09","lang":"zh","text":{"zh":"苦難讓我變得更堅強了！","ja":"苦しみが、私をもっと強くしてくれた！","en":"Hardship has made me stronger!"},"who":{"zh":"李筱瑜","ja":"李筱瑜","en":"Li Shiao-yu"},"role":{"zh":"台灣第一位女子職業鐵人三項選手","ja":"台湾初の女子プロトライアスリート","en":"Taiwan’s first female professional triathlete"},"ctx":{"zh":"2015 年剛贏得日本知多半島 Ironman 70.3，被問到這麼艱困的比賽難道不會身心俱疲時，她只回了這句。","ja":"2015年、知多半島のアイアンマン70.3で優勝した直後、過酷なレースに心身ともに疲れないかと聞かれて、ひと言だけ。","en":"Just after winning Ironman 70.3 Chita Peninsula in Japan in 2015, asked whether such hard races wore her down. This was her only answer."},"src":{"pub":"經理人 Manager Today","date":"2015-06-15","url":"https://www.managertoday.com.tw/articles/view/60701","pubEn":"Manager Today"}},
+{"id":"en15","lang":"en","text":{"zh":"我總是說，馬拉松選手也好、跑者也好，都是自己鍛鍊出來的。","ja":"いつも言うんです。マラソンランナーもランナーも、自分でつくるものだって。","en":"I always say you make yourself a marathoner or a runner."},"who":{"zh":"夏蘭・弗拉納根","ja":"シャレーン・フラナガン","en":"Shalane Flanagan"},"role":{"zh":"美國長跑選手，2017 年紐約馬拉松冠軍","ja":"米国の長距離選手。2017年ニューヨークシティマラソン優勝","en":"US distance runner, 2017 New York City Marathon champion"},"ctx":{"zh":"被問到頂尖跑者是不是天生的（CBS，2018）。","ja":"一流ランナーは生まれつきかと聞かれて（米CBS、2018年）。","en":"Asked on CBS whether elite runners are born, 2018."},"src":{"pub":"CBS News","date":"2018-08-29","url":"https://www.cbsnews.com/news/shalane-flanagan-new-york-city-marathon-new-cookbook-run-fast-cook-fast-eat-slow"}},
+{"id":"ja15","lang":"ja","text":{"zh":"這份不甘心，我不想用哭來宣洩，想用跑步來洗刷。","ja":"この悔しさを泣くのではなく、走って晴らしたいので。","en":"I don’t want to cry this frustration away. I want to run it off."},"who":{"zh":"柏原龍二","ja":"柏原竜二","en":"Ryuji Kashiwabara"},"role":{"zh":"日本長跑選手，箱根驛傳的「山神」","ja":"長距離。箱根駅伝の「山の神」","en":"Distance runner, Hakone Ekiden’s “God of the Mountain”"},"ctx":{"zh":"2011 年箱根驛傳，東洋大學去程奪冠、回程被早稻田逆轉而錯失三連霸。隊友不甘心地哭了，他沒有落淚。","ja":"2011年の箱根駅伝。東洋大学は往路を制したが復路で逆転され、3連覇を逃した。仲間が悔し泣きする中、ひとり涙を見せずに。","en":"Hakone Ekiden 2011: Toyo won day one but was overtaken on day two, missing a third straight title. As teammates wept, he held back his tears."},"src":{"pub":"Number Web（文藝春秋）","date":"2011-01-13","url":"https://number.bunshun.jp/articles/-/183953","pubEn":"Number Web (Bungeishunju)"}},
+{"id":"en10","lang":"en","text":{"zh":"今天有多少，就全部拿出來吧。","ja":"今日持っているものを、全部出し切ろう。","en":"Whatever you have today, let’s leave it all out there."},"who":{"zh":"寇特妮・道沃特","ja":"コートニー・ドウォルター","en":"Courtney Dauwalter"},"role":{"zh":"美國超馬跑者，UTMB 冠軍","ja":"米国のウルトラランナー。UTMB優勝","en":"US ultrarunner, UTMB champion"},"ctx":{"zh":"《跑者世界》人物專訪中，談她每次上場比賽的心態（2024 年受訪）。","ja":"『ランナーズ・ワールド』の人物記事で、レースに臨む心構えについて（2024年の取材）。","en":"On her attitude going into every race, from a Runner’s World profile (interviewed in 2024)."},"src":{"pub":"Runner’s World (via Runner’s World South Africa)","date":"2025-02-06","url":"https://www.runnersworld.co.za/human-race/my-running-life/she-has-no-coach-no-training-plan-and-seemingly-no-limits/"}},
+{"id":"zh12","lang":"zh","text":{"zh":"原來跑馬拉松是這麼好玩又享受的事！","ja":"マラソンって、こんなに楽しくて、ごほうびみたいなものだったんだ！","en":"Who knew running a marathon could be this much fun, and such a treat!"},"who":{"zh":"林冠汝","ja":"林冠汝","en":"Lin Kuan-ju"},"role":{"zh":"台灣超馬跑者，2022 年 24 小時賽亞洲暨大洋洲女子冠軍","ja":"台湾のウルトラランナー。2022年24時間走アジア・オセアニア女子王者","en":"Taiwanese ultrarunner, 2022 Asia & Oceania 24-hour champion"},"ctx":{"zh":"回憶開始跑馬拉松後印象最深的名古屋女子馬拉松：完賽獎品是一條 Tiffany 項鍊，終點還有花美男迎接（《財訊》，2025）。","ja":"マラソンを始めて一番印象に残った名古屋ウィメンズマラソンを振り返って。完走賞はティファニーのネックレス、ゴールではイケメンが出迎えてくれた（『財訊』、2025年）。","en":"Recalling her most memorable early marathon, the Nagoya Women’s Marathon: finishers got a Tiffany necklace and were greeted by handsome young men (Wealth Magazine, 2025)."},"src":{"pub":"工商時報（財訊雙週刊報導）","date":"2025-12-14","url":"https://www.ctee.com.tw/news/20251214700339-431401","pubEn":"Commercial Times (Wealth Magazine)"}},
+{"id":"ja16","lang":"ja","text":{"zh":"體力、氣力、努力。","ja":"体力 氣力 努力","en":"Stamina, willpower, effort."},"who":{"zh":"金栗四三","ja":"金栗四三","en":"Shizo Kanakuri"},"role":{"zh":"日本第一位奧運馬拉松選手（1912），「日本馬拉松之父」","ja":"日本初の五輪マラソン選手（1912年）。「日本マラソンの父」","en":"Japan’s first Olympic marathoner (1912), “father of the Japanese marathon”"},"ctx":{"zh":"他一生奉為座右銘的話。","ja":"金栗四三が座右の銘とした言葉。","en":"The motto he lived by."},"src":{"pub":"熊本県","date":"2021-09-02","url":"https://www.pref.kumamoto.jp/site/kini-kuma/108629.html","pubEn":"Kumamoto Prefecture"}},
+{"id":"en19","lang":"en","text":{"zh":"沒有人知道明天會怎樣，但只要還能跑，我選擇樂觀地生活、樂觀地奔跑。","ja":"明日何が起きるかは誰にもわからない。でも、できる限り前向きに生き、前向きに走ることを選ぶ。","en":"None of us ever know what tomorrow will bring, but I’m choosing to live and run optimistically as long as I can."},"who":{"zh":"安比・伯富特","ja":"アンビー・バーフット","en":"Amby Burfoot"},"role":{"zh":"1968 年波士頓馬拉松冠軍，跑步作家","ja":"1968年ボストンマラソン優勝。ランニング作家","en":"1968 Boston Marathon champion and running writer"},"ctx":{"zh":"75 歲時接受母校衛斯理安大學專訪，回顧一生的跑步。","ja":"75歳の時、母校ウェズリアン大学の取材で、走り続けてきた人生を振り返って。","en":"Looking back on a lifetime of running at 75, in a profile by his alma mater, Wesleyan."},"src":{"pub":"Wesleyan University News","date":"2022-07-11","url":"https://www.wesleyan.edu/about/news/2022/07/one-step-at-a-time-amby-burfoots-life-running.html"}}
+];
+const DAILY_QUOTE_PREF_KEY='daily-quote-pref-v1';
+const DAILY_QUOTE_ANCHOR_DAY=Date.UTC(2026,9,2)/86400000;   // 2026/10/2 顯示第 1 句
+function dailyQuoteEnabled(){ try{ return localStorage.getItem(DAILY_QUOTE_PREF_KEY)!=='off'; }catch(e){ return true; } }
+// 當地日期是第幾天：把年月日交給 Date.UTC 當成一個日曆日來數，不受時區、日光節約時間影響
+function localDayNumber(d){ d=d||new Date(); return Math.round(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000); }
+function dailyQuoteFor(d){
+  const n=DAILY_QUOTES.length;
+  if(!n) return null;
+  return DAILY_QUOTES[(((localDayNumber(d)-DAILY_QUOTE_ANCHOR_DAY)%n)+n)%n];
+}
+// 畫面上寫什麼：main 一定是版面的語言；orig 只有中文版面、原文不是中文時才有
+// （蘇炳添的原文是簡體字，中文版面顯示繁體轉寫，不另外附簡體）
+function dailyQuoteDisplay(q,lang){
+  lang=lang||currentLang;
+  const main=q.text[lang]||q.text.zh;
+  const orig=(lang==='zh'&&q.lang!=='zh')?(q.orig||q.text[q.lang]):'';
+  return {main,mainLang:lang,orig,origLang:q.lang,translated:lang!==q.lang};
+}
+const DQ_LANG_TAG={zh:'zh-Hant',ja:'ja',en:'en'};
+// 中文、日文用「」，英文用 “ ”
+function dqQuoted(text,lang){ return lang==='en'?`“${text}”`:`「${text}」`; }
+function dqLocal(o){ return (o&&(o[currentLang]||o.zh))||''; }
+function dailyQuoteDateParts(d){
+  d=d||new Date();
+  const m=d.getMonth(), day=d.getDate(), w=d.getDay();
+  if(currentLang==='en'){
+    const MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const WD=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    return {month:MON[m],day,wd:WD[w],long:`${WD[w].charAt(0)+WD[w].slice(1).toLowerCase()}, ${MON[m].charAt(0)+MON[m].slice(1).toLowerCase()} ${day}`};
+  }
+  if(currentLang==='ja'){
+    const wd='日月火水木金土'[w];
+    return {month:`${m+1}月`,day,wd:wd+'曜日',long:`${m+1}月${day}日（${wd}）`};
+  }
+  const wd='日一二三四五六'[w];
+  return {month:`${m+1} 月`,day,wd:'週'+wd,long:`${m+1} 月 ${day} 日（週${wd}）`};
+}
+function dailyQuoteCardHtml(now){
+  now=now||new Date();
+  const q=dailyQuoteFor(now);
+  if(!q) return '';
+  const v=dailyQuoteDisplay(q);
+  const d=dailyQuoteDateParts(now);
+  const sep=currentLang==='en'?', ':currentLang==='ja'?'、':'，';
+  // 日曆紙對讀螢幕的人是裝飾（aria-hidden），日期改用看不見的一句話唸出來；句子、原文
+  // 各自標 lang，讀螢幕軟體才會用對的語言唸
+  return `<button type="button" class="dq-card" data-action="open-daily-quote" data-quote-id="${escapeHtml(q.id)}" data-day="${localDayNumber(now)}" aria-haspopup="dialog">
+    <span class="dq-page" aria-hidden="true"><span class="dq-month">${escapeHtml(d.month)}</span><span class="dq-day">${d.day}</span><span class="dq-wd">${escapeHtml(d.wd)}</span></span>
+    <span class="dq-body">
+      <span class="dq-sr">${escapeHtml(t('ui.dailyQuoteSrPrefix','今日一句，{d}：').replace('{d}',d.long))}</span>
+      <span class="dq-quote" lang="${DQ_LANG_TAG[v.mainLang]}">${escapeHtml(dqQuoted(v.main,v.mainLang))}</span>
+      ${v.orig?`<span class="dq-orig" lang="${DQ_LANG_TAG[v.origLang]}">${escapeHtml(dqQuoted(v.orig,v.origLang))}</span>`:''}
+      <span class="dq-by"><b>${escapeHtml(dqLocal(q.who))}</b><span class="dq-sr">${sep}</span><span class="dq-role">${escapeHtml(dqLocal(q.role))}</span></span>
+      <span class="dq-sr">${escapeHtml(t('ui.dailyQuoteMoreSr','（看出處）'))}</span>
+    </span>
+  </button>`;
+}
+// 筆電並排、平板手機疊起來。DOM 順序跟畫面一致（並排：下一場卡在左、今日一句在右；
+// 疊起來：今日一句在上），用 Tab 鍵走的順序才不會跳來跳去，所以斷點一變就重畫
+const DQ_SIDE_MQ=window.matchMedia?window.matchMedia('(min-width:1100px)'):null;
+function homeTopHtml(main,hasPrompt){
+  if(!dailyQuoteEnabled()) return main;
+  const card=dailyQuoteCardHtml();
+  if(!card) return main;
+  if(!main) return `<div class="home-top">${card}</div>`;
+  const side=!!(DQ_SIDE_MQ&&DQ_SIDE_MQ.matches);
+  const inner=side?`<div class="home-top-main">${main}</div>${card}`:`${card}<div class="home-top-main">${main}</div>`;
+  return `<div class="home-top has-side${hasPrompt?' has-prompt':''}">${inner}</div>`;
+}
+if(DQ_SIDE_MQ){
+  const onDqLayoutChange=()=>{ if(document.querySelector('#focus-panel-slot .home-top.has-side')) renderFocusPanel(); };
+  if(DQ_SIDE_MQ.addEventListener) DQ_SIDE_MQ.addEventListener('change',onDqLayoutChange);
+  else if(DQ_SIDE_MQ.addListener) DQ_SIDE_MQ.addListener(onDqLayoutChange);
+}
+// 過了午夜換下一句：開著不動的分頁每分鐘看一次，切回來的時候馬上看一次。只換掉那張卡，
+// 不重畫整個月曆（半夜正在打字、開著抽屜都不受影響）
+function refreshDailyQuoteIfDayChanged(){
+  const card=document.querySelector('#focus-panel-slot .dq-card');
+  if(!card||card.dataset.day===String(localDayNumber())) return;
+  card.outerHTML=dailyQuoteCardHtml();
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') refreshDailyQuoteIfDayChanged(); });
+setInterval(refreshDailyQuoteIfDayChanged,60000);
+function dailyQuoteSheetHtml(q){
+  const v=dailyQuoteDisplay(q);
+  const pub=(currentLang==='en'&&q.src.pubEn)?q.src.pubEn:q.src.pub;
+  const date=String(q.src.date||'').replace(/-/g,'/');
+  const url=safeUrl(q.src.url);
+  return `<div class="modal-panel dq-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="dq-sheet-title">
+    <div class="dq-sheet-head">
+      <h2 id="dq-sheet-title">${escapeHtml(t('ui.dailyQuoteTitle','今日一句'))}</h2>
+      <button type="button" class="btn-ghost icon-btn" data-action="close-daily-quote" aria-label="${escapeHtml(t('ui.close','關閉'))}">✕</button>
+    </div>
+    <figure class="dq-sheet-fig">
+      <blockquote class="dq-sheet-quote">
+        <p class="dq-sheet-main" lang="${DQ_LANG_TAG[v.mainLang]}">${escapeHtml(dqQuoted(v.main,v.mainLang))}</p>
+        ${v.orig?`<p class="dq-sheet-orig"><span class="dq-sheet-orig-label">${escapeHtml(t('ui.dailyQuoteOrigLabel','原文'))}</span><span lang="${DQ_LANG_TAG[v.origLang]}">${escapeHtml(dqQuoted(v.orig,v.origLang))}</span></p>`:''}
+      </blockquote>
+      <figcaption class="dq-sheet-who"><b>${escapeHtml(dqLocal(q.who))}</b>${escapeHtml(dqLocal(q.role))}</figcaption>
+    </figure>
+    <p class="dq-sheet-ctx">${escapeHtml(dqLocal(q.ctx))}</p>
+    <div class="dq-sheet-src">
+      <div class="dq-sheet-src-label">${escapeHtml(t('ui.dailyQuoteSource','出處'))}</div>
+      <div class="dq-sheet-src-pub">${escapeHtml(pub)}${date?' · '+escapeHtml(date):''}</div>
+      ${url?`<a class="dq-sheet-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('ui.dailyQuoteOpenSource','看原始出處 ↗'))}</a>`:''}
+    </div>
+    ${v.translated?`<p class="dq-sheet-note">${escapeHtml(t('ui.dailyQuoteTranslatedNote','中文是本站翻譯的'))}</p>`:''}
+    <div class="dq-sheet-foot"><button type="button" class="dq-sheet-hide" data-action="hide-daily-quote">${escapeHtml(t('ui.dailyQuoteHide','不顯示今日一句'))}</button></div>
+  </div>`;
+}
+let dailyQuoteReturnFocus=null;
+function openDailyQuoteSheet(id){
+  const el=document.getElementById('daily-quote-sheet');
+  const q=DAILY_QUOTES.find(x=>x.id===id)||dailyQuoteFor();
+  if(!el||!q) return;
+  dailyQuoteReturnFocus=document.activeElement;
+  el.innerHTML=dailyQuoteSheetHtml(q);
+  el.hidden=false;
+  const close=el.querySelector('[data-action="close-daily-quote"]');
+  if(close){ try{ close.focus({preventScroll:true}); }catch(e){ close.focus(); } }
+  logFeatureUse('open_daily_quote');
+}
+function closeDailyQuoteSheet(){
+  const el=document.getElementById('daily-quote-sheet');
+  if(!el||el.hidden) return;
+  el.hidden=true; el.innerHTML='';
+  // 焦點回到卡片（用鍵盤的人關掉之後還在原地）
+  const back=document.querySelector('#focus-panel-slot .dq-card')||dailyQuoteReturnFocus;
+  dailyQuoteReturnFocus=null;
+  if(back&&back.isConnected){ try{ back.focus({preventScroll:true}); }catch(e){} }
+}
+function setDailyQuoteEnabled(on){
+  try{ localStorage.setItem(DAILY_QUOTE_PREF_KEY,on?'on':'off'); }catch(e){}
+  syncDailyQuoteToggle();
+  // 走 renderCalendar：首次使用、搜尋中、生涯數據分頁本來就不放，不能直接塞進去
+  renderCalendar();
+}
+function syncDailyQuoteToggle(){
+  const btn=document.getElementById('btn-daily-quote-toggle');
+  if(btn) btn.setAttribute('aria-checked',String(dailyQuoteEnabled()));
+}
+document.addEventListener('click',e=>{
+  const t0=e.target&&e.target.closest?e.target:null;
+  if(!t0) return;
+  const card=t0.closest('[data-action="open-daily-quote"]');
+  if(card){ openDailyQuoteSheet(card.dataset.quoteId); return; }
+  const sheet=document.getElementById('daily-quote-sheet');
+  if(t0.closest('[data-action="close-daily-quote"]')||t0===sheet){ closeDailyQuoteSheet(); return; }
+  if(t0.closest('[data-action="hide-daily-quote"]')){
+    closeDailyQuoteSheet();
+    setDailyQuoteEnabled(false);
+    showToast(t('ui.dailyQuoteHiddenToast','已隱藏今日一句，可以在頭像選單重新打開'));
+  }
+});
 function focusPanelHtml(){
   const race=computeFocusRace();
   if(!race||state.focusDismissedId===race.id) return '';
@@ -15655,7 +15985,8 @@ function renderFocusPanel(){
   // 第一場要到 1,362px——「比完了嗎？」在的時候先不放下一場卡（下一場就是清單「即將
   // 到來」的第一列）。筆電、月曆、完賽牆上看不到那份清單，兩張都放
   const prompt=resultPromptHtml();
-  slot.innerHTML=prompt+(prompt&&currentCalendarView()==='list'?'':focusPanelHtml());
+  // v4.7.0：今日一句跟這兩張卡排在一起（筆電並排、手機疊在上面），見 homeTopHtml
+  slot.innerHTML=homeTopHtml(prompt+(prompt&&currentCalendarView()==='list'?'':focusPanelHtml()),!!prompt);
 }
 
 function computeQuarterlyElevationStats(){
@@ -19123,7 +19454,7 @@ const BACK_LAYER_IDS=['global-drawer','training-overlay','training-import-modal'
   'fatigue-mode-overlay','share-modal','career-share-modal','help-modal','profile-modal','recovery-modal','import-modal',
   'gpx-modal','paste-modal','paste-note-modal','shoe-modal','nutrition-dict-modal','sync-diag-modal','pacing-modal',
   'focal-point-modal','race-context-sheet','storage-cleanup-modal','report-prompt-fallback-modal','command-palette',
-  'journey-map-overlay','career-sheet'];
+  'journey-map-overlay','career-sheet','daily-quote-sheet'];
 const BACK_LAYER_SELECTOR=BACK_LAYER_IDS.map(id=>'#'+id).join(',')+',.action-menu-panel,.badge-unbox-overlay';
 // 有自己的關閉函式的層：要用它關，才會一起清掉狀態（body 捲動鎖、計時器、地圖…）
 const BACK_LAYER_CLOSERS={
@@ -19144,6 +19475,7 @@ const BACK_LAYER_CLOSERS={
   'command-palette':()=>cmdkClose(),
   'journey-map-overlay':()=>closeJourneyMap(),
   'career-sheet':()=>closeCareerSheet(),
+  'daily-quote-sheet':()=>closeDailyQuoteSheet(),
 };
 let backLayerStack=[];          // 打開的先後順序，最後一個在最上面
 try{ backGuardActive=!!(history.state&&history.state.backGuard); }catch(e){}   // 重新整理前留下的
@@ -19782,6 +20114,9 @@ document.getElementById('btn-theme-toggle').addEventListener('click',()=>{
   applyTheme(next);
   try{ localStorage.setItem(THEME_KEY,next); }catch(e){}
 });
+// 今日一句的開關（v4.7.0）
+syncDailyQuoteToggle();
+document.getElementById('btn-daily-quote-toggle').addEventListener('click',()=>setDailyQuoteEnabled(!dailyQuoteEnabled()));
 
 document.getElementById('lang-select').value=currentLang;
 document.getElementById('lang-select').addEventListener('change',e=>{
@@ -22607,8 +22942,9 @@ function helpModalHtml(){
   const zhBody=`
       <h3>首頁：賽事／生涯數據／訓練</h3>
       <ul>
-        <li>首頁分成三個分頁：「賽事」是「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄。</li>
+        <li>首頁分成三個分頁：「賽事」是今日一句、「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄。</li>
         <li><strong>「下一場」卡</strong>：14 天內有比賽時，「賽事」分頁最上面是倒數、日期時間和地點，下面三格：打包、A 目標、號碼布——跟賽事頁的賽前四格同一套，點一下就打開那一格要填的地方（空的格子游標直接停在那一欄）。有天氣預報（抓到的即時預報，或自己填的預報）時第三格換成天氣；7 天內、有 GPS 軌跡還沒抓的，第三格是「抓取預報」。點賽名打開那一場；有封面照時照片是卡片的底圖；「暫時隱藏」可以先收起來。手機清單上還在問「比完了嗎？」的時候，這張卡先不放（下一場就在清單第一列）。</li>
+        <li><strong>今日一句</strong>：「賽事」分頁最上面每天一句跑者說過的話——電腦放在「下一場」卡右邊，手機、平板放在它上面。一天一句，過了午夜換下一句，同一天每台裝置都一樣。中文版面先寫中文翻譯，原文是日文或英文時下面附原文；日文、英文版面只顯示那個語言（原文不是那個語言就顯示翻譯）。點一下看說話者是誰、在什麼情況下說的，以及出處和連結。每一句都核對過出處，翻譯是本站翻的。不想看的話，頭像選單「顯示」裡的「今日一句」可以關掉。</li>
         <li>生涯數據可以點：年份長條、熱力圖的格子、「總完賽場次」「今年累計里程」點下去，下面會列出那幾場（點一場就打開，返回鍵先關掉列表）；點全馬 PB 的時間，直接打開締造 PB 的那一場。全馬只算跑步類的賽事（42 公里的自行車賽不算）。</li>
         <li>電腦：上方 <span class="mono">‹ 年 月 ›</span> 切換月份（只有月曆會顯示；完賽牆、表格是跨月份的，不顯示），「今天」跳回當月；旁邊的方格圖示切換「完賽牆」，表格圖示切換緊湊表格。</li>
         <li><strong>完賽牆</strong>：所有已完賽的賽事，依年份分段、新的在前，每一段開頭是那一年的場數、里程和 PB 數。有封面照的是一張拍立得；沒有的畫成那一場的號碼布——上面那條賽名帶的顏色是運動別，中間的大字是你的號碼（沒填號碼就寫距離），底下黑色的計時帶印著完賽時間、均速和爬升，個人最佳（PB）蓋一個紅色印章。均速用那個運動慣用的單位：跑步類每公里配速、自行車時速、游泳每 100 公尺的時間；三鐵、二鐵只寫成績，游泳、三鐵不寫爬升。拍立得下面也貼著同一條計時帶。號碼填在「賽事基本資料」的「號碼布編號」。每一年的標題點一下就能打開、收起來，預設只展開今年（今年還沒有完賽就展開最新的一年），收起來的年份還是看得到場數、里程和 PB 數；上面的「全部展開」一次全部打開。</li>
@@ -24339,7 +24675,7 @@ document.addEventListener('keydown',e=>{
   if(hof&&!hof.hidden){ closeHallOfFame(); return; }
   const drawer=document.getElementById('global-drawer');
   if(drawer&&!drawer.hidden){ closeDrawer(); return; }
-  const modalIds=['import-modal','gpx-modal','paste-modal','shoe-modal','pacing-modal','help-modal','recovery-modal','focal-point-modal','career-sheet'];
+  const modalIds=['import-modal','gpx-modal','paste-modal','shoe-modal','pacing-modal','help-modal','recovery-modal','focal-point-modal','career-sheet','daily-quote-sheet'];
   for(const id of modalIds){
     const el=document.getElementById(id);
     if(el&&!el.hidden){
