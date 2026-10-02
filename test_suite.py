@@ -7198,11 +7198,14 @@ BIB_FIT_JS = r"""()=>{ const bad=[];
   const cut=e=>e.scrollWidth>e.clientWidth+1;
   const name=c=>(c.title||'?').slice(0,8);
   document.querySelectorAll('#calendar .bib-card').forEach(c=>{ const cr=R(c);
-    ['.bib-head','.bib-num','.bib-foot'].forEach(s=>{ const e=c.querySelector(s); if(!inside(R(e),cr)) bad.push(name(c)+' out '+s); });
+    ['.bib-head','.bib-num','.bib-timing'].forEach(s=>{ const e=c.querySelector(s); if(e&&!inside(R(e),cr)) bad.push(name(c)+' out '+s); });
     const no=c.querySelector('.bib-no'); if(cut(no)) bad.push(name(c)+' number cut '+no.textContent);
     if(!inside(R(no),R(c.querySelector('.bib-num')),1)) bad.push(name(c)+' number spills');
     const tag=c.querySelector('.bib-tag'); if(cut(tag)) bad.push(name(c)+' tag cut '+tag.textContent);
-    const rt=c.querySelector('.bib-chip,.bib-date'); if(rt&&!inside(R(rt),cr)) bad.push(name(c)+' chip out');
+    // v4.6.0：成績、均速、爬升在底部的計時帶裡，每一樣都在帶子裡、沒被切掉，號碼底下那一行在號碼下面
+    const band=c.querySelector('.bib-timing');
+    if(band) band.querySelectorAll('.bib-time,.bib-pace,.bib-elev').forEach(e=>{ if(!inside(R(e),R(band),0.5)) bad.push(name(c)+' band text out '+e.textContent); if(cut(e)) bad.push(name(c)+' band text cut '+e.textContent); });
+    if(R(tag).top<R(no).bottom-2) bad.push(name(c)+' tag overlaps number');
     const race=c.querySelector('.bib-race'), fz=parseFloat(getComputedStyle(race).fontSize);
     if(race.clientWidth<Math.min(race.scrollWidth,4*fz)-1) bad.push(name(c)+' race name too narrow '+race.clientWidth);
     const sp=c.querySelector('.bib-stamp');
@@ -7218,7 +7221,7 @@ BIB_FIT_JS = r"""()=>{ const bad=[];
   document.querySelectorAll('#calendar .pola-card').forEach(c=>{ const cr=R(c);
     const d=c.querySelector('.pola-dist'); if(d&&!inside(R(d),R(c.querySelector('.pola-photo')))) bad.push(name(c)+' dist out of photo');
     const cap=R(c.querySelector('.pola-cap'));
-    c.querySelectorAll('.pola-meta span').forEach(e=>{ if(!inside(R(e),cap)) bad.push(name(c)+' meta out '+e.textContent); });
+    c.querySelectorAll('.pola-meta span,.bib-timing .bib-time,.bib-timing .bib-pace,.bib-timing .bib-elev').forEach(e=>{ if(!inside(R(e),cap)) bad.push(name(c)+' meta out '+e.textContent); });
     if(!inside(R(c.querySelector('.pola-cap')),cr)) bad.push(name(c)+' caption out');
   });
   // 印章裡的字（SVG）：getBBox 的高度是字型的整個行高、不是墨水；橫向用 bbox（textLength 固定了寬度），
@@ -7302,31 +7305,36 @@ class V44BibWall(Group):
         # 大字：有號碼寫號碼；沒有號碼寫距離（斜體）；兩個都沒有畫運動別的圖示。左下角：大字是號碼時寫距離，
         # 否則寫運動別。右下角：有成績寫在晶片條上，沒有成績寫日期
         c['bib_number_else_distance_else_icon'] = self.ev(pg, """()=>{ const bad=[];
-            const read=n=>{ const c=__card(n); const num=c.querySelector('.bib-num'), right=c.querySelector('.bib-chip,.bib-date');
-              return [c.querySelector('.bib-race').textContent, num.querySelector('svg')?'[icon]':num.textContent.trim(), getComputedStyle(num).fontStyle,
-                c.querySelector('.bib-tag').textContent, right?(right.classList.contains('bib-chip')?'chip:':'date:')+right.textContent.trim():'', (c.querySelector('.bib-year')||{}).textContent||''].join('|'); };
+            // v4.6.0 起成績在底部的計時帶上（沒有成績寫日期），距離（或運動別）寫在號碼底下
+            const read=n=>{ const c=__card(n); const no=c.querySelector('.bib-no'), right=c.querySelector('.bib-timing .bib-time');
+              return [c.querySelector('.bib-race').textContent, no.querySelector('svg')?'[icon]':no.textContent.trim(), getComputedStyle(no).fontStyle,
+                c.querySelector('.bib-num .bib-tag').textContent, right?(right.classList.contains('is-date')?'date:':'time:')+right.textContent.trim():'', (c.querySelector('.bib-year')||{}).textContent||''].join('|'); };
             const want={
-              '神戶馬拉松':'神戶馬拉松|8821|normal|42.2 KM|chip:3:31:02|2024',
-              '臺南標準鐵人三項':'臺南標準鐵人三項|51.5K|italic|三鐵|chip:2:31:45|2022',
+              '神戶馬拉松':'神戶馬拉松|8821|normal|42.2 KM|time:3:31:02|2024',
+              '臺南標準鐵人三項':'臺南標準鐵人三項|51.5K|italic|三鐵|time:2:31:45|2022',
               '只有距離':'只有距離|160.9K|italic|自行車|date:2026.01.18|2026',
               '公司運動會大隊接力':'公司運動會大隊接力|[icon]|normal|其他|date:2019.03.10|2019',
               '沒日期沒成績':'沒日期沒成績|[icon]|normal|障礙賽||',
-              '中文號碼':'中文號碼|B區1234|normal|21.1 KM|chip:1:39:59|2026' };
+              '中文號碼':'中文號碼|B區1234|normal|21.1 KM|time:1:39:59|2026' };
             Object.entries(want).forEach(([n,w])=>{ const g=read(n); if(g!==w) bad.push(g); });
             if(bad.length) console.log('wall: bib',bad.join(' || '));
             return bad.length===0; }""")
         # 手錶量到的距離（9.97、21.0975、160.93）：四捨五入到小數一位，整數不寫「.0」
         c['distance_rounds_to_one_decimal'] = self.ev(pg, """()=>{
-            const got=['手錶量的 10K','萬金石馬拉松（半程）','只有距離','東海岸超級馬拉松 100K'].map(n=>{ const c=__card(n); const num=c.querySelector('.bib-num');
-              return num.classList.contains('is-dist')?num.textContent.trim():c.querySelector('.bib-tag').textContent; }).join(',');
-            if(got!=='10K,21.1 KM,160.9K,100K') console.log('wall: round',got);
-            return got==='10K,21.1 KM,160.9K,100K'; }""")
+            const got=['手錶量的 10K','萬金石馬拉松（半程）','只有距離','東海岸超級馬拉松 100K','日月潭泳渡'].map(n=>{ const c=__card(n); const num=c.querySelector('.bib-num');
+              return num.classList.contains('is-dist')?num.querySelector('.bib-no').textContent.trim():c.querySelector('.bib-tag').textContent; }).join(',');
+            // 游泳寫公尺（v4.6.0）
+            if(got!=='10K,21.1 KM,160.9K,100K,3300M') console.log('wall: round',got);
+            return got==='10K,21.1 KM,160.9K,100K,3300M'; }""")
         # 有封面照的是拍立得：照片、照片上的距離、賽名、日期和成績；沒有號碼布的東西
         c['cover_race_is_polaroid'] = self.ev(pg, """()=>{
             const r=state.races.find(x=>x.name==='東京馬拉松'), c=__card('東京馬拉松'); const img=c.querySelector('img');
             const meta=[...c.querySelectorAll('.pola-meta span')].map(s=>s.textContent);
+            // v4.6.0：日期寫在賽名下面，成績、均速在下面那條計時帶上
+            const band=c.querySelector('.bib-timing.is-pola');
             return !!img && img.getAttribute('src')===coverThumbOf(r) && c.querySelector('.pola-dist').textContent==='42.2K'
-              && c.querySelector('.pola-name').textContent==='東京馬拉松' && JSON.stringify(meta)==='["2025.03.02","3:24:50"]'
+              && c.querySelector('.pola-name').textContent==='東京馬拉松' && JSON.stringify(meta)==='["2025.03.02"]'
+              && !!band && band.querySelector('.bib-time').textContent==='3:24:50' && band.querySelector('.bib-pace').textContent==='4\\'51"/km'
               && !c.querySelector('.bib-num,.bib-head') && document.querySelectorAll('#calendar .pola-card').length===3; }""")
         # PB 才有印章（號碼布、拍立得都是），淺色、深色都一樣
         c['pb_stamp_only_on_pb_light_and_dark'] = self.ev(pg, """async()=>{ """ + W + """
@@ -7351,7 +7359,7 @@ class V44BibWall(Group):
         c['wall_text_readable_light_and_dark'] = self.ev(pg, """async()=>{ """ + W + """
             const st=document.createElement('style'); st.textContent='*{transition:none!important}'; document.head.appendChild(st);
             const read=()=>{ const bad=[];
-              document.querySelectorAll('#calendar .bib-tag,#calendar .bib-date,#calendar .bib-chip,#calendar .pola-name,#calendar .pola-meta span,#calendar .bib-ystats,#calendar .bib-ystats b,#calendar .bib-year')
+              document.querySelectorAll('#calendar .bib-tag,#calendar .bib-time,#calendar .bib-pace,#calendar .bib-elev,#calendar .pola-name,#calendar .pola-meta span,#calendar .bib-ystats,#calendar .bib-ystats b,#calendar .bib-year')
                 .forEach(e=>{ const cr=__textCr(e); if(cr<4.5) bad.push(e.className+' '+e.textContent.slice(0,8)+' '+cr.toFixed(2)); });
               document.querySelectorAll('#calendar .bib-num:not(.is-dist):not(.is-icon) .bib-no,#calendar .bib-ynum').forEach(e=>{ const cr=__textCr(e); if(cr<3) bad.push('big '+e.textContent+' '+cr.toFixed(2)); });
               return [...new Set(bad)]; };
@@ -7361,7 +7369,8 @@ class V44BibWall(Group):
         # 報讀的名稱是一句完整的話：賽名、日期、距離、成績、號碼、PB（卡片上的版面直接唸會沒頭沒尾）
         c['screen_reader_label_says_name_date_time_bib_pb'] = self.ev(pg, """()=>{
             const a=__card('臺東巴歌浪鐵人三項').getAttribute('aria-label'), b=__card('合歡山越野挑戰賽').getAttribute('aria-label');
-            const ok=a==='臺東巴歌浪鐵人三項, 三鐵, 2024-04-14, 113 km, 5:58:12, 號碼布 356, 個人最佳 PB' && b==='合歡山越野挑戰賽, 越野跑, 2024-11-17, 25 km, 4:12:30'
+            // v4.6.0：均速也唸出來（三鐵不寫均速）
+            const ok=a==='臺東巴歌浪鐵人三項, 三鐵, 2024-04-14, 113 km, 5:58:12, 號碼布 356, 個人最佳 PB' && b==='合歡山越野挑戰賽, 越野跑, 2024-11-17, 25 km, 4:12:30, 均速 10\\'06"/km'
               && [...document.querySelectorAll('#calendar .photo-card')].every(x=>x.tagName==='BUTTON'&&x.getAttribute('aria-label'))
               && document.querySelectorAll('#calendar .bib-yhead').length===7 && document.querySelector('#calendar .bib-yhead').tagName==='H3';
             if(!ok) console.log('wall: label',a,'/',b);
@@ -8201,7 +8210,7 @@ class V451WallFold(Group):
               document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(150); }
             setLang('zh'); await wait(100);
             const ok=Object.values(out).every(m=>m.length===0); if(!ok) console.log('fold: help missing',JSON.stringify(out)); return ok; }""")
-        c['version_is_v4_5_1'] = self.ev(pg, "()=>APP_VERSION==='v4.5.1'")
+        # （版本號的檢查跟著最新的群組走，v4.6.0 起在 v46）
         ctx.close()
 
         # 今年跟更新的年份（日期填錯、或比完還沒改日期）都有：展開的是今年，不是最新的那一年
@@ -8256,6 +8265,314 @@ class V451WallFold(Group):
             fctx.close()
 
 
+
+# v4.6.0 的種子：在號碼布牆的樣本上加幾場、填爬升／分段，涵蓋均速、爬升的每一條規則
+V46_SEED_JS = r"""window.__seedV46=async function(o){ o=o||{};
+  await __seedBibWall({expand:true, extra:[
+    {n:'太魯閣登山自行車賽',s:'cycling',d:'2026-03-01',km:105,t:'4:28:10',bib:'1186'},
+    {n:'游跑兩項',s:'other',d:'2026-02-01',km:6,t:'0:40:00',bib:'77'},
+    {n:'平地場地賽',s:'road_running',d:'2026-02-15',km:5,t:'0:20:00',bib:'5'},
+    {n:'沒成績的封面',s:'trail_running',d:'2026-01-10',km:21,cover:1},
+    {n:'泳渡封面',s:'swimming',d:'2026-02-20',km:2.5,t:'0:58:00',cover:1},
+  ]});
+  const set=(n,f)=>{ const r=state.races.find(x=>x.name===n); f(r); };
+  set('太魯閣登山自行車賽',r=>{ r.route.elevationGainM=3275; });
+  set('中文號碼',r=>{ r.route.elevationGainM=180; });          // 二鐵：寫爬升、不寫均速
+  set('臺東巴歌浪鐵人三項',r=>{ r.route.elevationGainM=1200; }); // 三鐵：兩個都不寫
+  set('日月潭泳渡',r=>{ r.route.elevationGainM=531; });         // 游泳：GPS 假爬升不寫
+  set('游跑兩項',r=>{ r.route.elevationGainM=50; r.legs=[{sport:'swimming',distanceKm:1,durationSeconds:1200},{sport:'running',distanceKm:5,durationSeconds:1200}]; });
+  set('平地場地賽',r=>{ r.route.elevationGainM=0; });
+  set('神戶馬拉松',r=>{ r.route.elevationGainM=1234.4; });
+  set('只有距離',r=>{ r.route.elevationGainM=900; });
+  set('東京馬拉松',r=>{ r.route.elevationGainM=45; });
+  set('沒成績的封面',r=>{ r.route.elevationGainM=1000; });
+  set('英文字母號碼',r=>{ r.route.elevationGainM=2450; });
+  set('第三十八屆國際城市超級馬拉松暨全民健康路跑嘉年華',r=>{ r.route.elevationGainM=12345; });
+  set('合歡山越野挑戰賽',r=>{ r.route.elevationGainM=1450; });
+  await persist(); renderCalendar(); await new Promise(s=>setTimeout(s,200));
+};
+window.__band=n=>{ const c=__card(n); const b=c&&c.querySelector('.bib-timing'); if(!b) return null;
+  const q=s=>{ const e=b.querySelector(s); return e?e.textContent.trim():''; };
+  return [q('.bib-time'), b.querySelector('.bib-time.is-date')?'date':'', q('.bib-pace'), q('.bib-elev')].join('|'); };
+"""
+
+
+class V46FinisherWall(Group):
+    """v4.6.0：獎牌牆改名「完賽牆」；號碼布底部一條黑色計時帶——成績、均速（跑步每公里配速、自行車時速、
+    游泳每 100 公尺；三鐵、二鐵不寫）、爬升（游泳、三鐵不寫）；拍立得也有；游泳的距離在整個 App 都寫公尺
+    （填也是填公尺，存的照樣是公里）；深色模式、瀏覽器強制深色時號碼布還是白紙。"""
+
+    ECHO = ('v46:',)
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js, arg=None):
+        try:
+            return pg.evaluate(js) if arg is None else pg.evaluate(js, arg)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def _ctx(self, browser, viewport=None, touch=False, theme='light', force_dark=False, dsf=1):
+        # 強制深色：瀏覽器只在系統（或瀏覽器）是深色時才幫網頁轉深色——使用者把 App 設成淺色、手機是深色，
+        # 才會看到 App 被轉黑。prefers-color-scheme 還是 light 時 Chrome 連 color-scheme:only light 都不理，
+        # 那是模擬器才有的組合
+        ctx = full_mode_context(browser, viewport=viewport or {'width': 1280, 'height': 900}, is_mobile=touch, has_touch=touch,
+                                color_scheme='dark' if force_dark else 'light', device_scale_factor=dsf)
+        ctx.add_init_script("try{localStorage.setItem('theme-pref-v1','%s');}catch(e){}" % theme)
+        pg = ctx.new_page()
+        if force_dark:
+            cdp = ctx.new_cdp_session(pg)
+            cdp.send('Emulation.setAutoDarkModeOverride', {'enabled': True})
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=FIELD_FRAME_JS)
+        pg.add_script_tag(content=WALL_SEED_JS)
+        pg.add_script_tag(content=V46_SEED_JS)
+        pg.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important} *{transition:none!important}')
+        self.ev(pg, "()=>__seedV46()")
+        pg.wait_for_timeout(200)
+        return ctx, pg
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        W = ("const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+             "const home=async()=>{ for(let i=0;i<12;i++){ if(!document.getElementById('global-drawer').hidden){ closeDrawer(); await wait(300); continue; } if(state.selectedId||state.creating){ goBackFromDetail(); await wait(350); continue; } break; } };")
+        ctx, pg = self._ctx(browser)
+        # ================= 改名：完賽牆 =================
+        c['renamed_finisher_wall_three_languages'] = self.ev(pg, """async()=>{ """ + W + """ const out={};
+            const seg=()=>document.querySelector('.view-seg [data-phone-view="grid"]').textContent.trim();
+            const tog=()=>{ const b=document.getElementById('cal-view-toggle'); return b.getAttribute('aria-label')+'|'+b.getAttribute('title'); };
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(150); out[lang]=seg()+'|'+tog(); }
+            setLang('zh'); await wait(150);
+            const ok=out.zh==='完賽牆|切換為完賽牆檢視|切換為完賽牆檢視' && out.ja==='完走ウォール|完走ウォール表示に切り替え|完走ウォール表示に切り替え'
+              && out.en==='Finisher wall|Switch to finisher wall view|Switch to finisher wall view';
+            if(!ok) console.log('v46: rename',JSON.stringify(out)); return ok; }""")
+        # 畫面上、說明裡都不再出現舊名字（三種語言）
+        c['old_name_gone_from_ui_and_help'] = self.ev(pg, """async()=>{ """ + W + """ const bad=[];
+            const old={zh:/獎牌牆/,ja:/メダル棚/,en:/trophy wall/i};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(150);
+              const attrs=[...document.querySelectorAll('[aria-label],[title],[placeholder]')].map(e=>[e.getAttribute('aria-label'),e.getAttribute('title'),e.getAttribute('placeholder')].join(' ')).join(' ');
+              // innerText：畫面上看得到的字（textContent 會把 <script> 裡的程式註解也算進去）
+              if(old[lang].test(document.body.innerText+attrs)) bad.push(lang+' ui');
+              openHelpModal(); await wait(200); const tx=document.querySelector('#help-modal .help-body').textContent;
+              if(old[lang].test(tx)) bad.push(lang+' help');
+              if(!tx.includes({zh:'完賽牆',ja:'完走ウォール',en:'Finisher wall'}[lang])) bad.push(lang+' help no new name');
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(150); }
+            setLang('zh'); await wait(150);
+            if(bad.length) console.log('v46: old name',bad.join(',')); return bad.length===0; }""")
+        # ================= 計時帶：成績｜均速｜爬升 =================
+        # 成績|沒成績寫日期|均速|爬升。跑步類每公里配速、自行車時速、游泳每 100 公尺；多項運動（三鐵、二鐵、
+        # 分段兩段以上）不寫均速；游泳、三鐵、分段有游泳的不寫爬升；0 與沒填不寫；千分位
+        c['timing_band_pace_and_elevation_rules'] = self.ev(pg, """()=>{ const bad=[];
+            const want={
+              '臺北馬拉松':'3:38:15||5\\'10"/km|',
+              '神戶馬拉松':'3:31:02||5\\'00"/km|+1,234 m',
+              '太魯閣登山自行車賽':'4:28:10||23.5 km/h|+3,275 m',
+              '日月潭泳渡':'1:18:22||2\\'22"/100m|',
+              '臺東巴歌浪鐵人三項':'5:58:12|||',
+              '臺南標準鐵人三項':'2:31:45|||',
+              '中文號碼':'1:39:59|||+180 m',
+              '游跑兩項':'0:40:00|||',
+              '平地場地賽':'0:20:00||4\\'00"/km|',
+              '只有距離':'2026.01.18|date||+900 m',
+              '公司運動會大隊接力':'2019.03.10|date||',
+              '第三十八屆國際城市超級馬拉松暨全民健康路跑嘉年華':'35:12:40||8\\'35"/km|+12,345 m' };
+            Object.entries(want).forEach(([n,w])=>{ const g=__band(n); if(g!==w) bad.push(n+' → '+g); });
+            // 沒成績也沒日期、沒均速沒爬升：不畫帶子
+            if(__card('沒日期沒成績').querySelector('.bib-timing')) bad.push('empty band drawn');
+            if(bad.length) console.log('v46: band',bad.join(' || ')); return bad.length===0; }""")
+        # 拍立得：日期在賽名下面，帶子只寫成績、均速、爬升（沒成績時不再寫一次日期）；游泳的照片上寫公尺
+        c['polaroid_band_and_swim_meters'] = self.ev(pg, """()=>{
+            const meta=n=>[...__card(n).querySelectorAll('.pola-meta span')].map(s=>s.textContent).join(',');
+            const got=[__band('東京馬拉松'),meta('東京馬拉松'),__band('沒成績的封面'),meta('沒成績的封面'),__band('泳渡封面'),__card('泳渡封面').querySelector('.pola-dist').textContent,__band('澎湖超級鐵人三項')];
+            const want=['3:24:50||4\\'51"/km|+45 m','2025.03.02','|||+1,000 m','2026.01.10','0:58:00||2\\'19"/100m|','2500M','12:41:09|||'];
+            const ok=JSON.stringify(got)===JSON.stringify(want); if(!ok) console.log('v46: pola',JSON.stringify(got)); return ok; }""")
+        c['swim_bib_big_meters_and_tag'] = self.ev(pg, """async()=>{ """ + W + """
+            const r=state.races.find(x=>x.name==='日月潭泳渡'); const c1=__card('日月潭泳渡');
+            const a=[c1.querySelector('.bib-no').textContent, c1.querySelector('.bib-num .bib-tag').textContent];
+            r.bibNumber='S88'; renderCalendar(); await wait(80);
+            const b=[__card('日月潭泳渡').querySelector('.bib-no').textContent, __card('日月潭泳渡').querySelector('.bib-num .bib-tag').textContent];
+            r.bibNumber=''; renderCalendar(); await wait(80);
+            const ok=JSON.stringify(a)==='["3300M","游泳"]' && JSON.stringify(b)==='["S88","3300 M"]';
+            if(!ok) console.log('v46: swim bib',JSON.stringify([a,b])); return ok; }""")
+        c['screen_reader_label_has_pace_and_elevation'] = self.ev(pg, """async()=>{ """ + W + """ const out={};
+            for(const lang of ['zh','en']){ setLang(lang); await wait(150);
+              out[lang]=[__card('神戶馬拉松').getAttribute('aria-label'), __card('日月潭泳渡').getAttribute('aria-label')]; }
+            setLang('zh'); await wait(150);
+            const ok=out.zh[0]==='神戶馬拉松, 路跑, 2024-11-10, 42.2 km, 3:31:02, 均速 5\\'00"/km, 爬升 +1,234 m, 號碼布 8821'
+              && out.zh[1]==='日月潭泳渡, 游泳, 2022-03-13, 3300 m, 1:18:22, 均速 2\\'22"/100m'
+              && out.en[0].includes('avg 5\\'00"/km, elevation gain +1,234 m');
+            if(!ok) console.log('v46: label',JSON.stringify(out)); return ok; }""")
+        c['band_text_readable'] = self.ev(pg, """()=>{ const bad=[];
+            document.querySelectorAll('#calendar .bib-time,#calendar .bib-pace,#calendar .bib-elev').forEach(e=>{ const cr=__textCr(e); if(cr<4.5) bad.push(e.textContent+' '+cr.toFixed(2)); });
+            if(bad.length) console.log('v46: band contrast',bad.slice(0,5).join(' | ')); return bad.length===0 && document.querySelectorAll('#calendar .bib-elev').length>5; }""")
+        # 年份標題的合計照樣是公里（游泳 3.3 km 加在裡面，不換成公尺）
+        c['year_totals_stay_km'] = self.ev(pg, """()=>{ const s=[...document.querySelectorAll('#calendar .bib-sec')].find(x=>x.querySelector('.bib-ynum').textContent==='2022');
+            return !!s && s.querySelector('.bib-ystats').textContent.replace(/\\s+/g,' ').trim()==='2 場 · 55 km · 1 PB'; }""")
+        # ================= 深色模式：紙跟淺色一樣白 =================
+        c['dark_mode_paper_same_as_light'] = self.ev(pg, """async()=>{ """ + W + """
+            const read=()=>[getComputedStyle(__card('神戶馬拉松')).backgroundImage, getComputedStyle(__card('東京馬拉松')).backgroundColor];
+            const light=read(); applyTheme('dark'); await wait(100); const dark=read(); applyTheme('light'); await wait(100);
+            const ok=JSON.stringify(light)===JSON.stringify(dark) && /255, 255, 255/.test(light[0]) && light[1]==='rgb(253, 252, 248)';
+            if(!ok) console.log('v46: dark paper',JSON.stringify([light,dark])); return ok; }""")
+        c['cards_and_flag_opt_out_of_forced_dark'] = self.ev(pg, """()=>[...document.querySelectorAll('#calendar .photo-card,#calendar .bib-flag')].every(e=>{ const v=getComputedStyle(e).colorScheme; return /only/.test(v)&&/light/.test(v)&&!/dark/.test(v); })""")
+        # ================= 游泳寫公尺：整個 App =================
+        c['swim_meters_list_meta_table_and_labels'] = self.ev(pg, """async()=>{ """ + W + """
+            const sw=state.races.find(x=>x.name==='日月潭泳渡'), road=state.races.find(x=>x.name==='神戶馬拉松');
+            const meta=[raceTerrainMetaHtml(sw), raceTerrainMetaHtml(road)].map(h=>{ const d=document.createElement('div'); d.innerHTML=h; return d.textContent; });
+            const lab=[raceDistLabel(sw),raceDistLabel(road)];
+            const radar=computeRaceRadar(sw).find(d=>d.key==='distance').raw;
+            // 表格：游泳寫「3300 m」（表頭是 km），照距離排序還是照公里數排
+            state.viewMode='grid'; tableSort.key='distance'; tableSort.dir='asc'; state.viewMode='table'; renderCalendar(); await wait(100);
+            const rows=[...document.querySelectorAll('#calendar .table-view-row')].map(tr=>tr.children[3].textContent.trim());
+            const iSwim=rows.indexOf('3300 m'), i5=rows.indexOf('5.0');
+            tableSort.key='date'; tableSort.dir='desc'; state.viewMode='grid'; renderCalendar(); await wait(100);
+            const ok=meta[0]==='3300m · +531m' && meta[1]==='42.2K · +1234m' && lab[0]==='3300 m' && lab[1]==='42.2 km' && radar==='3300 m'
+              && iSwim>=0 && i5>iSwim && rows.includes('42.2');
+            if(!ok) console.log('v46: meters',JSON.stringify([meta,lab,radar,iSwim,i5,rows.slice(0,6)])); return ok; }""")
+        c['swim_meters_race_page_share_and_public'] = self.ev(pg, """async()=>{ """ + W + """
+            const sw=state.races.find(x=>x.name==='日月潭泳渡');
+            selectRace(sw.id,{scroll:false}); await wait(400);
+            const dash=(document.querySelector('#detail .results-dashboard')||{}).textContent||'';
+            const route=(document.querySelector('[data-section="route"] .dash-card-sub')||{}).textContent||'';
+            const share=shareStatsBadges(sw,SHARE_SHOW_DEFAULT).map(b=>b[1]);
+            const ok=dash.includes('3300 公尺') && !dash.includes('3.3 公里') && route.includes('3300 m') && !route.includes('3.3 km')
+              && share.includes('3300 公尺') && share.includes('2\\'22"/100m') && !share.some(v=>/公里/.test(v));
+            if(!ok) console.log('v46: race page',JSON.stringify([dash.slice(0,120),route,share]));
+            return ok; }""")
+        # 賽事頁的總距離欄：游泳填公尺、右邊寫 m，存的是公里；換成別的運動別又變回公里
+        c['swim_distance_field_in_meters_saves_km'] = self.ev(pg, """async()=>{ """ + W + """
+            const sw=state.races.find(x=>x.name==='日月潭泳渡');
+            openDrawer('route'); await wait(250);
+            let el=document.querySelector('#drawer-content #f-route-distanceKm');
+            const a=[el.value, el.closest('.field-input-wrap').querySelector('.field-unit').textContent];
+            el.value='1500'; el.dispatchEvent(new Event('change',{bubbles:true})); await wait(300);
+            const saved=sw.route.distanceKm; closeDrawer(); await wait(250);
+            sw.sportType='road_running'; openDrawer('route'); await wait(250);
+            el=document.querySelector('#drawer-content #f-route-distanceKm');
+            const b=[el.value, el.closest('.field-input-wrap').querySelector('.field-unit').textContent];
+            closeDrawer(); await wait(250); sw.sportType='swimming'; sw.route.distanceKm=3.3; await persist();
+            const ok=JSON.stringify(a)==='["3300","m"]' && saved===1.5 && JSON.stringify(b)==='["1.5","km"]';
+            if(!ok) console.log('v46: field',JSON.stringify([a,saved,b])); return ok; }""")
+        c['swim_gpx_preview_and_denoise_in_meters'] = self.ev(pg, """()=>{
+            const sw=state.races.find(x=>x.name==='日月潭泳渡');
+            const strip=h=>{ const d=document.createElement('div'); d.innerHTML=h; return d.textContent.replace(/\\s+/g,' '); };
+            const g=strip(gpxSummaryHtml({distanceKm:3.52,durationSeconds:4700,elevationGainM:null,avgHr:null,maxHr:null,avgCadence:null,splits:[]},'a.gpx'));
+            const keep=[sw.route.trackPoints,sw.route.timedTrackPoints];
+            sw.route.trackPoints=[[23.86,120.91],[23.87,120.92]]; sw.route.timedTrackPoints=[{lat:23.86,lon:120.91,t:0},{lat:23.87,lon:120.92,t:60}];
+            gpsDenoisePreview={raceId:sw.id,oldDistanceKm:3.52,newDistanceKm:3.31,smoothedTimedPoints:[]};
+            const d=strip(gpsDenoiseSectionHtml(sw));
+            gpsDenoisePreview=null; sw.route.trackPoints=keep[0]; sw.route.timedTrackPoints=keep[1];
+            const ok=g.includes('3520 公尺') && g.includes('會取代現有的 3300 公尺') && d.includes('3520 m') && d.includes('3310 m') && d.includes('套用並更新距離為 3310 m') && !/\\d km/.test(d);
+            if(!ok) console.log('v46: gpx',g.slice(0,160),'/',d.slice(0,200)); return ok; }""")
+        c['public_view_and_report_prompt_in_meters'] = self.ev(pg, """async()=>{
+            const sw=state.races.find(x=>x.name==='日月潭泳渡');
+            const prompt=buildRaceReportPrompt(sw);
+            const snap=await buildPublicSnapshot(sw);
+            return { snap, prompt }; }""")
+        pub = c['public_view_and_report_prompt_in_meters']
+        c['public_view_and_report_prompt_in_meters'] = False
+        # ================= 新增賽事：選游泳就填公尺 =================
+        c['create_form_swim_uses_meters'] = self.ev(pg, """async()=>{ """ + W + """
+            await home(); startCreate(); await wait(300);
+            const sel=document.getElementById('new-sport'), inp=document.getElementById('new-distance'), unit=()=>document.getElementById('new-distance-unit').textContent;
+            const fire=()=>sel.dispatchEvent(new Event('change',{bubbles:true}));
+            inp.value='3.3'; sel.value='swimming'; fire(); await wait(50);
+            const a=[inp.value,unit(),inp.getAttribute('placeholder'),inp.hasAttribute('list')];
+            sel.value='road_running'; fire(); await wait(50);
+            const b=[inp.value,unit(),inp.hasAttribute('list')];
+            sel.value='swimming'; fire(); await wait(50); inp.value='1500';
+            document.getElementById('new-name').value='V46 新泳渡';
+            document.querySelector('[data-action="confirm-create"]').click(); await wait(400);
+            const r=state.races.find(x=>x.name==='V46 新泳渡');
+            const ok=JSON.stringify(a)==='["3300","m","公尺，例如 1500",false]' && JSON.stringify(b)==='["3.3","km",true]' && !!r && r.route.distanceKm===1.5 && r.sportType==='swimming';
+            if(!ok) console.log('v46: create',JSON.stringify([a,b,r&&r.route.distanceKm]));
+            await home(); return ok; }""")
+        c['paste_create_swim_fills_meters'] = self.ev(pg, """async()=>{ """ + W + """
+            startCreateFromPaste({name:'貼上的泳渡',sportType:'swimming',distanceKm:3.3}); await wait(300);
+            const inp=document.getElementById('new-distance');
+            const ok=inp.value==='3300' && inp.dataset.unit==='m' && document.getElementById('new-distance-unit').textContent==='m';
+            await home(); return ok; }""")
+        c['help_describes_band_and_swim_meters'] = self.ev(pg, """async()=>{ """ + W + """ const out={};
+            // 計時帶上有哪三樣要寫成一句（只看單字的話，說明裡別處也有「均速」「爬升」，拿掉這一句也照樣過）
+            const words={zh:['計時帶印著完賽時間、均速和爬升','每 100 公尺','三鐵、二鐵只寫成績','游泳的距離寫公尺'],
+              ja:['計測帯には完走タイム・平均・獲得標高','100m あたり','デュアスロンはタイムだけ','メートルで表示'],
+              en:['timing strip along the bottom shows your finish time, average and elevation gain','per 100 m','triathlons and duathlons show just the time','meters everywhere']};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(150); openHelpModal(); await wait(200);
+              const tx=document.querySelector('#help-modal .help-body').textContent; out[lang]=words[lang].filter(w=>!tx.includes(w));
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(150); }
+            setLang('zh'); await wait(100);
+            const ok=Object.values(out).every(m=>m.length===0); if(!ok) console.log('v46: help missing',JSON.stringify(out)); return ok; }""")
+        c['version_is_v4_6_0'] = self.ev(pg, "()=>APP_VERSION==='v4.6.0'")
+        # 公開頁會把整頁換掉：放在這個頁面的最後
+        if pub and isinstance(pub, dict):
+            c['public_view_and_report_prompt_in_meters'] = self.ev(pg, """(o)=>{ renderPublicShareView(o.snap); const tx=document.body.textContent;
+                const ok=tx.includes('3300 公尺') && !tx.includes('3.3 公里') && (!o.prompt || (o.prompt.includes('3300 m') && !o.prompt.includes('3.3 km')));
+                if(!ok) console.log('v46: public',tx.slice(0,200)); return ok; }""", pub)
+        ctx.close()
+        # ================= 手機清單：游泳寫公尺 =================
+        pctx, pp = self._ctx(browser, viewport={'width': 390, 'height': 844}, touch=True)
+        c['phone_list_search_shows_swim_meters'] = self.ev(pp, """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms));
+            setPhoneView('list'); renderAll(); await wait(150);
+            const si=document.getElementById('search-input'); si.value='日月潭'; si.dispatchEvent(new Event('input',{bubbles:true})); await wait(400);
+            const m=[...document.querySelectorAll('#calendar .cal-list-meta')].map(e=>e.textContent.trim());
+            si.value=''; si.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
+            const ok=m.includes('3300m · +531m'); if(!ok) console.log('v46: list',JSON.stringify(m)); return ok; }""")
+        pctx.close()
+        # ================= 瀏覽器的「網頁強制深色」：號碼布、拍立得還是白紙，計時帶還是黑的 =================
+        # 強制深色是畫的時候才轉的，算出來的樣式看不到，只能量畫面
+        for w, touch in ((1280, False), (390, True)):
+            sctx, sp = self._ctx(browser, viewport={'width': w, 'height': 900}, touch=touch, force_dark=True, dsf=1)
+            geo = self.ev(sp, """()=>{ const b=__card('神戶馬拉松'); b.scrollIntoView({block:'center'}); const st=document.createElement('style'); st.textContent='.photo-card{transform:none!important}'; document.head.appendChild(st);
+                const br=b.getBoundingClientRect(), nr=b.querySelector('.bib-num').getBoundingClientRect(), tr=b.querySelector('.bib-timing').getBoundingClientRect();
+                return { paper:[br.left+5, nr.top+nr.height/2], band:[tr.left+4, tr.top+tr.height/2] }; }""")
+            sp.wait_for_timeout(200)
+            img = cv2.imdecode(np.frombuffer(sp.screenshot(), np.uint8), cv2.IMREAD_COLOR)
+            ok = False
+            if geo:
+                paper = img[int(geo['paper'][1]), int(geo['paper'][0])]
+                band = img[int(geo['band'][1]), int(geo['band'][0])]
+                lp, lb = V433Fields._lum(paper), V433Fields._lum(band)
+                ok = lp > 0.8 and lb < 0.05
+                if not ok:
+                    print(f'    v46: forced dark {w} paper {paper} band {band}')
+            c[f'forced_dark_{w}_bib_paper_stays_white'] = ok
+            # 拍立得的白框也一樣
+            pg2 = self.ev(sp, """()=>{ const p=__card('東京馬拉松'); p.scrollIntoView({block:'center'}); const r=p.getBoundingClientRect(), ph=p.querySelector('.pola-photo').getBoundingClientRect(); return [r.left+3, (ph.top+ph.bottom)/2]; }""")
+            sp.wait_for_timeout(150)
+            img = cv2.imdecode(np.frombuffer(sp.screenshot(), np.uint8), cv2.IMREAD_COLOR)
+            c[f'forced_dark_{w}_polaroid_frame_stays_white'] = bool(pg2) and V433Fields._lum(img[int(pg2[1]), int(pg2[0])]) > 0.8
+            sctx.close()
+        # ================= 版面：有爬升、各種寬度 × 語言 × 字級都放得下 =================
+        FIT_ALL = """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const fit=""" + BIB_FIT_JS + """; const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(120);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); await wait(80); fit().forEach(b=>bad.push(lang+' '+fs+' '+b)); } }
+            setLang('zh'); applyFontScale('medium');
+            if(bad.length) console.log('v46: fit',bad.slice(0,10).join(' | '));
+            return bad.length===0; }"""
+        # 一般字級：成績和均速／爬升排在同一列（帶子沒有被擠成兩列）
+        # 360 寬只看號碼布：拍立得的帶子在白框裡面窄 26px，游泳的「0:58:00」加「2'19"/100m」排不進一行，
+        # 均速會整組換到成績下面（這是設計好的退路，不算擠壞）
+        ONE_ROW = """(sel)=>{ const bad=[]; const st=document.createElement('style'); st.textContent='.photo-card{transform:none!important}'; document.head.appendChild(st);
+            document.querySelectorAll(sel).forEach(b=>{ const t=b.querySelector('.bib-time'), p=b.querySelector('.bib-perf'); if(!t||!p) return;
+              const tr=t.getBoundingClientRect(), pr=p.getBoundingClientRect(); if(pr.top>=tr.bottom-1) bad.push((b.closest('.photo-card').title||'').slice(0,8)); });
+            st.remove(); if(bad.length) console.log('v46: two rows',bad.join(',')); return bad.length===0 && document.querySelectorAll('#calendar .bib-perf').length>8; }"""
+        # V46_QUICK=1：反例驗證時跳過這一段（4 種寬度 × 9 種語言字級，佔這一組大半的時間）；
+        # 針對版面的反例照樣跑完整的
+        for w in (() if os.environ.get('V46_QUICK') else (360, 390, 700, 1280)):
+            fctx, fp = self._ctx(browser, viewport={'width': w, 'height': 900}, touch=w < 641)
+            c[f'band_fits_{w}_all_languages_and_font_sizes'] = self.ev(fp, FIT_ALL)
+            if w in (360, 390):
+                c[f'band_one_row_{w}'] = self.ev(fp, ONE_ROW, '#calendar .bib-card .bib-timing' if w == 360 else '#calendar .bib-timing')
+            fctx.close()
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -8290,6 +8607,7 @@ GROUPS = {
     'v44':        lambda: V44BibWall('v44'),
     'v45':        lambda: V45Backup('v45'),
     'v451':       lambda: V451WallFold('v451'),
+    'v46':        lambda: V46FinisherWall('v46'),
 }
 
 

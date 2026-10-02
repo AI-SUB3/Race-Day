@@ -516,11 +516,13 @@
   .table-view-name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .table-view-row.selected .pb-badge{color:var(--gold);}
 
-  /* ---------- 獎牌牆：號碼布牆（v4.4.0） ----------
+  /* ---------- 完賽牆：號碼布牆（v4.4.0；v4.6.0 以前叫「獎牌牆」） ----------
      每一年一段：方格旗＋年份＋那一年的場數、里程、PB 數。沒有封面照的完賽是那一場的號碼布，
-     有封面照的是拍立得（為什麼改成這樣，見 JS 那邊「獎牌牆：號碼布牆」那一段的開頭）。
-     紙在深色模式也維持淺色（只壓暗一階）：號碼布、拍立得本來就是白紙，整面跟著變深色反而
-     不像實物；紙上的字色也就可以固定，不必每個主題各配一套。
+     有封面照的是拍立得（為什麼改成這樣，見 JS 那邊「完賽牆：號碼布牆」那一段的開頭）。
+     紙在深色模式也是白的，跟淺色模式一模一樣（v4.6.0；原本壓暗一階，實際看起來是灰的）：
+     號碼布、拍立得本來就是白紙，整面跟著變深色反而不像實物；紙上的字色也就可以固定。
+     瀏覽器的「網頁強制深色」（Chrome／Edge 的 Auto Dark Mode）會把白紙轉成一片黑——卡片寫
+     color-scheme:only light 請瀏覽器不要轉（見 .photo-card）。
      大字（號碼、距離、年份）用 Barlow Condensed——號碼布、計時看板常見的窄體粗字。載不到
      （第一次開就離線、字型網站被擋）時依序換成各系統內建的窄體字，都沒有才是一般的無襯線字；
      號碼的字級是照最寬的那種情況估的（wallTextEm()），所以換成哪一種字都放得進號碼布。 */
@@ -553,7 +555,8 @@
   .bib-expand-all{min-height:36px;padding:4px 2px;border:none;background:none;font:inherit;font-size:calc(13px*var(--fs,1));
     color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
   .bib-expand-all:hover{color:var(--ink);}
-  .bib-flag{flex:none;width:33px;height:22px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.2);
+  /* 方格旗也不讓瀏覽器的強制深色轉：轉完白格子變黑格子，整面旗子是一塊黑 */
+  .bib-flag{flex:none;width:33px;height:22px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.2);color-scheme:only light;
     background:conic-gradient(#17191B 25%,#FFFFFF 0 50%,#17191B 0 75%,#FFFFFF 0) 0 0/11px 11px;}
   [data-theme="dark"] .bib-flag{box-shadow:0 0 0 1px rgba(255,255,255,.3);}
   .bib-ynum{font-family:var(--font-display);font-style:italic;font-weight:900;font-size:36px;line-height:1;letter-spacing:.02em;color:var(--ink);}
@@ -566,8 +569,11 @@
   /* 卡片是 <button>（點了打開那一場）：字色、字型一定要寫，不然是瀏覽器預設的黑字、系統字型。
      每張卡有一個固定的小角度（--rot，照 id 算），像隨手釘在牆上；滑鼠移上去扶正、浮起來。
      v4.3 跟著游標轉的 3D 傾斜拿掉了：卡片本來就斜斜的，再跟著游標轉會晃得頭暈 */
+  /* color-scheme:only light（v4.6.0）：瀏覽器開了「網頁強制深色」時，這張卡（連同裡面的字、印章、
+     照片框）照原本的顏色畫——白紙黑字，不會被轉成黑紙白字（使用者實測：整面號碼布一片黑）。
+     賽名帶、計時帶本來就是深色，不受影響 */
   .photo-card{position:relative;display:block;width:100%;margin:0;padding:0;border:none;border-radius:6px;
-    font:inherit;text-align:left;color:#17191B;cursor:pointer;
+    font:inherit;text-align:left;color:#17191B;cursor:pointer;color-scheme:only light;
     transform:rotate(var(--rot,0deg));transition:transform .2s ease,box-shadow .2s ease;}
   .photo-card:active{transform:rotate(var(--rot,0deg)) scale(.98);}
   /* 全站的 :focus-visible 是 box-shadow 光暈，會被卡片自己的陰影蓋掉：改用 outline */
@@ -596,6 +602,11 @@
     radial-gradient(circle at calc(100% - 11px) 11px,rgba(0,0,0,.35) 0 2.6px,rgba(0,0,0,.08) 3.2px,transparent 3.6px),
     radial-gradient(circle at 11px calc(100% - 11px),rgba(0,0,0,.3) 0 2.6px,rgba(0,0,0,.08) 3.2px,transparent 3.6px),
     radial-gradient(circle at calc(100% - 11px) calc(100% - 11px),rgba(0,0,0,.3) 0 2.6px,rgba(0,0,0,.08) 3.2px,transparent 3.6px);}
+  /* 有計時帶時只留上面兩個孔：下面兩個會打在帶子裡的成績、爬升上（手機上 170px 寬的號碼布，
+     帶子左右再各讓出孔的位置，「11:48:30」加「10'06"/km」就放不下一行） */
+  .bib-holes.on-band{background:
+    radial-gradient(circle at 11px 11px,rgba(0,0,0,.35) 0 2.6px,rgba(0,0,0,.08) 3.2px,transparent 3.6px),
+    radial-gradient(circle at calc(100% - 11px) 11px,rgba(0,0,0,.35) 0 2.6px,rgba(0,0,0,.08) 3.2px,transparent 3.6px);}
   /* 安全別針：每支都用同一個 <symbol>（BIB_WALL_DEFS），右邊那支鏡像 */
   .bib-pin{position:absolute;top:-3px;z-index:3;width:38px;height:12px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));}
   .bib-pin.is-l{left:-6px;transform:rotate(-30deg);}
@@ -606,29 +617,40 @@
   /* PB 的印章蓋在右上角：賽名帶右邊留出印章的位置，賽名不會被蓋住 */
   .bib-card.is-pb .bib-head{padding-right:72px;}
   /* 很窄的號碼布（360 寬的手機排兩欄）賽名帶不寫年份：這一段的標題就是年份，位置留給賽名 */
-  @container (max-width:165px){ .bib-year{display:none;} }
-  /* 號碼的字級：照號碼布的寬度（cqi）和號碼有多寬（--w，wallTextEm() 估的，單位是字級）算，
-     長號碼自動縮小、不會被切掉。不支援容器單位的舊瀏覽器用前面那個固定字級，太長的話省略號收尾 */
-  .bib-num{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:0 12px;
-    font-family:var(--font-display);font-weight:900;line-height:1;letter-spacing:-.01em;color:#17191B;
-    font-size:44px;font-size:min(26cqi,calc((100cqi - 24px) / var(--w,4)));}
-  .bib-no{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* 印章也小一號：底下有計時帶之後號碼往上移，原本 44px 的印章在 155px 寬的號碼布上會蓋到長號碼的最後一個字
+     （v4.6.0；桌機也從 58px 縮成 52px，理由一樣）。選擇器多一層 .bib-card：寫在後面的 .bib-stamp 規則才蓋不掉它 */
+  @container (max-width:165px){ .bib-year{display:none;} .bib-card .bib-stamp{top:4px;right:6px;width:38px;height:38px;} }
+  /* 中間：大大的號碼（或距離），底下一行小字寫距離（大字已經是距離時寫運動別）。
+     號碼的字級：照號碼布的寬度（cqi）和號碼有多寬（--w，wallTextEm() 估的，單位是字級）算，
+     長號碼自動縮小、不會被切掉。不支援容器單位的舊瀏覽器用前面那個固定字級，太長的話省略號收尾。
+     v4.6.0 起上下各有一條帶子，中間比原本矮：上限從 26cqi 降到 24cqi */
+  .bib-num{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;padding:6px 12px;color:#17191B;}
+  .bib-no{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-family:var(--font-display);font-weight:900;line-height:1;letter-spacing:-.01em;
+    font-size:44px;font-size:min(24cqi,calc((100cqi - 24px) / var(--w,4)));}
   .bib-num small{margin-left:2px;font-size:.45em;}
-  .bib-num.is-dist{font-style:italic;color:var(--band);}
-  .bib-num.is-icon{color:var(--band);}
-  .bib-num.is-icon svg{width:48px;height:48px;width:28cqi;height:28cqi;stroke-width:2.1;}
-  /* 左下角的字跟成績擠不下時，成績換到下一行（號碼布跟著長高），不要把字切成「Swimm…」「42.2…」 */
-  .bib-foot{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:0 20px 13px;line-height:1.3;}
-  .bib-tag{min-width:0;font-family:var(--font-display);font-weight:800;font-size:calc(14px*var(--fs,1));letter-spacing:.08em;color:#4A4F55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bib-num.is-dist .bib-no{font-style:italic;color:var(--band);}
+  .bib-num.is-icon .bib-no{color:var(--band);}
+  .bib-num.is-icon svg{width:48px;height:48px;width:26cqi;height:26cqi;stroke-width:2.1;}
+  .bib-tag{max-width:100%;font-family:var(--font-display);font-weight:800;font-size:calc(14px*var(--fs,1));line-height:1.2;letter-spacing:.08em;color:#4A4F55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .bib-tag.is-sport{font-family:inherit;font-weight:700;font-size:calc(12px*var(--fs,1));letter-spacing:.04em;}
-  /* 成績寫在計時晶片條上：黑底白字，左邊一小段條碼 */
-  .bib-chip{flex:none;margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:3px 8px 3px 6px;border-radius:3px;background:#17191B;color:#FFFFFF;
-    font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:calc(13px*var(--fs,1));font-variant-numeric:tabular-nums;}
-  .bib-chip i{width:16px;height:12px;opacity:.85;background:repeating-linear-gradient(90deg,#FFFFFF 0 1px,transparent 1px 3px,#FFFFFF 3px 5px,transparent 5px 6px);}
-  .bib-date{flex:none;margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:calc(12px*var(--fs,1));color:#4A4F55;}
+  /* 底部的計時帶（v4.6.0）：原本右下角那一小條計時晶片拉成整條黑色的帶子——左邊大字寫成績
+     （沒有成績寫日期），右邊均速疊在爬升上面。上面一條運動別顏色的賽名帶、下面一條計時帶，
+     成績、均速、爬升都在同一個地方找。擠不下的時候均速、爬升整組換到成績下面（號碼布跟著長高），
+     不會把「11:48:30」或「10'06"/km」切斷 */
+  .bib-timing{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 10px;min-height:44px;box-sizing:border-box;
+    padding:5px 16px 6px 18px;border-radius:0 0 6px 6px;background:#17191B;color:#FFFFFF;
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;line-height:1.25;}
+  .bib-time{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:calc(17px*var(--fs,1));letter-spacing:-.01em;white-space:nowrap;}
+  .bib-time i{width:16px;height:13px;opacity:.85;background:repeating-linear-gradient(90deg,#FFFFFF 0 1px,transparent 1px 3px,#FFFFFF 3px 5px,transparent 5px 6px);}
+  .bib-time.is-date{font-weight:500;font-size:calc(13px*var(--fs,1));}
+  .bib-perf{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:calc(11.5px*var(--fs,1));white-space:nowrap;}
+  .bib-pace{font-weight:600;}
+  /* 爬升比均速淡一階：白字 75%，黑底上還有 11:1 */
+  .bib-elev{color:rgba(255,255,255,.75);}
   /* PB：紅色印章（SVG，見 wallStampSvg()）。不用 mix-blend-mode:multiply（設計稿用了）：在白紙上看起來
      跟沒用一樣，可是瀏覽器的「網頁強制深色」把紙轉成深色之後，multiply 疊上去整個印章就看不見了 */
-  .bib-stamp{position:absolute;top:10px;right:12px;z-index:2;width:58px;height:58px;color:#C8322A;opacity:.86;transform:rotate(-16deg);pointer-events:none;overflow:visible;}
+  .bib-stamp{position:absolute;top:6px;right:12px;z-index:2;width:52px;height:52px;color:#C8322A;opacity:.86;transform:rotate(-16deg);pointer-events:none;overflow:visible;}
   .bib-stamp-bg{fill:none;}
   .bib-stamp-pb{font-family:var(--font-display);font-style:italic;font-weight:900;font-size:24px;fill:currentColor;}
   .bib-stamp-sub{font-weight:700;font-size:8px;fill:currentColor;}
@@ -648,12 +670,13 @@
   .pola-dist small{font-size:.45em;}
   .pola-cap{display:flex;flex-direction:column;gap:1px;min-width:0;padding:9px 4px 12px;}
   .pola-name{font-size:calc(14px*var(--fs,1));font-weight:700;line-height:1.35;color:#1E2124;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  /* 日期、成績各自不換行；放不下時成績整個換到下一行，不會把「12:41:09」拆成兩半 */
   .pola-meta{display:flex;flex-wrap:wrap;column-gap:10px;font-family:'IBM Plex Mono',monospace;font-size:calc(11.5px*var(--fs,1));line-height:1.45;color:#5A5F65;}
   .pola-meta span{white-space:nowrap;}
-  .pola-time{font-weight:600;color:#1E2124;}
-  [data-theme="dark"] .bib-card{background:linear-gradient(180deg,#F1EFE8 0%,#E4E1D8 100%);}
-  [data-theme="dark"] .pola-card{background:#EFEDE6;}
+  /* 拍立得下面也貼一條計時帶（v4.6.0）：成績、均速、爬升跟號碼布寫在一樣的地方，有沒有封面照都一樣好找。
+     日期已經寫在賽名下面，沒有成績時帶子不再寫一次日期 */
+  .bib-timing.is-pola{min-height:0;margin-top:7px;padding:5px 9px;border-radius:3px;}
+  .bib-timing.is-pola .bib-time{font-size:calc(15px*var(--fs,1));}
+  .bib-timing.is-pola .bib-time i{display:none;}
   @media (max-width:640px){
     .bib-sec{margin-bottom:28px;}
     .bib-yhead{margin-bottom:16px;}
@@ -664,14 +687,20 @@
     .bib-year{font-size:calc(13px*var(--fs,1));}
     .bib-race{font-size:calc(11px*var(--fs,1));}
     .bib-card.is-pb .bib-head{padding-right:54px;}
-    .bib-num{padding:0 8px;font-size:40px;font-size:min(26cqi,calc((100cqi - 16px) / var(--w,4)));}
-    .bib-foot{padding:0 12px 10px 14px;}
-    .bib-tag{font-size:calc(11px*var(--fs,1));letter-spacing:.05em;}
+    .bib-num{gap:3px;padding:4px 8px;}
+    .bib-no{font-size:40px;font-size:min(24cqi,calc((100cqi - 16px) / var(--w,4)));}
+    .bib-tag{font-size:calc(11px*var(--fs,1));letter-spacing:.06em;}
     .bib-tag.is-sport{font-size:calc(10.5px*var(--fs,1));letter-spacing:.02em;}
-    .bib-chip{padding:2px 6px 2px 5px;font-size:calc(11px*var(--fs,1));}
-    .bib-chip i{display:none;}
-    .bib-date{font-size:calc(10.5px*var(--fs,1));}
-    .bib-stamp{top:8px;right:8px;width:44px;height:44px;}
+    /* 手機的計時帶：成績 15px、均速爬升 10px，170px 寬的號碼布放得下「11:48:30」加「10'06"/km」；條碼拿掉 */
+    .bib-timing{min-height:37px;gap:1px 8px;padding:4px 9px 4px 10px;}
+    .bib-time{font-size:calc(15px*var(--fs,1));}
+    .bib-time i{display:none;}
+    .bib-time.is-date{font-size:calc(11px*var(--fs,1));}
+    .bib-perf{font-size:calc(10px*var(--fs,1));}
+    /* 拍立得的帶子在白框裡面，比號碼布窄 26px：左右內距、間距再收一點，360 寬的手機上成績和均速還排得進一行 */
+    .bib-timing.is-pola{margin-top:6px;column-gap:6px;padding:4px 6px;}
+    .bib-timing.is-pola .bib-time{font-size:calc(13px*var(--fs,1));}
+    .bib-stamp{top:6px;right:8px;width:44px;height:44px;}
     .bib-stamp.is-pola{top:12px;right:12px;width:42px;height:42px;}
     .pola-dist{font-size:30px;}
     .pola-meta{column-gap:8px;font-size:calc(10.5px*var(--fs,1));}
@@ -2019,7 +2048,7 @@
   .career-hof-row{display:flex;justify-content:center;margin:-4px 0 4px;}
   .career-hof-row .career-hof-open{margin-top:0;}
   .career-empty{margin:8px 0 4px;padding:18px 18px;border:1px dashed var(--rule);border-radius:12px;color:var(--ink-soft);font-size:calc(14px*var(--fs,1));line-height:1.65;}
-  /* ==== 手機的檢視切換（v4.0）：清單／月曆／獎牌牆 ==== */
+  /* ==== 手機的檢視切換（v4.0）：清單／月曆／完賽牆 ==== */
   .view-seg{display:none;flex:none;height:42px;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;overflow:hidden;}
   .view-seg button{
     border:none;background:var(--surface);color:var(--ink-soft);cursor:pointer;
@@ -2029,12 +2058,12 @@
   .view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);}
   .view-seg button:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
   .cal-month-nav{display:inline-flex;align-items:center;gap:6px;}
-  /* 表格、獎牌牆是跨月份的：月份箭頭按了內容不會變，乾脆不顯示（v4.1.0） */
+  /* 表格、完賽牆是跨月份的：月份箭頭按了內容不會變，乾脆不顯示（v4.1.0） */
   .cal-nav[data-view="table"] .cal-month-nav,.cal-nav[data-view="grid"] .cal-month-nav{display:none;}
   @media (max-width:640px){
     .view-seg{display:inline-flex;}
     .cal-tools{display:none!important;}
-    /* 月份切換只在「月曆」用得到；清單和獎牌牆都是跨月份的 */
+    /* 月份切換只在「月曆」用得到；清單和完賽牆都是跨月份的 */
     .cal-nav:not([data-phone-view="calendar"]) .cal-month-nav{display:none;}
   }
   .list-see-all{
@@ -2396,7 +2425,7 @@
     border-radius:12px;
   }
   /* 模糊只給桌機。filter:blur() 會把整個 #main-content 連同底下所有
-     東西（整個月曆、上百張 base64 封面、獎牌牆、圖表）一次點陣化成
+     東西（整個月曆、上百張 base64 封面、完賽牆、圖表）一次點陣化成
      單一 GPU 圖層再做模糊——頁面越長、照片越多，這張貼圖就越大。
      iOS Safari 對這種超大圖層沒有分塊處理，記憶體一超過就把整個
      分頁殺掉、自動重新載入；使用者看到的是「開一個彈窗就白畫面、
@@ -3246,11 +3275,11 @@
     <section id="focus-panel-slot"></section>
     <div class="topbar-row2">
       <div class="cal-nav">
-        <!-- 手機（≤640px）用這組切換：清單／月曆／獎牌牆；電腦用右邊的兩顆圖示 -->
+        <!-- 手機（≤640px）用這組切換：清單／月曆／完賽牆；電腦用右邊的兩顆圖示 -->
         <div class="view-seg" role="group" aria-label="檢視方式" data-i18n-aria="ui.viewSegLabel">
           <button type="button" data-phone-view="list" aria-pressed="true" data-i18n="ui.viewList">清單</button>
           <button type="button" data-phone-view="calendar" aria-pressed="false" data-i18n="ui.viewCalendar">月曆</button>
-          <button type="button" data-phone-view="grid" aria-pressed="false" data-i18n="ui.viewPhotoWall">獎牌牆</button>
+          <button type="button" data-phone-view="grid" aria-pressed="false" data-i18n="ui.viewPhotoWall">完賽牆</button>
         </div>
         <span class="cal-month-nav">
         <button id="cal-prev" class="btn-ghost" data-i18n-title="ui.calPrev" aria-label="上個月">‹</button>
@@ -3259,7 +3288,7 @@
         <button id="cal-today" class="btn-ghost" data-i18n="ui.today">今天</button>
         </span>
         <span class="cal-tools">
-        <button id="cal-view-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.gridViewToggle" title="切換檢視" aria-label="切換為獎牌牆檢視">
+        <button id="cal-view-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.gridViewToggle" title="切換檢視" aria-label="切換為完賽牆檢視">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         </button>
         <button id="cal-table-toggle" class="btn-ghost icon-btn" data-i18n-title="ui.tableViewToggle" title="切換為緊湊表格檢視" aria-label="切換為緊湊表格檢視">
@@ -4246,9 +4275,16 @@ function formatDistanceCompact(km){
   const rounded=Math.round(km*10)/10;
   return (Number.isInteger(rounded)?rounded:rounded.toFixed(1))+'K';
 }
+/* 游泳的距離寫公尺（v4.6.0）：泳渡、公開水域本來就講「3300 公尺」「1500m」，寫成 3.3 km 還要在腦中
+   換算。只改顯示：資料照樣存公里（route.distanceKm），加總、排序、統計、成就都不變；生涯里程、年份的
+   合計也照樣寫 km（一年裡有跑有游，加起來只能用一種單位）。三鐵分段裡的游泳是三鐵的一段，不在此列 */
+function isSwimRace(r){ return !!r&&r.sportType==='swimming'; }
+function swimMeters(km){ return Math.round(Number(km)*1000); }
+// 一場賽事的距離，寫成「42.2 km」；游泳寫「3300 m」（生涯回顧、分享卡、名人堂軌跡卡這些地方用）
+function raceDistLabel(r){ const km=r.route.distanceKm; return isSwimRace(r)?swimMeters(km)+' m':Number(km).toFixed(1)+' km'; }
 function raceTerrainMetaHtml(r){
   const parts=[];
-  const d=formatDistanceCompact(r.route.distanceKm);
+  const d=isSwimRace(r)&&r.route.distanceKm>0?swimMeters(r.route.distanceKm)+'m':formatDistanceCompact(r.route.distanceKm);
   if(d) parts.push(d);
   if(r.route.elevationGainM!=null) parts.push(`+${Math.round(r.route.elevationGainM)}m`);
   return parts.length?`<span class="cal-list-meta mono">${parts.join(' · ')}</span>`:'';
@@ -4500,10 +4536,10 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   calendarYear:today0.getFullYear(),calendarMonth:today0.getMonth(),savingTemplate:false,confirmDeleteTemplate:false,
   viewMode:'calendar',focusDismissedId:null,user:null,
   // v4.0：首頁分頁（races／career）與手機的檢視方式（list／calendar／grid）。
-  // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／獎牌牆／表格，手機預設清單。
+  // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／完賽牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.5.1';
+const APP_VERSION='v4.6.0';
 
 /* ============================================================
    多語系（i18n）
@@ -4574,7 +4610,7 @@ const JA={
   'ui.simpleHidNutritionSchedule':'補給スケジュール {n} 件','ui.simpleHidTraining':'トレーニング計画','ui.simpleHidLogistics':'予算と旅程','ui.simpleHidShoe':'レースシューズ',
   // v4.0
   'ui.tabRaces':'大会','ui.tabCareer':'キャリア','ui.homeTabsLabel':'ホームのタブ',
-  'ui.viewList':'リスト','ui.viewCalendar':'カレンダー','ui.viewPhotoWall':'メダル棚','ui.viewSegLabel':'表示方法',
+  'ui.viewList':'リスト','ui.viewCalendar':'カレンダー','ui.viewPhotoWall':'完走ウォール','ui.viewSegLabel':'表示方法',
   'ui.listRecent':'最近の大会','ui.listSeeAllHistory':'過去の記録をすべて見る（{n} 件）›',
   'ui.menuDisplay':'表示','ui.menuFontSize':'文字サイズ','ui.menuDarkMode':'ダークモード','ui.menuLanguage':'言語',
   'ui.menuData':'データ','ui.menuImport':'読み込み（Excel／JSON）','ui.menuExport':'書き出しとバックアップ（JSON／CSV／カレンダー）',
@@ -4591,7 +4627,7 @@ const JA={
   'ui.calResultsSearch':'「{q}」の検索結果：{n} 件','ui.calResultsFilter':'「{f}」：{n} 件','ui.calResultsBoth':'「{f}」で「{q}」を検索：{n} 件',
   'ui.calResultsNone':'該当する大会はありません','ui.calResultsClear':'検索と絞り込みを解除','ui.calUndated':'日付未定','ui.dateTbd':'日付未定','ui.done':'完了','ui.yesterday':'昨日','ui.daysAgo':'{n}日前','ui.resultPromptLabel':'走り終えましたか？','ui.resultPromptText':'記録を入れると、キャリアデータ・自己ベスト・バッジが自動で更新されます。','ui.recordResult':'記録を入れる','ui.resultDns':'出走しなかった（DNS）','ui.resultDnf':'完走できなかった（DNF）','ui.resultLater':'あとで','ui.resultBanner':'大会から{n}日経ちました。記録がまだです','ui.resultBannerOne':'大会は昨日でした。記録がまだです','ui.resultPending':'記録待ち','ui.resultVsGoalFaster':'A目標（{g}）より{n}速い','ui.resultVsGoalSlower':'A目標（{g}）より{n}遅い','ui.resultVsGoalExact':'A目標（{n}）ちょうど','ui.recordResultImport':'ウォッチの記録（GPX／TCX／FIT）から自動入力','ui.recordResultSave':'保存して「完走」にする','ui.recordResultHint':'感想・写真・スプリットはあとで追加できます。','ui.resultSaved':'記録しました','ui.resultSavedNoTime':'「完走」にしました。記録はあとで入れられます','ui.statusChangedTo':'「{n}」にしました','ui.resultLaterToast':'了解です。一覧と大会ページには「記録待ち」が残ります','ui.durHM':'{h}時間{m}分','ui.durMS':'{m}分{s}秒','ui.durS':'{s}秒','ui.rwAdd':'＋ 入力','ui.rwBib':'ゼッケン','ui.rwStart':'スタート','ui.rwPack':'荷造り','ui.rwAddList':'＋ 作成','ui.rwGoal':'A目標','ui.rwWeather':'天気','ui.rwWeatherRain':'降水 {n}%','ui.rwWeatherFetch':'予報を取得','ui.focusDaysAfter':'日後','ui.focusDaysAfterOne':'日後','ui.tableSortBar':'「{a}」で並べ替え（{b}）・{c}','ui.tableBackToYears':'年ごとの表示に戻す','ui.tableBackToNewest':'新しい順に戻す','ui.tableDirTimeAsc':'速い順','ui.tableDirTimeDesc':'遅い順','ui.tableDirDistAsc':'短い順','ui.tableDirDistDesc':'長い順','ui.tableDirElevAsc':'少ない順','ui.tableDirElevDesc':'多い順','ui.tableDirNameAsc':'昇順','ui.tableDirNameDesc':'降順','ui.tableDirDateAsc':'古い順','ui.tableDirDateDesc':'新しい順','ui.bestMarathon':'フル最速','ui.bestHalf':'ハーフ最速','ui.best10k':'10K 最速','ui.best5k':'5K 最速','ui.bestTri51':'51.5K トライアスロン最速','ui.bestTri113':'113K トライアスロン最速','ui.bestTri226':'226K トライアスロン最速','ui.equipViewPack':'荷造り','ui.equipViewEdit':'編集','ui.equipViewKanban':'配置','ui.equipViewLabel':'装備リストの表示方法','ui.packAddPlaceholder':'1つ追加（入力して Enter）','ui.packAddLabel':'装備を1つ追加','ui.packMust':'必携','ui.packNoMust':'「必携」の装備はありません','ui.packAllDone':'荷造り完了 ✓','ui.packDoneGroup':'準備済み {n}件','ui.packPacked':'準備済み','ui.packFilterTodo':'未準備 {n}','ui.packFilterAll':'すべて {n}','ui.packFilterMust':'必携 {n}','ui.packHint':'行をタップするとチェックが付きます。重さ・分類・置き場所を変えるときは「編集」へ。','ui.careerPbOpen':'「{n}」を開く','ui.careerSheetCount':'完走','ui.careerSheetRaces':'{n}大会','ui.careerSheetDistance':'総距離','ui.careerSheetBestFm':'フル最速','ui.careerSheetYear':'{y}年・完走 {n}大会','ui.careerSheetMonth':'{y}年{m}月・完走 {n}大会','ui.careerSheetAll':'すべての完走記録・{n}大会','ui.yearlyChartBarLabel':'{y}年 {n}大会','ui.calResultsHint':'すべての月から表示しています',
   'ui.showAllFields':'すべての項目を表示（あと {n} 項目）','ui.showAllFieldsFilled':'すべての項目を表示（あと {a} 項目、うち {b} 項目は入力済み）','ui.showCommonFields':'よく使う項目だけ表示',
-  'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'完走した大会はまだありません。「完走」にするとここに並びます。','ui.wallStampSub':'ベスト','ui.wallExpandAll':'すべて開く','ui.wallCollapseAll':'すべて閉じる',
+  'ui.gridViewToggle':'完走ウォール表示に切り替え','ui.photoGridEmpty':'完走した大会はまだありません。「完走」にするとここに並びます。','ui.wallStampSub':'ベスト','ui.wallExpandAll':'すべて開く','ui.wallPaceSr':'平均','ui.wallElevSr':'獲得標高','ui.wallCollapseAll':'すべて閉じる',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
   'ui.filterOverseas':'海外レース',
   'ui.mediaGalleryTitle':'メディアギャラリー',
@@ -4773,7 +4809,7 @@ const JA={
   'ui.gradientGentle':'緩やか','ui.gradientSteep':'急勾配 (≥25%)',
   'ui.coverFocalPoint':'フォーカス位置を調整',
   'ui.focalPointTitle':'カバー写真のフォーカス位置を調整',
-  'ui.focalPointHint':'カレンダーのマス、一覧、メダル棚の小さいサムネイルは正方形に切り抜かれます。下の写真をクリックまたはドラッグして、一番大事な部分を照準に合わせてください。右側のプレビューがリアルタイムで更新されます。',
+  'ui.focalPointHint':'カレンダーのマス、一覧、完走ウォールの小さいサムネイルは正方形に切り抜かれます。下の写真をクリックまたはドラッグして、一番大事な部分を照準に合わせてください。右側のプレビューがリアルタイムで更新されます。',
   'ui.focalPreviewLabel':'サムネイルプレビュー',
   'ui.templateAutoApplied':'装備テンプレートを自動的に適用しました',
   // ---- 賽事詳情 - 區塊標題 ----
@@ -4898,7 +4934,7 @@ const JA={
   'ui.gpxImportHint':'Garmin / COROS / Strava から書き出したファイルに対応。距離・標高・タイム・心拍数・スプリットを自動取得します。',
   'ui.gpxHintFull':'<strong>{file}</strong> から以下のデータを読み取りました。確認後「{race}」に適用します（<strong>既存の項目は上書きされます</strong>。置き換わる値は下に表示しています）：',
   'ui.gpxModalTitle':'アクティビティファイルの読み込み',
-  'ui.gpxApply':'このレースに適用','ui.journeyTitle':'レースへの旅','ui.yearJourneyTitle':'今年のレースの旅','ui.yearJourneyFrom':'● {n} から出発','ui.yearJourneyDomestic':'国内','ui.yearJourneyAbroad':'海外','ui.yearJourneyAllLocal':'今年のレースはすべて地元でした','ui.yearJourneyLocal':'地元','ui.yearJourneyMorePlaces':'ほか {n} か所','ui.yearJourneyPlaces':'開催地','ui.yearJourneyKm':'往復の直線距離','ui.yearJourneyFar':'最遠','ui.yearJourneyOffMap':'東アジア以外に {n} 件（距離には含む）','ui.yearJourneyUnlocated':'{n} 件は場所不明のため含まず','ui.yearJourneyNeedHome':'先にプロフィールで居住地を設定してください','ui.yearJourneyToggle':'年間のレースの旅を追加','ui.journeySameCounty':'地元のレース：お住まいと同じ県市です。','ui.journeyNeedHome':'居住地を設定すると、自宅から会場までの旅のアニメーションが表示されます。','ui.journeySetHome':'居住地を設定','ui.journeyNeedPlace':'大会の開催都市を入力するか GPX を取り込むと、旅のルートを描けます。','ui.journeyNotFound':'この場所が見つかりませんでした。開催都市をもう少し詳しく入力してください（例：「大阪市」）。','ui.journeyLocating':'開催地を検索中⋯','ui.journeyHomeRace':'地元のレース：自宅から約 {n} km。','ui.journeyNoTransport':'往路の交通手段が未入力','ui.journeyReplay':'タップで再生','ui.journeyKm':'km（直線距離）','ui.journeyOpenMap':'地図で見る','ui.journeyMapLoading':'地図を読み込み中⋯','ui.journeyMapOffline':'地図の表示にはネット接続が必要です。','ui.journeyMapFailed':'地図を読み込めませんでした。接続を確認してもう一度お試しください。','ui.journeyVenue':'会場','ui.profileHome':'居住地（レースへの旅の出発点）','ui.syncPaused':'このタブではクラウド同期を停止中（?nosync=1）','ui.syncResumed':'前回は {n} 回目のダウンロードで中断しました。続きから再開します','ui.syncDownloading':'クラウドからレースをダウンロード中⋯{n} 件完了','ui.syncDownloaded':'クラウドのデータをダウンロードしました（{n} 件）','ui.radarShortSwim':'ス','ui.radarWaterTemp':'水 {n}°C','ui.radarTempAny':'温度の厳しさ','ui.radarSwimWristHr':'🏊 スイムの心拍は手首の光学センサーによるもので、水中では実際より低めに出やすいです','ui.radarSwimNoSplits':'🏊 スイムに区間データがないため（ランニングモードで記録など）、レーダーには描きません','ui.radarLegScaleNoteSwim':'距離は種目ごとの満点：スイム 3.8 km、バイク 180 km、ラン 42.2 km（アイアンマン距離）。スイムの温度は水温で、トライアスロンのウェットスーツ規定で評価します','ui.radarShortBike':'バ','ui.radarShortRun':'ラ','ui.radarSwimNote':'🏊 スイム：水中の GPS と心拍は不正確なため、「区間成績」にのみ表示し、レーダーには描きません','ui.radarLegScaleNote':'距離は種目ごとの満点：バイク 180 km、ラン 42.2 km（アイアンマン距離）','ui.splitsSwimRejected':'このスイムは GPS が乱れすぎているため（世界記録より速いペースになる）、100 m ごとの区間は表示しません。','ui.splitsSwimInferred':'ランニングモードで記録した場合、水中の GPS はほぼ不正確なため、100 m ごとの区間は計算できません。','ui.splitsSwimNoGps':'このスイムには十分な GPS データがありません（プールモードまたは受信不良）。100 m ごとの区間は計算できません。','ui.fitLegsInferredTri':'このファイルには区間データがありません（単一モードで記録）。速度からスイム／バイク／ランとトランジションを推定しました。水中の GPS は不正確なためスイム距離は表示しません。トランジションは推定値です。','ui.splitsSwimSkipped':'スイムは水中で GPS が不正確なため、1 km ごとの区間は表示しません。','ui.splitsLegNone':'この区間は 1 km 未満のため、1 km ごとの区間はありません。','ui.splitsLegApprox':'以前のデータのため、時間で各区間に振り分けています。区間の境目をまたぐ 1 km は省きました。FIT を取り込み直すと区間ごとに正確に計算します。','ui.splitsPaceOrSpeed':'ペース／速度','ui.radarPerLeg':'（区間別）','ui.fitLegsInferred':'このファイルには区間データがありません（単一モードで記録）。速度からラン／バイク／ランの3区間とトランジションを推定しました。トランジションは推定値なので「区間成績」で確認してください。','ui.fitLegsInferredHint':'このファイルは「ラン → バイク → ラン」のようです。種目を「デュアスロン」に変えて再度取り込むと、自動で3区間に分けます。','ui.legInferredNote':'時計に区間の記録がないため、速度から推定した結果です。バイクとランの切り替えの誤差は通常十数秒以内。トランジションは「止まって着替えた時間」しか分からないため、公式計測より短めになることがあります。','ui.tpSuggest':'推奨 {n}','ui.tpPrepN':'準備 {n} 週','ui.tpTaperN':'テーパー {n} 週','ui.tpSuggestedTag':'（推奨）','ui.tpHint':'「{a}」の推奨：準備 {b} 週','ui.tpHintTaper':'、テーパー {n} 週。未入力なら推奨値を、入力すればその値を使います。','ui.tpHintNone':'この種目・距離には推奨週数がありません（対象はロード・トレイル・ウルトラ・デュアスロン・トライアスロン）。未入力の場合、レース前トレーニングは 12 週で表示します。','ui.buildupSubN':'レース前 {n} 週','ui.buildupSubHow':'数字は「レース何週前か」','ui.buildupSrcOwn':'設定した準備期間','ui.buildupSrcTable':'{n}の推奨準備期間','ui.buildupSrcDefault':'既定','ui.buildupTaperN':'テーパー（最後の {n} 週）','ui.buildupEmptyN':'レース前 {n} 週間のトレーニング記録がありません。','field.prep.trainingPlan.prepWeeks':'準備期間','field.prep.trainingPlan.taperWeeks':'テーパー週数','ui.trainingNSessions':'{n} 回','ui.trainingMonthLabel':'{n}月','ui.dropzoneTrainingTitle':'ドロップしてトレーニング記録を取り込む','ui.dropzoneTrainingHint':'FIT／GPX／TCX、複数ファイルもまとめてどうぞ','ui.trainingTitle':'トレーニング記録','ui.trainingShort':'トレーニング','ui.trainingImport':'＋ FIT／GPX を取り込む','ui.trainingHint':'トレーニング記録はレースとは別に保存され、レースの統計・PB・バッジには影響しません。複数ファイルをまとめて選べます。','ui.trainingWeek':'今週','ui.trainingMonth':'今月','ui.trainingAll':'すべて','ui.trainingKm':'km','ui.trainingCount':'回','ui.trainingHours':'合計時間','ui.trainingEmpty':'まだトレーニング記録がありません。「取り込む」から時計のFIT／GPX／TCXを選んでください（複数可）。','ui.trainingEmptyPeriod':'この期間の記録はありません。','ui.trainingExport':'トレーニング記録を書き出す（JSON）','ui.trainingImportTitle':'トレーニング記録の取り込み','ui.trainingNew':'件の新しい記録','ui.trainingDupes':'件は取り込み済みのためスキップ','ui.trainingFailed':'件は読み込めませんでした','ui.trainingStillImport':'トレーニングとして取り込む','ui.trainingNoShoe':'（シューズ指定なし）','ui.trainingPickShoe':'シューズを選ぶ','ui.trainingDelete':'この記録を削除','ui.buildupTitle':'レース前のトレーニング','ui.buildupAvg':'週平均','ui.buildupLongest':'最長','ui.buildupTaper':'テーパー','ui.buildupEmpty':'レース前 12 週間のトレーニング記録がありません。','ui.shoeTrainingManualLabel':'練習距離（手動入力）','ui.feedbackCaption':'ご意見をどうぞ','ui.fontSmallTitle':'文字サイズ：小','ui.fontMediumTitle':'文字サイズ：中','ui.fontLargeTitle':'文字サイズ：大','ui.feedbackTitle':'フィードバック','ui.feedbackNotReady':'フィードバックフォームは準備中です','ui.climateAvgLabel':'例年平均','ui.climateAvgBasis':'{a} 年 × 前後 {b} 日','ui.climateAvgSamples':'、計 {n} 件','ui.climateAvgYearsOnly':'{n} 年分の同日データ','ui.weatherNeedsGpsHistory':'GPS 軌跡がないため当日の過去天気を自動取得できません。下の項目に手動入力できます','ui.weatherTooEarly':'リアルタイム予報はレース 7 日前から取得できます','ui.logiFee':'エントリー','ui.logiDeposit':'デポジット','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'参加費が未払い','ui.logiWarnStayGap':'宿泊がレース当日をカバーしていません','ui.logiWarnLateArrival':'往路の到着がスタート時刻より後','ui.logiWarnNoTransport':'海外レースの交通が未手配','ui.hofYearsHint':'{a}－{b}、うち {c} 年に出走','ui.careerShareButton':'生涯サマリーを保存','ui.careerShareTitle':'生涯サマリーを保存','ui.careerOptHero':'フルマラソン PB','ui.careerOptTiles':'生涯データ','ui.careerMissingHero':'フルマラソンの記録がありません','ui.careerMissingTracks':'GPS 軌跡の記録がありません','ui.careerMissingShoes':'シューズを登録した完走記録がありません','ui.careerMissingFuel':'補給の記録がありません','ui.careerShareFilename':'生涯サマリー.png','ui.careerShareFailed':'画像の生成に失敗しました。もう一度お試しください','ui.shareMissingHr':'心拍データなし','ui.shareMissingShoe':'シューズ未登録','ui.shareMissingShoeSport':'この種目では表示しません','ui.shareMissingFuel':'補給の記録なし','ui.shareMissingTrack':'GPX 軌跡なし','ui.resultDistance':'距離','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearCountOne':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：レース当日すぐ開けて、7 日間使わなくても Safari にデータを消されません。共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
+  'ui.gpxApply':'このレースに適用','ui.journeyTitle':'レースへの旅','ui.yearJourneyTitle':'今年のレースの旅','ui.yearJourneyFrom':'● {n} から出発','ui.yearJourneyDomestic':'国内','ui.yearJourneyAbroad':'海外','ui.yearJourneyAllLocal':'今年のレースはすべて地元でした','ui.yearJourneyLocal':'地元','ui.yearJourneyMorePlaces':'ほか {n} か所','ui.yearJourneyPlaces':'開催地','ui.yearJourneyKm':'往復の直線距離','ui.yearJourneyFar':'最遠','ui.yearJourneyOffMap':'東アジア以外に {n} 件（距離には含む）','ui.yearJourneyUnlocated':'{n} 件は場所不明のため含まず','ui.yearJourneyNeedHome':'先にプロフィールで居住地を設定してください','ui.yearJourneyToggle':'年間のレースの旅を追加','ui.journeySameCounty':'地元のレース：お住まいと同じ県市です。','ui.journeyNeedHome':'居住地を設定すると、自宅から会場までの旅のアニメーションが表示されます。','ui.journeySetHome':'居住地を設定','ui.journeyNeedPlace':'大会の開催都市を入力するか GPX を取り込むと、旅のルートを描けます。','ui.journeyNotFound':'この場所が見つかりませんでした。開催都市をもう少し詳しく入力してください（例：「大阪市」）。','ui.journeyLocating':'開催地を検索中⋯','ui.journeyHomeRace':'地元のレース：自宅から約 {n} km。','ui.journeyNoTransport':'往路の交通手段が未入力','ui.journeyReplay':'タップで再生','ui.journeyKm':'km（直線距離）','ui.journeyOpenMap':'地図で見る','ui.journeyMapLoading':'地図を読み込み中⋯','ui.journeyMapOffline':'地図の表示にはネット接続が必要です。','ui.journeyMapFailed':'地図を読み込めませんでした。接続を確認してもう一度お試しください。','ui.journeyVenue':'会場','ui.profileHome':'居住地（レースへの旅の出発点）','ui.syncPaused':'このタブではクラウド同期を停止中（?nosync=1）','ui.syncResumed':'前回は {n} 回目のダウンロードで中断しました。続きから再開します','ui.syncDownloading':'クラウドからレースをダウンロード中⋯{n} 件完了','ui.syncDownloaded':'クラウドのデータをダウンロードしました（{n} 件）','ui.radarShortSwim':'ス','ui.radarWaterTemp':'水 {n}°C','ui.radarTempAny':'温度の厳しさ','ui.radarSwimWristHr':'🏊 スイムの心拍は手首の光学センサーによるもので、水中では実際より低めに出やすいです','ui.radarSwimNoSplits':'🏊 スイムに区間データがないため（ランニングモードで記録など）、レーダーには描きません','ui.radarLegScaleNoteSwim':'距離は種目ごとの満点：スイム 3.8 km、バイク 180 km、ラン 42.2 km（アイアンマン距離）。スイムの温度は水温で、トライアスロンのウェットスーツ規定で評価します','ui.radarShortBike':'バ','ui.radarShortRun':'ラ','ui.radarSwimNote':'🏊 スイム：水中の GPS と心拍は不正確なため、「区間成績」にのみ表示し、レーダーには描きません','ui.radarLegScaleNote':'距離は種目ごとの満点：バイク 180 km、ラン 42.2 km（アイアンマン距離）','ui.splitsSwimRejected':'このスイムは GPS が乱れすぎているため（世界記録より速いペースになる）、100 m ごとの区間は表示しません。','ui.splitsSwimInferred':'ランニングモードで記録した場合、水中の GPS はほぼ不正確なため、100 m ごとの区間は計算できません。','ui.splitsSwimNoGps':'このスイムには十分な GPS データがありません（プールモードまたは受信不良）。100 m ごとの区間は計算できません。','ui.fitLegsInferredTri':'このファイルには区間データがありません（単一モードで記録）。速度からスイム／バイク／ランとトランジションを推定しました。水中の GPS は不正確なためスイム距離は表示しません。トランジションは推定値です。','ui.splitsSwimSkipped':'スイムは水中で GPS が不正確なため、1 km ごとの区間は表示しません。','ui.splitsLegNone':'この区間は 1 km 未満のため、1 km ごとの区間はありません。','ui.splitsLegApprox':'以前のデータのため、時間で各区間に振り分けています。区間の境目をまたぐ 1 km は省きました。FIT を取り込み直すと区間ごとに正確に計算します。','ui.splitsPaceOrSpeed':'ペース／速度','ui.radarPerLeg':'（区間別）','ui.fitLegsInferred':'このファイルには区間データがありません（単一モードで記録）。速度からラン／バイク／ランの3区間とトランジションを推定しました。トランジションは推定値なので「区間成績」で確認してください。','ui.fitLegsInferredHint':'このファイルは「ラン → バイク → ラン」のようです。種目を「デュアスロン」に変えて再度取り込むと、自動で3区間に分けます。','ui.legInferredNote':'時計に区間の記録がないため、速度から推定した結果です。バイクとランの切り替えの誤差は通常十数秒以内。トランジションは「止まって着替えた時間」しか分からないため、公式計測より短めになることがあります。','ui.tpSuggest':'推奨 {n}','ui.tpPrepN':'準備 {n} 週','ui.tpTaperN':'テーパー {n} 週','ui.tpSuggestedTag':'（推奨）','ui.tpHint':'「{a}」の推奨：準備 {b} 週','ui.tpHintTaper':'、テーパー {n} 週。未入力なら推奨値を、入力すればその値を使います。','ui.tpHintNone':'この種目・距離には推奨週数がありません（対象はロード・トレイル・ウルトラ・デュアスロン・トライアスロン）。未入力の場合、レース前トレーニングは 12 週で表示します。','ui.buildupSubN':'レース前 {n} 週','ui.buildupSubHow':'数字は「レース何週前か」','ui.buildupSrcOwn':'設定した準備期間','ui.buildupSrcTable':'{n}の推奨準備期間','ui.buildupSrcDefault':'既定','ui.buildupTaperN':'テーパー（最後の {n} 週）','ui.buildupEmptyN':'レース前 {n} 週間のトレーニング記録がありません。','field.prep.trainingPlan.prepWeeks':'準備期間','field.prep.trainingPlan.taperWeeks':'テーパー週数','ui.trainingNSessions':'{n} 回','ui.trainingMonthLabel':'{n}月','ui.dropzoneTrainingTitle':'ドロップしてトレーニング記録を取り込む','ui.dropzoneTrainingHint':'FIT／GPX／TCX、複数ファイルもまとめてどうぞ','ui.trainingTitle':'トレーニング記録','ui.trainingShort':'トレーニング','ui.trainingImport':'＋ FIT／GPX を取り込む','ui.trainingHint':'トレーニング記録はレースとは別に保存され、レースの統計・PB・バッジには影響しません。複数ファイルをまとめて選べます。','ui.trainingWeek':'今週','ui.trainingMonth':'今月','ui.trainingAll':'すべて','ui.trainingKm':'km','ui.trainingCount':'回','ui.trainingHours':'合計時間','ui.trainingEmpty':'まだトレーニング記録がありません。「取り込む」から時計のFIT／GPX／TCXを選んでください（複数可）。','ui.trainingEmptyPeriod':'この期間の記録はありません。','ui.trainingExport':'トレーニング記録を書き出す（JSON）','ui.trainingImportTitle':'トレーニング記録の取り込み','ui.trainingNew':'件の新しい記録','ui.trainingDupes':'件は取り込み済みのためスキップ','ui.trainingFailed':'件は読み込めませんでした','ui.trainingStillImport':'トレーニングとして取り込む','ui.trainingNoShoe':'（シューズ指定なし）','ui.trainingPickShoe':'シューズを選ぶ','ui.trainingDelete':'この記録を削除','ui.buildupTitle':'レース前のトレーニング','ui.buildupAvg':'週平均','ui.buildupLongest':'最長','ui.buildupTaper':'テーパー','ui.buildupEmpty':'レース前 12 週間のトレーニング記録がありません。','ui.shoeTrainingManualLabel':'練習距離（手動入力）','ui.feedbackCaption':'ご意見をどうぞ','ui.fontSmallTitle':'文字サイズ：小','ui.fontMediumTitle':'文字サイズ：中','ui.fontLargeTitle':'文字サイズ：大','ui.feedbackTitle':'フィードバック','ui.feedbackNotReady':'フィードバックフォームは準備中です','ui.climateAvgLabel':'例年平均','ui.climateAvgBasis':'{a} 年 × 前後 {b} 日','ui.climateAvgSamples':'、計 {n} 件','ui.climateAvgYearsOnly':'{n} 年分の同日データ','ui.weatherNeedsGpsHistory':'GPS 軌跡がないため当日の過去天気を自動取得できません。下の項目に手動入力できます','ui.weatherTooEarly':'リアルタイム予報はレース 7 日前から取得できます','ui.logiFee':'エントリー','ui.logiDeposit':'デポジット','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'参加費が未払い','ui.logiWarnStayGap':'宿泊がレース当日をカバーしていません','ui.logiWarnLateArrival':'往路の到着がスタート時刻より後','ui.logiWarnNoTransport':'海外レースの交通が未手配','ui.hofYearsHint':'{a}－{b}、うち {c} 年に出走','ui.careerShareButton':'生涯サマリーを保存','ui.careerShareTitle':'生涯サマリーを保存','ui.careerOptHero':'フルマラソン PB','ui.careerOptTiles':'生涯データ','ui.careerMissingHero':'フルマラソンの記録がありません','ui.careerMissingTracks':'GPS 軌跡の記録がありません','ui.careerMissingShoes':'シューズを登録した完走記録がありません','ui.careerMissingFuel':'補給の記録がありません','ui.careerShareFilename':'生涯サマリー.png','ui.careerShareFailed':'画像の生成に失敗しました。もう一度お試しください','ui.shareMissingHr':'心拍データなし','ui.shareMissingShoe':'シューズ未登録','ui.shareMissingShoeSport':'この種目では表示しません','ui.shareMissingFuel':'補給の記録なし','ui.shareMissingTrack':'GPX 軌跡なし','ui.resultDistance':'距離','ui.pasteResultTitle':'記録を検出','ui.pasteResultHint':'リザルトページのようです。確認後、このレースの記録欄に入力します。','ui.pasteResultFields':'取得した記録','ui.pasteResultApply':'記録を入力','ui.pasteResultDone':'{n} 項目の記録を入力しました','ui.pasteNewRaceFilled':'クリップボードからレース情報を取り込みました。確認して「レースを作成」を押してください','ui.newRaceDistance':'距離','ui.newRaceDistancePlaceholder':'km（例：21.0975）','ui.newRaceDistancePlaceholderSwim':'m（例：1500）','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'ハーフマラソン','preset.distance.30k':'30 km','preset.distance.full':'フルマラソン','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} 件はデータが大きすぎて同期できませんでした（カバー写真や軌跡点が多すぎる可能性）。他は同期済み：','ui.pasteUrlTitle':'リンクを検出','ui.pasteUrlHint':'この {n} のリンクをこのレースの「関連リンク」に保存しますか？URL のみ保存し、ページの内容は取得しません。','ui.pasteUrlNotesHint':'例：公式記録照会','ui.pasteUrlDuplicate':'同じリンクが既に登録されています。保存すると 2 件になります。','ui.pasteUrlApply':'リンクを保存','ui.pasteUrlDone':'リンクを保存しました','ui.pasteTransportTitle':'交通チケットを検出','ui.pasteTransportHint':'乗車券・航空券のようです。{n} 区間を取得しました。方向と交通手段は推定なので確認してください。既存の交通は変更しません。','ui.pasteTransportLeg':'第 {n} 区間','ui.pasteTransportDateOnly':'日付 {d} のみで時刻がないため、出発時刻は空のままです。','ui.pasteTransportApply':'交通を追加','ui.pasteTransportDone':'{n} 区間の交通を追加しました','ui.transportArrive':'到着','ui.pasteAccomTitle':'宿泊情報を検出','ui.pasteAccomHint':'予約情報のようです。確認後、このレースに宿泊を 1 件追加します（既存の宿泊は変更しません）。','ui.pasteAccomFields':'次の項目を取得しました','ui.pasteAccomNothing':'取得できた項目はありません。空の宿泊を追加して手入力もできます。','ui.pasteAccomNoTime':'日付のみで時刻がないため、時刻は空のままにしました（推測するともっともらしい嘘になるため）。','ui.pasteAccomApply':'宿泊を追加','ui.pasteAccomDone':'宿泊を 1 件追加しました','ui.pasteNoteTitle':'レースの振り返りを検出','ui.pasteNoteHint':'クリップボードに {n} 文字のテキストがあります。どのレースに入れますか？','ui.pasteNoteRace':'対象レース','ui.pasteNoteField':'入力先','ui.pasteNoteMode':'この項目には既に内容があります','ui.pasteNoteAppend':'末尾に追加','ui.pasteNoteReplace':'上書き','ui.pasteNoteFacts':'数値も見つかりました。一緒に入れますか？','ui.pasteNoteFactsHint':'既定ではオフ：振り返りの数字は昨年・他人・目標値のことが多いためです。','ui.pasteNoteWillOverwrite':'現在の {n} を上書きします','ui.pasteNoteApply':'入力する','ui.pasteNoteDone':'振り返りを入力しました','ui.pasteNoteDoneWithFacts':'振り返りを入力し、{n} 項目を更新しました','ui.publicLinkTitle':'公開リンク','ui.publicCreate':'公開リンクを作成','ui.publicRevoke':'取り消す','ui.publicCreated':'公開リンクを作成しました','ui.publicRevoked':'取り消しました。リンクは無効です','ui.linkCopied':'リンクをコピーしました','ui.copy':'コピー','ui.publicScopeHint':'公開されるもの：結果、コース軌跡、写真、シューズと補給。公開されないもの：予算、メモ、装備リスト、トレーニング計画。','ui.publicLiveHint':'このリンクを知っている人は誰でも、このレースの結果・写真・コースを見られます。取り消すと即時無効になります。','ui.publicNeedLogin':'公開リンクの作成にはログインが必要です','ui.publicLoading':'公開記録を読み込み中…','ui.publicGone':'このリンクは無効です','ui.publicGoneHint':'共有が取り消されたか、リンクが誤っている可能性があります。','ui.publicMadeWith':'「賽事紀錄」であなたのレースを記録しよう','ui.shareIncludeQr':'QRコード','ui.copyCaption':'キャプションをコピー','ui.captionCopied':'コピーしました。IG のキャプションに貼り付けてください','ui.copyFailed':'コピーできませんでした。手動で選択してください','ui.swWipedLoop':'再読み込みの繰り返しを検知したため、オフラインキャッシュを削除して一時的に無効化しました。データは保持されています。','ui.swWipedManual':'オフラインキャッシュを削除しました。データは保持されています。','ui.reloadNow':'再読み込み','ui.tableYearUnknown':'日付未設定','ui.tableYearCount':'{n} レース','ui.tableYearCountOne':'{n} レース','ui.tableYearDone':'完走 {n}','ui.tableYearKm':'合計 {n} km','ui.geoPhotoSkippedTitle':'{n} 枚は追加できませんでした','ui.geoPhotoSkipNoTime':'撮影日時がありません（スクリーンショット、または転送・編集で EXIF が消えた写真）','ui.geoPhotoSkipParseFailed':'読み込みに失敗しました。この形式は未対応の可能性があります','ui.climateFrontierTip':'（この距離のベスト）','ui.climateChartYAxisCurve':'ペース低下（自分の距離カーブ比）','ui.climateChartLegendEstimated':'気候平均気温','ui.climateChartLegendTrail':'トレイル','ui.climateTempEstimatedTip':'（気候平均・推定）','ui.climateTrailTip':'／トレイル・補正済','ui.climateCountEstimated':'うち {n} レースは気候平均気温','ui.climateCountTrail':'トレイル {n} レースは補正済','ui.climateCurveFitted':'効率の基準：自分の距離カーブ k={a}（{b} 種の距離のベストから推定）','ui.climateCurveDefault':'効率の基準：自分の距離カーブ k={n}（距離の種類が足りないため一般的な既定値）','ui.climateIncludeTrail':'トレイルを含める（登坂係数で補正）','ui.climateTrailNotReady':'登坂係数のデータ不足のため、トレイルは未反映','ui.updateAvailable':'新しいバージョンがあります','ui.updateNow':'今すぐ更新','ui.later':'あとで','ui.nowOffline':'オフラインです：データは端末に保存され、接続回復後に同期します','ui.backOnline':'オンラインに戻りました','ui.installHint':'ホーム画面に追加すると、レース当日すぐ開けます','ui.installNow':'追加','ui.installHintIos':'ホーム画面に追加：レース当日すぐ開けて、7 日間使わなくても Safari にデータを消されません。共有ボタン →「ホーム画面に追加」','ui.gotIt':'わかった','ui.storageNearFull':'ストレージを {n}% 使用中。先にバックアップを書き出すか、不要なカバー写真を削除してください','ui.cleanupCovers':'カバー写真を整理','ui.cleanupCoversTitle':'カバー写真を整理','ui.cleanupCoversHint':'{a} レースにカバーあり、合計 {b}。削除後は元に戻せません。','ui.cleanupCoversEmpty':'カバー写真のあるレースはありません','ui.removeCover':'カバーを削除','ui.confirmRemove':'本当に削除？','ui.gpxWillReplaceValue':'既存の {n} を置き換えます','ui.gpxWillReplaceSplits':'既存の {n} 区間を置き換えます','ui.gpxCadence':'ケイデンス','ui.durationInvalidHint':'時間の形式が読み取れません。例：3:44:25、44:25、3h44m25s','ui.ctxOpen':'レースを開く','ui.gpxWillReplace':'既存の {n} km を置き換えます','ui.gpxWillReplaceM':'既存の {n} m を置き換えます','ui.gpxDistance':'距離','ui.gpxElevGain':'累積標高','ui.gpxTime':'タイム',
   'ui.gpxAvgHr':'平均心拍数','ui.gpxMaxHr':'最大心拍数','ui.gpxSplits':'スプリット数',
   // ---- Excel 匯入 ----
   'ui.excelStep1Title':'Excelを読み込む — シートを選択','ui.excelStep1Hint':'「年度別レース一覧」らしきシートには自動でチェックが入っています。必要に応じて調整してください。',
@@ -4954,10 +4990,11 @@ const JA={
         <li>ホームは3つのタブに分かれています。「大会」は「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。</li>
         <li><strong>「次の大会」カード</strong>：14日以内に大会があると、「大会」タブの一番上にカウントダウン・日時・場所、その下に3つのマス（荷造り・A目標・ゼッケン）が出ます。大会ページの「レース前の4項目」と同じで、タップするとそのマスの入力欄が開きます（空のマスはカーソルがその欄に入ります）。天気予報（取得したライブ予報か、自分で入れた予報）があると3つ目は天気に、7日以内で GPS 軌跡があってまだ取得していないときは「予報を取得」になります。大会名をタップすると大会ページが開き、カバー写真があればカードの背景になります。「一時的に隠す」で閉じられます。スマホのリストで「走り終えましたか？」が出ている間は、このカードは出ません（次の大会はリストの一番上にあります）。</li>
         <li>キャリアの数字はタップできます：年ごとの棒グラフ、ヒートマップのマス、「完走レース数」「年間走行距離」をタップすると、下にその大会の一覧が出ます（1件タップで開き、戻る操作ではまず一覧が閉じます）。フルマラソン自己ベストのタイムをタップすると、その記録を出した大会が開きます。フルマラソンはランニング系の大会だけを数えます（42km の自転車レースは入りません）。</li>
-        <li>パソコン：上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え（カレンダー表示のときだけ。メダル棚と表は月をまたいで表示するので出ません）、「今日」で当月に戻ります。隣のグリッドアイコンで「メダル棚」、表アイコンでコンパクトな表に切り替えます。</li>
-        <li><strong>メダル棚</strong>：完走した大会すべてを年ごとに区切って新しい順に並べ、各年の最初にその年の大会数・距離・PB の数を表示します。カバー写真がある大会はポラロイド写真、ない大会はその大会のゼッケンになります。上の帯の色は種目、真ん中の大きな数字はゼッケン番号（未入力なら距離）、完走タイムは計測チップの帯に印字され、自己ベスト（PB）には赤いスタンプが押されます。ゼッケン番号は「大会の基本情報」の「ゼッケン番号」に入力します。各年の見出しをタップすると開閉でき、最初は今年だけ開いています（今年の完走がまだなければ最新の年）。閉じた年も大会数・距離・PB の数は見えます。上の「すべて開く」でまとめて全部開けます。</li>
+        <li>パソコン：上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え（カレンダー表示のときだけ。完走ウォールと表は月をまたいで表示するので出ません）、「今日」で当月に戻ります。隣のグリッドアイコンで「完走ウォール」、表アイコンでコンパクトな表に切り替えます。</li>
+        <li><strong>完走ウォール</strong>：完走した大会すべてを年ごとに区切って新しい順に並べ、各年の最初にその年の大会数・距離・PB の数を表示します。カバー写真がある大会はポラロイド写真、ない大会はその大会のゼッケンになります。上の帯の色は種目、真ん中の大きな数字はゼッケン番号（未入力なら距離）、下の黒い計測帯には完走タイム・平均・獲得標高が印字され、自己ベスト（PB）には赤いスタンプが押されます。平均は種目ごとの単位で表示します：ランニング系は 1km あたりのペース、自転車は時速、水泳は 100m あたりのタイム。トライアスロン・デュアスロンはタイムだけ、水泳とトライアスロンは獲得標高を表示しません。ポラロイドの下にも同じ計測帯があります。ゼッケン番号は「大会の基本情報」の「ゼッケン番号」に入力します。各年の見出しをタップすると開閉でき、最初は今年だけ開いています（今年の完走がまだなければ最新の年）。閉じた年も大会数・距離・PB の数は見えます。上の「すべて開く」でまとめて全部開けます。</li>
         <li><strong>表</strong>（パソコン）：列の見出しをクリックすると並べ替え（日付・大会名・距離・獲得標高・完走タイム）、もう一度で逆順になります。日付以外で並べ替えると年ごとのまとまりをやめて一続きになり、上に今の並べ方が出ます（「年ごとの表示に戻す」で戻ります）。検索と組み合わせることもできます。表の上には距離別の最速記録（フル・ハーフ・10K・5K・トライアスロン 51.5K／113K／226K）が並び、大会名の前にその年が付きます。タップでその大会が開きます。</li>
-        <li>スマートフォン：最初は「リスト」表示——今後の予定（日付が決まっていない予定は最後に「日付未定」と表示）、最近の5件。「過去の記録をすべて見る」で過去の大会を一覧できます。上の「リスト／カレンダー／メダル棚」で表示を切り替えます。「今後の予定」の件数は絞り込みボタンの数字と同じです。</li>
+        <li><strong>水泳の距離はメートル</strong>：水泳の大会の距離は、リスト・表・詳細画面・シェア画像・完走ウォールのどこでもメートルで表示します（例：3300 m）。詳細画面と大会追加の距離欄もメートルで入力します。生涯距離や年ごとの合計は引き続き km で合計します。</li>
+        <li>スマートフォン：最初は「リスト」表示——今後の予定（日付が決まっていない予定は最後に「日付未定」と表示）、最近の5件。「過去の記録をすべて見る」で過去の大会を一覧できます。上の「リスト／カレンダー／完走ウォール」で表示を切り替えます。「今後の予定」の件数は絞り込みボタンの数字と同じです。</li>
         <li>フィルターは2段階：まず「すべて／今後の予定／過去の記録」を選択し、「今後の予定」または「過去の記録」を選ぶと詳細ステータスが展開されます（ボタンが一度に多く表示されすぎないように）。</li>
         <li>検索欄でレース名や都市名で絞り込みできます。検索や絞り込み中はすべての月の結果が一覧で表示されます。日付が未定の予定は「今後の予定」の最後に、日付のない過去の大会は「日付未定」にあります。</li>
       </ul>
@@ -4973,7 +5010,7 @@ const JA={
         <li><strong>ステータス</strong>：タイトル上のステータス印（例：「エントリー済み ▾」）をタップすると変更できます。未出走（DNS）・途中棄権（DNF）もここにあります。レース前の大会は、タイトル下のステータスバーも直接タップできます。</li>
         <li><strong>レース前の4項目</strong>：エントリー済みでまだ走っていない大会は、タイトルの下にゼッケン・スタート時刻・荷造りの進み具合・A目標が並び、タップするとすぐ入力できます（「荷造り」は荷造りリストが開きます）。大会日を過ぎると「大会から N 日経ちました。記録がまだです」のお知らせに替わります。</li>
         <li><strong>セクションの順番</strong>：完走・DNS・DNF の大会は「レース後の記録とデータ」が一番上になり、上のジャンプボタンも同じ順番です。レース前の大会はこれまでどおり「基本情報」から始まります。</li>
-        <li><strong>カバー写真</strong>：詳細画面の「その他の操作」→「カバー写真を追加」からアップロードでき、タイトル部分の淡いブランド背景になります（縦長の写真は自動的に高さを調整し、潰れないようにします）。同じ写真がカレンダーのマスやスマホの一覧の小さなサムネイル、メダル棚、ホームの「次の大会」カードの背景にも使われます。</li>
+        <li><strong>カバー写真</strong>：詳細画面の「その他の操作」→「カバー写真を追加」からアップロードでき、タイトル部分の淡いブランド背景になります（縦長の写真は自動的に高さを調整し、潰れないようにします）。同じ写真がカレンダーのマスやスマホの一覧の小さなサムネイル、完走ウォール、ホームの「次の大会」カードの背景にも使われます。</li>
         <li><strong>基本情報</strong>：大会名、シリーズ（同じ名前なら自動で年別比較）、ステータス、日程、抽選情報。</li>
         <li><strong>コースと地形</strong>：距離、標高、標高変化グラフ、CP詳細、ITRA/UTMBポイント（要手動入力）。</li>
         <li><strong>装備・補給・戦略</strong>：装備リスト（ロード／トレイル／トライアスロン標準装備テンプレート対応）、補給計画、ペース計算＆リストバンド作成。装備リストは最初「荷造り」表示です：1行1アイテムで、行をタップするとチェックが付き、準備済みは「準備済み N件」にまとまります。一番下の欄に入力して Enter で追加。重さ・分類・置き場所を変えるときは「編集」、置き場所ごとに並べるときは「配置」に切り替えます。ホームの「次の大会」カードの「荷造り」マスをタップしても開きます。</li>
@@ -5116,7 +5153,7 @@ const EN={
   'ui.simpleHidNutritionSchedule':'{n} fueling items','ui.simpleHidTraining':'training plan','ui.simpleHidLogistics':'budget & travel','ui.simpleHidShoe':'race shoes',
   // v4.0
   'ui.tabRaces':'Races','ui.tabCareer':'Career','ui.homeTabsLabel':'Home sections',
-  'ui.viewList':'List','ui.viewCalendar':'Calendar','ui.viewPhotoWall':'Trophy wall','ui.viewSegLabel':'View',
+  'ui.viewList':'List','ui.viewCalendar':'Calendar','ui.viewPhotoWall':'Finisher wall','ui.viewSegLabel':'View',
   'ui.listRecent':'Recent races','ui.listSeeAllHistory':'See all {n} past races ›',
   'ui.menuDisplay':'Display','ui.menuFontSize':'Text size','ui.menuDarkMode':'Dark mode','ui.menuLanguage':'Language',
   'ui.menuData':'Data','ui.menuImport':'Import (Excel / JSON)','ui.menuExport':'Export & backup (JSON / CSV / calendar)',
@@ -5133,7 +5170,7 @@ const EN={
   'ui.calResultsSearch':'“{q}”: {n} races','ui.calResultsFilter':'{f}: {n} races','ui.calResultsBoth':'“{q}” in {f}: {n} races',
   'ui.calResultsNone':'No matching races','ui.calResultsClear':'Clear search & filter','ui.calUndated':'No date yet','ui.dateTbd':'TBD','ui.done':'Done','ui.yesterday':'Yesterday','ui.daysAgo':'{n} days ago','ui.resultPromptLabel':'Did you finish?','ui.resultPromptText':'Log your result — career stats, PBs and badges update automatically.','ui.recordResult':'Log result','ui.resultDns':'Didn’t start (DNS)','ui.resultDnf':'Didn’t finish (DNF)','ui.resultLater':'Later','ui.resultBanner':'This race was {n} days ago — no result yet','ui.resultBannerOne':'This race was yesterday — no result yet','ui.resultPending':'Result pending','ui.resultVsGoalFaster':'{n} faster than goal A ({g})','ui.resultVsGoalSlower':'{n} slower than goal A ({g})','ui.resultVsGoalExact':'Exactly goal A ({n})','ui.recordResultImport':'Fill in from a watch file (GPX/TCX/FIT)','ui.recordResultSave':'Save and mark as finished','ui.recordResultHint':'Notes, photos and splits can come later.','ui.resultSaved':'Result saved','ui.resultSavedNoTime':'Marked as finished — add the time whenever you like','ui.statusChangedTo':'Changed to “{n}”','ui.resultLaterToast':'OK — the list and race page will keep showing “Result pending”','ui.durHM':'{h} h {m} min','ui.durMS':'{m} min {s} s','ui.durS':'{s} s','ui.rwAdd':'＋ Add','ui.rwBib':'Bib','ui.rwStart':'Start','ui.rwPack':'Packed','ui.rwAddList':'＋ List','ui.rwGoal':'Goal A','ui.rwWeather':'Weather','ui.rwWeatherRain':'Rain {n}%','ui.rwWeatherFetch':'Get forecast','ui.focusDaysAfter':'days','ui.focusDaysAfterOne':'day','ui.tableSortBar':'Sorted by “{a}” ({b}) · {c}','ui.tableBackToYears':'Back to grouping by year','ui.tableBackToNewest':'Back to newest first','ui.tableDirTimeAsc':'fastest first','ui.tableDirTimeDesc':'slowest first','ui.tableDirDistAsc':'shortest first','ui.tableDirDistDesc':'longest first','ui.tableDirElevAsc':'least climbing first','ui.tableDirElevDesc':'most climbing first','ui.tableDirNameAsc':'A → Z','ui.tableDirNameDesc':'Z → A','ui.tableDirDateAsc':'oldest first','ui.tableDirDateDesc':'newest first','ui.bestMarathon':'Best marathon','ui.bestHalf':'Best half','ui.best10k':'Best 10K','ui.best5k':'Best 5K','ui.bestTri51':'Best 51.5K triathlon','ui.bestTri113':'Best 113K triathlon','ui.bestTri226':'Best 226K triathlon','ui.equipViewPack':'Pack','ui.equipViewEdit':'Edit','ui.equipViewKanban':'Layout','ui.equipViewLabel':'Gear list view','ui.packAddPlaceholder':'Add an item (press Enter)','ui.packAddLabel':'Add a gear item','ui.packMust':'Required','ui.packNoMust':'No items marked “Required”','ui.packAllDone':'All packed ✓','ui.packDoneGroup':'Packed: {n}','ui.packPacked':'Packed','ui.packFilterTodo':'To pack {n}','ui.packFilterAll':'All {n}','ui.packFilterMust':'Required {n}','ui.packHint':'Tap a row to check it off. To change weight, category or where it goes, switch to “Edit”.','ui.careerPbOpen':'Open “{n}”','ui.careerSheetCount':'Finished','ui.careerSheetRaces':'{n}','ui.careerSheetDistance':'Distance','ui.careerSheetBestFm':'Best marathon','ui.careerSheetYear':'{y} · {n} finished','ui.careerSheetMonth':'{m}/{y} · {n} finished','ui.careerSheetAll':'All finished races · {n}','ui.yearlyChartBarLabel':'{y}: {n} races','ui.calResultsHint':'Showing all months',
   'ui.showAllFields':'Show all fields ({n} more)','ui.showAllFieldsFilled':'Show all fields ({a} more, {b} filled in)','ui.showCommonFields':'Show common fields only',
-  'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No finished races yet — mark a race as finished and it shows up here.','ui.wallStampSub':'BEST','ui.wallExpandAll':'Expand all','ui.wallCollapseAll':'Collapse all',
+  'ui.gridViewToggle':'Switch to finisher wall view','ui.photoGridEmpty':'No finished races yet — mark a race as finished and it shows up here.','ui.wallStampSub':'BEST','ui.wallExpandAll':'Expand all','ui.wallPaceSr':'avg','ui.wallElevSr':'elevation gain','ui.wallCollapseAll':'Collapse all',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
   'ui.filterOverseas':'Overseas',
   'ui.mediaGalleryTitle':'Media Gallery',
@@ -5314,7 +5351,7 @@ const EN={
   'ui.gradientGentle':'Gentle','ui.gradientSteep':'Steep (≥25%)',
   'ui.coverFocalPoint':'Adjust Focal Point',
   'ui.focalPointTitle':'Adjust Cover Photo Focal Point',
-  'ui.focalPointHint':'Small thumbnails (calendar cells, lists, the trophy wall) crop the photo to a square. Click or drag on the photo below to move the most important part to the crosshair — the preview on the right updates live.',
+  'ui.focalPointHint':'Small thumbnails (calendar cells, lists, the finisher wall) crop the photo to a square. Click or drag on the photo below to move the most important part to the crosshair — the preview on the right updates live.',
   'ui.focalPreviewLabel':'Thumbnail preview',
   'ui.templateAutoApplied':'Equipment template applied automatically',
   'ui.sectionBasic':'Basic Info & Schedule','ui.sectionRoute':'Course & Terrain','ui.sectionWeather':'Weather',
@@ -5431,7 +5468,7 @@ const EN={
   'ui.gpxImportHint':'Works with files exported from Garmin, COROS or Strava — automatically extracts distance, elevation, time, heart rate and splits.',
   'ui.gpxHintFull':'Read the following data from <strong>{file}</strong>. Confirm to apply it to "{race}" (<strong>existing fields will be overwritten</strong> — values being replaced are shown below):',
   'ui.gpxModalTitle':'Import Activity File',
-  'ui.gpxApply':'Apply to this race','ui.journeyTitle':'Race journey','ui.yearJourneyTitle':'This year\'s race travel','ui.yearJourneyFrom':'● Starting from {n}','ui.yearJourneyDomestic':'Domestic','ui.yearJourneyAbroad':'Abroad','ui.yearJourneyAllLocal':'All races this year were close to home','ui.yearJourneyLocal':'local','ui.yearJourneyMorePlaces':'{n} more places','ui.yearJourneyPlaces':'Places','ui.yearJourneyKm':'Round-trip, straight line','ui.yearJourneyFar':'Farthest','ui.yearJourneyOffMap':'{n} more outside East Asia (included in distance)','ui.yearJourneyUnlocated':'{n} could not be located (not included)','ui.yearJourneyNeedHome':'Set your home in Profile first','ui.yearJourneyToggle':'Add this year\'s race travel','ui.journeySameCounty':'Home race: in the same city/county you live in.','ui.journeyNeedHome':'Set where you live to see an animated journey from home to the race.','ui.journeySetHome':'Set home','ui.journeyNeedPlace':'Add the race city or import a GPX track to draw the journey.','ui.journeyNotFound':'Could not find this place — try a more specific city (e.g. "Osaka City").','ui.journeyLocating':'Looking up the race location…','ui.journeyHomeRace':'Home race: about {n} km from home.','ui.journeyNoTransport':'No outbound transport yet','ui.journeyReplay':'Tap to replay','ui.journeyKm':'km in a straight line','ui.journeyOpenMap':'View on map','ui.journeyMapLoading':'Loading map…','ui.journeyMapOffline':'The map needs an internet connection.','ui.journeyMapFailed':'Could not load the map. Check your connection and try again.','ui.journeyVenue':'Venue','ui.profileHome':'Home (start of your race journeys)','ui.syncPaused':'Cloud sync paused for this tab (?nosync=1)','ui.syncResumed':'Last download stopped at batch {n}; resuming from there','ui.syncDownloading':'Downloading races from the cloud… {n} done','ui.syncDownloaded':'Cloud download complete ({n} races)','ui.radarShortSwim':'S','ui.radarWaterTemp':'water {n}°C','ui.radarTempAny':'Temp. stress','ui.radarSwimWristHr':'🏊 Swim heart rate comes from the wrist optical sensor, which usually reads low in water','ui.radarSwimNoSplits':'🏊 The swim has no split data (e.g. recorded in run mode), so it is not drawn on the radar','ui.radarLegScaleNoteSwim':'Distance is scored per sport: swim 3.8 km, bike 180 km, run 42.2 km (full distance). Swim temperature is water temperature, scored against triathlon wetsuit rules','ui.radarShortBike':'B','ui.radarShortRun':'R','ui.radarSwimNote':'🏊 Swim: GPS and heart rate are unreliable in water, so the swim is shown under Leg results only, not on the radar','ui.radarLegScaleNote':'Distance is scored per sport: bike 180 km, run 42.2 km (full-distance triathlon)','ui.splitsSwimRejected':'GPS for this swim is too noisy (it implies a pace faster than the world record), so per-100 m splits are not shown.','ui.splitsSwimInferred':'Recorded in run mode, GPS in the water is essentially noise, so per-100 m splits cannot be calculated.','ui.splitsSwimNoGps':'Not enough GPS data for this swim (pool mode or weak signal), so per-100 m splits cannot be calculated.','ui.fitLegsInferredTri':'This file has no leg data (recorded in a single sport mode). Swim／bike／run legs and transitions were estimated from speed. Swim distance is not shown because GPS is unreliable in water; transitions are estimates.','ui.splitsSwimSkipped':'Swim GPS is unreliable in water, so no per-km splits are listed.','ui.splitsLegNone':'This leg is under 1 km, so it has no per-km splits.','ui.splitsLegApprox':'Older data: per-km splits were assigned to legs by time, and any km crossing a leg boundary was skipped. Re-import the FIT file for exact per-leg splits.','ui.splitsPaceOrSpeed':'Pace／speed','ui.radarPerLeg':' (per leg)','ui.fitLegsInferred':'This file has no leg data (recorded in a single sport mode). Run／bike／run legs and transitions were estimated from speed — check the transition times under Leg results.','ui.fitLegsInferredHint':'This file looks like run → bike → run. Change the race type to Duathlon and import it again to split it into legs automatically.','ui.legInferredNote':'Your watch did not record legs, so these were estimated from speed. Bike/run boundaries are usually within a dozen seconds; transitions only capture the time spent slowed down to change, so they may read shorter than official timing.','ui.tpSuggest':'suggested {n}','ui.tpPrepN':'{n}-week build','ui.tpTaperN':'{n}-week taper','ui.tpSuggestedTag':' (suggested)','ui.tpHint':'Suggested for “{a}”: {b}-week build','ui.tpHintTaper':', {n}-week taper. Leave blank to use these, or enter your own.','ui.tpHintNone':'No suggested weeks for this sport or distance (the table covers road, trail, ultra, duathlon and triathlon). Pre-race training shows 12 weeks by default.','ui.buildupSubN':'{n} weeks before the race','ui.buildupSubHow':'numbers are weeks before race day','ui.buildupSrcOwn':'your build length','ui.buildupSrcTable':'suggested build for {n}','ui.buildupSrcDefault':'default','ui.buildupTaperN':'Taper (last {n} wk)','ui.buildupEmptyN':'No training logged in the {n} weeks before this race.','field.prep.trainingPlan.prepWeeks':'Build length','field.prep.trainingPlan.taperWeeks':'Taper length','ui.trainingNSessions':'{n} sessions','ui.trainingMonthLabel':'Month {n}','ui.dropzoneTrainingTitle':'Drop to import training','ui.dropzoneTrainingHint':'FIT／GPX／TCX — many files at once is fine','ui.trainingTitle':'Training log','ui.trainingShort':'Training','ui.trainingImport':'＋ Import FIT／GPX','ui.trainingHint':'Training is stored separately from races and never affects race stats, PBs or badges. You can pick many files at once.','ui.trainingWeek':'This week','ui.trainingMonth':'This month','ui.trainingAll':'All','ui.trainingKm':'km','ui.trainingCount':'sessions','ui.trainingHours':'Total time','ui.trainingEmpty':'No training yet. Tap Import and choose FIT／GPX／TCX files from your watch — multiple files are fine.','ui.trainingEmptyPeriod':'No training in this period.','ui.trainingExport':'Export training log (JSON)','ui.trainingImportTitle':'Import training','ui.trainingNew':'new sessions','ui.trainingDupes':'already imported, skipped','ui.trainingFailed':'files could not be read','ui.trainingStillImport':'import as training anyway','ui.trainingNoShoe':'(no shoe)','ui.trainingPickShoe':'Pick shoe','ui.trainingDelete':'Delete','ui.buildupTitle':'Pre-race training','ui.buildupAvg':'Weekly avg','ui.buildupLongest':'Longest','ui.buildupTaper':'Taper','ui.buildupEmpty':'No training logged in the 12 weeks before this race.','ui.shoeTrainingManualLabel':'Training km (manual)','ui.feedbackCaption':'Tell me what you think','ui.fontSmallTitle':'Text size: small','ui.fontMediumTitle':'Text size: medium','ui.fontLargeTitle':'Text size: large','ui.feedbackTitle':'Send feedback','ui.feedbackNotReady':'The feedback form is coming soon','ui.climateAvgLabel':'Climate average','ui.climateAvgBasis':'{a} years × ±{b} days','ui.climateAvgSamples':', {n} samples','ui.climateAvgYearsOnly':'{n} years, same date','ui.weatherNeedsGpsHistory':'No GPS track, so race-day historical weather cannot be fetched automatically; you can fill the fields below manually','ui.weatherTooEarly':'Live forecast becomes available 7 days before the race','ui.logiFee':'Entry','ui.logiDeposit':'Deposit','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'entry fee unpaid','ui.logiWarnStayGap':'stay does not cover race day','ui.logiWarnLateArrival':'outbound trip departs after the start','ui.logiWarnNoTransport':'overseas race with no transport planned','ui.hofYearsHint':'{a}–{b}, raced in {c} of them','ui.careerShareButton':'Save career summary','ui.careerShareTitle':'Save career summary','ui.careerOptHero':'Marathon PB','ui.careerOptTiles':'Career stats','ui.careerMissingHero':'no marathon result yet','ui.careerMissingTracks':'no GPS tracks imported','ui.careerMissingShoes':'no finishes with a shoe linked','ui.careerMissingFuel':'no fuel logged as consumed','ui.careerShareFilename':'career-summary.png','ui.careerShareFailed':'Could not generate the image; please try again','ui.shareMissingHr':'no heart-rate data','ui.shareMissingShoe':'no shoe linked','ui.shareMissingShoeSport':'not shown for this sport','ui.shareMissingFuel':'nothing marked as consumed','ui.shareMissingTrack':'no GPX track','ui.resultDistance':'Distance','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearCountOne':'{n} race','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'Add to your Home Screen: opens faster on race day, and Safari won’t clear your data after 7 days without a visit. Tap Share → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
+  'ui.gpxApply':'Apply to this race','ui.journeyTitle':'Race journey','ui.yearJourneyTitle':'This year\'s race travel','ui.yearJourneyFrom':'● Starting from {n}','ui.yearJourneyDomestic':'Domestic','ui.yearJourneyAbroad':'Abroad','ui.yearJourneyAllLocal':'All races this year were close to home','ui.yearJourneyLocal':'local','ui.yearJourneyMorePlaces':'{n} more places','ui.yearJourneyPlaces':'Places','ui.yearJourneyKm':'Round-trip, straight line','ui.yearJourneyFar':'Farthest','ui.yearJourneyOffMap':'{n} more outside East Asia (included in distance)','ui.yearJourneyUnlocated':'{n} could not be located (not included)','ui.yearJourneyNeedHome':'Set your home in Profile first','ui.yearJourneyToggle':'Add this year\'s race travel','ui.journeySameCounty':'Home race: in the same city/county you live in.','ui.journeyNeedHome':'Set where you live to see an animated journey from home to the race.','ui.journeySetHome':'Set home','ui.journeyNeedPlace':'Add the race city or import a GPX track to draw the journey.','ui.journeyNotFound':'Could not find this place — try a more specific city (e.g. "Osaka City").','ui.journeyLocating':'Looking up the race location…','ui.journeyHomeRace':'Home race: about {n} km from home.','ui.journeyNoTransport':'No outbound transport yet','ui.journeyReplay':'Tap to replay','ui.journeyKm':'km in a straight line','ui.journeyOpenMap':'View on map','ui.journeyMapLoading':'Loading map…','ui.journeyMapOffline':'The map needs an internet connection.','ui.journeyMapFailed':'Could not load the map. Check your connection and try again.','ui.journeyVenue':'Venue','ui.profileHome':'Home (start of your race journeys)','ui.syncPaused':'Cloud sync paused for this tab (?nosync=1)','ui.syncResumed':'Last download stopped at batch {n}; resuming from there','ui.syncDownloading':'Downloading races from the cloud… {n} done','ui.syncDownloaded':'Cloud download complete ({n} races)','ui.radarShortSwim':'S','ui.radarWaterTemp':'water {n}°C','ui.radarTempAny':'Temp. stress','ui.radarSwimWristHr':'🏊 Swim heart rate comes from the wrist optical sensor, which usually reads low in water','ui.radarSwimNoSplits':'🏊 The swim has no split data (e.g. recorded in run mode), so it is not drawn on the radar','ui.radarLegScaleNoteSwim':'Distance is scored per sport: swim 3.8 km, bike 180 km, run 42.2 km (full distance). Swim temperature is water temperature, scored against triathlon wetsuit rules','ui.radarShortBike':'B','ui.radarShortRun':'R','ui.radarSwimNote':'🏊 Swim: GPS and heart rate are unreliable in water, so the swim is shown under Leg results only, not on the radar','ui.radarLegScaleNote':'Distance is scored per sport: bike 180 km, run 42.2 km (full-distance triathlon)','ui.splitsSwimRejected':'GPS for this swim is too noisy (it implies a pace faster than the world record), so per-100 m splits are not shown.','ui.splitsSwimInferred':'Recorded in run mode, GPS in the water is essentially noise, so per-100 m splits cannot be calculated.','ui.splitsSwimNoGps':'Not enough GPS data for this swim (pool mode or weak signal), so per-100 m splits cannot be calculated.','ui.fitLegsInferredTri':'This file has no leg data (recorded in a single sport mode). Swim／bike／run legs and transitions were estimated from speed. Swim distance is not shown because GPS is unreliable in water; transitions are estimates.','ui.splitsSwimSkipped':'Swim GPS is unreliable in water, so no per-km splits are listed.','ui.splitsLegNone':'This leg is under 1 km, so it has no per-km splits.','ui.splitsLegApprox':'Older data: per-km splits were assigned to legs by time, and any km crossing a leg boundary was skipped. Re-import the FIT file for exact per-leg splits.','ui.splitsPaceOrSpeed':'Pace／speed','ui.radarPerLeg':' (per leg)','ui.fitLegsInferred':'This file has no leg data (recorded in a single sport mode). Run／bike／run legs and transitions were estimated from speed — check the transition times under Leg results.','ui.fitLegsInferredHint':'This file looks like run → bike → run. Change the race type to Duathlon and import it again to split it into legs automatically.','ui.legInferredNote':'Your watch did not record legs, so these were estimated from speed. Bike/run boundaries are usually within a dozen seconds; transitions only capture the time spent slowed down to change, so they may read shorter than official timing.','ui.tpSuggest':'suggested {n}','ui.tpPrepN':'{n}-week build','ui.tpTaperN':'{n}-week taper','ui.tpSuggestedTag':' (suggested)','ui.tpHint':'Suggested for “{a}”: {b}-week build','ui.tpHintTaper':', {n}-week taper. Leave blank to use these, or enter your own.','ui.tpHintNone':'No suggested weeks for this sport or distance (the table covers road, trail, ultra, duathlon and triathlon). Pre-race training shows 12 weeks by default.','ui.buildupSubN':'{n} weeks before the race','ui.buildupSubHow':'numbers are weeks before race day','ui.buildupSrcOwn':'your build length','ui.buildupSrcTable':'suggested build for {n}','ui.buildupSrcDefault':'default','ui.buildupTaperN':'Taper (last {n} wk)','ui.buildupEmptyN':'No training logged in the {n} weeks before this race.','field.prep.trainingPlan.prepWeeks':'Build length','field.prep.trainingPlan.taperWeeks':'Taper length','ui.trainingNSessions':'{n} sessions','ui.trainingMonthLabel':'Month {n}','ui.dropzoneTrainingTitle':'Drop to import training','ui.dropzoneTrainingHint':'FIT／GPX／TCX — many files at once is fine','ui.trainingTitle':'Training log','ui.trainingShort':'Training','ui.trainingImport':'＋ Import FIT／GPX','ui.trainingHint':'Training is stored separately from races and never affects race stats, PBs or badges. You can pick many files at once.','ui.trainingWeek':'This week','ui.trainingMonth':'This month','ui.trainingAll':'All','ui.trainingKm':'km','ui.trainingCount':'sessions','ui.trainingHours':'Total time','ui.trainingEmpty':'No training yet. Tap Import and choose FIT／GPX／TCX files from your watch — multiple files are fine.','ui.trainingEmptyPeriod':'No training in this period.','ui.trainingExport':'Export training log (JSON)','ui.trainingImportTitle':'Import training','ui.trainingNew':'new sessions','ui.trainingDupes':'already imported, skipped','ui.trainingFailed':'files could not be read','ui.trainingStillImport':'import as training anyway','ui.trainingNoShoe':'(no shoe)','ui.trainingPickShoe':'Pick shoe','ui.trainingDelete':'Delete','ui.buildupTitle':'Pre-race training','ui.buildupAvg':'Weekly avg','ui.buildupLongest':'Longest','ui.buildupTaper':'Taper','ui.buildupEmpty':'No training logged in the 12 weeks before this race.','ui.shoeTrainingManualLabel':'Training km (manual)','ui.feedbackCaption':'Tell me what you think','ui.fontSmallTitle':'Text size: small','ui.fontMediumTitle':'Text size: medium','ui.fontLargeTitle':'Text size: large','ui.feedbackTitle':'Send feedback','ui.feedbackNotReady':'The feedback form is coming soon','ui.climateAvgLabel':'Climate average','ui.climateAvgBasis':'{a} years × ±{b} days','ui.climateAvgSamples':', {n} samples','ui.climateAvgYearsOnly':'{n} years, same date','ui.weatherNeedsGpsHistory':'No GPS track, so race-day historical weather cannot be fetched automatically; you can fill the fields below manually','ui.weatherTooEarly':'Live forecast becomes available 7 days before the race','ui.logiFee':'Entry','ui.logiDeposit':'Deposit','ui.logiMore':'+{n}','ui.logiWarnUnpaid':'entry fee unpaid','ui.logiWarnStayGap':'stay does not cover race day','ui.logiWarnLateArrival':'outbound trip departs after the start','ui.logiWarnNoTransport':'overseas race with no transport planned','ui.hofYearsHint':'{a}–{b}, raced in {c} of them','ui.careerShareButton':'Save career summary','ui.careerShareTitle':'Save career summary','ui.careerOptHero':'Marathon PB','ui.careerOptTiles':'Career stats','ui.careerMissingHero':'no marathon result yet','ui.careerMissingTracks':'no GPS tracks imported','ui.careerMissingShoes':'no finishes with a shoe linked','ui.careerMissingFuel':'no fuel logged as consumed','ui.careerShareFilename':'career-summary.png','ui.careerShareFailed':'Could not generate the image; please try again','ui.shareMissingHr':'no heart-rate data','ui.shareMissingShoe':'no shoe linked','ui.shareMissingShoeSport':'not shown for this sport','ui.shareMissingFuel':'nothing marked as consumed','ui.shareMissingTrack':'no GPX track','ui.resultDistance':'Distance','ui.pasteResultTitle':'Looks like race results','ui.pasteResultHint':'This reads like a results page. Confirm to fill this race\'s result fields.','ui.pasteResultFields':'Results found','ui.pasteResultApply':'Fill results','ui.pasteResultDone':'{n} result field(s) filled','ui.pasteNewRaceFilled':'Race details filled from the clipboard — check them and press Create','ui.newRaceDistance':'Distance','ui.newRaceDistancePlaceholder':'km, e.g. 21.0975','ui.newRaceDistancePlaceholderSwim':'m, e.g. 1500','preset.distance.5k':'5 km','preset.distance.10k':'10 km','preset.distance.half':'Half marathon','preset.distance.30k':'30 km','preset.distance.full':'Marathon','preset.distance.50k':'50 km','preset.distance.100k':'100 km','ui.syncSkippedOversized':'{n} race(s) were too large to sync (usually an oversized cover photo or too many track points); the rest synced: ','ui.pasteUrlTitle':'Looks like a link','ui.pasteUrlHint':'Save this {n} link to this race\'s media links? Only the URL is stored; the page is never fetched.','ui.pasteUrlNotesHint':'e.g. official results lookup','ui.pasteUrlDuplicate':'This race already has the exact same link; saving again makes two entries.','ui.pasteUrlApply':'Save link','ui.pasteUrlDone':'Link saved','ui.pasteTransportTitle':'Looks like a ticket','ui.pasteTransportHint':'This reads like travel tickets; {n} leg(s) found. Direction and mode are guesses — check them. Existing transport entries are untouched.','ui.pasteTransportLeg':'Leg {n}','ui.pasteTransportDateOnly':'Only the date {d} was found, no time — departure time is left blank.','ui.pasteTransportApply':'Add transport','ui.pasteTransportDone':'{n} transport leg(s) added','ui.transportArrive':'arrive','ui.pasteAccomTitle':'Looks like a booking','ui.pasteAccomHint':'This reads like accommodation details. It will add one new stay to this race; existing stays are untouched.','ui.pasteAccomFields':'Fields found','ui.pasteAccomNothing':'No fields could be read. You can still add a blank stay and fill it in.','ui.pasteAccomNoTime':'Only dates were found, no times — times are left blank rather than guessed.','ui.pasteAccomApply':'Add stay','ui.pasteAccomDone':'Stay added','ui.pasteNoteTitle':'Looks like a race report','ui.pasteNoteHint':'The clipboard holds {n} characters that read like a race report. Which race?','ui.pasteNoteRace':'Race','ui.pasteNoteField':'Field','ui.pasteNoteMode':'This field already has content','ui.pasteNoteAppend':'Append','ui.pasteNoteReplace':'Replace','ui.pasteNoteFacts':'Found some numbers too — fill them in?','ui.pasteNoteFactsHint':'Off by default: numbers in a report are often last year\'s, someone else\'s, or just a target.','ui.pasteNoteWillOverwrite':'overwrites current {n}','ui.pasteNoteApply':'Fill in','ui.pasteNoteDone':'Report saved','ui.pasteNoteDoneWithFacts':'Report saved; {n} field(s) updated','ui.publicLinkTitle':'Public link','ui.publicCreate':'Create public link','ui.publicRevoke':'Revoke','ui.publicCreated':'Public link created','ui.publicRevoked':'Revoked; the link is dead now','ui.linkCopied':'Link copied','ui.copy':'Copy','ui.publicScopeHint':'Shared: results, route track, photos, shoes and fuel. Not shared: budget, notes, gear lists, training plans.','ui.publicLiveHint':'Anyone with this link can see this race\'s results, photos and route. Revoking kills the link immediately.','ui.publicNeedLogin':'Sign in first to create a public link','ui.publicLoading':'Loading public record…','ui.publicGone':'This link is no longer valid','ui.publicGoneHint':'The owner may have revoked it, or the link is wrong.','ui.publicMadeWith':'Track your races with Race Log','ui.shareIncludeQr':'QR code','ui.copyCaption':'Copy caption','ui.captionCopied':'Copied — paste it into your IG caption','ui.copyFailed':'Could not copy; please select manually','ui.swWipedLoop':'Detected a reload loop, so the offline cache was cleared and temporarily disabled. Your data is intact.','ui.swWipedManual':'Offline cache cleared. Your data is intact.','ui.reloadNow':'Reload','ui.tableYearUnknown':'No date','ui.tableYearCount':'{n} races','ui.tableYearCountOne':'{n} race','ui.tableYearDone':'{n} finished','ui.tableYearKm':'{n} km total','ui.geoPhotoSkippedTitle':'{n} photo(s) could not be added','ui.geoPhotoSkipNoTime':'No capture time in the file (a screenshot, or EXIF stripped by messaging apps / editing)','ui.geoPhotoSkipParseFailed':'Could not read this file; the format may be unsupported','ui.climateFrontierTip':' (best at this distance)','ui.climateChartYAxisCurve':'Pace loss (vs. your distance curve)','ui.climateChartLegendEstimated':'Climate avg temp','ui.climateChartLegendTrail':'Trail','ui.climateTempEstimatedTip':' (climate avg, estimated)','ui.climateTrailTip':' / trail, corrected','ui.climateCountEstimated':'{n} using climate avg temp','ui.climateCountTrail':'{n} trail races corrected','ui.climateCurveFitted':'Baseline: personal distance curve k={a} (fitted from bests at {b} distances)','ui.climateCurveDefault':'Baseline: personal distance curve k={n} (not enough distinct distances to fit; using the common default)','ui.climateIncludeTrail':'Include trail (corrected with your climb coefficient)','ui.climateTrailNotReady':'Not enough climb-coefficient data yet; trail races left out','ui.updateAvailable':'A new version is available','ui.updateNow':'Update now','ui.later':'Later','ui.nowOffline':'You are offline: data stays on this device and syncs when back online','ui.backOnline':'Back online','ui.installHint':'Add Race Log to your home screen for race-day quick access','ui.installNow':'Install','ui.installHintIos':'Add to your Home Screen: opens faster on race day, and Safari won’t clear your data after 7 days without a visit. Tap Share → “Add to Home Screen”','ui.gotIt':'Got it','ui.storageNearFull':'Storage is {n}% full. Export a backup first, or remove cover photos you no longer need','ui.cleanupCovers':'Clean up covers','ui.cleanupCoversTitle':'Clean up cover photos','ui.cleanupCoversHint':'{a} races have covers, {b} in total. Removal cannot be undone.','ui.cleanupCoversEmpty':'No race has a cover photo','ui.removeCover':'Remove cover','ui.confirmRemove':'Really remove?','ui.gpxWillReplaceValue':'replaces existing {n}','ui.gpxWillReplaceSplits':'replaces existing {n} splits','ui.gpxCadence':'Cadence','ui.durationInvalidHint':'Could not read this time. Try 3:44:25, 44:25 or 3h44m25s','ui.ctxOpen':'Open race','ui.gpxWillReplace':'replaces existing {n} km','ui.gpxWillReplaceM':'replaces existing {n} m','ui.gpxDistance':'Distance','ui.gpxElevGain':'Elevation gain','ui.gpxTime':'Time',
   'ui.gpxAvgHr':'Avg heart rate','ui.gpxMaxHr':'Max heart rate','ui.gpxSplits':'Splits',
   'ui.excelStep1Title':'Import Excel — Select Sheets','ui.excelStep1Hint':'Sheets that look like "yearly race lists" are pre-checked. Adjust as needed.',
   'ui.excelErrorTitle':'Couldn\u2019t import this file','ui.excelErrorGeneric':'Failed to parse the file. Please confirm it\u2019s a valid Excel file (.xlsx/.xls).',
@@ -5484,10 +5521,11 @@ const EN={
         <li>The home page has three tabs. “Races” holds the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log.</li>
         <li><strong>Next-race card</strong>: when a race is within 14 days, the top of “Races” shows the countdown, date, start time and place, with three tiles underneath — Packed, Goal A and Bib. They’re the same tiles as on the race page: tap one to open where you fill it in (an empty tile puts the cursor right in that field). When there’s a forecast (a live one you fetched, or one you typed in), the third tile shows the weather; within 7 days, with a GPS track and no forecast yet, it says “Get forecast”. Tap the race name to open the race; a cover photo becomes the card’s background; “Hide for now” tucks the card away. In a phone’s list, while “Did you finish?” is showing, the card steps aside — the next race is the first row of the list.</li>
         <li>Career numbers are tappable: tap a year’s bar, a heatmap square, “Races finished” or “Distance this year” to list those races underneath (tap one to open it; back closes the list first). Tap the marathon PB time to open the race where you set it. Only running races count as marathons (a 42 km bike race doesn’t).</li>
-        <li>On a computer, use <span class="mono">‹ Year Month ›</span> to change months and "Today" to jump back (calendar view only — the trophy wall and table span all months, so they don’t show it). The grid icon next to it switches to the trophy wall; the table icon switches to a compact table.</li>
-        <li><strong>Trophy wall</strong>: every finished race, grouped by year with the newest first; each year opens with its race count, distance and number of PBs. Races with a cover photo are a polaroid; the rest become that race’s bib — the band color is the sport, the big number is your bib number (or the distance if you haven’t entered one), the finish time is printed on the timing-chip strip, and a personal best (PB) gets a red stamp. Enter your bib number under “Bib Number” in “Race Details”. Tap a year’s heading to open or close it: at first only this year is open (or the latest year if you haven’t finished a race this year yet), closed years still show their race count, distance and PBs, and “Expand all” at the top opens every year at once.</li>
+        <li>On a computer, use <span class="mono">‹ Year Month ›</span> to change months and "Today" to jump back (calendar view only — the finisher wall and table span all months, so they don’t show it). The grid icon next to it switches to the finisher wall; the table icon switches to a compact table.</li>
+        <li><strong>Finisher wall</strong>: every finished race, grouped by year with the newest first; each year opens with its race count, distance and number of PBs. Races with a cover photo are a polaroid; the rest become that race’s bib — the band color is the sport, the big number is your bib number (or the distance if you haven’t entered one), the black timing strip along the bottom shows your finish time, average and elevation gain, and a personal best (PB) gets a red stamp. The average uses each sport’s usual unit: pace per km for running, km/h for cycling, time per 100 m for swimming; triathlons and duathlons show just the time, and swims and triathlons don’t show elevation. Polaroids carry the same strip under the photo. Enter your bib number under “Bib Number” in “Race Details”. Tap a year’s heading to open or close it: at first only this year is open (or the latest year if you haven’t finished a race this year yet), closed years still show their race count, distance and PBs, and “Expand all” at the top opens every year at once.</li>
         <li><strong>Table</strong> (computer): click a column header to sort (date, name, distance, elevation, finish time); click again to reverse. Sorting by anything other than date turns the year groups into one list, with a line above saying how it’s sorted (“Back to grouping by year” undoes it). It works together with search. Above the table, your fastest marathon, half, 10K, 5K and triathlon (51.5K, 113K, 226K) times are listed, with the year in front of each race name — click one to open that race.</li>
-        <li>On a phone, you start in “List”: upcoming races (plans without a date come last, marked “TBD”) and your 5 most recent — “See all past races” lists everything before today. The “List / Calendar / Trophy wall” switch at the top changes the view. The upcoming count matches the number on the filter button.</li>
+        <li><strong>Swim distances in meters</strong>: swim races show their distance in meters everywhere — lists, the table, the race page, share images and the finisher wall (e.g. 3300 m) — and you enter it in meters on the race page and when adding a race. Lifetime and yearly totals still add up in km.</li>
+        <li>On a phone, you start in “List”: upcoming races (plans without a date come last, marked “TBD”) and your 5 most recent — “See all past races” lists everything before today. The “List / Calendar / Finisher wall” switch at the top changes the view. The upcoming count matches the number on the filter button.</li>
         <li>Filters have two levels: pick "All / Upcoming / History" first — tapping "Upcoming" or "History" reveals the more specific statuses underneath, so the bar isn't crowded with options at once.</li>
         <li>The search box filters by race name or city; searching or picking a filter lists matches from every month. Upcoming races without a date come last under “Upcoming”; past races without a date are listed under “No date yet”.</li>
       </ul>
@@ -5503,7 +5541,7 @@ const EN={
         <li><strong>Status</strong>: tap the status stamp above the title (e.g. “Registered ▾”) to change it — DNS and DNF are in there too. For races that haven't happened yet, you can also tap the status track under the title.</li>
         <li><strong>Race-week tiles</strong>: for a race you’re registered for and haven’t run yet, bib, start time, packing progress and goal A sit under the title — tap one to fill it in (“Packed” opens the packing list). Once race day has passed, they’re replaced by a “no result yet” note.</li>
         <li><strong>Section order</strong>: for finished, DNS and DNF races, “Results & Post-race Data” comes first, and so do the jump buttons at the top; upcoming races still start with “Basic Info”.</li>
-        <li><strong>Cover Photo</strong>: upload one from “More Actions” → “+ Add Cover Photo” on the race page — it becomes a faded background for the title block (portrait photos automatically get a taller block so they aren't squeezed thin), and the same photo shows as a small thumbnail on the calendar and mobile list, on the trophy wall, and as the background of the next-race card.</li>
+        <li><strong>Cover Photo</strong>: upload one from “More Actions” → “+ Add Cover Photo” on the race page — it becomes a faded background for the title block (portrait photos automatically get a taller block so they aren't squeezed thin), and the same photo shows as a small thumbnail on the calendar and mobile list, on the finisher wall, and as the background of the next-race card.</li>
         <li><strong>Basic Info</strong>: name, series (same-name series get automatic year-over-year PB comparison), status, schedule, lottery info.</li>
         <li><strong>Course & Terrain</strong>: distance, elevation, an elevation profile chart, checkpoint details, ITRA/UTMB points (enter manually).</li>
         <li><strong>Gear, Nutrition & Strategy</strong>: gear checklist (with built-in road/trail/triathlon starter templates), a nutrition schedule, and a pace calculator with wristband generator. The gear checklist opens in “Pack”: one item per row — tap a row to check it off, packed items fold into “Packed: N”, and typing in the last row then pressing Enter adds an item. Switch to “Edit” to change weight, category or where it goes, or to “Layout” to arrange by location. Tapping “Packed” on the next-race card on the home page opens it too.</li>
@@ -8699,6 +8737,12 @@ function renderField(race,cfg,ns){
       break;
     case 'number':{
       const ph=cfg.placeholderFn?cfg.placeholderFn(race):'';
+      // 游泳的總距離用公尺填（v4.6.0）：畫面上其他地方都寫 3300 m，這裡還要人填 3.3 會打成 3300 公里。
+      // 存的照樣是公里——data-scale 告訴存檔的那一段要先除以 1000
+      if(cfg.path==='route.distanceKm'&&isSwimRace(race)){
+        input=`<input id="${id}" type="number" step="any" data-path="${cfg.path}" data-scale="1000" value="${val!=null?swimMeters(val):''}">`;
+        return renderFieldShell(cfg,id,label,input,'公尺');
+      }
       input=`<input id="${id}" type="number" step="any" data-path="${cfg.path}" value="${val!=null?val:''}"${ph?` placeholder="${escapeHtml(ph)}"`:''}>`;
       break;
     }
@@ -8710,9 +8754,14 @@ function renderField(race,cfg,ns){
   // 要填什麼格式」的提示，放在輸入框上比放在標題上更接近它的用途。
   // hint 則放到輸入框下方：像「官方公告值，非自動計算」這種補充說明
   // 寫在標題裡會把標題撐成兩行，擠掉真正的欄位名稱。
-  const unitHtml=cfg.unit?`<span class="field-unit" aria-hidden="true">${escapeHtml(unitSuffix(cfg.unit))}</span>`:'';
+  return renderFieldShell(cfg,id,label,input,cfg.unit);
+}
+// 欄位的外框：標籤、輸入框（單位貼在右緣）、下方的補充說明。unit 通常就是 cfg.unit，
+// 游泳的總距離換成公尺時由呼叫端傳別的單位
+function renderFieldShell(cfg,id,label,input,unit){
+  const unitHtml=unit?`<span class="field-unit" aria-hidden="true">${escapeHtml(unitSuffix(unit))}</span>`:'';
   const hintHtml=cfg.hint?`<span class="field-hint">${escapeHtml(cfg.hint)}</span>`:'';
-  const inputWrap=cfg.unit
+  const inputWrap=unit
     ?`<span class="field-input-wrap has-unit">${input}${unitHtml}</span>`
     :input;
   return `<label class="field${cfg.wide?' wide':''}${smartFilledHighlightPaths.has(cfg.path)?' field-smart-filled':''}" for="${id}"><span>${label}</span>${inputWrap}${hintHtml}</label>`;
@@ -9197,7 +9246,7 @@ function surfaceMixBarHtml(race){
 function routeDashCardHtml(race){
   const r=race.route||{};
   const parts=[];
-  if(r.distanceKm!=null) parts.push(r.distanceKm+' km');
+  if(r.distanceKm!=null) parts.push(isSwimRace(race)?swimMeters(r.distanceKm)+' m':r.distanceKm+' km');
   if(r.elevationGainM!=null) parts.push('+'+Math.round(r.elevationGainM)+' m');
   if(r.cutoffTimeSeconds!=null) parts.push(t('ui.dashCutoff','關門')+' '+secToHMS(r.cutoffTimeSeconds));
   const sub=parts.length?parts.join('/  '):t('ui.dashRouteEmpty','尚未填寫路線數據');
@@ -9850,7 +9899,7 @@ function computeRaceRadar(race){
   const dist=race.route.distanceKm;
   dims.push({key:'distance',label:t('ui.radarDistance','距離'),
     value:dist!=null?Math.min(dist/100,1):null,
-    raw:dist!=null?dist.toFixed(1)+' km':null});
+    raw:dist!=null?(isSwimRace(race)?swimMeters(dist)+' m':dist.toFixed(1)+' km'):null});
   // 2. 爬升：3000 公尺為滿分。游泳一律當成沒有資料——開放水域的 GPS
   //    高度跳動累加起來會得到「泳渡爬升 531 公尺」這種數字，水面是平的，
   //    把它畫進雷達圖會讓整個形狀失真。
@@ -10307,7 +10356,7 @@ function renderResultsDashboard(race){
     // 兩種情況一次滿足，順便擋掉浮點運算的尾數雜訊。
     const km=Number(race.route.distanceKm);
     badges.push([t('ui.resultDistance','距離'),
-      String(parseFloat(km.toFixed(4)))+' '+t('ui.unitKm','公里'),false]);
+      isSwim?swimMeters(km)+' '+t('ui.unitMeters','公尺'):String(parseFloat(km.toFixed(4)))+' '+t('ui.unitKm','公里'),false]);
   }
   if(!isMultisport&&race.route.distanceKm){
     if(isSwim){
@@ -12618,8 +12667,9 @@ function renderPublicShareView(snap){
   const stats=[];
   if(snap.route.distanceKm!=null&&snap.results.chipTimeSeconds&&isRunningSportType(snap.sportType))
     stats.push([t('ui.statPace','配速'),formatPace(snap.results.chipTimeSeconds/snap.route.distanceKm)]);
-  if(snap.route.distanceKm!=null) stats.push([t('ui.statDistance','距離'),snap.route.distanceKm+' '+t('ui.unitKm','公里')]);
-  if(snap.route.elevationGainM!=null) stats.push([t('ui.statElev','總爬升'),Math.round(snap.route.elevationGainM)+' '+t('ui.unitM','公尺')]);
+  if(snap.route.distanceKm!=null) stats.push([t('ui.statDistance','距離'),isSwimRace(snap)?swimMeters(snap.route.distanceKm)+' '+t('ui.unitMeters','公尺'):snap.route.distanceKm+' '+t('ui.unitKm','公里')]);
+  // 單位用 ui.unitMeters（日文、英文都有翻）；原本的 ui.unitM 沒有翻譯，日文、英文頁面也寫「公尺」
+  if(snap.route.elevationGainM!=null) stats.push([t('ui.statElev','總爬升'),Math.round(snap.route.elevationGainM)+' '+t('ui.unitMeters','公尺')]);
   if(snap.performance.avgHr!=null) stats.push([t('ui.statAvgHr','平均心率'),snap.performance.avgHr+' bpm']);
   if(snap.results.overallRank!=null) stats.push([t('ui.statOverallRank','總排名次'),snap.results.overallRank]);
   document.body.innerHTML=`<div class="pubview">
@@ -12727,7 +12777,7 @@ function shareStatsBadges(race,show){
       isSwim?formatSwimPace(chipT/(race.route.distanceKm*10))
             :formatPace(chipT/race.route.distanceKm)+'/km']);
   }
-  if(race.route.distanceKm) badges.push([t('field.route.route.distanceKm','距離'),race.route.distanceKm+' 公里']);
+  if(race.route.distanceKm) badges.push([t('field.route.route.distanceKm','距離'),isSwim?swimMeters(race.route.distanceKm)+' 公尺':race.route.distanceKm+' 公里']);
   if(!isSwim&&race.route.elevationGainM!=null) badges.push([t('ui.resultElevGain','總爬升'),race.route.elevationGainM+' 公尺']);
   if(show.hr&&!isMultisport&&race.performanceData.avgHr!=null) badges.push([t('ui.resultAvgHr','平均心率'),race.performanceData.avgHr+' bpm']);
   if(race.results.overallRank!=null) badges.push([t('ui.resultOverallRank','總排名次'),String(race.results.overallRank)]);
@@ -13487,7 +13537,7 @@ function buildRaceReportPrompt(race){
   lines.push(promptSectionHeader(t('ui.reportPromptRaceInfo','賽事資訊')));
   lines.push(t('ui.reportPromptName','賽事名稱')+'：'+(race.name||t('ui.unnamedRace','(未命名賽事)')));
   if(race.schedule.raceDate) lines.push(t('ui.reportPromptDate','日期')+'：'+race.schedule.raceDate);
-  if(race.route.distanceKm!=null) lines.push(t('ui.reportPromptDistance','距離')+'：'+race.route.distanceKm+' km');
+  if(race.route.distanceKm!=null) lines.push(t('ui.reportPromptDistance','距離')+'：'+(isSwimRace(race)?swimMeters(race.route.distanceKm)+' m':race.route.distanceKm+' km'));
   if(race.route.elevationGainM) lines.push(t('ui.reportPromptElevation','總爬升')+'：'+Math.round(race.route.elevationGainM)+' m');
   if(race.results.chipTimeSeconds!=null) lines.push(t('ui.reportPromptTime','完賽時間')+'：'+secToHMS(race.results.chipTimeSeconds));
   if(race.results.chipTimeSeconds!=null&&race.route.distanceKm){
@@ -13698,7 +13748,7 @@ async function buildBadgeShareCanvas(badgeId){
   const triggerRace=triggerRaceId?state.races.find(r=>r.id===triggerRaceId):null;
   if(triggerRace){
     const stats=[];
-    if(triggerRace.route.distanceKm!=null) stats.push([t('ui.dossierStatDistance','距離'),triggerRace.route.distanceKm.toFixed(1)+' km']);
+    if(triggerRace.route.distanceKm!=null) stats.push([t('ui.dossierStatDistance','距離'),raceDistLabel(triggerRace)]);
     if(triggerRace.route.elevationGainM) stats.push([t('ui.dossierStatElevation','總爬升'),Math.round(triggerRace.route.elevationGainM)+' m']);
     if(triggerRace.results.chipTimeSeconds!=null) stats.push([t('ui.dossierStatTime','完賽時間'),secToHMS(triggerRace.results.chipTimeSeconds)]);
     if(triggerRace.results.chipTimeSeconds!=null&&triggerRace.route.distanceKm){
@@ -14051,7 +14101,7 @@ function storySlideHtml(){
         <div class="story-slide-name">${escapeHtml(race.name)||t('ui.unnamedRace','(未命名賽事)')}</div>
         <div class="story-slide-date">${escapeHtml(race.schedule.raceDate||'')}</div>
         <div class="story-slide-stats">
-          ${race.route.distanceKm!=null?`<div><div class="story-slide-stat-label">${t('ui.dossierStatDistance','距離')}</div><div class="story-slide-stat-value">${race.route.distanceKm.toFixed(1)} km</div></div>`:''}
+          ${race.route.distanceKm!=null?`<div><div class="story-slide-stat-label">${t('ui.dossierStatDistance','距離')}</div><div class="story-slide-stat-value">${raceDistLabel(race)}</div></div>`:''}
           ${weatherText?`<div><div class="story-slide-stat-label">${t('ui.storyWeatherLabel','當天天氣')}</div><div class="story-slide-stat-value">${weatherText}</div></div>`:''}
         </div>
       </div>
@@ -15603,7 +15653,7 @@ function renderFocusPanel(){
   if(!slot) return;
   // v4.2：剛比完、還沒填成績的那一場排在「下一場」上面。v4.3：手機清單上兩張疊起來，
   // 第一場要到 1,362px——「比完了嗎？」在的時候先不放下一場卡（下一場就是清單「即將
-  // 到來」的第一列）。筆電、月曆、獎牌牆上看不到那份清單，兩張都放
+  // 到來」的第一列）。筆電、月曆、完賽牆上看不到那份清單，兩張都放
   const prompt=resultPromptHtml();
   slot.innerHTML=prompt+(prompt&&currentCalendarView()==='list'?'':focusPanelHtml());
 }
@@ -16074,7 +16124,7 @@ function hofTrackCardHtml(race){
   const path=trackToSvgPath(race.route.trackPoints,W,H,14);
   if(!path) return '';
   const year=(race.schedule.raceDate||'').slice(0,4);
-  const dist=race.route.distanceKm!=null?race.route.distanceKm.toFixed(1)+' km':'';
+  const dist=race.route.distanceKm!=null?raceDistLabel(race):'';
   const time=race.results&&race.results.chipTimeSeconds!=null?secToHMS(race.results.chipTimeSeconds):'';
   const isPb=!!(race.results&&race.results.isPb);
   // PB 用金色、其餘用螢光綠；發光靠 SVG 的 feDropShadow 濾鏡做，
@@ -16335,7 +16385,7 @@ async function buildCareerCanvas(opts){
           ctx.fillText(fitCareerText(ctx,r.name||'',cellW),x,ty+cellH+30);
           ctx.fillStyle='#8B8D82'; ctx.font=`20px ${monoFont}`;
           ctx.fillText((r.schedule.raceDate||'').slice(0,4)+' ・ '
-            +(r.route.distanceKm!=null?r.route.distanceKm.toFixed(1)+' km':''),x,ty+cellH+58);
+            +(r.route.distanceKm!=null?raceDistLabel(r):''),x,ty+cellH+58);
         }
       });
       y+=Math.ceil(trackList.length/cols)*(cellH+70)+28;
@@ -17652,12 +17702,13 @@ function renderCareerSummary(){
 }
 
 /* ============================================================
-   獎牌牆：號碼布牆（v4.4.0）
+   完賽牆：號碼布牆（v4.4.0；v4.6.0 以前叫「獎牌牆」）
    v4.3 把沒有封面照的完賽畫成距離獎牌，可是每一面都是「圓圈裡一個距離」，上百場排在一起
    像一張表，認不出哪一面是哪一場。號碼布是每個跑者都會留著的東西，號碼本身就是那一場的
    記憶：沒有封面照的完賽畫成那一場的號碼布——安全別針、運動別顏色的賽名帶、大大的號碼、
-   計時晶片條上的成績；有封面照的是一張用紙膠帶貼著的拍立得；PB 蓋一個紅色印章。
+   底部計時帶上的成績、均速、爬升（v4.6.0）；有封面照的是一張用紙膠帶貼著的拍立得；PB 蓋一個紅色印章。
    依年份分段，每一段開頭寫那一年的場數、里程、PB 數，翻牆就是翻年份。
+   改名「完賽牆」（v4.6.0）：牆上掛的是號碼布、拍立得，不是獎牌；每一場完賽都在上面。
    ============================================================ */
 // 距離的數字：42.195 → 42.2、21.0975 → 21.1、10 → 10、9.97 → 10（四捨五入到小數一位，整數不寫 .0）
 function wallDistance(r){
@@ -17710,54 +17761,93 @@ function wallStampSvg(extra){
     <text class="bib-stamp-sub" x="30" y="43.5" text-anchor="middle" textLength="${len}" lengthAdjust="spacingAndGlyphs">${escapeHtml(sub)}</text>
   </svg>`;
 }
-// 讀螢幕報讀的名稱：卡片上的字是設計過的版面（號碼、晶片條），直接唸出來沒頭沒尾，
-// PB 印章也只是圖。這裡整理成一句：賽名、運動別、日期、距離、成績、號碼、PB
-function wallCardLabel(r,km,time){
+/* 完賽牆上的距離（v4.6.0）：游泳寫公尺（3300M），其他照舊寫公里（42.2K）。
+   num 是大字的數字、unit 是旁邊的小字，label 是號碼底下「42.2 KM」那一行，aria 給報讀用 */
+function wallDistParts(r){
+  const d=r.route&&r.route.distanceKm;
+  if(!(d>0)) return null;
+  if(isSwimRace(r)){ const m=String(swimMeters(d)); return {num:m,unit:'M',label:m+' M',aria:m+' m'}; }
+  const k=wallDistance(r);
+  return {num:k,unit:'K',label:k+' KM',aria:k+' km'};
+}
+/* 均速（v4.6.0）：每一場用那個運動自己慣用的單位——跑步類每公里配速、自行車時速、游泳每 100 公尺
+   （跟賽事頁、分享圖的配速同一套寫法）。三鐵、二鐵這種多項運動不寫：游泳、騎車、跑步混在一起
+   除出來的平均跟哪一場都沒得比（賽事頁也是「多項運動不顯示全場平均配速」）。沒有成績或距離不寫 */
+function wallPaceText(r){
+  const sec=r.results&&r.results.chipTimeSeconds, km=r.route&&r.route.distanceKm;
+  if(!(sec>0)||!(km>0)||isMultisportRace(r)) return '';
+  if(r.sportType==='swimming') return formatSwimPace(sec/(km*10));
+  if(r.sportType==='cycling') return (km/(sec/3600)).toFixed(1)+' km/h';
+  const p=formatPace(sec/km);
+  return p?p+'/km':'';
+}
+/* 爬升（v4.6.0）：游泳、三鐵不寫——水面是平的，開放水域 GPS 的高度跳動累加起來是「泳渡爬升 531 公尺」
+   這種假數字（賽事頁、雷達圖也是這樣處理），三鐵裡有一段游泳，全場的爬升說不清楚是哪一段的；
+   分段裡有游泳的多項運動也一樣。沒填或 0 不寫，不寫「+0 m」 */
+function wallElevText(r){
+  if(r.sportType==='swimming'||r.sportType==='triathlon'||(r.legs||[]).some(l=>l&&l.sport==='swimming')) return '';
+  const e=r.route&&r.route.elevationGainM;
+  return e>0?'+'+Math.round(e).toLocaleString('en-US')+' m':'';
+}
+/* 底部的計時帶（v4.6.0）：左邊成績，右邊均速疊在爬升上面。號碼布沒有成績時左邊寫日期
+   （dateFallback）；拍立得的日期已經寫在賽名下面，不再寫一次。三樣都沒有就不畫帶子 */
+function wallTimingHtml(r,time,pace,elev,extra,dateFallback){
+  const date=r.schedule.raceDate||'';
+  const left=time?`<span class="bib-time"><i aria-hidden="true"></i>${time}</span>`
+    :(dateFallback&&date?`<span class="bib-time is-date">${date.replace(/-/g,'.')}</span>`:'');
+  const perf=(pace||elev)?`<span class="bib-perf">${pace?`<span class="bib-pace">${escapeHtml(pace)}</span>`:''}${elev?`<span class="bib-elev">${elev}</span>`:''}</span>`:'';
+  return (left||perf)?`<span class="bib-timing${extra||''}">${left}${perf}</span>`:'';
+}
+// 讀螢幕報讀的名稱：卡片上的字是設計過的版面（號碼、計時帶），直接唸出來沒頭沒尾，
+// PB 印章也只是圖。這裡整理成一句：賽名、運動別、日期、距離、成績、均速、爬升、號碼、PB
+function wallCardLabel(r,dist,time,pace,elev){
   const parts=[r.name||t('ui.unnamedRace','(未命名賽事)'),sportLabel(r.sportType),r.schedule.raceDate||t('ui.calUndated','未定日期')];
-  if(km) parts.push(km+' km');
+  if(dist) parts.push(dist.aria);
   if(time) parts.push(time);
+  if(pace) parts.push(t('ui.wallPaceSr','均速')+' '+pace);
+  if(elev) parts.push(t('ui.wallElevSr','爬升')+' '+elev);
   const bib=String(r.bibNumber||'').trim();
   if(bib) parts.push(t('ui.rwBib','號碼布')+' '+bib);
   if(r.results.isPb) parts.push(t('ui.pbBadge','個人最佳 PB'));
   return escapeHtml(parts.join(', '));
 }
-function wallCardAttrs(r,kind,maxTilt,km,time){
-  return `type="button" class="photo-card ${kind}${r.results.isPb?' is-pb':''}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" data-sport="${escapeHtml(r.sportType||'other')}" style="--rot:${wallTilt(r,maxTilt).toFixed(2)}deg" title="${escapeHtml(r.name||'')}" aria-label="${wallCardLabel(r,km,time)}"`;
+function wallCardAttrs(r,kind,maxTilt,dist,time,pace,elev){
+  return `type="button" class="photo-card ${kind}${r.results.isPb?' is-pb':''}${r.id===state.selectedId?' selected':''}" data-id="${r.id}" data-sport="${escapeHtml(r.sportType||'other')}" style="--rot:${wallTilt(r,maxTilt).toFixed(2)}deg" title="${escapeHtml(r.name||'')}" aria-label="${wallCardLabel(r,dist,time,pace,elev)}"`;
 }
 function bibCardHtml(r){
-  const km=wallDistance(r);
+  const dist=wallDistParts(r);
   const time=r.results.chipTimeSeconds!=null?secToHMS(r.results.chipTimeSeconds):'';
+  const pace=wallPaceText(r), elev=wallElevText(r);
   const date=r.schedule.raceDate||'';
   const bib=String(r.bibNumber||'').trim();
   // 最大的那一行：有填號碼就寫號碼；沒有就寫距離（斜體、運動別的顏色，一看就知道不是號碼）；
   // 兩個都沒填（少見）畫運動別的圖示——不寫運動別的名稱：「ウルトラマラソン」「Obstacle Race」
-  // 放不進號碼布中間，名稱寫在左下角
+  // 放不進號碼布中間，名稱寫在下面那一行
   let big,cls,w;
   if(bib){ big=escapeHtml(bib); cls=''; w=wallTextEm(bib); }
-  else if(km){ big=`${km}<small>K</small>`; cls=' is-dist'; w=wallTextEm(km)+0.5; }
+  else if(dist){ big=`${dist.num}<small>${dist.unit}</small>`; cls=' is-dist'; w=wallTextEm(dist.num)+0.5; }
   else { big=sportIconSvg(sportIconKey(r.sportType),40); cls=' is-icon'; w=1; }
-  // 左下角：大字是號碼時寫距離；大字已經是距離（或根本沒有距離）時寫運動別
-  const tag=bib&&km?`<span class="bib-tag">${km} KM</span>`:`<span class="bib-tag is-sport">${escapeHtml(sportLabel(r.sportType))}</span>`;
-  // 右下角：成績寫在計時晶片條上；沒有成績就寫日期
-  const right=time?`<span class="bib-chip"><i aria-hidden="true"></i>${time}</span>`
-    :(date?`<span class="bib-date">${date.replace(/-/g,'.')}</span>`:'');
-  return `<button ${wallCardAttrs(r,'bib-card',1.6,km,time)}>
-    ${BIB_PIN('l')}${BIB_PIN('r')}<span class="bib-holes" aria-hidden="true"></span>
+  // 號碼底下那一行：大字是號碼時寫距離；大字已經是距離（或根本沒有距離）時寫運動別
+  const tag=bib&&dist?`<span class="bib-tag">${dist.label}</span>`:`<span class="bib-tag is-sport">${escapeHtml(sportLabel(r.sportType))}</span>`;
+  const timing=wallTimingHtml(r,time,pace,elev,'',true);
+  return `<button ${wallCardAttrs(r,'bib-card',1.6,dist,time,pace,elev)}>
+    ${BIB_PIN('l')}${BIB_PIN('r')}<span class="bib-holes${timing?' on-band':''}" aria-hidden="true"></span>
     <span class="bib-head">${date?`<span class="bib-year">${date.slice(0,4)}</span>`:''}<span class="bib-race">${escapeHtml(r.name||'')||t('ui.unnamedRace','(未命名賽事)')}</span></span>
-    <span class="bib-num${cls}" style="--w:${w.toFixed(2)}"><span class="bib-no">${big}</span></span>
-    <span class="bib-foot">${tag}${right}</span>
+    <span class="bib-num${cls}"><span class="bib-no" style="--w:${w.toFixed(2)}">${big}</span>${tag}</span>
+    ${timing}
     ${r.results.isPb?wallStampSvg(''):''}
   </button>`;
 }
 function polaroidCardHtml(r){
-  const km=wallDistance(r);
+  const dist=wallDistParts(r);
   const time=r.results.chipTimeSeconds!=null?secToHMS(r.results.chipTimeSeconds):'';
+  const pace=wallPaceText(r), elev=wallElevText(r);
   const date=r.schedule.raceDate||'';
-  return `<button ${wallCardAttrs(r,'pola-card',3,km,time)}>
+  return `<button ${wallCardAttrs(r,'pola-card',3,dist,time,pace,elev)}>
     <span class="pola-tape" aria-hidden="true"></span>
-    <span class="pola-photo${km?' has-dist':''}"><img src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" loading="lazy" style="${focalPointStyle(r)}">${km?`<span class="pola-dist">${km}<small>K</small></span>`:''}</span>
+    <span class="pola-photo${dist?' has-dist':''}"><img src="${escapeHtml(safeUrl(coverThumbOf(r)))}" alt="" loading="lazy" style="${focalPointStyle(r)}">${dist?`<span class="pola-dist">${dist.num}<small>${dist.unit}</small></span>`:''}</span>
     <span class="pola-cap"><span class="pola-name">${escapeHtml(r.name||'')||t('ui.unnamedRace','(未命名賽事)')}</span>
-      <span class="pola-meta">${date?`<span>${date.replace(/-/g,'.')}</span>`:''}${time?`<span class="pola-time">${time}</span>`:''}</span></span>
+      ${date?`<span class="pola-meta"><span>${date.replace(/-/g,'.')}</span></span>`:''}${wallTimingHtml(r,time,pace,elev,' is-pola',false)}</span>
     ${r.results.isPb?wallStampSvg(' is-pola'):''}
   </button>`;
 }
@@ -17902,7 +17992,8 @@ function tableBestHtml(){
 // 「12 場」：英文一場要寫「1 race」，不是「1 races」
 function tableRaceCount(n){ return n===1?tf('ui.tableYearCountOne','{n} 場',n):tf('ui.tableYearCount','{n} 場',n); }
 function tableRowHtml(r){
-  const dist=r.route.distanceKm!=null?r.route.distanceKm.toFixed(1):'—';
+  // 表頭寫「距離(km)」；游泳寫公尺，單位跟著寫出來，不會被看成 3300 公里
+  const dist=r.route.distanceKm!=null?(isSwimRace(r)?swimMeters(r.route.distanceKm)+' m':r.route.distanceKm.toFixed(1)):'—';
   const elev=r.route.elevationGainM!=null?String(Math.round(r.route.elevationGainM)):'—';
   const time=r.results.chipTimeSeconds!=null?secToHMS(r.results.chipTimeSeconds):'—';
   return `<tr class="table-view-row${r.id===state.selectedId?' selected':''}" data-id="${r.id}">
@@ -17979,7 +18070,7 @@ function renderTableView(){
    行事曆：跨月份的搜尋／篩選結果、未定日期、空月份（v3.98.0）
    原本搜尋和篩選只作用在「畫面上這個月」：搜「大阪」（9 場）得到「這個
    月沒有符合條件的賽事」，篩選鈕寫「歷史紀錄 (107)」畫面卻是空的；沒
-   填日期的賽事則在月曆、獎牌牆、搜尋都不會出現。現在：
+   填日期的賽事則在月曆、完賽牆、搜尋都不會出現。現在：
    - 有搜尋字或選了篩選 → 列出所有月份的結果（即將到來、各年份、未定日期）
    - 沒有搜尋也沒篩選 → 照舊顯示這個月；月曆下面多一區「未定日期」
    - 這個月沒有賽事 → 給「上一場／下一場」直接跳過去
@@ -18107,15 +18198,15 @@ function exitCalendarResults(){
    ============================================================ */
 const PHONE_LAYOUT_MQ=window.matchMedia?window.matchMedia('(max-width:640px)'):null;
 function isPhoneLayout(){ return !!(PHONE_LAYOUT_MQ&&PHONE_LAYOUT_MQ.matches); }
-// 目前實際畫出來的是哪一種檢視：手機看 phoneView（清單／月曆／獎牌牆），
-// 電腦看 viewMode（月曆／獎牌牆／表格）。簡易版沒有表格檢視的按鈕，原本
+// 目前實際畫出來的是哪一種檢視：手機看 phoneView（清單／月曆／完賽牆），
+// 電腦看 viewMode（月曆／完賽牆／表格）。簡易版沒有表格檢視的按鈕，原本
 // 停在表格的話先畫月曆——不改 state.viewMode，切回完整版還是表格。
 function currentCalendarView(){
   if(isPhoneLayout()) return state.phoneView==='calendar'?'calendar':state.phoneView==='grid'?'grid':'list';
   if(state.viewMode==='table') return isSimpleMode()?'calendar':'table';
   return state.viewMode==='grid'?'grid':'calendar';
 }
-// 搜尋或篩選中的「跨月份結果清單」只接手月曆和清單；獎牌牆、表格自己會篩
+// 搜尋或篩選中的「跨月份結果清單」只接手月曆和清單；完賽牆、表格自己會篩
 function resultsListShowing(){ const v=currentCalendarView(); return v==='calendar'||v==='list'; }
 function hasAnyRace(){ return state.races.some(r=>!r.deletedAt); }
 // 分頁列、檢視切換、body 上給 CSS 用的標記——每次重畫首頁都同步一次
@@ -18627,6 +18718,22 @@ function updateCreateStagingUI(){
   if(a) a.innerHTML=createActivityLineHtml();
   if(c) c.innerHTML=createCoverLineHtml();
 }
+/* 新增賽事的距離欄（v4.6.0）：選了游泳就改成填公尺——畫面上的游泳距離都寫 3300 m，這裡還要人填 3.3
+   很容易打成 3300 公里。已經填了的數字跟著換算（3.3 → 3300），單位寫在輸入框右邊；公里的常用距離清單
+   （全馬、半馬…）對游泳沒用，換成公尺時拿掉 */
+function syncCreateDistanceUnit(){
+  const sel=document.getElementById('new-sport'), inp=document.getElementById('new-distance');
+  if(!sel||!inp) return;
+  const want=sel.value==='swimming'?'m':'km', cur=inp.dataset.unit||'km';
+  if(want===cur) return;
+  const v=parseFloat(inp.value);
+  if(Number.isFinite(v)&&v>0) inp.value=want==='m'?String(Math.round(v*1000)):String(parseFloat((v/1000).toFixed(4)));
+  inp.dataset.unit=want;
+  inp.step=want==='m'?'1':'0.001';
+  inp.setAttribute('placeholder',want==='m'?t('ui.newRaceDistancePlaceholderSwim','公尺，例如 1500'):t('ui.newRaceDistancePlaceholder','公里，例如 21.0975'));
+  if(want==='m') inp.removeAttribute('list'); else inp.setAttribute('list','distance-presets');
+  const u=document.getElementById('new-distance-unit'); if(u) u.textContent=want;
+}
 function renderCreateForm(){
   return `${quickNavHtml({backOnly:true})}<div class="create-form">
     <h1>${t('ui.createRace','新增賽事')}</h1>
@@ -18637,7 +18744,7 @@ function renderCreateForm(){
       <label class="field" for="new-sport"><span>${t('ui.newRaceSport','賽事種類')}</span><select id="new-sport">${SPORT_OPTIONS.map(o=>`<option value="${o.value}">${t('opt.sport.'+o.value,o.label)}</option>`).join('')}</select></label>
       <label class="field" for="new-status"><span>${t('ui.newRaceStatus','狀態')}</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value===createDefaultStatus?'selected':''}>${t('opt.status.'+o.value,o.label)}</option>`).join('')}</select></label>
       <label class="field" for="new-distance"><span>${t('ui.newRaceDistance','距離')}</span>
-        <input type="number" id="new-distance" step="0.001" min="0" inputmode="decimal" list="distance-presets" placeholder="${t('ui.newRaceDistancePlaceholder','公里，例如 21.0975')}">
+        <span class="field-input-wrap has-unit"><input type="number" id="new-distance" data-unit="km" step="0.001" min="0" inputmode="decimal" list="distance-presets" placeholder="${t('ui.newRaceDistancePlaceholder','公里，例如 21.0975')}"><span class="field-unit" id="new-distance-unit" aria-hidden="true">km</span></span>
         <datalist id="distance-presets">${DISTANCE_PRESETS.map(d=>`<option value="${d.km}">${escapeHtml(t('preset.distance.'+d.key,d.label))}</option>`).join('')}</datalist>
       </label>
     </div>
@@ -19168,7 +19275,8 @@ function startCreateFromPaste(info){
   set('new-name',info.name);
   set('new-url',info.officialUrl);
   set('new-sport',info.sportType);
-  if(info.distanceKm!=null) set('new-distance',info.distanceKm);
+  syncCreateDistanceUnit();
+  if(info.distanceKm!=null) set('new-distance',info.sportType==='swimming'?swimMeters(info.distanceKm):info.distanceKm);
   const nameEl=document.getElementById('new-name');
   if(nameEl){ nameEl.focus(); nameEl.setSelectionRange(nameEl.value.length,nameEl.value.length); }
   showToast(t('ui.pasteNewRaceFilled','已從剪貼簿帶入賽事資料，確認後按「建立賽事」'));
@@ -19396,7 +19504,7 @@ let calNavSwipeState=null;
 const calNavEl=document.querySelector('.cal-nav');
 calNavEl.addEventListener('touchstart',e=>{
   if(e.touches.length!==1) return;
-  // 手機的清單、獎牌牆沒有月份可以切（月份按鈕也藏起來了），不接這個手勢——
+  // 手機的清單、完賽牆沒有月份可以切（月份按鈕也藏起來了），不接這個手勢——
   // 不然在檢視切換鈕上滑一下，會在看不到的地方偷偷換了月份
   if(isPhoneLayout()&&state.phoneView!=='calendar') return;
   const touch=e.touches[0];
@@ -19433,7 +19541,7 @@ document.getElementById('cal-today').addEventListener('click',()=>{
   state.calendarYear=t.getFullYear();state.calendarMonth=t.getMonth();
   renderCalendar();
 });
-/* scrollPhotoWallIntoView()：切成獎牌牆時，如果牆在畫面下方看不到，唯一
+/* scrollPhotoWallIntoView()：切成完賽牆時，如果牆在畫面下方看不到，唯一
    的回饋只有按鈕自己變深色，會以為沒切成功，所以自動捲過去（v3.x 牆在
    生涯數據、榮譽櫃下面，一個半螢幕之外）。扣掉 --topbar-height 是因為
    頂欄是 sticky 的，直接對齊會被蓋住。 */
@@ -19487,7 +19595,7 @@ document.getElementById('cal-table-toggle').addEventListener('click',()=>{
   if(state.viewMode==='table') logFeatureUse('view_table');
 });
 /* ------------------------------------------------------------
-   長按賽事卡片（行事曆格子、清單列、獎牌牆卡片、表格列）：彈出
+   長按賽事卡片（行事曆格子、清單列、完賽牆卡片、表格列）：彈出
    複製／分享／刪除，不用先進頁面再找「更多操作」。
    只吃 touch 的 pointer——桌機有右鍵與 hover，長按是手機的手勢。
    長按觸發後，瀏覽器接著補送的 click 要擋掉（用捕獲階段先攔），
@@ -19575,7 +19683,7 @@ raceContextEl_getter().addEventListener('click',e=>{
 document.addEventListener('click',e=>{
   const photoCard=e.target.closest('.photo-card');
   if(photoCard) selectRace(photoCard.dataset.id);
-  // 獎牌牆的年份折頁（v4.5.1）。重畫之後焦點放回同一顆按鈕：用鍵盤的人按完 Enter 還在原地，
+  // 完賽牆的年份折頁（v4.5.1）。重畫之後焦點放回同一顆按鈕：用鍵盤的人按完 Enter 還在原地，
   // 不會被丟回頁面最上面
   const wallYear=e.target.closest('[data-wall-year]');
   if(wallYear&&wallOpenYears){
@@ -20350,6 +20458,8 @@ function showSaveStatus(kind){
 // 同一份函式，不是各自複製一份，避免日後改了一邊忘了另一邊。
 async function handleDetailChange(e){
   const t=e.target;
+  // 新增賽事表單換運動別：游泳的距離改成填公尺（見 syncCreateDistanceUnit）
+  if(t.id==='new-sport'){ syncCreateDistanceUnit(); return; }
   if(t.id==='geo-photo-input'){
     if(currentRace&&t.files&&t.files.length){
       const files=Array.from(t.files);
@@ -20404,7 +20514,8 @@ async function handleDetailChange(e){
     value=v.value;
     if(value!=null) t.value=secToHMS(value);
   }
-  else if(t.type==='number') value=(t.value===''?null:Number(t.value));
+  // data-scale：畫面上填的單位跟存的不一樣（游泳的總距離填公尺、存公里），存之前換算回去
+  else if(t.type==='number') value=(t.value===''?null:Number(t.value)/(Number(t.dataset.scale)||1));
   else value=t.value;
   if(path==='status'){
     await setRaceStatusFromUi(currentRace,value);
@@ -20550,7 +20661,8 @@ function handleDetailClick(e){
     const distanceRaw=(document.getElementById('new-distance')||{}).value;
     const race=emptyRace(name,sportType,status,raceDate);
     if(officialUrl) race.officialUrl=officialUrl;
-    const distanceKm=parseFloat(distanceRaw);
+    const distInput=document.getElementById('new-distance');
+    const distanceKm=parseFloat(distanceRaw)/(distInput&&distInput.dataset.unit==='m'?1000:1);
     if(Number.isFinite(distanceKm)&&distanceKm>0) race.route.distanceKm=distanceKm;
     if(createStagedActivity) applyActivitySummaryToRace(race,createStagedActivity.summary);
     if(createStagedCover){ race.coverImage=createStagedCover.dataUrl; race.coverThumb=createStagedCover.thumbDataUrl||''; race.coverImageAspect=createStagedCover.aspect; race.coverImageAccentColor=createStagedCover.accentColor; }
@@ -21140,20 +21252,20 @@ function extractDominantColor(ctx,w,h){
   }catch(err){ return null; }
 }
 /* makeCoverThumb(canvas, w, h)：從已縮到 760px 的封面再縮一張 320px 的
-   縮圖。月曆格子、清單、獎牌牆這些一次要畫幾十張的地方全部改用縮圖，
+   縮圖。月曆格子、清單、完賽牆這些一次要畫幾十張的地方全部改用縮圖，
    只有詳情頁的大圖與動態回顧才用 760px 原圖。
    為什麼需要這一層：封面是 base64 字串直接存在賽事物件裡，100 場賽事
-   的封面加起來 8～9 MB 常駐記憶體，每次重畫月曆或獎牌牆，瀏覽器要
-   重新解碼一百張 760px 的圖——實測中階手機上獎牌牆要 490ms、搜尋每
+   的封面加起來 8～9 MB 常駐記憶體，每次重畫月曆或完賽牆，瀏覽器要
+   重新解碼一百張 760px 的圖——實測中階手機上完賽牆要 490ms、搜尋每
    次觸發要 500ms，卡就是卡在這裡。縮圖約 15 KB，解碼量降到原本的
    七分之一。
-   480px（v3.26.0 從 320px 提高）：獎牌牆的卡片實測是桌機 245 CSS px、
+   480px（v3.26.0 從 320px 提高）：完賽牆的卡片實測是桌機 245 CSS px、
    手機 170 CSS px，乘上 Retina 的 2～3 倍像素密度，實際需要的是
    490～510 像素。原本的 320px 只有需求的六成，在手機上看起來就是糊的
    ——這不是壓縮品質的問題，是解析度根本不夠。
    為什麼停在 480 不再往上：760px 大圖本身才 80 KB，縮圖若做到 640px
    要 69 KB，等於存了第二份幾乎一樣大的檔案，那不如直接用大圖；而直接
-   用大圖實測會讓獎牌牆的渲染從 75ms 變成 152ms（60 場、沙盒環境），
+   用大圖實測會讓完賽牆的渲染從 75ms 變成 152ms（60 場、沙盒環境），
    因為 base64 是直接串進 innerHTML 的，字串本身就是成本。480px 剛好
    打平需求，代價是渲染 75ms→100ms、每張約 20KB→48KB。 */
 const COVER_THUMB_PX=480;
@@ -21713,16 +21825,19 @@ function gpsDenoiseSectionHtml(race){
     </div>`;
   }
   const deltaPct=preview.oldDistanceKm>0?((preview.newDistanceKm-preview.oldDistanceKm)/preview.oldDistanceKm*100):0;
+  // 游泳的距離寫公尺（v4.6.0）：3520 m → 3310 m，跟賽事頁其他地方一樣
+  const swim=isSwimRace(race);
+  const fmt=km=>swim?swimMeters(km)+' m':km.toFixed(2)+' km';
   return `<div class="gps-denoise-preview">
     <p class="small">${t('ui.gpsDenoisePreviewTitle','降噪預覽')}</p>
     <div class="gps-denoise-compare">
-      <span class="mono">${t('ui.gpsDenoiseBefore','降噪前')}：${preview.oldDistanceKm.toFixed(2)} km</span>
-      <span class="mono">${t('ui.gpsDenoiseAfter','降噪後')}：${preview.newDistanceKm.toFixed(2)} km（${deltaPct>=0?'+':''}${deltaPct.toFixed(1)}%）</span>
+      <span class="mono">${t('ui.gpsDenoiseBefore','降噪前')}：${fmt(preview.oldDistanceKm)}</span>
+      <span class="mono">${t('ui.gpsDenoiseAfter','降噪後')}：${fmt(preview.newDistanceKm)}（${deltaPct>=0?'+':''}${deltaPct.toFixed(1)}%）</span>
     </div>
     <p class="empty-hint small">${t('ui.gpsDenoiseNote','降噪能大幅壓低 GPS 雜訊，但沒辦法完全還原真實路徑，這個距離仍然是估計值。地圖軌跡一定會更新；賽事的距離欄位要不要一起改成這個數字，由你決定。')}</p>
     <div class="gps-denoise-actions">
       <button type="button" class="btn-ghost" data-action="apply-gps-denoise" data-id="${race.id}" data-update-distance="0">${t('ui.gpsDenoiseApplyMapOnly','套用（只更新地圖軌跡）')}</button>
-      <button type="button" class="btn-ghost" data-action="apply-gps-denoise" data-id="${race.id}" data-update-distance="1">${t('ui.gpsDenoiseApplyWithDistance','套用並更新距離為 {km}').replace('{km}',preview.newDistanceKm.toFixed(2))} km</button>
+      <button type="button" class="btn-ghost" data-action="apply-gps-denoise" data-id="${race.id}" data-update-distance="1">${t('ui.gpsDenoiseApplyWithDistance','套用並更新距離為 {km}').replace('{km}',fmt(preview.newDistanceKm))}</button>
       <button type="button" class="btn-text-small" data-action="cancel-gps-denoise">${t('ui.cancel','取消')}</button>
     </div>
   </div>`;
@@ -22027,11 +22142,14 @@ function gpxSummaryHtml(summary,filename){
     <h2>${t('ui.gpxModalTitle','匯入運動紀錄檔')}</h2>
     <p class="modal-hint">${t('ui.gpxHintFull',`從 <strong>${fileEsc}</strong> 讀到以下數據，確認後套用到「${raceName}」（<strong>會覆蓋現有欄位</strong>，被取代的值標示在下方）：`).replace('{file}',fileEsc).replace('{race}',raceName)}</p>
     <ul class="gpx-summary">
-      <li>${t('ui.gpxDistance','距離')} <span class="mono">${summary.distanceKm} 公里</span>${
+      <li>${t('ui.gpxDistance','距離')} <span class="mono">${isSwimRace(currentRace)?swimMeters(summary.distanceKm)+' '+t('ui.unitMeters','公尺'):summary.distanceKm+' '+t('ui.unitKm','公里')}</span>${
         // 套用一律覆蓋，所以現有值只要不同就標出來，使用者才有機會在
         // 套用前發現「這場的距離本來是別的數字」，不想覆蓋就按取消。
+        // 游泳寫公尺（v4.6.0），跟賽事頁其他地方一樣
         (currentRace.route.distanceKm!=null&&currentRace.route.distanceKm!==summary.distanceKm)
-          ?`<span class="gpx-overwrite-note">${tf('ui.gpxWillReplace','會取代現有的 {n} 公里',currentRace.route.distanceKm)}</span>`
+          ?`<span class="gpx-overwrite-note">${isSwimRace(currentRace)
+            ?tf('ui.gpxWillReplaceM','會取代現有的 {n} 公尺',swimMeters(currentRace.route.distanceKm))
+            :tf('ui.gpxWillReplace','會取代現有的 {n} 公里',currentRace.route.distanceKm)}</span>`
           :''
       }</li>
       <li>${t('ui.gpxElevGain','總爬升')} <span class="mono">${summary.elevationGainM!=null?summary.elevationGainM+' 公尺':'—'}</span>${
@@ -22492,10 +22610,11 @@ function helpModalHtml(){
         <li>首頁分成三個分頁：「賽事」是「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄。</li>
         <li><strong>「下一場」卡</strong>：14 天內有比賽時，「賽事」分頁最上面是倒數、日期時間和地點，下面三格：打包、A 目標、號碼布——跟賽事頁的賽前四格同一套，點一下就打開那一格要填的地方（空的格子游標直接停在那一欄）。有天氣預報（抓到的即時預報，或自己填的預報）時第三格換成天氣；7 天內、有 GPS 軌跡還沒抓的，第三格是「抓取預報」。點賽名打開那一場；有封面照時照片是卡片的底圖；「暫時隱藏」可以先收起來。手機清單上還在問「比完了嗎？」的時候，這張卡先不放（下一場就在清單第一列）。</li>
         <li>生涯數據可以點：年份長條、熱力圖的格子、「總完賽場次」「今年累計里程」點下去，下面會列出那幾場（點一場就打開，返回鍵先關掉列表）；點全馬 PB 的時間，直接打開締造 PB 的那一場。全馬只算跑步類的賽事（42 公里的自行車賽不算）。</li>
-        <li>電腦：上方 <span class="mono">‹ 年 月 ›</span> 切換月份（只有月曆會顯示；獎牌牆、表格是跨月份的，不顯示），「今天」跳回當月；旁邊的方格圖示切換「獎牌牆」，表格圖示切換緊湊表格。</li>
-        <li><strong>獎牌牆</strong>：所有已完賽的賽事，依年份分段、新的在前，每一段開頭是那一年的場數、里程和 PB 數。有封面照的是一張拍立得；沒有的畫成那一場的號碼布——上面那條賽名帶的顏色是運動別，中間的大字是你的號碼（沒填號碼就寫距離），完賽時間印在計時晶片條上，個人最佳（PB）蓋一個紅色印章。號碼填在「賽事基本資料」的「號碼布編號」。每一年的標題點一下就能打開、收起來，預設只展開今年（今年還沒有完賽就展開最新的一年），收起來的年份還是看得到場數、里程和 PB 數；上面的「全部展開」一次全部打開。</li>
+        <li>電腦：上方 <span class="mono">‹ 年 月 ›</span> 切換月份（只有月曆會顯示；完賽牆、表格是跨月份的，不顯示），「今天」跳回當月；旁邊的方格圖示切換「完賽牆」，表格圖示切換緊湊表格。</li>
+        <li><strong>完賽牆</strong>：所有已完賽的賽事，依年份分段、新的在前，每一段開頭是那一年的場數、里程和 PB 數。有封面照的是一張拍立得；沒有的畫成那一場的號碼布——上面那條賽名帶的顏色是運動別，中間的大字是你的號碼（沒填號碼就寫距離），底下黑色的計時帶印著完賽時間、均速和爬升，個人最佳（PB）蓋一個紅色印章。均速用那個運動慣用的單位：跑步類每公里配速、自行車時速、游泳每 100 公尺的時間；三鐵、二鐵只寫成績，游泳、三鐵不寫爬升。拍立得下面也貼著同一條計時帶。號碼填在「賽事基本資料」的「號碼布編號」。每一年的標題點一下就能打開、收起來，預設只展開今年（今年還沒有完賽就展開最新的一年），收起來的年份還是看得到場數、里程和 PB 數；上面的「全部展開」一次全部打開。</li>
         <li><strong>表格</strong>（電腦）：點欄位標題排序（日期、名稱、距離、爬升、完賽時間），再點一次反過來。不是照日期排時，年份收合改成一整串，上面寫現在怎麼排，按「回到依年份分組」回去；可以搭配搜尋，例如搜「半程」再點「完賽時間」。表格上面的「各距離最佳」列出全馬、半馬、10K、5K、51.5K／113K／226K 鐵人三項的最快成績，賽名前面是那一場的年份，點了打開那一場。</li>
-        <li>手機：預設是「清單」——即將到來（還沒定日期的計畫排在最後，寫「日期未定」）、最近的 5 場，按「看全部歷史紀錄」列出所有過去的賽事；上面的「清單／月曆／獎牌牆」切換檢視。「即將到來」的場數跟篩選鈕上的數字一樣。</li>
+        <li><strong>游泳的距離寫公尺</strong>：游泳賽事的距離在清單、表格、賽事頁、分享圖、完賽牆都寫公尺（例如 3300 m），賽事頁和新增賽事的距離欄也是填公尺。生涯里程、年份的合計照樣用公里加總。</li>
+        <li>手機：預設是「清單」——即將到來（還沒定日期的計畫排在最後，寫「日期未定」）、最近的 5 場，按「看全部歷史紀錄」列出所有過去的賽事；上面的「清單／月曆／完賽牆」切換檢視。「即將到來」的場數跟篩選鈕上的數字一樣。</li>
         <li>篩選分兩層：先選「全部／即將到來／歷史紀錄」，點「即將到來」或「歷史紀錄」後才會展開細分狀態，避免按鈕一次擠太多。</li>
         <li>搜尋框可用賽事名稱或城市過濾，搜尋或點篩選鈕時會列出所有月份的結果；還沒比、沒填日期的賽事排在「即將到來」最後，沒填日期的過去賽事列在「未定日期」。</li>
       </ul>
@@ -22511,7 +22630,7 @@ function helpModalHtml(){
         <li><strong>狀態</strong>：標題上方的狀態章（例如「已報名 ▾」）點了就能改狀態，未起跑（DNS）、未完賽（DNF）也在裡面；還沒比賽的賽事，標題下方的狀態條也可以直接點。</li>
         <li><strong>賽前四格</strong>：已報名、還沒比的賽事，標題下面有號碼布、起跑時間、打包進度、A 目標，點一下就能填（「打包」打開打包清單）。比賽日過了，換成「比賽已經過了 N 天，成績還沒填」的提示。</li>
         <li><strong>區段順序</strong>：已完賽、DNS、DNF 的賽事，「賽後紀錄」排第一個，上面的跳轉鈕也一樣；還沒比的照舊從「基本資訊」開始。</li>
-        <li><strong>封面照片</strong>：賽事頁「更多操作」→「新增封面照片」上傳，會變成標題區塊的淡化背景底圖（直式照片會自動加高區塊避免被壓扁），同一張圖也會出現在行事曆格子與手機清單的小縮圖、獎牌牆，以及首頁「下一場」卡的底圖。</li>
+        <li><strong>封面照片</strong>：賽事頁「更多操作」→「新增封面照片」上傳，會變成標題區塊的淡化背景底圖（直式照片會自動加高區塊避免被壓扁），同一張圖也會出現在行事曆格子與手機清單的小縮圖、完賽牆，以及首頁「下一場」卡的底圖。</li>
         <li><strong>基本資訊</strong>：名稱、系列（同名系列會自動跨年比較 PB）、狀態、時間、抽籤資訊。</li>
         <li><strong>地理與路線</strong>：距離、爬升、海拔變化圖、CP 明細、ITRA/UTMB 點數（需自行查詢填入）。</li>
         <li><strong>裝備補給與戰略</strong>：裝備清單（可套用路跑／越野／三鐵標配範本）、補給時程規劃、配速試算與手環產生器。裝備清單預設是「打包」：一列一件，點整列就打勾，打包好的收進「已打包 N 件」，最下面一格打字按 Enter 直接新增；要改重量、分類、放在哪裡切到「編輯」，依放置位置排列切到「佈署」。首頁「下一場」卡的「打包」格點下去也會打開。</li>
@@ -22564,7 +22683,7 @@ function helpModalHtml(){
 const helpModalEl_getter=()=>document.getElementById('help-modal');
 /* ============================================================
    封面照片焦點調整
-   小縮圖（行事曆格子、清單、獎牌牆）用 object-fit:cover 會裁成正方形，
+   小縮圖（行事曆格子、清單、完賽牆）用 object-fit:cover 會裁成正方形，
    這裡讓使用者用滑鼠/觸控直接在完整照片上點選或拖曳，決定裁切時
    要保留哪個位置，存成百分比座標（跟 CSS object-position 直接對應）。
    ============================================================ */
@@ -22574,7 +22693,7 @@ function focalPointModalHtml(race){
   const aspect=race.coverImageAspect||1.5;
   return `<div class="modal-panel">
     <h2>${t('ui.focalPointTitle','調整封面照片焦點')}</h2>
-    <p class="modal-hint">${t('ui.focalPointHint','行事曆格子、清單、獎牌牆的小縮圖會把照片裁成正方形。點選或拖曳下方照片，把最重要的部分移到準心位置，右側縮圖預覽會即時更新。')}</p>
+    <p class="modal-hint">${t('ui.focalPointHint','行事曆格子、清單、完賽牆的小縮圖會把照片裁成正方形。點選或拖曳下方照片，把最重要的部分移到準心位置，右側縮圖預覽會即時更新。')}</p>
     <div class="focal-point-body">
       <div class="focal-point-stage" id="focal-point-stage" style="aspect-ratio:${aspect}">
         <img src="${escapeHtml(safeUrl(race.coverImage))}" alt="" id="focal-point-img" draggable="false">
