@@ -529,7 +529,30 @@
   .bib-defs{position:absolute;width:0;height:0;overflow:hidden;}
   .bib-sec{margin:0 0 34px;}
   .bib-sec:last-child{margin-bottom:8px;}
-  .bib-yhead{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:0 2px 18px;font-size:inherit;font-weight:400;line-height:1.3;}
+  /* 年份折頁（v4.5.1）：每一年的標題就是開關（h3 裡一顆按鈕）。收起來的年份一年一列、上下一條
+     細線，像一份目錄；展開的年份照舊是標題加一整片號碼布 */
+  .bib-sec.is-collapsed{margin:0;border-top:1px solid var(--rule);}
+  .bib-sec.is-collapsed:last-child{border-bottom:1px solid var(--rule);}
+  /* 收起來的年份後面接一個展開的：上面一樣一條線；不加內距，點下去的標題才不會往下跳 */
+  .bib-sec.is-collapsed+.bib-sec:not(.is-collapsed){border-top:1px solid var(--rule);}
+  .bib-yhead{margin:0 0 18px;font-size:inherit;font-weight:400;line-height:1.3;}
+  .bib-sec.is-collapsed .bib-yhead{margin:0;}
+  .bib-ytoggle{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;margin:0;padding:6px 2px;border:none;border-radius:6px;
+    background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;}
+  .bib-ytoggle:focus-visible{outline:3px solid var(--trail);outline-offset:2px;}
+  .bib-yline{flex:1 1 auto;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;}
+  /* 箭頭跟選單裡「匯入／匯出」那兩組的展開箭頭同一種：收起來朝下，展開朝上 */
+  .bib-ychev{flex:none;width:9px;height:9px;margin:0 10px 5px 0;border-right:2px solid var(--stone);border-bottom:2px solid var(--stone);
+    transform:rotate(45deg);transition:transform .15s ease;}
+  .bib-ytoggle[aria-expanded="true"] .bib-ychev{transform:rotate(-135deg);margin-bottom:-5px;}
+  @media (hover:hover){ .bib-ytoggle:hover .bib-ychev{border-color:var(--ink);} }
+  @media (prefers-reduced-motion:reduce){ .bib-ychev{transition:none;} }
+  /* .bib-grid 寫了 display:grid，會蓋過 [hidden] 的 display:none */
+  .bib-grid[hidden]{display:none;}
+  .bib-wall-bar{display:flex;justify-content:flex-end;margin:0 0 4px;}
+  .bib-expand-all{min-height:36px;padding:4px 2px;border:none;background:none;font:inherit;font-size:calc(13px*var(--fs,1));
+    color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+  .bib-expand-all:hover{color:var(--ink);}
   .bib-flag{flex:none;width:33px;height:22px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.2);
     background:conic-gradient(#17191B 25%,#FFFFFF 0 50%,#17191B 0 75%,#FFFFFF 0) 0 0/11px 11px;}
   [data-theme="dark"] .bib-flag{box-shadow:0 0 0 1px rgba(255,255,255,.3);}
@@ -4480,7 +4503,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／獎牌牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.5.0';
+const APP_VERSION='v4.5.1';
 
 /* ============================================================
    多語系（i18n）
@@ -4568,7 +4591,7 @@ const JA={
   'ui.calResultsSearch':'「{q}」の検索結果：{n} 件','ui.calResultsFilter':'「{f}」：{n} 件','ui.calResultsBoth':'「{f}」で「{q}」を検索：{n} 件',
   'ui.calResultsNone':'該当する大会はありません','ui.calResultsClear':'検索と絞り込みを解除','ui.calUndated':'日付未定','ui.dateTbd':'日付未定','ui.done':'完了','ui.yesterday':'昨日','ui.daysAgo':'{n}日前','ui.resultPromptLabel':'走り終えましたか？','ui.resultPromptText':'記録を入れると、キャリアデータ・自己ベスト・バッジが自動で更新されます。','ui.recordResult':'記録を入れる','ui.resultDns':'出走しなかった（DNS）','ui.resultDnf':'完走できなかった（DNF）','ui.resultLater':'あとで','ui.resultBanner':'大会から{n}日経ちました。記録がまだです','ui.resultBannerOne':'大会は昨日でした。記録がまだです','ui.resultPending':'記録待ち','ui.resultVsGoalFaster':'A目標（{g}）より{n}速い','ui.resultVsGoalSlower':'A目標（{g}）より{n}遅い','ui.resultVsGoalExact':'A目標（{n}）ちょうど','ui.recordResultImport':'ウォッチの記録（GPX／TCX／FIT）から自動入力','ui.recordResultSave':'保存して「完走」にする','ui.recordResultHint':'感想・写真・スプリットはあとで追加できます。','ui.resultSaved':'記録しました','ui.resultSavedNoTime':'「完走」にしました。記録はあとで入れられます','ui.statusChangedTo':'「{n}」にしました','ui.resultLaterToast':'了解です。一覧と大会ページには「記録待ち」が残ります','ui.durHM':'{h}時間{m}分','ui.durMS':'{m}分{s}秒','ui.durS':'{s}秒','ui.rwAdd':'＋ 入力','ui.rwBib':'ゼッケン','ui.rwStart':'スタート','ui.rwPack':'荷造り','ui.rwAddList':'＋ 作成','ui.rwGoal':'A目標','ui.rwWeather':'天気','ui.rwWeatherRain':'降水 {n}%','ui.rwWeatherFetch':'予報を取得','ui.focusDaysAfter':'日後','ui.focusDaysAfterOne':'日後','ui.tableSortBar':'「{a}」で並べ替え（{b}）・{c}','ui.tableBackToYears':'年ごとの表示に戻す','ui.tableBackToNewest':'新しい順に戻す','ui.tableDirTimeAsc':'速い順','ui.tableDirTimeDesc':'遅い順','ui.tableDirDistAsc':'短い順','ui.tableDirDistDesc':'長い順','ui.tableDirElevAsc':'少ない順','ui.tableDirElevDesc':'多い順','ui.tableDirNameAsc':'昇順','ui.tableDirNameDesc':'降順','ui.tableDirDateAsc':'古い順','ui.tableDirDateDesc':'新しい順','ui.bestMarathon':'フル最速','ui.bestHalf':'ハーフ最速','ui.best10k':'10K 最速','ui.best5k':'5K 最速','ui.bestTri51':'51.5K トライアスロン最速','ui.bestTri113':'113K トライアスロン最速','ui.bestTri226':'226K トライアスロン最速','ui.equipViewPack':'荷造り','ui.equipViewEdit':'編集','ui.equipViewKanban':'配置','ui.equipViewLabel':'装備リストの表示方法','ui.packAddPlaceholder':'1つ追加（入力して Enter）','ui.packAddLabel':'装備を1つ追加','ui.packMust':'必携','ui.packNoMust':'「必携」の装備はありません','ui.packAllDone':'荷造り完了 ✓','ui.packDoneGroup':'準備済み {n}件','ui.packPacked':'準備済み','ui.packFilterTodo':'未準備 {n}','ui.packFilterAll':'すべて {n}','ui.packFilterMust':'必携 {n}','ui.packHint':'行をタップするとチェックが付きます。重さ・分類・置き場所を変えるときは「編集」へ。','ui.careerPbOpen':'「{n}」を開く','ui.careerSheetCount':'完走','ui.careerSheetRaces':'{n}大会','ui.careerSheetDistance':'総距離','ui.careerSheetBestFm':'フル最速','ui.careerSheetYear':'{y}年・完走 {n}大会','ui.careerSheetMonth':'{y}年{m}月・完走 {n}大会','ui.careerSheetAll':'すべての完走記録・{n}大会','ui.yearlyChartBarLabel':'{y}年 {n}大会','ui.calResultsHint':'すべての月から表示しています',
   'ui.showAllFields':'すべての項目を表示（あと {n} 項目）','ui.showAllFieldsFilled':'すべての項目を表示（あと {a} 項目、うち {b} 項目は入力済み）','ui.showCommonFields':'よく使う項目だけ表示',
-  'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'完走した大会はまだありません。「完走」にするとここに並びます。','ui.wallStampSub':'ベスト',
+  'ui.gridViewToggle':'獲得メダル表示に切り替え','ui.photoGridEmpty':'完走した大会はまだありません。「完走」にするとここに並びます。','ui.wallStampSub':'ベスト','ui.wallExpandAll':'すべて開く','ui.wallCollapseAll':'すべて閉じる',
   'ui.filterAll':'すべて','ui.filterUpcoming':'今後の予定','ui.filterHistory':'過去の記録',
   'ui.filterOverseas':'海外レース',
   'ui.mediaGalleryTitle':'メディアギャラリー',
@@ -4932,7 +4955,7 @@ const JA={
         <li><strong>「次の大会」カード</strong>：14日以内に大会があると、「大会」タブの一番上にカウントダウン・日時・場所、その下に3つのマス（荷造り・A目標・ゼッケン）が出ます。大会ページの「レース前の4項目」と同じで、タップするとそのマスの入力欄が開きます（空のマスはカーソルがその欄に入ります）。天気予報（取得したライブ予報か、自分で入れた予報）があると3つ目は天気に、7日以内で GPS 軌跡があってまだ取得していないときは「予報を取得」になります。大会名をタップすると大会ページが開き、カバー写真があればカードの背景になります。「一時的に隠す」で閉じられます。スマホのリストで「走り終えましたか？」が出ている間は、このカードは出ません（次の大会はリストの一番上にあります）。</li>
         <li>キャリアの数字はタップできます：年ごとの棒グラフ、ヒートマップのマス、「完走レース数」「年間走行距離」をタップすると、下にその大会の一覧が出ます（1件タップで開き、戻る操作ではまず一覧が閉じます）。フルマラソン自己ベストのタイムをタップすると、その記録を出した大会が開きます。フルマラソンはランニング系の大会だけを数えます（42km の自転車レースは入りません）。</li>
         <li>パソコン：上部の <span class="mono">‹ 年 月 ›</span> で月を切り替え（カレンダー表示のときだけ。メダル棚と表は月をまたいで表示するので出ません）、「今日」で当月に戻ります。隣のグリッドアイコンで「メダル棚」、表アイコンでコンパクトな表に切り替えます。</li>
-        <li><strong>メダル棚</strong>：完走した大会すべてを年ごとに区切って新しい順に並べ、各年の最初にその年の大会数・距離・PB の数を表示します。カバー写真がある大会はポラロイド写真、ない大会はその大会のゼッケンになります。上の帯の色は種目、真ん中の大きな数字はゼッケン番号（未入力なら距離）、完走タイムは計測チップの帯に印字され、自己ベスト（PB）には赤いスタンプが押されます。ゼッケン番号は「大会の基本情報」の「ゼッケン番号」に入力します。</li>
+        <li><strong>メダル棚</strong>：完走した大会すべてを年ごとに区切って新しい順に並べ、各年の最初にその年の大会数・距離・PB の数を表示します。カバー写真がある大会はポラロイド写真、ない大会はその大会のゼッケンになります。上の帯の色は種目、真ん中の大きな数字はゼッケン番号（未入力なら距離）、完走タイムは計測チップの帯に印字され、自己ベスト（PB）には赤いスタンプが押されます。ゼッケン番号は「大会の基本情報」の「ゼッケン番号」に入力します。各年の見出しをタップすると開閉でき、最初は今年だけ開いています（今年の完走がまだなければ最新の年）。閉じた年も大会数・距離・PB の数は見えます。上の「すべて開く」でまとめて全部開けます。</li>
         <li><strong>表</strong>（パソコン）：列の見出しをクリックすると並べ替え（日付・大会名・距離・獲得標高・完走タイム）、もう一度で逆順になります。日付以外で並べ替えると年ごとのまとまりをやめて一続きになり、上に今の並べ方が出ます（「年ごとの表示に戻す」で戻ります）。検索と組み合わせることもできます。表の上には距離別の最速記録（フル・ハーフ・10K・5K・トライアスロン 51.5K／113K／226K）が並び、大会名の前にその年が付きます。タップでその大会が開きます。</li>
         <li>スマートフォン：最初は「リスト」表示——今後の予定（日付が決まっていない予定は最後に「日付未定」と表示）、最近の5件。「過去の記録をすべて見る」で過去の大会を一覧できます。上の「リスト／カレンダー／メダル棚」で表示を切り替えます。「今後の予定」の件数は絞り込みボタンの数字と同じです。</li>
         <li>フィルターは2段階：まず「すべて／今後の予定／過去の記録」を選択し、「今後の予定」または「過去の記録」を選ぶと詳細ステータスが展開されます（ボタンが一度に多く表示されすぎないように）。</li>
@@ -5110,7 +5133,7 @@ const EN={
   'ui.calResultsSearch':'“{q}”: {n} races','ui.calResultsFilter':'{f}: {n} races','ui.calResultsBoth':'“{q}” in {f}: {n} races',
   'ui.calResultsNone':'No matching races','ui.calResultsClear':'Clear search & filter','ui.calUndated':'No date yet','ui.dateTbd':'TBD','ui.done':'Done','ui.yesterday':'Yesterday','ui.daysAgo':'{n} days ago','ui.resultPromptLabel':'Did you finish?','ui.resultPromptText':'Log your result — career stats, PBs and badges update automatically.','ui.recordResult':'Log result','ui.resultDns':'Didn’t start (DNS)','ui.resultDnf':'Didn’t finish (DNF)','ui.resultLater':'Later','ui.resultBanner':'This race was {n} days ago — no result yet','ui.resultBannerOne':'This race was yesterday — no result yet','ui.resultPending':'Result pending','ui.resultVsGoalFaster':'{n} faster than goal A ({g})','ui.resultVsGoalSlower':'{n} slower than goal A ({g})','ui.resultVsGoalExact':'Exactly goal A ({n})','ui.recordResultImport':'Fill in from a watch file (GPX/TCX/FIT)','ui.recordResultSave':'Save and mark as finished','ui.recordResultHint':'Notes, photos and splits can come later.','ui.resultSaved':'Result saved','ui.resultSavedNoTime':'Marked as finished — add the time whenever you like','ui.statusChangedTo':'Changed to “{n}”','ui.resultLaterToast':'OK — the list and race page will keep showing “Result pending”','ui.durHM':'{h} h {m} min','ui.durMS':'{m} min {s} s','ui.durS':'{s} s','ui.rwAdd':'＋ Add','ui.rwBib':'Bib','ui.rwStart':'Start','ui.rwPack':'Packed','ui.rwAddList':'＋ List','ui.rwGoal':'Goal A','ui.rwWeather':'Weather','ui.rwWeatherRain':'Rain {n}%','ui.rwWeatherFetch':'Get forecast','ui.focusDaysAfter':'days','ui.focusDaysAfterOne':'day','ui.tableSortBar':'Sorted by “{a}” ({b}) · {c}','ui.tableBackToYears':'Back to grouping by year','ui.tableBackToNewest':'Back to newest first','ui.tableDirTimeAsc':'fastest first','ui.tableDirTimeDesc':'slowest first','ui.tableDirDistAsc':'shortest first','ui.tableDirDistDesc':'longest first','ui.tableDirElevAsc':'least climbing first','ui.tableDirElevDesc':'most climbing first','ui.tableDirNameAsc':'A → Z','ui.tableDirNameDesc':'Z → A','ui.tableDirDateAsc':'oldest first','ui.tableDirDateDesc':'newest first','ui.bestMarathon':'Best marathon','ui.bestHalf':'Best half','ui.best10k':'Best 10K','ui.best5k':'Best 5K','ui.bestTri51':'Best 51.5K triathlon','ui.bestTri113':'Best 113K triathlon','ui.bestTri226':'Best 226K triathlon','ui.equipViewPack':'Pack','ui.equipViewEdit':'Edit','ui.equipViewKanban':'Layout','ui.equipViewLabel':'Gear list view','ui.packAddPlaceholder':'Add an item (press Enter)','ui.packAddLabel':'Add a gear item','ui.packMust':'Required','ui.packNoMust':'No items marked “Required”','ui.packAllDone':'All packed ✓','ui.packDoneGroup':'Packed: {n}','ui.packPacked':'Packed','ui.packFilterTodo':'To pack {n}','ui.packFilterAll':'All {n}','ui.packFilterMust':'Required {n}','ui.packHint':'Tap a row to check it off. To change weight, category or where it goes, switch to “Edit”.','ui.careerPbOpen':'Open “{n}”','ui.careerSheetCount':'Finished','ui.careerSheetRaces':'{n}','ui.careerSheetDistance':'Distance','ui.careerSheetBestFm':'Best marathon','ui.careerSheetYear':'{y} · {n} finished','ui.careerSheetMonth':'{m}/{y} · {n} finished','ui.careerSheetAll':'All finished races · {n}','ui.yearlyChartBarLabel':'{y}: {n} races','ui.calResultsHint':'Showing all months',
   'ui.showAllFields':'Show all fields ({n} more)','ui.showAllFieldsFilled':'Show all fields ({a} more, {b} filled in)','ui.showCommonFields':'Show common fields only',
-  'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No finished races yet — mark a race as finished and it shows up here.','ui.wallStampSub':'BEST',
+  'ui.gridViewToggle':'Switch to trophy wall view','ui.photoGridEmpty':'No finished races yet — mark a race as finished and it shows up here.','ui.wallStampSub':'BEST','ui.wallExpandAll':'Expand all','ui.wallCollapseAll':'Collapse all',
   'ui.filterAll':'All','ui.filterUpcoming':'Upcoming','ui.filterHistory':'History',
   'ui.filterOverseas':'Overseas',
   'ui.mediaGalleryTitle':'Media Gallery',
@@ -5462,7 +5485,7 @@ const EN={
         <li><strong>Next-race card</strong>: when a race is within 14 days, the top of “Races” shows the countdown, date, start time and place, with three tiles underneath — Packed, Goal A and Bib. They’re the same tiles as on the race page: tap one to open where you fill it in (an empty tile puts the cursor right in that field). When there’s a forecast (a live one you fetched, or one you typed in), the third tile shows the weather; within 7 days, with a GPS track and no forecast yet, it says “Get forecast”. Tap the race name to open the race; a cover photo becomes the card’s background; “Hide for now” tucks the card away. In a phone’s list, while “Did you finish?” is showing, the card steps aside — the next race is the first row of the list.</li>
         <li>Career numbers are tappable: tap a year’s bar, a heatmap square, “Races finished” or “Distance this year” to list those races underneath (tap one to open it; back closes the list first). Tap the marathon PB time to open the race where you set it. Only running races count as marathons (a 42 km bike race doesn’t).</li>
         <li>On a computer, use <span class="mono">‹ Year Month ›</span> to change months and "Today" to jump back (calendar view only — the trophy wall and table span all months, so they don’t show it). The grid icon next to it switches to the trophy wall; the table icon switches to a compact table.</li>
-        <li><strong>Trophy wall</strong>: every finished race, grouped by year with the newest first; each year opens with its race count, distance and number of PBs. Races with a cover photo are a polaroid; the rest become that race’s bib — the band color is the sport, the big number is your bib number (or the distance if you haven’t entered one), the finish time is printed on the timing-chip strip, and a personal best (PB) gets a red stamp. Enter your bib number under “Bib Number” in “Race Details”.</li>
+        <li><strong>Trophy wall</strong>: every finished race, grouped by year with the newest first; each year opens with its race count, distance and number of PBs. Races with a cover photo are a polaroid; the rest become that race’s bib — the band color is the sport, the big number is your bib number (or the distance if you haven’t entered one), the finish time is printed on the timing-chip strip, and a personal best (PB) gets a red stamp. Enter your bib number under “Bib Number” in “Race Details”. Tap a year’s heading to open or close it: at first only this year is open (or the latest year if you haven’t finished a race this year yet), closed years still show their race count, distance and PBs, and “Expand all” at the top opens every year at once.</li>
         <li><strong>Table</strong> (computer): click a column header to sort (date, name, distance, elevation, finish time); click again to reverse. Sorting by anything other than date turns the year groups into one list, with a line above saying how it’s sorted (“Back to grouping by year” undoes it). It works together with search. Above the table, your fastest marathon, half, 10K, 5K and triathlon (51.5K, 113K, 226K) times are listed, with the year in front of each race name — click one to open that race.</li>
         <li>On a phone, you start in “List”: upcoming races (plans without a date come last, marked “TBD”) and your 5 most recent — “See all past races” lists everything before today. The “List / Calendar / Trophy wall” switch at the top changes the view. The upcoming count matches the number on the filter button.</li>
         <li>Filters have two levels: pick "All / Upcoming / History" first — tapping "Upcoming" or "History" reveals the more specific statuses underneath, so the bar isn't crowded with options at once.</li>
@@ -17738,6 +17761,16 @@ function polaroidCardHtml(r){
     ${r.results.isPb?wallStampSvg(' is-pola'):''}
   </button>`;
 }
+/* 年份折頁（v4.5.1）：生涯上百場全部攤開，要捲很久才翻得到前幾年。每一年的標題就是開關，
+   預設只展開今年（今年還沒有完賽就展開最新的一年）——跟表格檢視的年份收合同一個原則。
+   - 收起來的年份只畫標題：場數、里程、PB 數照樣看得到，卡片不畫——上百張號碼布不必一打開就
+     全部畫出來。
+   - 開關是 h3 裡的按鈕（aria-expanded）：報讀軟體照樣可以用標題一年一年跳，按下去會唸「已展開」。
+   - 兩年以上時，最上面一顆「全部展開／全部收合」：想從頭翻到尾的人不必一年一年按。
+   - 展開狀態記在記憶體、這次瀏覽有效：打開一場再返回，牆還是原本的樣子；年份會隨資料變，存起來
+     只會累積已經不存在的年份。 */
+let wallOpenYears=null;
+function wallYearKey(r){ return (r.schedule.raceDate||'').slice(0,4)||'undated'; }
 function renderPhotoGrid(){
   const done=state.races.filter(r=>!r.deletedAt&&r.status==='completed');
   done.sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
@@ -17747,19 +17780,28 @@ function renderPhotoGrid(){
   // 依年份分段：已經照日期新到舊排好，同一年的一定連在一起；沒填日期的排在最後一段
   const groups=[];
   done.forEach(r=>{
-    const y=(r.schedule.raceDate||'').slice(0,4);
+    const key=wallYearKey(r);
     const g=groups[groups.length-1];
-    if(g&&g.year===y) g.list.push(r); else groups.push({year:y,list:[r]});
+    if(g&&g.key===key) g.list.push(r); else groups.push({key,list:[r]});
   });
-  return `<div class="photo-grid-wrap bib-wall">${BIB_WALL_DEFS}${groups.map(({year,list})=>{
+  if(!wallOpenYears){
+    const thisYear=String(new Date().getFullYear());
+    wallOpenYears=new Set([groups.some(g=>g.key===thisYear)?thisYear:groups[0].key]);
+  }
+  const allOpen=groups.every(g=>wallOpenYears.has(g.key));
+  const bar=groups.length>1?`<div class="bib-wall-bar"><button type="button" class="bib-expand-all" data-action="wall-toggle-all" data-open="${allOpen?'0':'1'}">${escapeHtml(allOpen?t('ui.wallCollapseAll','全部收合'):t('ui.wallExpandAll','全部展開'))}</button></div>`:'';
+  return `<div class="photo-grid-wrap bib-wall">${BIB_WALL_DEFS}${bar}${groups.map(({key,list})=>{
+    const open=wallOpenYears.has(key);
     const km=Math.round(list.reduce((s,r)=>s+(r.route&&r.route.distanceKm>0?r.route.distanceKm:0),0));
     const pb=list.filter(r=>r.results.isPb).length;
     const stats=[tableRaceCount(list.length)];
     if(km) stats.push(km+' km');
-    return `<section class="bib-sec">
-      <h3 class="bib-yhead"><span class="bib-flag" aria-hidden="true"></span><span class="bib-ynum${year?'':' is-undated'}">${year||escapeHtml(t('ui.calUndated','未定日期'))}</span>
-        <span class="bib-ystats">${stats.join(' · ')}${pb?` · <b>${pb} PB</b>`:''}</span></h3>
-      <div class="bib-grid">${list.map(r=>r.coverImage?polaroidCardHtml(r):bibCardHtml(r)).join('')}</div>
+    const undated=key==='undated';
+    return `<section class="bib-sec${open?'':' is-collapsed'}">
+      <h3 class="bib-yhead"><button type="button" class="bib-ytoggle" data-wall-year="${key}" aria-expanded="${open}" aria-controls="bib-y-${key}">
+        <span class="bib-yline"><span class="bib-flag" aria-hidden="true"></span><span class="bib-ynum${undated?' is-undated':''}">${undated?escapeHtml(t('ui.calUndated','未定日期')):key}</span>
+        <span class="bib-ystats">${stats.join(' · ')}${pb?` · <b>${pb} PB</b>`:''}</span></span><span class="bib-ychev" aria-hidden="true"></span></button></h3>
+      <div class="bib-grid" id="bib-y-${key}"${open?'':' hidden'}>${open?list.map(r=>r.coverImage?polaroidCardHtml(r):bibCardHtml(r)).join(''):''}</div>
     </section>`;
   }).join('')}</div>`;
 }
@@ -19533,6 +19575,25 @@ raceContextEl_getter().addEventListener('click',e=>{
 document.addEventListener('click',e=>{
   const photoCard=e.target.closest('.photo-card');
   if(photoCard) selectRace(photoCard.dataset.id);
+  // 獎牌牆的年份折頁（v4.5.1）。重畫之後焦點放回同一顆按鈕：用鍵盤的人按完 Enter 還在原地，
+  // 不會被丟回頁面最上面
+  const wallYear=e.target.closest('[data-wall-year]');
+  if(wallYear&&wallOpenYears){
+    const y=wallYear.dataset.wallYear;
+    if(wallOpenYears.has(y)) wallOpenYears.delete(y); else wallOpenYears.add(y);
+    renderCalendar();
+    const again=document.querySelector(`#calendar [data-wall-year="${y}"]`); if(again) again.focus({preventScroll:true});
+    logFeatureUse('wall_year_toggle');
+    return;
+  }
+  const wallAll=e.target.closest('[data-action="wall-toggle-all"]');
+  if(wallAll){
+    wallOpenYears=wallAll.dataset.open==='1'?new Set([...document.querySelectorAll('#calendar [data-wall-year]')].map(b=>b.dataset.wallYear)):new Set();
+    renderCalendar();
+    const again=document.querySelector('#calendar [data-action="wall-toggle-all"]'); if(again) again.focus({preventScroll:true});
+    logFeatureUse('wall_toggle_all');
+    return;
+  }
   const sortBtn=e.target.closest('[data-action="table-sort"]');
   if(sortBtn){
     const k=sortBtn.dataset.key;
@@ -22432,7 +22493,7 @@ function helpModalHtml(){
         <li><strong>「下一場」卡</strong>：14 天內有比賽時，「賽事」分頁最上面是倒數、日期時間和地點，下面三格：打包、A 目標、號碼布——跟賽事頁的賽前四格同一套，點一下就打開那一格要填的地方（空的格子游標直接停在那一欄）。有天氣預報（抓到的即時預報，或自己填的預報）時第三格換成天氣；7 天內、有 GPS 軌跡還沒抓的，第三格是「抓取預報」。點賽名打開那一場；有封面照時照片是卡片的底圖；「暫時隱藏」可以先收起來。手機清單上還在問「比完了嗎？」的時候，這張卡先不放（下一場就在清單第一列）。</li>
         <li>生涯數據可以點：年份長條、熱力圖的格子、「總完賽場次」「今年累計里程」點下去，下面會列出那幾場（點一場就打開，返回鍵先關掉列表）；點全馬 PB 的時間，直接打開締造 PB 的那一場。全馬只算跑步類的賽事（42 公里的自行車賽不算）。</li>
         <li>電腦：上方 <span class="mono">‹ 年 月 ›</span> 切換月份（只有月曆會顯示；獎牌牆、表格是跨月份的，不顯示），「今天」跳回當月；旁邊的方格圖示切換「獎牌牆」，表格圖示切換緊湊表格。</li>
-        <li><strong>獎牌牆</strong>：所有已完賽的賽事，依年份分段、新的在前，每一段開頭是那一年的場數、里程和 PB 數。有封面照的是一張拍立得；沒有的畫成那一場的號碼布——上面那條賽名帶的顏色是運動別，中間的大字是你的號碼（沒填號碼就寫距離），完賽時間印在計時晶片條上，個人最佳（PB）蓋一個紅色印章。號碼填在「賽事基本資料」的「號碼布編號」。</li>
+        <li><strong>獎牌牆</strong>：所有已完賽的賽事，依年份分段、新的在前，每一段開頭是那一年的場數、里程和 PB 數。有封面照的是一張拍立得；沒有的畫成那一場的號碼布——上面那條賽名帶的顏色是運動別，中間的大字是你的號碼（沒填號碼就寫距離），完賽時間印在計時晶片條上，個人最佳（PB）蓋一個紅色印章。號碼填在「賽事基本資料」的「號碼布編號」。每一年的標題點一下就能打開、收起來，預設只展開今年（今年還沒有完賽就展開最新的一年），收起來的年份還是看得到場數、里程和 PB 數；上面的「全部展開」一次全部打開。</li>
         <li><strong>表格</strong>（電腦）：點欄位標題排序（日期、名稱、距離、爬升、完賽時間），再點一次反過來。不是照日期排時，年份收合改成一整串，上面寫現在怎麼排，按「回到依年份分組」回去；可以搭配搜尋，例如搜「半程」再點「完賽時間」。表格上面的「各距離最佳」列出全馬、半馬、10K、5K、51.5K／113K／226K 鐵人三項的最快成績，賽名前面是那一場的年份，點了打開那一場。</li>
         <li>手機：預設是「清單」——即將到來（還沒定日期的計畫排在最後，寫「日期未定」）、最近的 5 場，按「看全部歷史紀錄」列出所有過去的賽事；上面的「清單／月曆／獎牌牆」切換檢視。「即將到來」的場數跟篩選鈕上的數字一樣。</li>
         <li>篩選分兩層：先選「全部／即將到來／歷史紀錄」，點「即將到來」或「歷史紀錄」後才會展開細分狀態，避免按鈕一次擠太多。</li>

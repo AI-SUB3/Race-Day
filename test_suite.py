@@ -5687,9 +5687,16 @@ class V42Flows(Group):
             return !!card && card.querySelector('.result-prompt-title').textContent==='昨天的馬拉松'
               && card.querySelector('.result-prompt-meta').textContent.startsWith('昨天')
               && card.compareDocumentPosition(document.querySelector('#focus-panel-slot .focus-panel'))&Node.DOCUMENT_POSITION_FOLLOWING; }""")
+        # 每一場所在的月份都翻過去看（v4.5.1 修測試）：原本只看畫面上那個月，月初的頭幾天「昨天」和
+        # 「三天前」分在兩個月，只看得到其中一場，測試在每個月的 1–3 號會失敗
         c['list_tag_only_on_awaiting'] = page.evaluate("""()=>{
-            const tagged=[...document.querySelectorAll('#calendar .cal-list-item')].filter(b=>b.querySelector('.result-tag')).map(b=>state.races.find(r=>r.id===b.dataset.id).name).sort();
-            return JSON.stringify(tagged)===JSON.stringify(['三天前的半馬','昨天的馬拉松']); }""")
+            const names=['昨天的馬拉松','三天前的半馬','十五天前的賽事','今天的賽事','昨天沒抽中'];
+            const months=new Set(names.map(n=>state.races.find(r=>r.name===n).schedule.raceDate.slice(0,7)));
+            const keep=[state.calendarYear,state.calendarMonth], tagged=new Set();
+            months.forEach(ym=>{ state.calendarYear=Number(ym.slice(0,4)); state.calendarMonth=Number(ym.slice(5,7))-1; renderCalendar();
+              document.querySelectorAll('#calendar .cal-list-item').forEach(b=>{ if(b.querySelector('.result-tag')) tagged.add(state.races.find(r=>r.id===b.dataset.id).name); }); });
+            state.calendarYear=keep[0]; state.calendarMonth=keep[1]; renderCalendar();
+            return JSON.stringify([...tagged].sort())===JSON.stringify(['三天前的半馬','昨天的馬拉松']); }""")
         c['record_opens_race_and_short_sheet'] = page.evaluate("""async()=>{ """ + W + """
             document.querySelector('.result-prompt [data-action="result-record"]').click(); await wait(500);
             const d=document.getElementById('global-drawer');
@@ -6264,6 +6271,8 @@ class V43Flows(Group):
         # ================= ③ 獎牌牆 =================
         c['wall_has_every_finished_race_newest_first'] = self.ev(page, """async()=>{ """ + W + """
             scrollTo(0,0); document.getElementById('cal-view-toggle').click(); await wait(800);
+            // v4.5.1 起每一年可以收起來、預設只展開今年：全部展開之後才數得到每一場
+            const all=document.querySelector('#calendar [data-action="wall-toggle-all"]'); if(all&&all.dataset.open==='1'){ all.click(); await wait(200); }
             const done=state.races.filter(r=>!r.deletedAt&&r.status==='completed').sort((a,b)=>(b.schedule.raceDate||'').localeCompare(a.schedule.raceDate||''));
             const ids=[...document.querySelectorAll('#calendar .photo-card')].map(b=>b.dataset.id);
             return state.viewMode==='grid' && done.length>90 && JSON.stringify(ids)===JSON.stringify(done.map(r=>r.id))
@@ -7128,7 +7137,7 @@ class V433Fields(Group):
 
 # 號碼布牆用的賽事：各種號碼（短、長、英文字母、中文、一位數）、有封面照的、PB、沒距離、沒成績、
 # 沒日期、很長的賽名；還有不該上牆的（還沒比、沒跑完、刪掉的）
-WALL_SEED_JS = r"""window.__seedBibWall=async function(){
+WALL_SEED_JS = r"""window.__seedBibWall=async function(opts){ opts=opts||{};
   const cv=document.createElement('canvas'); cv.width=96; cv.height=72; const g=cv.getContext('2d');
   const gr=g.createLinearGradient(0,0,0,72); gr.addColorStop(0,'#F4C27A'); gr.addColorStop(1,'#1F4E79'); g.fillStyle=gr; g.fillRect(0,0,96,72);
   const cover=cv.toDataURL('image/jpeg',.8);
@@ -7161,9 +7170,11 @@ WALL_SEED_JS = r"""window.__seedBibWall=async function(){
     {n:'沒跑完',s:'trail_running',st:'dnf',d:'2025-06-01',km:50},
     {n:'刪掉的',s:'road_running',d:'2025-05-01',km:10,t:'0:50:00',del:1},
   ];
-  state.races=L.map(mk); state.selectedId=null; state.filterStatus='all'; state.searchQuery='';
+  state.races=L.concat(opts.extra||[]).map(mk).filter(opts.keep||(()=>true)); state.selectedId=null; state.filterStatus='all'; state.searchQuery='';
   const si=document.getElementById('search-input'); if(si) si.value='';
   state.viewMode='grid'; await persist(); setPhoneView('grid'); renderAll(); await new Promise(s=>setTimeout(s,250));
+  // v4.5.1 起每一年可以收起來、預設只展開今年：要看每一張卡（v44 的版面、對比檢查）就先按「全部展開」
+  if(opts.expand){ const b=document.querySelector('#calendar [data-action="wall-toggle-all"]'); if(b&&b.dataset.open==='1') b.click(); await new Promise(s=>setTimeout(s,150)); }
 };
 window.__card=n=>{ const r=state.races.find(x=>x.name===n); return r&&document.querySelector('#calendar .photo-card[data-id="'+r.id+'"]'); };
 // 字底下真正的顏色：往上找第一層不透明的底；號碼布的紙是漸層，拿漸層裡的每一個顏色都比一次、取最差的
@@ -7257,7 +7268,7 @@ class V44BibWall(Group):
         pg.add_script_tag(content=FIELD_FRAME_JS)
         pg.add_script_tag(content=WALL_SEED_JS)
         pg.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important}')
-        pg.evaluate("()=>__seedBibWall()")
+        pg.evaluate("()=>__seedBibWall({expand:true})")
         pg.wait_for_timeout(300)
         return ctx, pg
 
@@ -8025,7 +8036,7 @@ class V45Backup(Group):
               out[lang]=miss; document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(150); }
             setLang('zh'); await wait(100);
             const ok=Object.values(out).every(m=>m.length===0); if(!ok) console.log('v45: help missing',JSON.stringify(out)); return ok; }""")
-        c['version_is_v4_5_0'] = self.ev(pg, "()=>APP_VERSION==='v4.5.0'")
+        # （版本號的檢查跟著最新的群組走，v4.5.1 起在 v451）
         ctx.close()
 
         # 雲端合併也不再複製內建範本（同一個合併函式）
@@ -8036,6 +8047,213 @@ class V45Backup(Group):
             mergeGlobalListsIntoState({templates:copy.concat([{id:'cloud-own',name:'雲端自訂',items:[]}])});
             return templates.length===n+1 && templates.some(x=>x.id==='cloud-own'); }""")
         ctx.close()
+
+
+# 獎牌牆年份折頁的小工具：每一段的狀態、展開了哪幾年、按一下某一年
+FOLD_JS = r"""
+window.__secs=()=>[...document.querySelectorAll('#calendar .bib-sec')].map(s=>{ const b=s.querySelector('.bib-ytoggle');
+  return {key:b.dataset.wallYear, open:b.getAttribute('aria-expanded')==='true', cards:s.querySelectorAll('.photo-card').length,
+    label:s.querySelector('.bib-ynum').textContent, stats:s.querySelector('.bib-ystats').textContent.replace(/\s+/g,' ').trim()}; });
+window.__openKeys=()=>__secs().filter(x=>x.open).map(x=>x.key).join(',');
+window.__toggle=k=>document.querySelector('#calendar [data-wall-year="'+k+'"]').click();
+window.__ty=()=>String(new Date().getFullYear());
+"""
+
+
+class V451WallFold(Group):
+    """v4.5.1：獎牌牆每一年可以收起來——年份標題就是開關，預設只展開今年（今年還沒有完賽就展開最新的
+    一年）；收起來的年份只畫標題（場數、里程、PB 數）、不畫卡片；兩年以上有「全部展開／全部收合」；
+    鍵盤、報讀；打開一場再返回、重畫、換語言，展開的年份都不變。"""
+
+    ECHO = ('fold:',)
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js, arg=None):
+        try:
+            return pg.evaluate(js) if arg is None else pg.evaluate(js, arg)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def _ctx(self, browser, viewport=None, touch=False, theme='light', lang=None, keep=None, extra=None, seed='wall'):
+        ctx = full_mode_context(browser, viewport=viewport or {'width': 1280, 'height': 900}, is_mobile=touch, has_touch=touch)
+        init = f"localStorage.setItem('theme-pref-v1','{theme}');"
+        if lang:
+            init += f"localStorage.setItem('lang-pref-v1','{lang}');"
+        ctx.add_init_script('try{' + init + '}catch(e){}')
+        pg = ctx.new_page()
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=FIELD_FRAME_JS)
+        pg.add_script_tag(content=WALL_SEED_JS)
+        pg.add_script_tag(content=FOLD_JS)
+        pg.add_style_tag(content='.badge-unbox-overlay,.foreground-toast{display:none!important} *{transition:none!important}')
+        if seed == 'wall':
+            self.ev(pg, "(o)=>__seedBibWall({keep:o.keep?new Function('r','return ('+o.keep+')'):null, extra:o.extra||[]})", {'keep': keep, 'extra': extra or []})
+        else:
+            pg.add_script_tag(content=UX_SEED_JS)
+            self.ev(pg, V4_EXTRA_JS)
+            self.ev(pg, "()=>{ state.viewMode='grid'; setPhoneView('grid'); renderAll(); }")
+        pg.wait_for_timeout(300)
+        return ctx, pg
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        W = "const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+        ctx, pg = self._ctx(browser)
+        # ================= 預設：只展開今年 =================
+        c['default_opens_only_this_year'] = self.ev(pg, """()=>{ const keys=__secs().map(x=>x.key); const ty=__ty();
+            const want=keys.includes(ty)?ty:keys[0]; const ok=__openKeys()===want && keys.length===7;
+            if(!ok) console.log('fold: default',__openKeys(),keys.join(',')); return ok; }""")
+        c['collapsed_years_show_stats_but_no_cards'] = self.ev(pg, """()=>{ const secs=__secs();
+            const want=['5 場 · 520 km · 2 PB','2 場 · 268 km · 1 PB','4 場 · 222 km · 1 PB','3 場 · 73 km · 1 PB','2 場 · 55 km · 1 PB','3 場 · 105 km · 1 PB','2 場 · 10 km'];
+            const gridsOk=[...document.querySelectorAll('#calendar .bib-sec')].every(s=>{ const open=s.querySelector('.bib-ytoggle').getAttribute('aria-expanded')==='true';
+              const g=s.querySelector('.bib-grid'); return open?(!g.hidden&&g.children.length>0):(g.hidden&&g.children.length===0&&g.getBoundingClientRect().height===0); });
+            const ok=JSON.stringify(secs.map(x=>x.stats))===JSON.stringify(want) && secs.every(x=>x.open?x.cards>0:x.cards===0)
+              && document.querySelectorAll('#calendar .photo-card').length===secs.filter(x=>x.open).reduce((n,x)=>n+x.cards,0) && gridsOk;
+            if(!ok) console.log('fold: collapsed',JSON.stringify(secs)); return ok; }""")
+        # 開關是 h3 裡的按鈕：報讀軟體照樣可以用標題跳，按鈕講得出展開了沒有、控制的是哪一片
+        c['year_header_is_h3_button_with_state'] = self.ev(pg, """()=>[...document.querySelectorAll('#calendar .bib-sec')].every(s=>{
+            const h=s.querySelector('h3'), b=h&&h.querySelector('button.bib-ytoggle'); if(!b) return false;
+            const ctl=document.getElementById(b.getAttribute('aria-controls')||'');
+            return b.type==='button' && ['true','false'].includes(b.getAttribute('aria-expanded')) && !!ctl && s.contains(ctl)
+              && b.textContent.includes(s.querySelector('.bib-ynum').textContent) && b.getBoundingClientRect().height>=44; })""")
+        c['clicking_a_year_opens_it_and_again_closes'] = self.ev(pg, """async()=>{ """ + W + """
+            const sel='#calendar [data-wall-year="2024"]'; document.querySelector(sel).scrollIntoView({block:'center'}); await wait(100);
+            const y0=document.querySelector(sel).getBoundingClientRect().top;
+            __toggle('2024'); await wait(150);
+            const s=__secs().find(x=>x.key==='2024'), y1=document.querySelector(sel).getBoundingClientRect().top;
+            const opened=s.open && s.cards===4 && document.querySelector(sel).getAttribute('aria-expanded')==='true' && Math.abs(y1-y0)<2;
+            __toggle('2024'); await wait(150);
+            const t=__secs().find(x=>x.key==='2024');
+            if(!(opened&&!t.open&&t.cards===0)) console.log('fold: click',JSON.stringify(s),y0,y1);
+            return opened && !t.open && t.cards===0; }""")
+        # 鍵盤：Enter／空白鍵開關，焦點留在同一顆按鈕上（看得到框）；Tab 進到那一年的第一張卡
+        pg.focus('#calendar [data-wall-year="2023"]')
+        pg.keyboard.press('Enter')
+        pg.wait_for_timeout(150)
+        k1 = self.ev(pg, """()=>{ const a=document.activeElement; return a.dataset.wallYear==='2023' && a.matches(':focus-visible') && a.getAttribute('aria-expanded')==='true'
+            && __secs().find(x=>x.key==='2023').cards===3; }""")
+        pg.keyboard.press('Tab')
+        pg.wait_for_timeout(100)
+        k2 = self.ev(pg, """()=>{ const a=document.activeElement; return a.classList.contains('photo-card') && a.closest('.bib-sec').querySelector('[data-wall-year]').dataset.wallYear==='2023'; }""")
+        pg.keyboard.press('Shift+Tab')
+        pg.keyboard.press('Space')
+        pg.wait_for_timeout(150)
+        k3 = self.ev(pg, "()=>{ const a=document.activeElement; return a.dataset.wallYear==='2023' && a.getAttribute('aria-expanded')==='false' && __secs().find(x=>x.key==='2023').cards===0; }")
+        c['keyboard_toggles_and_keeps_focus'] = bool(k1 and k2 and k3)
+        if not c['keyboard_toggles_and_keeps_focus']:
+            print('    fold: keyboard', k1, k2, k3)
+        # 全部展開／全部收合
+        c['expand_all_then_collapse_all'] = self.ev(pg, """async()=>{ """ + W + """
+            const btn=()=>document.querySelector('#calendar [data-action="wall-toggle-all"]');
+            const a0=btn().textContent; btn().click(); await wait(150);
+            const allOpen=__secs().every(x=>x.open) && document.querySelectorAll('#calendar .photo-card').length===21 && btn().textContent==='全部收合' && document.activeElement===btn();
+            btn().click(); await wait(150);
+            const allShut=__secs().every(x=>!x.open) && !document.querySelector('#calendar .photo-card') && btn().textContent==='全部展開';
+            if(!(a0==='全部展開'&&allOpen&&allShut)) console.log('fold: all',a0,allOpen,allShut);
+            return a0==='全部展開' && allOpen && allShut; }""")
+        # 打開一場再返回：展開的年份不變，剛剛點的那張卡回到畫面上
+        c['open_years_survive_opening_a_race_and_back'] = self.ev(pg, """async()=>{ """ + W + """
+            __toggle('2026'); await wait(100); __toggle('2024'); await wait(150);
+            const card=__card('神戶馬拉松'); card.scrollIntoView({block:'center'}); await wait(150); const id=card.dataset.id;
+            card.click(); await wait(500); const inRace=state.selectedId===id;
+            document.querySelector('#detail .qn-back').click(); await wait(600);
+            const back=__card('神戶馬拉松'), r=back&&back.getBoundingClientRect();
+            const ok=inRace && state.selectedId===null && __openKeys()==='2026,2024' && !!back && r.top>=0 && r.bottom<=innerHeight;
+            if(!ok) console.log('fold: back',inRace,__openKeys(),r&&r.top);
+            return ok; }""")
+        c['open_years_survive_rerender_and_language'] = self.ev(pg, """async()=>{ """ + W + """
+            const before=__openKeys(); renderAll(); await wait(100); const same=__openKeys()===before;
+            const out={};
+            for(const lang of ['ja','en']){ setLang(lang); await wait(150);
+              out[lang]=[__openKeys()===before, document.querySelector('#calendar [data-action="wall-toggle-all"]').textContent, __secs().pop().label]; }
+            setLang('zh'); await wait(150);
+            const ok=same && out.ja[0] && out.en[0] && out.ja[1]==='すべて開く' && out.en[1]==='Expand all' && out.ja[2]==='日付未定' && out.en[2]==='No date yet' && __openKeys()===before;
+            if(!ok) console.log('fold: lang',JSON.stringify(out)); return ok; }""")
+        c['undated_group_opens'] = self.ev(pg, """async()=>{ """ + W + """
+            __toggle('undated'); await wait(150); const u=__secs().find(x=>x.key==='undated');
+            const ok=u.open && u.cards===2 && u.label==='未定日期'; __toggle('undated'); await wait(100); return ok; }""")
+        # 收起來的那幾列在淺色、深色都看得清楚：年份（大字）3:1、場數里程 4.5:1、箭頭 3:1、「全部展開」4.5:1
+        readable = """()=>{ const bad=[];
+            document.querySelectorAll('#calendar .bib-sec.is-collapsed').forEach(s=>{
+              const y=s.querySelector('.bib-ynum'), st=s.querySelector('.bib-ystats'), ch=s.querySelector('.bib-ychev');
+              if(__textCr(y)<3) bad.push('year '+y.textContent); if(__textCr(st)<4.5) bad.push('stats '+st.textContent);
+              const bg=__under(ch)[0]; if(__cr(__over(__rgba(getComputedStyle(ch).borderRightColor),bg),bg)<3) bad.push('chevron'); });
+            const b=document.querySelector('#calendar [data-action="wall-toggle-all"]'); if(__textCr(b)<4.5) bad.push('expand-all');
+            if(bad.length) console.log('fold: contrast',bad.join(' | ')); return bad.length===0 && !!document.querySelector('#calendar .bib-sec.is-collapsed'); }"""
+        light = self.ev(pg, readable)
+        self.ev(pg, "()=>applyTheme('dark')")
+        pg.wait_for_timeout(100)
+        dark = self.ev(pg, readable)
+        self.ev(pg, "()=>applyTheme('light')")
+        c['collapsed_rows_readable_light_and_dark'] = bool(light and dark)
+        c['help_describes_year_folding'] = self.ev(pg, """async()=>{ """ + W + """ const out={};
+            const words={zh:['預設只展開今年','全部展開'],ja:['今年だけ','すべて開く'],en:['only this year','Expand all']};
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(150); openHelpModal(); await wait(200);
+              const tx=document.querySelector('#help-modal .help-body').textContent; out[lang]=words[lang].filter(w=>!tx.includes(w));
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await wait(150); }
+            setLang('zh'); await wait(100);
+            const ok=Object.values(out).every(m=>m.length===0); if(!ok) console.log('fold: help missing',JSON.stringify(out)); return ok; }""")
+        c['version_is_v4_5_1'] = self.ev(pg, "()=>APP_VERSION==='v4.5.1'")
+        ctx.close()
+
+        # 今年跟更新的年份（日期填錯、或比完還沒改日期）都有：展開的是今年，不是最新的那一年
+        ty = page.evaluate("()=>new Date().getFullYear()")
+        ctx, pg = self._ctx(browser, extra=[{'n': '今年的賽事', 's': 'road_running', 'd': f'{ty}-01-02', 'km': 10, 't': '0:50:00'},
+                                             {'n': '明年的賽事', 's': 'road_running', 'd': f'{ty + 1}-03-01', 'km': 21.0975, 't': '1:45:00'}])
+        c['this_year_wins_over_a_newer_year'] = self.ev(pg, """()=>{ const keys=__secs().map(x=>x.key);
+            const ok=keys[0]===String(Number(__ty())+1) && __openKeys()===__ty(); if(!ok) console.log('fold: newer',keys.join(','),__openKeys()); return ok; }""")
+        ctx.close()
+        # 今年還沒有完賽：展開最新的那一年（不會整面牆都收著）
+        ctx, pg = self._ctx(browser, keep="!(r.schedule.raceDate||'').startsWith(String(new Date().getFullYear()))")
+        c['no_race_this_year_opens_newest'] = self.ev(pg, """()=>{ const keys=__secs().map(x=>x.key);
+            const ok=!keys.includes(__ty()) && __openKeys()===keys[0] && keys[0]!=='undated'; if(!ok) console.log('fold: newest',keys.join(','),__openKeys()); return ok; }""")
+        ctx.close()
+        # 只有一年：不需要「全部展開」；那一年照樣可以收起來
+        ctx, pg = self._ctx(browser, keep="(r.schedule.raceDate||'').startsWith('2024')")
+        c['single_year_has_no_expand_all'] = self.ev(pg, """async()=>{ """ + W + """
+            const one=__secs().length===1 && __openKeys()==='2024' && !document.querySelector('#calendar [data-action="wall-toggle-all"]');
+            __toggle('2024'); await wait(150); const shut=__openKeys()==='' && !document.querySelector('#calendar .photo-card');
+            __toggle('2024'); await wait(150); return one && shut && __secs()[0].cards===4; }""")
+        ctx.close()
+        # 107 場的資料：只畫展開那一年的卡，其他年份只有標題
+        ctx, pg = self._ctx(browser, seed='ux')
+        c['big_wall_renders_only_open_year_cards'] = self.ev(pg, """()=>{ const secs=__secs(), done=state.races.filter(r=>!r.deletedAt&&r.status==='completed').length;
+            const shown=document.querySelectorAll('#calendar .photo-card').length, open=secs.filter(x=>x.open);
+            const ok=done>90 && secs.length>=8 && open.length===1 && shown===open[0].cards && shown<done/5;
+            if(!ok) console.log('fold: big',done,secs.length,shown,__openKeys()); return ok; }""")
+        ctx.close()
+
+        # ================= 手機的標題列放得下 =================
+        FIT = """async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await wait(120);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); await wait(80);
+                document.querySelectorAll('#calendar .bib-ytoggle').forEach(b=>{ const r=b.getBoundingClientRect(), ch=b.querySelector('.bib-ychev').getBoundingClientRect();
+                  const st=b.querySelector('.bib-ystats'), sr=st.getBoundingClientRect(), tag=lang+' '+fs+' '+b.dataset.wallYear;
+                  if(r.left<0||r.right>innerWidth+0.5) bad.push(tag+' toggle out');
+                  if(r.height<44) bad.push(tag+' short '+r.height);
+                  if(ch.right>r.right+0.5||ch.left<sr.right-0.5&&ch.top<sr.bottom&&ch.bottom>sr.top) bad.push(tag+' chevron overlaps');
+                  // 箭頭一直在這一列的最右邊（字多到換行時也是），不會掉到年份底下
+                  if(ch.right<r.right-24) bad.push(tag+' chevron not at right end');
+                  if(Math.abs((ch.top+ch.bottom)/2-(r.top+r.bottom)/2)>r.height/2) bad.push(tag+' chevron off');
+                  if(sr.right>r.right+0.5) bad.push(tag+' stats out'); });
+                const a=document.querySelector('#calendar [data-action="wall-toggle-all"]'); if(a){ const ar=a.getBoundingClientRect(); if(ar.right>innerWidth+0.5||ar.height<32) bad.push(lang+' '+fs+' expand-all'); }
+                if(document.documentElement.scrollWidth>innerWidth) bad.push(lang+' '+fs+' hscroll'); } }
+            setLang('zh'); applyFontScale('medium');
+            if(bad.length) console.log('fold: fit',bad.slice(0,8).join(' | ')); return bad.length===0; }"""
+        # 2021 年塞 12 場、10 個 PB：英文、字級「大」時「12 races · 1235 km · 10 PB」在 360 寬放不下一行，要換行
+        heavy = [{'n': f'百公里 {i + 1}', 's': 'ultra_marathon', 'd': f'2021-{i + 1:02d}-15', 'km': 102.9, 't': '11:00:00', 'pb': 1 if i < 10 else 0} for i in range(12)]
+        for w in (360, 390):
+            fctx, fp = self._ctx(browser, viewport={'width': w, 'height': 800}, touch=True, extra=heavy)
+            c[f'phone_{w}_year_headers_fit'] = self.ev(fp, FIT)
+            fctx.close()
 
 
 GROUPS = {
@@ -8071,6 +8289,7 @@ GROUPS = {
     'v433':       lambda: V433Fields('v433'),
     'v44':        lambda: V44BibWall('v44'),
     'v45':        lambda: V45Backup('v45'),
+    'v451':       lambda: V451WallFold('v451'),
 }
 
 
