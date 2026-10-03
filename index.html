@@ -435,6 +435,11 @@
   .auth-area .btn-text:hover,.auth-area .btn-ghost:hover{background:var(--hover-overlay);}
   .auth-hint{color:var(--stone);}
   .auth-error{color:var(--flag);max-width:260px;}
+  /* 登入按鈕下的同意說明（v4.9.0）：小字、跟按鈕對齊；連結沿用字色加底線，不搶登入按鈕的視線 */
+  .auth-area .auth-legal{margin:2px 10px 6px;font-size:calc(12px*var(--fs,1));line-height:1.5;color:var(--stone);}
+  .auth-legal a,.dh-bgm-legal a{color:inherit;text-decoration:underline;text-underline-offset:2px;}
+  /* 頭像選單裡唯一的 <a>（隱私權政策）：長得跟旁邊的按鈕一樣 */
+  a.action-menu-item{text-decoration:none;}
   /* 沒登入、資料只在這台裝置（v4.5.0）：頭像選單最上面的提醒卡。底色用「要你做一件事」的
      琥珀色（跟比完賽記錄成績的提示同一色），不用錯誤的紅：還沒出事，只是提醒。
      卡片本身標 data-keep-menu-open：按「匯出備份檔」之後選單留著，看得到「上次備份：今天」 */
@@ -1699,43 +1704,165 @@
      兩種主題都拿到後面那個深色備用值：淺色模式變成「黑底配深色字」，標題只有 1.15:1 */
   .training-overlay{position:fixed;inset:0;z-index:208;overflow-y:auto;background:var(--paper);color:var(--ink);}
   .training-overlay[hidden]{display:none;}
-  .training-inner{max-width:720px;margin:0 auto;padding:22px 18px 120px;}
-  .training-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
-  .training-top h2{margin:0;font-size:calc(22px*var(--fs,1));}
-  .training-top-actions{display:flex;gap:8px;align-items:center;}
-  .training-hint{color:var(--stone);margin:8px 0 12px;}
-  .training-tabs{display:flex;gap:6px;margin-bottom:12px;}
-  .training-tab{border:1px solid var(--rule);background:transparent;color:var(--ink-soft);border-radius:14px;
-    padding:5px 13px;font:inherit;font-size:calc(13px*var(--fs,1));cursor:pointer;}
-  .training-tab.is-on{background:var(--ink);color:var(--surface);border-color:var(--ink);}
-  .training-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
-  .training-kpi{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px 12px;}
-  .training-kpi b{display:block;font-size:calc(19px*var(--fs,1));}
-  .training-kpi span{font-size:calc(11px*var(--fs,1));color:var(--stone);}
-  .training-row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--rule);}
+  /* ---- 訓練頁改版（v4.10.0）：字級照設計稿——正文 16px、列表標題 17px、距離 24px、統計行 15px、
+     圖表上的字至少 13px，全部乘上 --fs；按鈕與點擊區至少 44px（原本是 11–14px） ---- */
+  .training-inner{max-width:720px;margin:0 auto;padding:22px 16px 120px;font-size:calc(16px*var(--fs,1));line-height:1.5;}
+  /* 標題跟按鈕放不下同一排時換成兩排：按鈕在上（關閉鈕維持右上角）、標題自己一排，像 iOS 的大標題。
+     原本是標題被擠窄：日文「トレーニング記録」在 390px 斷成「トレーニング記／録」、320px 加大字級斷成三行。
+     wrap-reverse 讓先寫的標題排在下面那一排；DOM 照舊標題在前，讀螢幕先唸標題 */
+  .training-top{display:flex;flex-wrap:wrap-reverse;justify-content:space-between;align-items:center;gap:6px 10px;}
+  .training-top h2{margin:0;font-size:calc(24px*var(--fs,1));line-height:1.25;text-wrap:balance;}
+  .training-top-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;margin-left:auto;}
+  .training-import-btn{min-height:44px;padding:0 16px;border-radius:12px;font-size:calc(16px*var(--fs,1));font-weight:700;white-space:nowrap;}
+  .training-close{min-width:44px;min-height:44px;border-radius:12px;font-size:calc(18px*var(--fs,1));}
+  .training-hint{color:var(--stone);margin:10px 0 4px;font-size:calc(15px*var(--fs,1));line-height:1.6;}
+  .training-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 14px;}
+  .training-tab{min-height:44px;border:1px solid var(--rule);background:var(--surface);color:var(--ink-soft);border-radius:12px;
+    padding:0 8px;font:inherit;font-size:calc(16px*var(--fs,1));cursor:pointer;}
+  .training-tab.is-on{background:var(--ink);color:var(--surface);border-color:var(--ink);font-weight:700;}
+  .training-tab:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  /* 運動篩選：跟上面的分頁長得不一樣（外框膠囊、選中加粗），看得出是第二層 */
+  .training-sports{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 14px;}
+  .training-sport{flex:0 0 auto;min-height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:999px;background:transparent;
+    color:var(--ink-soft);font:inherit;font-size:calc(15px*var(--fs,1));cursor:pointer;white-space:nowrap;}
+  .training-sport.is-on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);color:var(--ink);font-weight:700;background:var(--surface);}
+  .training-sport:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .tr-card{display:block;box-sizing:border-box;background:var(--surface);border:1px solid var(--rule);border-radius:16px;padding:18px 16px;margin:0 0 12px;}
+  .tr-card-label{font-size:calc(15px*var(--fs,1));font-weight:700;color:var(--ink-soft);margin-bottom:4px;}
+  /* 本週／本月／全部卡 */
+  .trw-head{display:flex;justify-content:space-between;align-items:center;gap:6px 8px;flex-wrap:wrap;}
+  .trw-label{font-size:calc(16px*var(--fs,1));font-weight:700;}
+  .trw-range{margin-left:8px;font-weight:400;color:var(--stone);font-size:calc(15px*var(--fs,1));white-space:nowrap;}
+  .tr-chip{display:inline-flex;align-items:center;min-height:28px;padding:2px 10px;border-radius:999px;background:var(--hover-overlay);
+    color:var(--ink-soft);font-size:calc(14px*var(--fs,1));font-weight:700;white-space:nowrap;}
+  /* 綠字在深色的淡綠底上只有 4.1:1：字往 --ink 混一點，淺色變深、深色變亮 */
+  .tr-chip.is-up{background:var(--stamp-bg-trail);color:color-mix(in srgb,var(--trail) 62%,var(--ink));}
+  .trw-km{display:flex;align-items:baseline;gap:6px;margin:6px 0 2px;}
+  .trw-km b{font-size:calc(52px*var(--fs,1));line-height:1.05;font-weight:700;letter-spacing:-0.02em;}
+  .trw-km span{font-size:calc(20px*var(--fs,1));color:var(--ink-soft);}
+  .tr-mix{color:var(--ink-soft);font-size:calc(15px*var(--fs,1));margin-bottom:4px;}
+  .trw-goal{margin-top:12px;}
+  .trw-goal-row,.trw-goal-foot{display:flex;justify-content:space-between;align-items:baseline;gap:2px 8px;flex-wrap:wrap;}
+  .trw-goal-row{font-size:calc(15px*var(--fs,1));color:var(--ink-soft);}
+  .trw-goal-row b{font-size:calc(16px*var(--fs,1));color:var(--ink);}
+  .trw-goal-bar{height:10px;border-radius:5px;background:var(--rule);overflow:hidden;margin:6px 0;}
+  .trw-goal-bar span{display:block;height:100%;border-radius:5px;background:var(--trail);}
+  .trw-goal-foot{font-size:calc(15px*var(--fs,1));color:var(--ink-soft);}
+  .trw-goal-src{color:var(--stone);font-size:calc(13px*var(--fs,1));}
+  .tr-link{display:inline-flex;align-items:center;min-height:44px;margin-top:6px;padding:0;border:none;background:none;color:var(--trail);
+    font:inherit;font-size:calc(15px*var(--fs,1));text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;}
+  .trw-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:16px;}
+  .trw-day{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;}
+  .trw-day-bar{display:flex;align-items:flex-end;justify-content:center;width:100%;height:calc(52px*var(--fs,1));}
+  .trw-day-bar span{display:block;width:min(30px,72%);border-radius:5px 5px 2px 2px;background:color-mix(in srgb,var(--trail) 45%,var(--surface));}
+  .trw-day.is-today .trw-day-bar span{background:var(--trail);}
+  .trw-day.is-zero:not(.is-future) .trw-day-bar span{height:3px!important;border-radius:2px;background:var(--rule);}
+  .trw-day.is-future .trw-day-bar span{height:3px!important;border-radius:2px;background:repeating-linear-gradient(90deg,var(--rule) 0 4px,transparent 4px 7px);}
+  .trw-day-name{display:flex;align-items:center;justify-content:center;width:calc(30px*var(--fs,1));height:calc(30px*var(--fs,1));border-radius:50%;
+    font-size:calc(15px*var(--fs,1));color:var(--ink-soft);}
+  .trw-day.is-today .trw-day-name{background:var(--ink);color:var(--surface);font-weight:700;}
+  .trw-day-val{font-size:calc(13px*var(--fs,1));color:var(--ink-soft);white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .trw-day.is-today .trw-day-val{color:var(--ink);font-weight:700;}
+  /* 三格小卡：320px 加大字級放不下三格時自動變兩格一排，數字不會被擠出格子 */
+  .tr-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(84px*var(--fs,1)),1fr));gap:8px;margin-bottom:12px;}
+  .tr-tile{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:12px 10px;min-width:0;}
+  .tr-tile b{display:block;font-size:calc(22px*var(--fs,1));line-height:1.2;white-space:nowrap;letter-spacing:-0.01em;}
+  .tr-tile span{display:block;font-size:calc(15px*var(--fs,1));color:var(--stone);margin-top:2px;}
+  .tr-read p{margin:0;font-size:calc(16px*var(--fs,1));line-height:1.65;color:var(--ink);}
+  /* 長條圖：近 12 週／近 12 個月 */
+  .trc-head{display:flex;justify-content:space-between;align-items:baseline;gap:2px 10px;flex-wrap:wrap;margin-bottom:10px;}
+  .trc-head h3{margin:0;font-size:calc(17px*var(--fs,1));}
+  .trc-legend{font-size:calc(13px*var(--fs,1));color:var(--stone);}
+  .trc-plot{height:calc(132px*var(--fs,1));padding-top:calc(22px*var(--fs,1));box-sizing:border-box;}
+  .trc-area{position:relative;display:block;height:100%;}
+  .trc-cols{display:grid;gap:5px;height:100%;}
+  .trc-col{position:relative;display:flex;align-items:flex-end;height:100%;min-width:0;}
+  .trc-bar{display:block;width:100%;border-radius:4px 4px 1px 1px;background:var(--trail);}
+  .trc-col.is-cur .trc-bar{background:color-mix(in srgb,var(--trail) 45%,var(--surface));}
+  .trc-val{position:absolute;left:50%;transform:translateX(-50%);font-size:calc(13px*var(--fs,1));font-weight:700;color:var(--ink);white-space:nowrap;}
+  .trc-avg{position:absolute;left:0;right:0;height:0;border-top:2px dashed var(--ink-soft);pointer-events:none;}
+  .trc-x{display:grid;margin-top:6px;font-size:calc(13px*var(--fs,1));color:var(--stone);}
+  .trc-x span{white-space:nowrap;grid-row:1;}
+  .trc-x .trc-x-cur{justify-self:end;color:var(--ink);font-weight:700;}
+  /* 本月卡：每天一根 */
+  .trm-strip{display:grid;gap:2px;align-items:end;height:calc(48px*var(--fs,1));margin-top:14px;}
+  .trm-day{display:flex;align-items:flex-end;height:100%;min-width:0;}
+  .trm-day span{display:block;width:100%;border-radius:2px;background:color-mix(in srgb,var(--trail) 45%,var(--surface));}
+  .trm-day.is-today span{background:var(--trail);}
+  .trm-day.is-zero:not(.is-future) span{height:2px!important;background:var(--rule);}
+  .trm-x{display:grid;margin-top:4px;font-size:calc(13px*var(--fs,1));color:var(--stone);}
+  .trm-x span{white-space:nowrap;grid-row:1;}
+  /* 備戰中的賽事卡（點了打開那場賽事） */
+  .trp-card{width:100%;text-align:left;font:inherit;color:var(--ink);cursor:pointer;-webkit-appearance:none;appearance:none;}
+  .trp-card:hover{border-color:var(--field-border);}
+  .trp-card:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .trp-card>span{display:block;}
+  .trp-card>.trp-head,.trp-card>.trp-mid,.trp-card>.trp-phases{display:flex;}
+  .trp-card>.trp-bar{display:grid;}
+  .trp-head{justify-content:space-between;align-items:center;gap:6px 8px;flex-wrap:wrap;}
+  .trp-chip{display:inline-flex;align-items:center;min-height:28px;padding:2px 12px;border-radius:999px;background:var(--hover-overlay);
+    font-size:calc(14px*var(--fs,1));font-weight:700;color:var(--ink-soft);}
+  .trp-meta{font-size:calc(15px*var(--fs,1));color:var(--stone);}
+  .trp-name{font-size:calc(20px*var(--fs,1));font-weight:700;line-height:1.35;margin-top:10px;overflow-wrap:anywhere;}
+  .trp-when{font-size:calc(15px*var(--fs,1));color:var(--stone);margin-top:2px;}
+  .trp-mid{justify-content:space-between;align-items:flex-end;gap:8px 12px;margin-top:8px;flex-wrap:wrap;}
+  .trp-days{display:flex;align-items:baseline;gap:6px;}
+  .trp-days-num{font-size:calc(52px*var(--fs,1));font-weight:700;line-height:1;}
+  .trp-days-unit{font-size:calc(20px*var(--fs,1));color:var(--ink-soft);}
+  .trp-goals{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+  .trp-goal{font-size:calc(17px*var(--fs,1));font-weight:700;white-space:nowrap;}
+  .trp-goal-tier{font-family:inherit;color:var(--stone);font-weight:400;margin-right:2px;}
+  .trp-week{font-size:calc(15px*var(--fs,1));color:var(--ink-soft);margin-top:12px;}
+  .trp-bar{gap:3px;margin-top:8px;}
+  .trp-seg{height:12px;border-radius:3px;background:color-mix(in srgb,var(--trail) 22%,var(--surface));}
+  .trp-seg.is-taper{background:color-mix(in srgb,var(--gold) 38%,var(--surface));}
+  .trp-seg.is-past{background:var(--stone);}
+  .trp-seg.is-now{background:var(--ink);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink);}
+  .trp-phases{justify-content:space-between;gap:8px;margin-top:8px;font-size:calc(13px*var(--fs,1));color:var(--stone);}
+  /* 列表：縮圖、標題、距離、日期、鞋款膠囊、統計行 */
+  .training-list{margin-top:4px;}
+  .training-group{margin-bottom:8px;}
+  .training-list-head{display:flex;justify-content:space-between;align-items:baseline;gap:2px 8px;flex-wrap:wrap;padding:14px 2px 6px;border-bottom:1px solid var(--rule);}
+  .training-list-label{font-size:calc(17px*var(--fs,1));font-weight:700;}
+  .training-list-head .training-group-stats{margin-left:auto;}
+  .training-row{display:grid;grid-template-columns:calc(56px*var(--fs,1)) minmax(0,1fr) auto;column-gap:12px;row-gap:2px;align-items:center;
+    padding:14px 0;border-bottom:1px solid var(--rule);}
   /* 縮圖軌跡：深色模式維持深底金線；淺色模式改成淺底、深一點的金色（亮金色在白底上看不到） */
-  .training-thumb{width:44px;height:44px;flex-shrink:0;box-sizing:border-box;border-radius:8px;border:1px solid var(--rule);background:var(--thumb-bg);color:var(--stone);display:flex;align-items:center;justify-content:center;}
-  .training-main{flex:1;min-width:0;}
-  .training-title{display:flex;justify-content:space-between;gap:8px;font-weight:600;font-size:calc(14px*var(--fs,1));}
-  .training-date{font-weight:400;color:var(--stone);font-size:calc(12px*var(--fs,1));white-space:nowrap;}
-  .training-stats{font-size:calc(12.5px*var(--fs,1));color:var(--ink-soft);margin-top:3px;}
-  .training-shoe{margin-top:4px;border:none;background:transparent;padding:0;color:var(--stone);font:inherit;font-size:calc(12px*var(--fs,1));cursor:pointer;text-align:left;}
-  .training-shoe:hover{color:var(--ink);}
-  .training-edit{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;}
-  .training-edit select{font:inherit;font-size:calc(13px*var(--fs,1));padding:5px 8px;border-radius:6px;border:1px solid transparent;box-shadow:var(--field-ring);background:var(--field-bg);color:var(--ink);}
-  .training-delete{color:var(--flag);}
+  .training-thumb{grid-row:1 / span 3;align-self:start;width:calc(56px*var(--fs,1));height:calc(56px*var(--fs,1));box-sizing:border-box;
+    border-radius:12px;border:1px solid var(--rule);background:var(--thumb-bg);color:var(--stone);display:flex;align-items:center;justify-content:center;}
+  .training-thumb svg{width:100%;height:100%;}
+  .training-title{grid-column:2;grid-row:1;font-size:calc(17px*var(--fs,1));font-weight:700;line-height:1.35;overflow-wrap:anywhere;}
+  .training-dist{grid-column:3;grid-row:1;text-align:right;white-space:nowrap;}
+  .training-dist b{font-size:calc(24px*var(--fs,1));font-weight:700;line-height:1.2;}
+  .training-dist span{font-size:calc(15px*var(--fs,1));color:var(--ink-soft);margin-left:4px;}
+  .training-date{grid-column:2;grid-row:2;font-size:calc(15px*var(--fs,1));color:var(--stone);}
+  .training-chipcell{grid-column:3;grid-row:2;justify-self:end;}
+  .training-shoe{position:relative;display:inline-flex;align-items:center;min-height:32px;max-width:calc(150px*var(--fs,1));padding:0 12px;
+    border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink-soft);font:inherit;font-size:calc(14px*var(--fs,1));cursor:pointer;}
+  .training-shoe span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* 膠囊看起來 32px 高，點擊範圍往外擴到 44px（偽元素從框線裡面算起：30＋7＋7） */
+  .training-shoe::after{content:'';position:absolute;inset:-7px -5px;}
+  .training-shoe.is-empty{border-style:dashed;}
+  .training-shoe:hover{color:var(--ink);border-color:var(--field-border);}
+  .training-shoe:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .training-stats{grid-column:2 / span 2;grid-row:3;font-size:calc(15px*var(--fs,1));color:var(--ink-soft);}
+  .training-edit{grid-column:2 / span 2;grid-row:4;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  .training-edit select{min-height:44px;max-width:100%;font:inherit;font-size:calc(16px*var(--fs,1));padding:0 10px;border-radius:10px;
+    border:1px solid transparent;box-shadow:var(--field-ring);background:var(--field-bg);color:var(--ink);}
+  .training-delete{min-height:44px;color:var(--flag);font-size:calc(15px*var(--fs,1));}
   .training-footer{margin-top:18px;text-align:center;}
+  .training-footer .btn-text-small{min-height:44px;font-size:calc(15px*var(--fs,1));}
   .training-group-head{
-    display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;cursor:pointer;
+    display:flex;align-items:center;gap:10px;width:100%;min-height:44px;text-align:left;cursor:pointer;
     background:transparent;border:none;border-bottom:1px solid var(--rule);color:var(--ink);font:inherit;
   }
   .training-group-head:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
-  .training-group-head.is-year{padding:12px 2px 10px;font-size:calc(17px*var(--fs,1));font-weight:700;}
-  .training-group-head.is-month{padding:9px 2px 8px 18px;font-size:calc(14px*var(--fs,1));font-weight:600;background:var(--surface);}
-  .training-caret{width:12px;flex-shrink:0;color:var(--stone);font-size:calc(12px*var(--fs,1));}
+  .training-group-head.is-year{padding:12px 2px 10px;font-size:calc(18px*var(--fs,1));font-weight:700;}
+  .training-group-head.is-month{padding:10px 2px 10px 18px;font-size:calc(16px*var(--fs,1));font-weight:700;background:var(--surface);}
+  .training-caret{width:14px;flex-shrink:0;color:var(--stone);font-size:calc(14px*var(--fs,1));}
   .training-group-label{flex-shrink:0;}
-  .training-group-stats{margin-left:auto;color:var(--stone);font-weight:400;font-size:calc(12px*var(--fs,1));text-align:right;}
-  .training-month-rows{padding-left:18px;}
+  .training-group-stats{margin-left:auto;color:var(--stone);font-weight:400;font-size:calc(15px*var(--fs,1));text-align:right;}
+  .training-month-rows{padding-left:0;}
   #training-import-modal{z-index:245;}
   .training-progress{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;margin:8px 0 14px;}
   .training-progress span{display:block;height:100%;background:var(--trail);transition:width .2s;}
@@ -2222,6 +2349,9 @@
   .dh-bgm{margin-top:12px;max-width:520px;}
   .dh-bgm-cap{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:var(--ink-soft);font-size:calc(12.5px*var(--fs,1));line-height:1.4;}
   .dh-bgm-cap span{min-width:0;overflow-wrap:anywhere;}
+  /* 播放器下的 Cookie 說明（v4.9.0）。用 --ink-soft 不用 --stone：有封面時頁首底下透著照片，
+     --stone 的 12px 小字在花的照片上對比會掉到 4.5:1 以下 */
+  .dh-bgm-legal{margin:6px 2px 0;font-size:calc(12px*var(--fs,1));line-height:1.5;color:var(--ink-soft);overflow-wrap:anywhere;}
   .dh-bgm-icon{flex:none;}
   /* 還沒載入（或載入中）時看到的是這個底色，深色模式不會先閃一塊白 */
   .dh-bgm-frame{display:block;width:100%;height:152px;border:0;border-radius:12px;background:var(--surface);}
@@ -2979,7 +3109,7 @@
   .pubview-gear{color:var(--ink-soft);}
   .pubview-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;}
   .pubview-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;}
-  .pubview-foot{margin-top:24px;border-top:1px solid var(--rule);padding-top:14px;}
+  .pubview-foot{margin-top:24px;border-top:1px solid var(--rule);padding-top:14px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;}
   .pubview-foot a{color:var(--trail);}
   .pubview-loading{color:var(--stone);}
   .climate-trail-toggle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--stone);margin-top:8px;cursor:pointer;}
@@ -3369,6 +3499,10 @@
               <span data-i18n="ui.helpTitle">使用說明</span>
             </button>
             <button id="btn-feedback" type="button" class="action-menu-item" data-i18n="ui.feedbackTitle">意見回饋</button>
+            <!-- 隱私權政策與使用條款（v4.9.0）：Spotify 嵌入條款要求網站有使用者條款與隱私權政策。
+                 用 <a> 不用 <button>：是真的連到另一頁，長按、中鍵開新分頁都照瀏覽器的習慣。
+                 href 由 refreshPrivacyLinks() 補上目前的語言 -->
+            <a id="btn-privacy" class="action-menu-item" href="privacy/" data-privacy-link="" target="_blank" rel="noopener" data-i18n="ui.privacyLink">隱私權政策與使用條款</a>
             <!-- 清除全部資料放到最下面、自己一區（v4.1.0）：v4.0 它夾在「範例資料」和
                  「使用說明」中間，都是常按的東西，手指一偏就點到紅字 -->
             <div class="action-menu-divider"></div>
@@ -4646,6 +4780,13 @@ const BGM_ICON='<svg class="dh-bgm-icon" viewBox="0 0 24 24" width="14" height="
 // 重畫頁首時暫時搬開的播放器（見 bgmHoldFrame）
 let bgmKeptFrame=null;
 function bgmFrameTitle(){ return t('ui.bgmFrameTitle','賽事 BGM（Spotify 播放器）'); }
+/* 播放器下面一行 Cookie 說明（v4.9.0）。Spotify 嵌入條款 V.6 要求告訴使用者第三方會設 Cookie；
+   政策頁寫了，但真正設 Cookie 的那一刻是播放器載入時，說明就放在播放器旁邊。
+   只放在真的載入播放器的狀態：連結卡、離線卡不會載入 Spotify，不需要。
+   寫在播放器外面、不蓋到播放器：條款要求照 Spotify 給的樣子顯示 */
+function bgmLegalHtml(){
+  return `<p class="dh-bgm-legal">${escapeHtml(t('ui.bgmCookieNote','播放器由 Spotify 提供，會使用 Spotify 的 Cookie。'))}${privacyLinkHtml(t('ui.privacyPolicy','隱私權政策'),'cookies')}</p>`;
+}
 function bgmBlockHtml(race){
   const b=raceBgm(race);
   if(!b) return '';
@@ -4658,13 +4799,13 @@ function bgmBlockHtml(race){
     // 同一個播放器剛被搬開（重畫前）：只留位子讓它搬回來，不重新載入。
     // 離線也一樣留著——已經載入的播放器，緩衝好的部分還能繼續播
     if(bgmKeptFrame&&bgmKeptFrame.dataset.bgmSrc===src){
-      return `<div class="dh-bgm" data-bgm-state="player">${cap}<div class="dh-bgm-slot" data-bgm-slot></div></div>`;
+      return `<div class="dh-bgm" data-bgm-state="player">${cap}<div class="dh-bgm-slot" data-bgm-slot></div>${bgmLegalHtml()}</div>`;
     }
     // 離線時新的 iframe 只會是一塊錯誤頁：先放連結，連上網路再換回播放器（見下面的 online 監聽）
     if(navigator.onLine===false){
       return `<div class="dh-bgm" data-bgm-state="offline">${cap}${linkHtml(spotifyOpenUrl(b.sp),tf('ui.bgmOpenIn','在 {n} 開啟','Spotify'),t('ui.bgmOffline','離線中，連上網路後會顯示播放器'))}</div>`;
     }
-    return `<div class="dh-bgm" data-bgm-state="player">${cap}<iframe class="dh-bgm-frame" src="${escapeHtml(src)}" data-bgm-src="${escapeHtml(src)}" title="${escapeHtml(bgmFrameTitle())}" height="152" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
+    return `<div class="dh-bgm" data-bgm-state="player">${cap}<iframe class="dh-bgm-frame" src="${escapeHtml(src)}" data-bgm-src="${escapeHtml(src)}" title="${escapeHtml(bgmFrameTitle())}" height="152" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>${bgmLegalHtml()}</div>`;
   }
   // 組不出播放器（短網址、其他音樂平台）：放一個連結。網址要過 safeUrl，不是 http(s) 的就不放
   const href=safeUrl(b.url);
@@ -4789,7 +4930,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／完賽牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.8.0';
+const APP_VERSION='v4.10.0';
 
 /* ============================================================
    多語系（i18n）
@@ -4841,6 +4982,21 @@ function applyStaticTranslations(){
     if(el.dataset.zhAria==null) el.dataset.zhAria=el.getAttribute('aria-label')||'';
     el.setAttribute('aria-label', t(el.dataset.i18nAria, el.dataset.zhAria));
   });
+  refreshPrivacyLinks();
+}
+/* 隱私權政策與使用條款（v4.9.0）：獨立頁面 privacy/，跟 index.html 放在同一層部署。
+   用相對路徑：GitHub Pages 的 /Race-Day/、本機測試的根目錄都對得上，不用寫死網域。
+   網址帶上目前的語言（?lang=），政策頁才會用同一種語言打開——同網域的 lang-pref-v1 它也讀得到，
+   但無痕模式、或在別人的公開連結頁點過去時不一定有。新分頁打開：看完條款不用重新載入 App */
+function privacyUrl(anchor){
+  return 'privacy/?lang='+encodeURIComponent(currentLang)+(anchor?'#'+anchor:'');
+}
+function privacyLinkHtml(text,anchor){
+  return `<a href="${escapeHtml(privacyUrl(anchor))}" target="_blank" rel="noopener">${escapeHtml(text)}</a>`;
+}
+// 寫死在 HTML 裡的連結（頭像選單）：換語言時，網址裡的 ?lang= 跟著換
+function refreshPrivacyLinks(){
+  document.querySelectorAll('a[data-privacy-link]').forEach(a=>a.setAttribute('href',privacyUrl(a.dataset.privacyLink||'')));
 }
 
 const JA={
@@ -5242,6 +5398,7 @@ const JA={
       <h3>ホーム：大会／キャリア／トレーニング</h3>
       <ul>
         <li>ホームは3つのタブに分かれています。「大会」は今日の名言、「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。</li>
+        <li><strong>トレーニング画面</strong>（v4.10.0 で刷新）：「今週」のいちばん上は準備中の大会（エントリー済みまたは抽選待ちで、準備期間に入った直近の大会：カウントダウン、A／B 目標、レースまで第何週）。その下に今週の距離、先週の同じ時点との比較、週間目標（大会画面の「トレーニング計画」の週間走行距離）、日ごとの棒グラフ、今週のまとめ、直近12週の距離が並びます。「今月」は日ごとの棒グラフと直近12か月、「すべて」は年・月ごとにたたんで表示します。種目が2つ以上あるときはタブの下で種目を選べ、種目の違う距離は合計しません。各記録の右にあるシューズのボタンから、シューズの変更や削除ができます。</li>
         <li><strong>「次の大会」カード</strong>：14日以内に大会があると、「大会」タブの一番上にカウントダウン・日時・場所、その下に3つのマス（荷造り・A目標・ゼッケン）が出ます。大会ページの「レース前の4項目」と同じで、タップするとそのマスの入力欄が開きます（空のマスはカーソルがその欄に入ります）。天気予報（取得したライブ予報か、自分で入れた予報）があると3つ目は天気に、7日以内で GPS 軌跡があってまだ取得していないときは「予報を取得」になります。大会名をタップすると大会ページが開き、カバー写真があればカードの背景になります。「一時的に隠す」で閉じられます。スマホのリストで「走り終えましたか？」が出ている間は、このカードは出ません（次の大会はリストの一番上にあります）。</li>
         <li><strong>今日の名言</strong>：「大会」タブの一番上に、ランナーたちが実際に口にした言葉を毎日ひとつ表示します。パソコンでは「次の大会」カードの右、スマートフォンやタブレットではその上です。1日にひとつで、日付が変わると次の言葉になり、同じ日ならどの端末でも同じ言葉です。日本語表示では日本語だけを表示します（元の言葉が日本語ならそのまま、英語や中国語なら日本語訳）。タップすると、誰がどんな場面で言ったのか、出典とリンクが見られます。どの言葉も出典を確認済みで、翻訳はこのアプリによるものです。表示したくない場合は、アカウントメニューの「表示」にある「今日の名言」をオフにしてください。</li>
         <li>キャリアの数字はタップできます：年ごとの棒グラフ、ヒートマップのマス、「完走レース数」「年間走行距離」をタップすると、下にその大会の一覧が出ます（1件タップで開き、戻る操作ではまず一覧が閉じます）。フルマラソン自己ベストのタイムをタップすると、その記録を出した大会が開きます。フルマラソンはランニング系の大会だけを数えます（42km の自転車レースは入りません）。</li>
@@ -5303,6 +5460,10 @@ const JA={
         <li>使い方（このページ）とフィードバックもアイコンメニューにあります。バージョン番号はページの一番下です。</li>
         <li>スマートフォンのブラウザでサイトを開き「ホーム画面に追加」を選ぶと、専用アイコンでアプリのように使えます。iPhone ではホーム画面に追加すると、7 日間開かなくても Safari にデータを消されません。</li>
         <li>サイト全体の機能一覧は <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">サイトマップ</a> をご覧ください。</li>
+      </ul>
+      <h3>プライバシーと利用規約</h3>
+      <ul>
+        <li>このサイトが保存するデータ、接続する第三者サービス（たとえばレースBGM の Spotify プレーヤーは Spotify の Cookie を使用します）、データの照会や削除の方法は、<a href="privacy/?lang=ja" target="_blank" rel="noopener">プライバシーポリシーと利用規約</a>にまとめています。アイコンメニューの「フィードバック」の下にもリンクがあります。</li>
       </ul>`,
 
   // ---- 選項清單（狀態、運動種類等） ----
@@ -5326,6 +5487,54 @@ const JA={
   'ui.bgmOffline':'オフラインです。接続するとプレーヤーが表示されます',
   'ui.bgmShortLink':'短縮URLでは曲がわからないため、プレーヤーを表示できません。完全なURLを貼ると表示されます',
   'ui.pasteUrlBgmHint':'「レースBGM」として保存すると、レース名の下にSpotifyのプレーヤーが表示されます。',
+  // 訓練頁改版（v4.10.0）
+  'ui.trTabWeek':'今週','ui.trTabMonth':'今月','ui.trSportFilter':'種目','ui.trSportAll':'すべての種目',
+  // 訓練的運動種類：原本日文、英文都沒有翻，清單裡沒有名字的訓練一律顯示中文的「跑步」
+  'opt.trainingSport.run':'ランニング','opt.trainingSport.ride':'サイクリング','opt.trainingSport.swim':'水泳',
+  'opt.trainingSport.walk':'ウォーキング','opt.trainingSport.hike':'登山','opt.trainingSport.multisport':'マルチスポーツ','opt.trainingSport.other':'その他',
+  'ui.trainingImportShort':'＋ 取り込む',
+  'ui.trPrepChip':'レース準備中',
+  'ui.trPrepStart':'{n} スタート',
+  'ui.trPrepToday':'今日',
+  'ui.trPrepDay':'日',
+  'ui.trPrepDays':'日',
+  'ui.trPrepRaceDay':'レース当日',
+  'ui.trPrepWeekLine':'レースまで第{k}週 ・ 準備{w}週目 / 全{n}週',
+  'ui.trPhaseBuild':'準備期',
+  'ui.trPhaseTaper':'テーパー',
+  'ui.trVsWeekSame':'先週の同じ時点と同じ',
+  'ui.trVsMonthSame':'先月の同じ時点と同じ',
+  'ui.trVsWeekUp':'↑ 先週同期比 {n}%',
+  'ui.trVsWeekDown':'↓ 先週同期比 {n}%',
+  'ui.trVsMonthUp':'↑ 先月同期比 {n}%',
+  'ui.trVsMonthDown':'↓ 先月同期比 {n}%',
+  'ui.trSetGoal':'大会の「トレーニング計画」で週間距離の目標を設定',
+  'ui.trGoalOver':'達成！{n} km オーバー',
+  'ui.trGoalDone':'達成！',
+  'ui.trGoalLeft':'あと {n} km で達成',
+  'ui.trWeekGoal':'週間目標 {n} km',
+  'ui.trGoalSrc':'「{n}」のトレーニング計画より',
+  'ui.trRest':'休',
+  'ui.trElevM':'獲得標高 m',
+  'ui.trReadNone':'今週はまだトレーニングがありません。',
+  'ui.trReadSame':'今週は {km} km。直近4週の平均（{avg} km）とほぼ同じです。',
+  'ui.trReadMore':'今週は {km} km。直近4週の平均（{avg} km）より {pct}% 多めです。',
+  'ui.trReadLess':'今週は {km} km。直近4週の平均（{avg} km）より {pct}% 少なめです。',
+  'ui.trReadGap':'直近4週の平均は {avg} km。あと {gap} km です。',
+  'ui.trReadLongest':'いちばん長かったのは{day}の {km} km で、今週の {pct}% です。',
+  'ui.trReadTitle':'今週のまとめ',
+  'ui.trWeeksTitle':'直近12週の距離',
+  'ui.trWeeksLegend':'点線＝直近4週の平均 {n} km',
+  'ui.trMonthsTitle':'直近12か月の距離',
+  'ui.trMonthsLegend':'点線＝前3か月の平均 {n} km',
+  'ui.trMonthAria':'{month}：{n} 日トレーニング、合計 {km} km',
+  'ui.trLastWeek':'先週',
+  'ui.trainingMore':'その他の操作',
+  'ui.trainingShoeAria':'今回履いたシューズ',
+  // 隱私權政策與使用條款（v4.9.0）
+  'ui.privacyLink':'プライバシーポリシーと利用規約','ui.privacyPolicy':'プライバシーポリシー',
+  'ui.legalLinkText':'利用規約とプライバシーポリシー','ui.signInAgree':'ログインすると、{n}に同意したものとみなされます。',
+  'ui.bgmCookieNote':'プレーヤーは Spotify が提供しており、Spotify の Cookie が使用されます。',
   'ui.pasteUrlBgmShortHint':'Spotifyの短縮URLです。どの曲かわからないため、リンクとしてだけ保存されます。ブラウザで開き、アドレスバーの完全なURLをコピーして貼り直すと、プレーヤーが表示されます。',
   'opt.transportmode.hsr':'新幹線／高鉄','opt.transportmode.shuttle':'シャトルバス','opt.transportmode.self_drive':'自家用車',
   'opt.transportmode.flight':'飛行機','opt.transportmode.other':'その他','opt.transportmode.train':'鉄道／在来線','opt.transportmode.metro':'地下鉄／メトロ','opt.transportmode.bus':'高速バス／バス','opt.transportmode.ferry':'フェリー／船','opt.transportmode.taxi':'タクシー／配車',
@@ -5785,6 +5994,7 @@ const EN={
       <h3>Home: Races / Career / Training</h3>
       <ul>
         <li>The home page has three tabs. “Races” holds the quote of the day, the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log.</li>
+        <li><strong>Training page</strong> (redesigned in v4.10.0): at the top of “Week” is the race you are preparing for (the nearest registered or lottery-pending race whose prep period has started: countdown, A/B goals, weeks to go). Below it: this week’s distance, a comparison with the same days last week, your weekly goal (the weekly mileage in the race’s “Training Plan”), daily bars, a short summary and the last 12 weeks. “Month” shows daily bars and the last 12 months; “All” groups sessions by year and month. If you log more than one sport, pick one under the tabs, so distances from different sports are never added together. Tap the shoe button on a session to change the shoes or delete it.</li>
         <li><strong>Next-race card</strong>: when a race is within 14 days, the top of “Races” shows the countdown, date, start time and place, with three tiles underneath — Packed, Goal A and Bib. They’re the same tiles as on the race page: tap one to open where you fill it in (an empty tile puts the cursor right in that field). When there’s a forecast (a live one you fetched, or one you typed in), the third tile shows the weather; within 7 days, with a GPS track and no forecast yet, it says “Get forecast”. Tap the race name to open the race; a cover photo becomes the card’s background; “Hide for now” tucks the card away. In a phone’s list, while “Did you finish?” is showing, the card steps aside — the next race is the first row of the list.</li>
         <li><strong>Quote of the day</strong>: the top of “Races” shows one thing a runner actually said, every day — to the right of the next-race card on a computer, above it on phones and tablets. It changes at midnight, and every device shows the same quote on the same day. In English you only see English: the original words if they were said in English, otherwise an English translation. Tap it to see who said it and when, with the source and a link. Every quote has been checked against its source; the translations are ours. To hide it, turn off “Quote of the day” under Display in the account menu.</li>
         <li>Career numbers are tappable: tap a year’s bar, a heatmap square, “Races finished” or “Distance this year” to list those races underneath (tap one to open it; back closes the list first). Tap the marathon PB time to open the race where you set it. Only running races count as marathons (a 42 km bike race doesn’t).</li>
@@ -5846,6 +6056,10 @@ const EN={
         <li>Help (this page) and feedback are in the avatar menu too; the version number is at the very bottom of the page.</li>
         <li>On mobile, open the site in your browser and choose "Add to Home Screen" for an app-like experience with a custom icon. On iPhone, once it’s on your Home Screen, Safari won’t clear your data after 7 days without a visit.</li>
         <li>For a quick overview of everything on this site and where to find it, see the <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">sitemap</a>.</li>
+      </ul>
+      <h3>Privacy &amp; terms</h3>
+      <ul>
+        <li>What this site stores, which third-party services it connects to (for example, the Spotify player for Race BGM uses Spotify cookies), and how to access or delete your data are explained in the <a href="privacy/?lang=en" target="_blank" rel="noopener">Privacy Policy &amp; Terms of Use</a>. There is also a link under “Send feedback” in the avatar menu.</li>
       </ul>`,
 
   // ---- option sets ----
@@ -5869,6 +6083,54 @@ const EN={
   'ui.bgmOffline':'You are offline. The player will appear when you are back online.',
   'ui.bgmShortLink':'Short links do not say which track they point to, so the player cannot be shown. Paste the full link to get the player.',
   'ui.pasteUrlBgmHint':'Saved as Race BGM, it shows as a Spotify player under the race name.',
+  // Training page redesign (v4.10.0)
+  'ui.trTabWeek':'Week','ui.trTabMonth':'Month','ui.trSportFilter':'Sport','ui.trSportAll':'All sports',
+  // Training sport names were never translated: unnamed sessions showed the Chinese label
+  'opt.trainingSport.run':'Run','opt.trainingSport.ride':'Ride','opt.trainingSport.swim':'Swim',
+  'opt.trainingSport.walk':'Walk','opt.trainingSport.hike':'Hike','opt.trainingSport.multisport':'Multisport','opt.trainingSport.other':'Other',
+  'ui.trainingImportShort':'+ Import',
+  'ui.trPrepChip':'Race prep',
+  'ui.trPrepStart':'Starts {n}',
+  'ui.trPrepToday':'Today',
+  'ui.trPrepDay':'day',
+  'ui.trPrepDays':'days',
+  'ui.trPrepRaceDay':'Race day',
+  'ui.trPrepWeekLine':'Week {k} before the race · prep week {w} of {n}',
+  'ui.trPhaseBuild':'Build',
+  'ui.trPhaseTaper':'Taper',
+  'ui.trVsWeekSame':'Same as last week so far',
+  'ui.trVsMonthSame':'Same as last month so far',
+  'ui.trVsWeekUp':'↑ {n}% vs. last week so far',
+  'ui.trVsWeekDown':'↓ {n}% vs. last week so far',
+  'ui.trVsMonthUp':'↑ {n}% vs. last month so far',
+  'ui.trVsMonthDown':'↓ {n}% vs. last month so far',
+  'ui.trSetGoal':'Set a weekly mileage goal in the training plan of this race',
+  'ui.trGoalOver':'Goal reached, {n} km over',
+  'ui.trGoalDone':'Goal reached',
+  'ui.trGoalLeft':'{n} km to go',
+  'ui.trWeekGoal':'Weekly goal {n} km',
+  'ui.trGoalSrc':'From the training plan for {n}',
+  'ui.trRest':'Off',
+  'ui.trElevM':'Climb m',
+  'ui.trReadNone':'No training yet this week.',
+  'ui.trReadSame':'{km} km so far, about the same as your 4-week average ({avg} km).',
+  'ui.trReadMore':'{km} km so far, {pct}% more than your 4-week average ({avg} km).',
+  'ui.trReadLess':'{km} km this week, {pct}% less than your 4-week average ({avg} km).',
+  'ui.trReadGap':'Your 4-week average is {avg} km, {gap} km to go.',
+  'ui.trReadLongest':'Your longest was {km} km on {day}, {pct}% of the week.',
+  'ui.trReadTitle':'This week at a glance',
+  'ui.trWeeksTitle':'Last 12 weeks',
+  'ui.trWeeksLegend':'Dashed line = 4-week average {n} km',
+  'ui.trMonthsTitle':'Last 12 months',
+  'ui.trMonthsLegend':'Dashed line = previous 3-month average {n} km',
+  'ui.trMonthAria':'{month}: trained on {n} days, {km} km in total',
+  'ui.trLastWeek':'Last week',
+  'ui.trainingMore':'More actions',
+  'ui.trainingShoeAria':'Shoes worn',
+  // Privacy & terms (v4.9.0)
+  'ui.privacyLink':'Privacy Policy & Terms','ui.privacyPolicy':'Privacy Policy',
+  'ui.legalLinkText':'Terms of Use and Privacy Policy','ui.signInAgree':'By signing in, you agree to the {n}.',
+  'ui.bgmCookieNote':'This player is provided by Spotify and uses Spotify cookies. ',
   'ui.pasteUrlBgmShortHint':'This is a Spotify short link. The app cannot tell which track it points to, so it will be saved as a plain link. Open it in a browser, copy the full address from the address bar and paste that instead to get the player.',
   'opt.transportmode.hsr':'High-speed Rail','opt.transportmode.shuttle':'Shuttle','opt.transportmode.self_drive':'Self-drive','opt.transportmode.train':'Train / Rail','opt.transportmode.metro':'Metro / Subway','opt.transportmode.bus':'Bus / Coach','opt.transportmode.ferry':'Ferry','opt.transportmode.taxi':'Taxi / Ride-hail',
   'opt.transportmode.flight':'Flight','opt.transportmode.other':'Other',
@@ -6931,11 +7193,18 @@ function renderAuthArea(){
   }else{
     // 確定沒登入、這台裝置有賽事：提醒卡（v4.5.0）；新裝置、或還不知道有沒有登入時照舊一顆按鈕
     el.innerHTML=(signedOutWithData()?backupNudgeHtml():`<button id="btn-signin" class="btn-ghost">${t('ui.signIn','使用 Google 登入同步')}</button>`)
+      +signInLegalHtml()
       +(authError?`<span class="auth-error small">${escapeHtml(authError)}</span>`:'');
   }
   // 首頁的歡迎卡有一句「右上角頭像登入 Google」，登入／登出之後跟著更新
   const welcome=document.querySelector('#calendar .welcome-card');
   if(welcome) welcome.outerHTML=welcomeCardHtml();
+}
+/* 登入按鈕下面的一行小字（v4.9.0）：一登入，紀錄就開始存到 Firebase——按下去之前，
+   要看得到同意的是什麼。兩種登入入口（一般按鈕、有資料時的提醒卡）都在 #auth-area 裡，
+   放在這裡兩種都涵蓋 */
+function signInLegalHtml(){
+  return `<p class="auth-legal">${tf('ui.signInAgree','登入即表示你同意{n}。',privacyLinkHtml(t('ui.legalLinkText','使用條款與隱私權政策')))}</p>`;
 }
 function authErrorMessage(err){
   const code=err&&err.code||'';
@@ -12984,6 +13253,7 @@ function renderPublicShareView(snap){
     ${snap.photos.length?`<div class="pubview-photos">${snap.photos.map(ph=>`<img src="${escapeHtml(ph.thumb)}" alt="" loading="lazy">`).join('')}</div>`:''}
     <footer class="pubview-foot small">
       <a href="${escapeHtml(shareSiteUrl())}">${t('ui.publicMadeWith','用「賽事紀錄」記下你的每一場比賽')}</a>
+      ${privacyLinkHtml(t('ui.privacyLink','隱私權政策與使用條款'))}
     </footer>
   </div>`;
 }
@@ -17696,8 +17966,7 @@ let trainingOpenYears=null, trainingOpenMonths=null;
 function trainingGroupStatsHtml(items){
   const km=items.reduce((s,x)=>s+(Number(x.distanceKm)||0),0);
   const sec=items.reduce((s,x)=>s+(Number(x.durationSeconds)||0),0);
-  const h=Math.floor(sec/3600), m=Math.round((sec%3600)/60);
-  return [tf('ui.trainingNSessions','{n} 次',items.length),km.toFixed(1)+' km',`${h}:${String(m).padStart(2,'0')}`].join(' ・ ');
+  return [tf('ui.trainingNSessions','{n} 次',items.length),km.toFixed(1)+' km',fmtTrainingHM(sec)].join(trSep());
 }
 function trainingMonthLabel(ym){
   const n=parseInt(ym.slice(5),10);
@@ -17746,60 +18015,407 @@ function trainingGroupedHtml(list,rowHtml){
   });
   return html;
 }
-function trainingOverlayHtml(){
-  const {from,to}=trainingPeriodRange(trainingPeriod);
-  const list=liveTrainings().filter(x=>x.date>=from&&x.date<=to)
-    .sort((a,b)=>(b.date+(b.startTime||'')).localeCompare(a.date+(a.startTime||'')));
-  const km=list.reduce((s,x)=>s+(Number(x.distanceKm)||0),0);
-  const sec=list.reduce((s,x)=>s+(Number(x.durationSeconds)||0),0);
-  const hh=Math.floor(sec/3600), mm=Math.round((sec%3600)/60);
-  const tabs=[['week',t('ui.trainingWeek','本週')],['month',t('ui.trainingMonth','本月')],['all',t('ui.trainingAll','全部')]]
-    .map(([v,l])=>`<button type="button" class="training-tab${trainingPeriod===v?' is-on':''}" data-training-period="${v}" aria-pressed="${trainingPeriod===v}">${l}</button>`).join('');
-  const shoeOpts=sel=>`<option value="">${t('ui.trainingNoShoe','（不指定鞋款）')}</option>`
+/* ============================================================
+   訓練頁改版（v4.10.0）：設計稿 A（週報加強版）＋設計稿 D 上半部的「備戰中」賽事卡
+   - 字級照設計稿：正文 16px、列表標題 17px、距離 24px、統計行 15px、圖表上的字至少 13px，
+     全部乘上字級設定 --fs；按鈕與點擊區至少 44px（原本 11–14px）
+   - 圖表用 HTML 畫，不用 SVG 的 <text>：SVG 會跟著寬度縮放，筆電上 13px 的字會變成快兩倍大、
+     320px 的手機又縮到 11px；HTML 的字就是設定的大小
+   - 只用每筆訓練的摘要（距離、時間、爬升、平均心率）：訓練只存摘要和縮圖軌跡（v3.76.0 方案 B）
+   ============================================================ */
+function trSumKm(list){ return list.reduce((s,x)=>s+(Number(x.distanceKm)||0),0); }
+function trSumSec(list){ return list.reduce((s,x)=>s+(Number(x.durationSeconds)||0),0); }
+function trSumElev(list){ return list.reduce((s,x)=>s+(Number(x.elevationGainM)||0),0); }
+// 總時數「4:37」。先四捨五入成分鐘再拆成時、分：原本分開算，3 小時 59 分 40 秒會顯示成「3:60」
+function fmtTrainingHM(sec){
+  const tm=Math.round((Number(sec)||0)/60);
+  return `${Math.floor(tm/60)}:${String(tm%60).padStart(2,'0')}`;
+}
+function trainingsInRange(from,to,sports){
+  return liveTrainings().filter(x=>x.date>=from&&x.date<=to&&(!sports||sports.includes(x.sport)));
+}
+// 週一為一週的開始（跟原本的「本週」分頁一樣）
+function weekStartOf(dateStr){
+  const dow=(new Date(dateStr+'T00:00:00').getDay()+6)%7;
+  return addDaysStr(dateStr,-dow);
+}
+function daysBetweenStr(a,b){ return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }
+function trFmtKm(v){ return (Math.round((Number(v)||0)*10)/10).toFixed(1); }
+// 週目標這種使用者填的整數，不要多一個「.0」
+function trFmtKmPlain(v){ const n=Math.round((Number(v)||0)*10)/10; return Number.isInteger(n)?String(n):n.toFixed(1); }
+function trMD(s){ const p=String(s).split('-'); return Number(p[1])+'/'+Number(p[2]); }
+// 「10/3（六）」；英文「10/3 (Sat)」
+function trDayLabel(s){
+  const wd=weekdayLabels()[new Date(s+'T00:00:00').getDay()];
+  return currentLang==='en'?`${trMD(s)} (${wd})`:`${trMD(s)}（${wd}）`;
+}
+// 句子裡的星期：「週六」「土曜日」「Saturday」
+function trWeekdayLong(s){
+  const d=new Date(s+'T00:00:00');
+  if(currentLang==='en') return d.toLocaleString('en-US',{weekday:'long'});
+  if(currentLang==='ja') return weekdayLabels()[d.getDay()]+'曜日';
+  return '週'+WEEKDAY_LABELS_ZH[d.getDay()];
+}
+function trSep(){ return currentLang==='en'?' · ':' ・ '; }
+/* ---- 運動篩選 ----
+   不同運動的公里數不能直接相加：一次 42 km 的騎車、每天 5 km 的散步加進跑量，大數字、週目標、
+   跟上週比、本週解讀全都會失真（舊版的「公里」就是全部加起來）。資料裡有兩種以上的運動時，
+   分頁下面多一排運動：預設是備戰中那場賽事的運動（三鐵預設全部），沒有的話用近 12 週次數最多的；
+   卡片、圖表、列表都跟著它，數字才對得起來 */
+let trainingSport=null;   // null＝打開訓練頁時重新決定；'all'＝全部運動加總
+function trainingSportsPresent(){
+  const have=new Set(liveTrainings().map(x=>x.sport));
+  return TRAINING_SPORTS.map(o=>o.value).filter(v=>have.has(v));
+}
+function defaultTrainingSport(prep,present){
+  if(present.length<=1) return 'all';
+  if(prep){
+    const rs=trainingSportsForRace(prep.race);
+    if(!rs) return 'all';
+    if(rs.length===1&&present.includes(rs[0])) return rs[0];
+  }
+  const since=addDaysStr(todayISO(),-84), cnt={};
+  liveTrainings().forEach(x=>{ if(x.date>=since) cnt[x.sport]=(cnt[x.sport]||0)+1; });
+  return present.slice().sort((a,b)=>(cnt[b]||0)-(cnt[a]||0)||present.indexOf(a)-present.indexOf(b))[0]||'all';
+}
+function trSports(){ return trainingSport&&trainingSport!=='all'?[trainingSport]:null; }
+// 一句話裡要換好幾個 {名稱}：tf／tf2 只換得了 {n}、{a}{b}
+function tv(key,fallback,vars){
+  let s=t(key,fallback);
+  Object.keys(vars).forEach(k=>{ s=s.split('{'+k+'}').join(String(vars[k])); });
+  return s;
+}
+
+/* ---- 備戰中的賽事（設計稿 D 的上半部） ----
+   最近一場「已報名／抽籤中」、而且已經進入準備期的賽事。準備期的週數跟賽事頁「賽前訓練週期」
+   同一套：使用者填的 > 對照表依賽事類型的建議 > 12 週。考慮中的不算：還沒決定要不要比，
+   不該在訓練頁最上面倒數。最近那場還沒進準備期（例如 6 週後的 5K、準備期 4 週），
+   就看下一場有沒有進（10 週後的全馬、準備期 16 週） */
+function trainingPrepRace(){
+  const today=todayISO();
+  const list=state.races.filter(r=>!r.deletedAt&&['registered','lottery_pending'].includes(r.status)
+      &&r.schedule&&r.schedule.raceDate&&r.schedule.raceDate>=today)
+    .sort((a,b)=>a.schedule.raceDate.localeCompare(b.schedule.raceDate));
+  for(const race of list){
+    const days=daysBetweenStr(today,race.schedule.raceDate), N=effectivePrepWeeks(race);
+    // 「賽前第 1 週」是比賽前 7 天（跟賽事頁的週期圖同一種切法）
+    if(days<=N*7) return {race,days,N,T:Math.max(0,Math.min(effectiveTaperWeeks(race),N-1)),k:Math.ceil(days/7)};
+  }
+  return null;
+}
+/* 週目標：備戰中那一場在賽事頁「訓練計畫」填的週跑量。不另外開一個設定——同一個數字
+   放兩個地方，改了一邊另一邊不會跟著變。比較的是那場賽事的運動：路跑、越野只算跑步，
+   三鐵全部都算（trainingSportsForRace 回 null） */
+function trainingWeekGoal(prep){
+  const tp=prep&&prep.race.trainingPlan;
+  const km=tp?Number(tp.weeklyMileageTargetKm):NaN;
+  return km>0?{km,race:prep.race,sports:trainingSportsForRace(prep.race)}:null;
+}
+/* 階段只分「準備期」「減量期」兩段：減量週數有資料（使用者填的或對照表），設計稿上的
+   基礎／增強／巔峰沒有任何資料可以切，硬切就是替使用者編課表 */
+function trainingPrepCardHtml(prep){
+  const {race,days,N,T,k}=prep;
+  const chip=race.status==='registered'?t('ui.trPrepChip','備戰中'):labelFor(STATUS_OPTIONS,race.status,'status');
+  const km=inferRaceDistanceKm(race);
+  const meta=[km?trFmtKmPlain(km)+' km':'',sportLabel(race.sportType)].filter(Boolean).join(trSep());
+  const d=race.schedule.raceDate, time=race.schedule.startTime||'';
+  const when=tf('ui.trPrepStart','{n} 起跑',trDayLabel(d)+(time?(currentLang==='en'?' ':'')+time:''));
+  const goals=(race.goals||[]).filter(g=>g.targetTimeSeconds!=null).slice(0,2)
+    .map(g=>`<span class="trp-goal mono"><span class="trp-goal-tier">${escapeHtml(g.tier||'')}</span> ${secToHMS(g.targetTimeSeconds)}</span>`).join('');
+  const big=days===0
+    ?`<span class="trp-days-num">${t('ui.trPrepToday','今天')}</span>`
+    :`<span class="trp-days-num mono">${days}</span><span class="trp-days-unit">${days===1?t('ui.trPrepDay','天'):t('ui.trPrepDays','天')}</span>`;
+  const weekLine=days===0?t('ui.trPrepRaceDay','比賽當天')
+    :tv('ui.trPrepWeekLine','賽前第 {k} 週 ・ 備戰第 {w} 週 / 共 {n} 週',{k,w:N-k+1,n:N});
+  let segs='';
+  for(let i=0;i<N;i++){
+    const wk=N-i;   // 這一格是「賽前第幾週」
+    segs+=`<span class="${['trp-seg',wk<=T?'is-taper':'',wk>k?'is-past':(wk===k?'is-now':'')].filter(Boolean).join(' ')}"></span>`;
+  }
+  return `<button type="button" class="tr-card trp-card" data-action="training-open-race" data-id="${race.id}">
+    <span class="trp-head"><span class="trp-chip">${escapeHtml(chip)}</span><span class="trp-meta">${escapeHtml(meta)}</span></span>
+    <span class="trp-name">${escapeHtml(race.name||t('ui.unnamedRace','(未命名賽事)'))}</span>
+    <span class="trp-when">${escapeHtml(when)}</span>
+    <span class="trp-mid"><span class="trp-days">${big}</span>${goals?`<span class="trp-goals">${goals}</span>`:''}</span>
+    <span class="trp-week">${escapeHtml(weekLine)}</span>
+    <span class="trp-bar" style="grid-template-columns:repeat(${N},1fr)" aria-hidden="true">${segs}</span>
+    <span class="trp-phases" aria-hidden="true"><span>${t('ui.trPhaseBuild','準備期')}</span>${T>0?`<span>${t('ui.trPhaseTaper','減量期')}</span>`:''}</span>
+  </button>`;
+}
+
+/* ---- 本週卡（設計稿 A） ---- */
+// 跟上一期的同一段比：週一到今天 對比 上週一到上週的今天。拿整週比，週一早上就會是「少 100%」
+function trCompareChipHtml(cur,base,kind){
+  if(!(base>0)) return '';
+  const pct=Math.round((cur/base-1)*100);
+  const wk=kind==='week';
+  if(pct===0) return `<span class="tr-chip">${escapeHtml(wk?t('ui.trVsWeekSame','和上週同期持平'):t('ui.trVsMonthSame','和上月同期持平'))}</span>`;
+  const up=pct>0;
+  const txt=up?(wk?tf('ui.trVsWeekUp','↑ {n}% 比上週同期',pct):tf('ui.trVsMonthUp','↑ {n}% 比上月同期',pct))
+              :(wk?tf('ui.trVsWeekDown','↓ {n}% 比上週同期',-pct):tf('ui.trVsMonthDown','↓ {n}% 比上月同期',-pct));
+  // 跑得比較少不用紅色：恢復週、減量期本來就該少
+  return `<span class="tr-chip${up?' is-up':''}">${escapeHtml(txt)}</span>`;
+}
+// 同一期有好幾種運動時，大數字是全部加起來（跟列表的小計一致），下面一行拆開寫
+function trSportMixHtml(items){
+  const by=new Map();
+  items.forEach(x=>{ const v=Number(x.distanceKm)||0; if(v>0) by.set(x.sport,(by.get(x.sport)||0)+v); });
+  if(by.size<2) return '';
+  return `<div class="tr-mix">${[...by.entries()].sort((a,b)=>b[1]-a[1])
+    .map(([s,v])=>`${escapeHtml(trainingSportLabel(s))} ${trFmtKm(v)}`).join(currentLang==='en'?' · ':'・')} km</div>`;
+}
+function trGoalHtml(items,goal,prep){
+  const sp=trSports(), raceSports=prep&&trainingSportsForRace(prep.race);
+  // 正在看別的運動（例如備戰全馬時切到騎車）：跑量目標跟這裡的數字無關，不放
+  if(sp&&raceSports&&!raceSports.includes(sp[0])) return '';
+  if(!goal){
+    // 備戰中但還沒填週跑量：給一個入口，直接打開那場賽事的訓練計畫
+    return prep?`<button type="button" class="tr-link" data-action="training-set-goal" data-id="${prep.race.id}">${t('ui.trSetGoal','到賽事的「訓練計畫」設定週跑量目標')}</button>`:'';
+  }
+  const counted=items.filter(x=>!goal.sports||goal.sports.includes(x.sport));
+  const gkm=trSumKm(counted);
+  const pct=Math.round(gkm/goal.km*100);
+  // 這週有不算進目標的運動（例如騎車），標明目標只算哪一種，數字才對得起來
+  const note=goal.sports&&items.some(x=>!goal.sports.includes(x.sport))
+    ?(currentLang==='en'?` (${goal.sports.map(trainingSportLabel).join(', ')})`:`（${goal.sports.map(trainingSportLabel).join('、')}）`):'';
+  const foot=gkm>=goal.km
+    ?(gkm-goal.km>=0.05?tf('ui.trGoalOver','已達標，多跑了 {n} km',trFmtKm(gkm-goal.km)):t('ui.trGoalDone','已達標'))
+    :tf('ui.trGoalLeft','再 {n} km 達標',trFmtKm(goal.km-gkm));
+  return `<div class="trw-goal">
+    <div class="trw-goal-row"><span>${escapeHtml(tf('ui.trWeekGoal','週目標 {n} km',trFmtKmPlain(goal.km))+note)}</span><b class="mono">${pct}%</b></div>
+    <div class="trw-goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100,pct)}"
+      aria-label="${escapeHtml(tf('ui.trWeekGoal','週目標 {n} km',trFmtKmPlain(goal.km)))}"><span style="width:${Math.min(100,pct)}%"></span></div>
+    <div class="trw-goal-foot"><span>${escapeHtml(foot)}</span>
+      <span class="trw-goal-src">${escapeHtml(tf('ui.trGoalSrc','依「{n}」的訓練計畫',goal.race.name||t('ui.unnamedRace','(未命名賽事)')))}</span></div>
+  </div>`;
+}
+function trainingWeekCardHtml(prep){
+  const today=todayISO(), ws=weekStartOf(today), we=addDaysStr(ws,6), sp=trSports();
+  const items=trainingsInRange(ws,today,sp);
+  const km=trSumKm(items);
+  const chip=trCompareChipHtml(km,trSumKm(trainingsInRange(addDaysStr(ws,-7),addDaysStr(today,-7),sp)),'week');
+  const wl=weekdayLabels();
+  const days=[0,1,2,3,4,5,6].map(i=>{ const d=addDaysStr(ws,i);
+    return {d,km:trSumKm(items.filter(x=>x.date===d)),future:d>today,isToday:d===today,dow:new Date(d+'T00:00:00').getDay()}; });
+  const maxDay=Math.max(0,...days.map(x=>x.km));
+  const dayCols=days.map(x=>{
+    const h=x.km>0&&maxDay>0?Math.max(8,Math.round(x.km/maxDay*100)):0;
+    const val=x.future?'—':(x.km>0?trFmtKm(x.km):t('ui.trRest','休'));
+    return `<span class="trw-day${x.isToday?' is-today':''}${x.future?' is-future':''}${x.km>0?'':' is-zero'}">
+      <span class="trw-day-bar"><span style="height:${h}%"></span></span>
+      <span class="trw-day-name">${escapeHtml(wl[x.dow])}</span>
+      <span class="trw-day-val">${escapeHtml(val)}</span></span>`;
+  }).join('');
+  const aria=days.filter(x=>!x.future).map(x=>wl[x.dow]+' '+(x.km>0?trFmtKm(x.km)+' km':t('ui.trRest','休'))).join(currentLang==='en'?', ':'、');
+  return `<div class="tr-card trw-card">
+    <div class="trw-head"><span class="trw-label">${t('ui.trainingWeek','本週')}<span class="trw-range">${trRangeLabel(ws,we)}</span></span>${chip}</div>
+    <div class="trw-km"><b class="mono">${trFmtKm(km)}</b><span>km</span></div>
+    ${trSportMixHtml(items)}
+    ${trGoalHtml(items,trainingWeekGoal(prep),prep)}
+    <div class="trw-days" role="img" aria-label="${escapeHtml(aria)}">${dayCols}</div>
+  </div>
+  ${trTilesHtml(items)}
+  ${trainingWeekReadHtml(items,km,ws,today)}`;
+}
+function trRangeLabel(from,to){ return trMD(from)+' – '+trMD(to); }
+function trTilesHtml(items){
+  return `<div class="tr-tiles">
+    <div class="tr-tile"><b class="mono">${items.length}</b><span>${t('ui.trainingCount','次訓練')}</span></div>
+    <div class="tr-tile"><b class="mono">${fmtTrainingHM(trSumSec(items))}</b><span>${t('ui.trainingHours','總時數')}</span></div>
+    <div class="tr-tile"><b class="mono">${Math.round(trSumElev(items)).toLocaleString('en-US')}</b><span>${t('ui.trElevM','爬升 m')}</span></div>
+  </div>`;
+}
+/* 本週解讀：最多兩句。週還沒過完、量也還沒到平均時，不說「少 70%」（週二打開一定是這樣），
+   改說還差多少；過完了、或已經超過平均，才說多幾 %。近 4 週＝本週之前的 4 個完整週 */
+function trainingWeekReadHtml(items,km,ws,today){
+  const parts=[];
+  if(!items.length) parts.push(t('ui.trReadNone','本週還沒有訓練。'));
+  const had=trainingsInRange(addDaysStr(ws,-28),addDaysStr(ws,-1),trSports());
+  const avg=trSumKm(had)/4;
+  if(had.length&&avg>0){
+    const pct=Math.round((km/avg-1)*100);
+    if(km>=avg||today>=addDaysStr(ws,6)){
+      if(Math.abs(pct)<=3) parts.push(tv('ui.trReadSame','目前 {km} km，跟近 4 週平均（{avg} km）差不多。',{km:trFmtKm(km),avg:trFmtKm(avg)}));
+      else if(pct>0) parts.push(tv('ui.trReadMore','目前 {km} km，比近 4 週平均（{avg} km）多 {pct}%。',{km:trFmtKm(km),avg:trFmtKm(avg),pct}));
+      else parts.push(tv('ui.trReadLess','目前 {km} km，比近 4 週平均（{avg} km）少 {pct}%。',{km:trFmtKm(km),avg:trFmtKm(avg),pct:-pct}));
+    }else if(items.length){
+      parts.push(tv('ui.trReadGap','近 4 週平均 {avg} km，還差 {gap} km。',{avg:trFmtKm(avg),gap:trFmtKm(avg-km)}));
+    }
+  }
+  if(items.length>=2&&km>0){
+    const L=items.reduce((m,x)=>(Number(x.distanceKm)||0)>(Number(m.distanceKm)||0)?x:m,items[0]);
+    const share=Math.round((Number(L.distanceKm)||0)/km*100);
+    if(share>=30) parts.push(tv('ui.trReadLongest','最長一次是{day}的 {km} km，佔本週的 {pct}%。',{day:trWeekdayLong(L.date),km:trFmtKm(L.distanceKm),pct:share}));
+  }
+  if(!parts.length) return '';
+  return `<div class="tr-card tr-read"><div class="tr-card-label">${t('ui.trReadTitle','本週解讀')}</div>
+    <p>${escapeHtml(parts.join(currentLang==='en'?' ':''))}</p></div>`;
+}
+
+/* ---- 長條圖（近 12 週／近 12 個月）：最高那一根和最後一根標數字，虛線是平均 ---- */
+function trBarsChartHtml({title,legend,cols,avg,ariaLabel,xLabels}){
+  const max=Math.max(avg||0,...cols.map(c=>c.km));
+  if(!(max>0)) return '';
+  const peakIdx=cols.slice(0,-1).reduce((bi,c,i,a)=>c.km>a[bi].km?i:bi,0);
+  const bars=cols.map((c,i)=>{
+    const h=c.km>0?Math.max(2,c.km/max*100):0;
+    const label=(i===cols.length-1||(i===peakIdx&&c.km>0&&i!==cols.length-1))
+      ?`<span class="trc-val mono" style="bottom:calc(${h.toFixed(1)}% + 4px)">${trFmtKm(c.km)}</span>`:'';
+    return `<span class="trc-col${c.cur?' is-cur':''}" title="${escapeHtml(c.label+'：'+trFmtKm(c.km)+' km')}"><span class="trc-bar" style="height:${h.toFixed(1)}%"></span>${label}</span>`;
+  }).join('');
+  const line=avg>0?`<span class="trc-avg" style="bottom:${(avg/max*100).toFixed(1)}%"></span>`:'';
+  return `<div class="tr-card trc-card">
+    <div class="trc-head"><h3>${escapeHtml(title)}</h3>${legend?`<span class="trc-legend">${escapeHtml(legend)}</span>`:''}</div>
+    <div class="trc-plot" role="img" aria-label="${escapeHtml(ariaLabel)}"><span class="trc-area"><span class="trc-cols" style="grid-template-columns:repeat(${cols.length},minmax(0,1fr))">${bars}</span>${line}</span></div>
+    <div class="trc-x" style="grid-template-columns:repeat(${cols.length},1fr)" aria-hidden="true">${xLabels}</div>
+  </div>`;
+}
+function trainingWeeksChartHtml(ws){
+  const N=12;
+  const cols=[...Array(N)].map((_,i)=>{ const from=addDaysStr(ws,-7*(N-1-i)), to=addDaysStr(from,6);
+    return {from,km:trSumKm(trainingsInRange(from,to,trSports())),cur:i===N-1,label:trRangeLabel(from,to)}; });
+  const avg=cols.slice(N-5,N-1).reduce((s,c)=>s+c.km,0)/4;
+  const xl=(currentLang==='en'?[0,4]:[0,4,8]).map(i=>`<span class="mono" style="grid-column:${i+1} / span 3">${trMD(cols[i].from)}</span>`).join('')
+    +`<span class="trc-x-cur" style="grid-column:${N-1} / span 2">${t('ui.trainingWeek','本週')}</span>`;
+  return trBarsChartHtml({title:t('ui.trWeeksTitle','近 12 週里程'),cols,avg,xLabels:xl,
+    legend:avg>0?tf('ui.trWeeksLegend','虛線＝近 4 週平均 {n} km',trFmtKm(avg)):'',
+    ariaLabel:cols.map(c=>c.label+' '+trFmtKm(c.km)+' km').join(currentLang==='en'?', ':'、')});
+}
+function trMonthName(ym,short){
+  const m=Number(ym.slice(5,7));
+  if(currentLang==='en') return new Date(Number(ym.slice(0,4)),m-1,1).toLocaleString('en-US',{month:short?'short':'long'});
+  return tf('ui.trainingMonthLabel','{n} 月',m);
+}
+function trainingMonthsChartHtml(today){
+  const N=12, y=Number(today.slice(0,4)), m0=Number(today.slice(5,7))-1;
+  const cols=[...Array(N)].map((_,i)=>{ const d=new Date(y,m0-(N-1-i),1);
+    const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    return {ym,km:trSumKm(trainingsInRange(ym+'-01',ym+'-'+String(last).padStart(2,'0'),trSports())),cur:i===N-1,label:trMonthName(ym)}; });
+  const avg=cols.slice(N-4,N-1).reduce((s,c)=>s+c.km,0)/3;
+  const xl=[0,3,6].map(i=>`<span style="grid-column:${i+1} / span 3">${escapeHtml(trMonthName(cols[i].ym,true))}</span>`).join('')
+    +`<span class="trc-x-cur" style="grid-column:${N-1} / span 2">${t('ui.trainingMonth','本月')}</span>`;
+  return trBarsChartHtml({title:t('ui.trMonthsTitle','近 12 個月里程'),cols,avg,xLabels:xl,
+    legend:avg>0?tf('ui.trMonthsLegend','虛線＝前 3 個月平均 {n} km',trFmtKm(avg)):'',
+    ariaLabel:cols.map(c=>c.label+' '+trFmtKm(c.km)+' km').join(currentLang==='en'?', ':'、')});
+}
+
+/* ---- 本月卡：大數字、比上月同期、每天一根的小長條 ---- */
+function trainingMonthCardHtml(){
+  const today=todayISO(), ms=today.slice(0,8)+'01', sp=trSports();
+  const items=trainingsInRange(ms,today,sp), km=trSumKm(items);
+  const y=Number(ms.slice(0,4)), m=Number(ms.slice(5,7));
+  // 上月同期：上個月 1 號到上個月的同一天（上個月沒有這一天就算到月底）
+  const pm=new Date(y,m-2,1), pmLast=new Date(y,m-1,0).getDate();
+  const pms=localDateStr(pm), pmTo=pms.slice(0,8)+String(Math.min(Number(today.slice(8)),pmLast)).padStart(2,'0');
+  const chip=trCompareChipHtml(km,trSumKm(trainingsInRange(pms,pmTo,sp)),'month');
+  const dim=new Date(y,m,0).getDate();
+  const per=[...Array(dim)].map((_,i)=>{ const d=ms.slice(0,8)+String(i+1).padStart(2,'0'); return {d,km:trSumKm(items.filter(x=>x.date===d)),future:d>today,isToday:d===today}; });
+  const max=Math.max(0,...per.map(x=>x.km));
+  const strip=per.map(x=>`<span class="trm-day${x.isToday?' is-today':''}${x.future?' is-future':''}${x.km>0?'':' is-zero'}"><span style="height:${x.km>0&&max>0?Math.max(8,Math.round(x.km/max*100)):0}%"></span></span>`).join('');
+  const labels=[1,8,15,22,29].filter(n=>n<=dim).map(n=>`<span style="grid-column:${n} / span 4">${n}</span>`).join('');
+  const aria=tv('ui.trMonthAria','{month}：{n} 天有訓練，共 {km} km',{month:trMonthName(ms.slice(0,7)),n:per.filter(x=>x.km>0).length,km:trFmtKm(km)});
+  return `<div class="tr-card trw-card">
+    <div class="trw-head"><span class="trw-label">${escapeHtml(trMonthName(ms.slice(0,7)))}<span class="trw-range">${trRangeLabel(ms,today)}</span></span>${chip}</div>
+    <div class="trw-km"><b class="mono">${trFmtKm(km)}</b><span>km</span></div>
+    ${trSportMixHtml(items)}
+    <div class="trm-strip" style="grid-template-columns:repeat(${dim},1fr)" role="img" aria-label="${escapeHtml(aria)}">${strip}</div>
+    <div class="trm-x mono" style="grid-template-columns:repeat(${dim},1fr)" aria-hidden="true">${labels}</div>
+  </div>
+  ${trTilesHtml(items)}`;
+}
+// 「全部」：總里程、次數、時數、爬升
+function trainingAllCardHtml(list){
+  if(!list.length) return '';
+  const first=list[list.length-1].date, last=list[0].date;
+  return `<div class="tr-card trw-card">
+    <div class="trw-head"><span class="trw-label">${t('ui.trainingAll','全部')}<span class="trw-range">${trRangeLabel(first,last)}</span></span></div>
+    <div class="trw-km"><b class="mono">${Math.round(trSumKm(list)).toLocaleString('en-US')}</b><span>km</span></div>
+    ${trSportMixHtml(list)}
+  </div>
+  ${trTilesHtml(list)}`;
+}
+
+/* ---- 列表：大字級（標題 17px、距離 24px、統計 15px），鞋款是右邊的膠囊 ---- */
+function trainingShoeOptions(sel){
+  return `<option value="">${t('ui.trainingNoShoe','（不指定鞋款）')}</option>`
     +shoes.filter(s=>!s.isRetired||s.id===sel).map(s=>`<option value="${s.id}"${s.id===sel?' selected':''}>${escapeHtml(s.name)}</option>`).join('');
-  const rowHtml=x=>{
-    const shoe=shoes.find(s=>s.id===x.shoeId);
-    const stats=[x.distanceKm!=null?x.distanceKm.toFixed(1)+' km':'',x.durationSeconds?fmtTrainingDuration(x.durationSeconds):'',
-      x.durationSeconds&&x.distanceKm&&SHOE_SPORTS.includes(x.sport)?formatPace(x.durationSeconds/x.distanceKm):'',
-      x.avgHr?'♥'+x.avgHr:''].filter(Boolean).join(' ・ ');
-    const editing=trainingEditId===x.id;
-    return `<div class="training-row" data-training-id="${x.id}">
-      <div class="training-thumb">${thumbSvg(x.thumb,44)}</div>
-      <div class="training-main">
-        <div class="training-title"><span>${escapeHtml(x.name||trainingSportLabel(x.sport))}</span><span class="training-date">${x.date.slice(5).replace('-','/')}${x.startTime?' '+x.startTime:''}</span></div>
-        <div class="training-stats mono">${stats}</div>
-        ${SHOE_SPORTS.includes(x.sport)?(editing
-          ?`<div class="training-edit"><select data-training-shoe="${x.id}">${shoeOpts(x.shoeId)}</select>
-             <button type="button" class="btn-text-small training-delete" data-action="training-delete" data-id="${x.id}">${t('ui.trainingDelete','刪除這筆')}</button></div>`
-          :`<button type="button" class="training-shoe" data-action="training-edit" data-id="${x.id}">👟 ${escapeHtml(shoe?shoe.name:t('ui.trainingPickShoe','選擇鞋款'))}</button>`)
-          :(editing?`<div class="training-edit"><button type="button" class="btn-text-small training-delete" data-action="training-delete" data-id="${x.id}">${t('ui.trainingDelete','刪除這筆')}</button></div>`
-          :`<button type="button" class="training-shoe" data-action="training-edit" data-id="${x.id}">⋯</button>`)}
-      </div></div>`;
-  };
-  // 「全部」依年份、月份收合；本週／本月筆數少，維持平鋪
-  const rows=trainingPeriod==='all'?trainingGroupedHtml(list,rowHtml):list.map(rowHtml).join('');
+}
+function trainingRowHtml(x){
+  const shoe=shoes.find(s=>s.id===x.shoeId);
+  const canShoe=SHOE_SPORTS.includes(x.sport);
+  const pace=x.durationSeconds&&x.distanceKm&&canShoe?formatPace(x.durationSeconds/x.distanceKm):'';
+  const stats=[x.durationSeconds?fmtTrainingDuration(x.durationSeconds):'',pace?pace+'/km':'',x.avgHr?'♥'+x.avgHr:''].filter(Boolean).join(trSep());
+  const editing=trainingEditId===x.id;
+  const chip=canShoe
+    ?`<button type="button" class="training-shoe${shoe?'':' is-empty'}" data-action="training-edit" data-id="${x.id}" aria-expanded="${editing}"><span>${escapeHtml(shoe?shoe.name:t('ui.trainingPickShoe','選擇鞋款'))}</span></button>`
+    :`<button type="button" class="training-shoe is-more" data-action="training-edit" data-id="${x.id}" aria-expanded="${editing}" aria-label="${escapeHtml(t('ui.trainingMore','更多操作'))}"><span>⋯</span></button>`;
+  return `<div class="training-row" data-training-id="${x.id}">
+    <div class="training-thumb">${thumbSvg(x.thumb,56)}</div>
+    <div class="training-title">${escapeHtml(x.name||trainingSportLabel(x.sport))}</div>
+    <div class="training-dist">${x.distanceKm!=null?`<b class="mono">${trFmtKm(x.distanceKm)}</b><span>km</span>`:''}</div>
+    <div class="training-date">${escapeHtml(trDayLabel(x.date)+(x.startTime?(currentLang==='en'?' ':'')+x.startTime:''))}</div>
+    <div class="training-chipcell">${chip}</div>
+    ${stats?`<div class="training-stats mono">${escapeHtml(stats)}</div>`:''}
+    ${editing?`<div class="training-edit">${canShoe?`<select data-training-shoe="${x.id}" aria-label="${escapeHtml(t('ui.trainingShoeAria','這次穿的鞋'))}">${trainingShoeOptions(x.shoeId)}</select>`:''}
+      <button type="button" class="btn-text-small training-delete" data-action="training-delete" data-id="${x.id}">${t('ui.trainingDelete','刪除這筆')}</button></div>`:''}
+  </div>`;
+}
+function trainingListGroupHtml(label,items,emptyText){
+  return `<div class="training-group">
+    <div class="training-list-head"><span class="training-list-label">${escapeHtml(label)}</span>${items.length?`<span class="training-group-stats mono">${trainingGroupStatsHtml(items)}</span>`:''}</div>
+    ${items.length?items.map(trainingRowHtml).join(''):`<p class="empty-hint">${escapeHtml(emptyText)}</p>`}
+  </div>`;
+}
+const byNewest=(a,b)=>(b.date+(b.startTime||'')).localeCompare(a.date+(a.startTime||''));
+function trainingOverlayHtml(){
+  const today=todayISO(), ws=weekStartOf(today);
+  const prep=trainingPrepRace();
+  const present=trainingSportsPresent();
+  if(!trainingSport||(trainingSport!=='all'&&!present.includes(trainingSport))) trainingSport=defaultTrainingSport(prep,present);
+  const sp=trSports();
+  const all=liveTrainings().filter(x=>!sp||sp.includes(x.sport)).sort(byNewest);
+  const sportRow=present.length>1?`<div class="training-sports" role="group" aria-label="${escapeHtml(t('ui.trSportFilter','運動'))}">`
+    +present.concat('all').map(v=>`<button type="button" class="training-sport${trainingSport===v?' is-on':''}" data-training-sport="${v}" aria-pressed="${trainingSport===v}">${escapeHtml(v==='all'?t('ui.trSportAll','全部運動'):trainingSportLabel(v))}</button>`).join('')
+    +'</div>':'';
+  const tabs=[['week',t('ui.trTabWeek','本週')],['month',t('ui.trTabMonth','本月')],['all',t('ui.trainingAll','全部')]]
+    .map(([v,l])=>`<button type="button" class="training-tab${trainingPeriod===v?' is-on':''}" data-training-period="${v}" aria-pressed="${trainingPeriod===v}">${l}</button>`).join('');
+  let body='';
+  if(!liveTrainings().length){
+    body=(prep&&trainingPeriod==='week'?trainingPrepCardHtml(prep):'')
+      +`<p class="empty-hint training-empty">${t('ui.trainingEmpty','還沒有訓練紀錄。按「匯入」選擇手錶匯出的 FIT／GPX／TCX 檔，可以一次選很多個。')}</p>`;
+  }else if(trainingPeriod==='week'){
+    const thisWeek=all.filter(x=>x.date>=ws&&x.date<=today);
+    const lastWeek=all.filter(x=>x.date>=addDaysStr(ws,-7)&&x.date<addDaysStr(ws,0));
+    body=(prep?trainingPrepCardHtml(prep):'')+trainingWeekCardHtml(prep)+trainingWeeksChartHtml(ws)
+      +`<div class="training-list">${trainingListGroupHtml(t('ui.trainingWeek','本週'),thisWeek,t('ui.trReadNone','本週還沒有訓練。'))}
+        ${lastWeek.length?trainingListGroupHtml(t('ui.trLastWeek','上週'),lastWeek,''):''}</div>`;
+  }else if(trainingPeriod==='month'){
+    const list=all.filter(x=>x.date>=today.slice(0,8)+'01'&&x.date<=today);
+    body=trainingMonthCardHtml()+trainingMonthsChartHtml(today)
+      +(list.length?`<div class="training-list">${list.map(trainingRowHtml).join('')}</div>`
+        :`<p class="empty-hint">${t('ui.trainingEmptyPeriod','這段期間沒有訓練紀錄。')}</p>`);
+  }else{
+    // 「全部」依年份、月份收合（v3.80.0），列換成新的大字級
+    body=trainingAllCardHtml(all)+`<div class="training-list">${trainingGroupedHtml(all,trainingRowHtml)}</div>`;
+  }
   return `<div class="training-inner">
     <div class="training-top">
       <h2>${t('ui.trainingTitle','訓練紀錄')}</h2>
       <div class="training-top-actions">
-        <button type="button" class="btn-primary" data-action="training-import">${t('ui.trainingImport','＋ 匯入 FIT／GPX')}</button>
-        <button type="button" class="btn-ghost icon-btn" data-action="close-training" aria-label="${t('ui.close','關閉')}">✕</button>
+        <button type="button" class="btn-primary training-import-btn" data-action="training-import" title="${escapeHtml(t('ui.trainingImportTitle','匯入訓練紀錄'))}">${t('ui.trainingImportShort','＋ 匯入')}</button>
+        <button type="button" class="btn-ghost icon-btn training-close" data-action="close-training" aria-label="${t('ui.close','關閉')}">✕</button>
       </div>
     </div>
-    <p class="small training-hint">${t('ui.trainingHint','訓練紀錄跟賽事分開存放，不會影響賽事統計、PB 與徽章。可以一次選很多個檔案。')}</p>
+    ${liveTrainings().length?'':`<p class="training-hint">${t('ui.trainingHint','訓練紀錄跟賽事分開存放，不會影響賽事統計、PB 與徽章。可以一次選很多個檔案。')}</p>`}
     <div class="training-tabs">${tabs}</div>
-    <div class="training-kpis">
-      <div class="training-kpi"><b class="mono">${km.toFixed(1)}</b><span>${t('ui.trainingKm','公里')}</span></div>
-      <div class="training-kpi"><b class="mono">${list.length}</b><span>${t('ui.trainingCount','次訓練')}</span></div>
-      <div class="training-kpi"><b class="mono">${hh}:${String(mm).padStart(2,'0')}</b><span>${t('ui.trainingHours','總時數')}</span></div>
-    </div>
-    ${list.length?`<div class="training-list">${rows}</div>`
-      :`<p class="empty-hint">${liveTrainings().length?t('ui.trainingEmptyPeriod','這段期間沒有訓練紀錄。'):t('ui.trainingEmpty','還沒有訓練紀錄。按「匯入」選擇手錶匯出的 FIT／GPX／TCX 檔，可以一次選很多個。')}</p>`}
+    ${sportRow}
+    ${body}
     ${liveTrainings().length?`<p class="training-footer"><button type="button" class="btn-text-small" data-action="training-export">${t('ui.trainingExport','匯出訓練紀錄（JSON 備份）')}</button></p>`:''}
   </div>`;
 }
 function openTrainingOverlay(){
-  trainingOpenYears=null; trainingOpenMonths=null;
+  trainingOpenYears=null; trainingOpenMonths=null; trainingSport=null;
   const el=document.getElementById('training-overlay');
   el.innerHTML=trainingOverlayHtml(); el.hidden=false;
   document.body.classList.add('overlay-open');
@@ -17916,8 +18532,19 @@ document.getElementById('training-file-input').addEventListener('change',e=>{
 document.getElementById('training-overlay').addEventListener('click',async e=>{
   if(e.target.closest('[data-action="close-training"]')){ closeTrainingOverlay(); return; }
   if(e.target.closest('[data-action="training-import"]')){ document.getElementById('training-file-input').click(); return; }
+  // 備戰中的賽事卡：關掉訓練頁、打開那場賽事；「設定週跑量目標」再直接打開它的訓練計畫，游標放在週跑量那一格
+  const openRace=e.target.closest('[data-action="training-open-race"],[data-action="training-set-goal"]');
+  if(openRace){
+    const id=openRace.dataset.id, goal=openRace.dataset.action==='training-set-goal';
+    if(!state.races.some(r=>r.id===id)) return;
+    closeTrainingOverlay(); selectRace(id);
+    if(goal){ openDrawer('trainingPlan'); focusDrawerFieldIfEmpty('trainingPlan.weeklyMileageTargetKm'); }
+    return;
+  }
   const tab=e.target.closest('[data-training-period]');
   if(tab){ trainingPeriod=tab.dataset.trainingPeriod; trainingEditId=null; refreshTrainingOverlay(); return; }
+  const sportBtn=e.target.closest('[data-training-sport]');
+  if(sportBtn){ trainingSport=sportBtn.dataset.trainingSport; trainingEditId=null; trainingOpenYears=null; trainingOpenMonths=null; refreshTrainingOverlay(); return; }
   const yh=e.target.closest('[data-training-year]');
   if(yh){
     const y=yh.dataset.trainingYear;
@@ -23143,6 +23770,7 @@ function helpModalHtml(){
       <h3>首頁：賽事／生涯數據／訓練</h3>
       <ul>
         <li>首頁分成三個分頁：「賽事」是今日一句、「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄。</li>
+        <li><strong>訓練頁</strong>（v4.10.0 改版）：「本週」最上面是備戰中的賽事（已報名或抽籤中、已經進入準備期的最近一場：倒數、A／B 目標、賽前第幾週），下面是本週的公里數、跟上週同一段時間比、週目標（賽事頁「訓練計畫」填的週跑量）、每天的長條、本週解讀和近 12 週的里程；「本月」換成每天的長條和近 12 個月；「全部」依年份、月份收合。有兩種以上的運動時，分頁下面可以選要看哪一種，不同運動的公里數不會加在一起。每一筆右邊的鞋款按鈕點了可以換鞋或刪除。</li>
         <li><strong>「下一場」卡</strong>：14 天內有比賽時，「賽事」分頁最上面是倒數、日期時間和地點，下面三格：打包、A 目標、號碼布——跟賽事頁的賽前四格同一套，點一下就打開那一格要填的地方（空的格子游標直接停在那一欄）。有天氣預報（抓到的即時預報，或自己填的預報）時第三格換成天氣；7 天內、有 GPS 軌跡還沒抓的，第三格是「抓取預報」。點賽名打開那一場；有封面照時照片是卡片的底圖；「暫時隱藏」可以先收起來。手機清單上還在問「比完了嗎？」的時候，這張卡先不放（下一場就在清單第一列）。</li>
         <li><strong>今日一句</strong>：「賽事」分頁最上面每天一句跑者說過的話——電腦放在「下一場」卡右邊，手機、平板放在它上面。一天一句，過了午夜換下一句，同一天每台裝置都一樣。中文版面先寫中文翻譯，原文是日文或英文時下面附原文；日文、英文版面只顯示那個語言（原文不是那個語言就顯示翻譯）。點一下看說話者是誰、在什麼情況下說的，以及出處和連結。每一句都核對過出處，翻譯是本站翻的。不想看的話，頭像選單「顯示」裡的「今日一句」可以關掉。</li>
         <li>生涯數據可以點：年份長條、熱力圖的格子、「總完賽場次」「今年累計里程」點下去，下面會列出那幾場（點一場就打開，返回鍵先關掉列表）；點全馬 PB 的時間，直接打開締造 PB 的那一場。全馬只算跑步類的賽事（42 公里的自行車賽不算）。</li>
@@ -23205,6 +23833,10 @@ function helpModalHtml(){
         <li>使用說明（就是這一頁）和意見回饋也在頭像選單裡；版本號在頁面最下面。</li>
         <li>手機瀏覽器開啟網站後選「加入主畫面」，會使用自訂圖示，體驗跟 App 一樣；iPhone 加到主畫面之後，資料也不會因為 7 天沒打開被 Safari 清掉。</li>
         <li>想快速瀏覽整個網站有哪些功能、各自放在哪裡，可以看 <a href="https://ai-sub3.github.io/Race-Day/sitemap/" target="_blank" rel="noopener noreferrer">網站地圖</a>。</li>
+      </ul>
+      <h3>隱私權與使用條款</h3>
+      <ul>
+        <li>本網站會存哪些資料、會連到哪些第三方服務（例如賽事 BGM 的 Spotify 播放器會使用 Spotify 的 Cookie）、怎麼查詢或刪除資料，都寫在<a href="privacy/?lang=zh" target="_blank" rel="noopener">隱私權政策與使用條款</a>。頭像選單裡「意見回饋」的下面也有連結。</li>
       </ul>
       <h3>版權與授權</h3>
       <ul>

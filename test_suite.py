@@ -6211,12 +6211,18 @@ class V43Flows(Group):
             near.schedule.raceDate=keep; near.route.trackPoints=[]; near.liveForecast=null;
             near.climateForecast=emptyRace('x','road_running','registered','').climateForecast; await persist(); renderAll();
             return far && offer && busy && got; }""")
+        # 高度要量卡片自己的：v4.7.0 起筆電右邊有今日一句、兩張一樣高（v47 有測），句子長的那幾天卡片的框
+        # 會被拉到 221px。原本直接量框，結果跟著「今天是哪一句」變——v4.10.0 回歸時（10/3）才第一次失敗，
+        # 換回 v4.9.0 一樣失敗。這一項要看的是「封面照不會把卡片撐高」，所以量的時候先關掉今日一句
         c['cover_photo_is_card_background'] = self.ev(page, """async()=>{ """ + W + """
             const cv=document.createElement('canvas'); cv.width=320; cv.height=180; const g=cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,320,180);
-            near.coverImage=cv.toDataURL('image/jpeg',.9); near.coverImageAspect=320/180; await persist(); renderAll(); await wait(150);
-            const f=card(); const bi=getComputedStyle(f.querySelector('.nx-head')).backgroundImage;
-            return f.classList.contains('has-cover') && !f.querySelector('.focus-mesh') && bi.includes('url(') && bi.includes('data:image')
-              && f.querySelectorAll('.rw-tile').length===3 && f.getBoundingClientRect().height<=170; }""")
+            near.coverImage=cv.toDataURL('image/jpeg',.9); near.coverImageAspect=320/180; await persist();
+            localStorage.setItem(DAILY_QUOTE_PREF_KEY,'off'); renderAll(); await wait(150);
+            try{
+              const f=card(); const bi=getComputedStyle(f.querySelector('.nx-head')).backgroundImage;
+              return !document.querySelector('#focus-panel-slot .dq-card') && f.classList.contains('has-cover') && !f.querySelector('.focus-mesh') && bi.includes('url(') && bi.includes('data:image')
+                && f.querySelectorAll('.rw-tile').length===3 && f.getBoundingClientRect().height<=170;
+            }finally{ localStorage.removeItem(DAILY_QUOTE_PREF_KEY); renderAll(); await wait(150); } }""")
         # 最難讀的情況：封面照是一整片白（雪地、天空）。用頁首漸層算出每個字底下的顏色——淺色、深色模式都一樣
         COVER_READ = """()=>{ const head=document.querySelector('#focus-panel-slot .has-cover .nx-head'); if(!head) return ['no cover'];
             const bi=getComputedStyle(head).backgroundImage;
@@ -6382,14 +6388,21 @@ class V43Flows(Group):
         # （版本號的檢查跟著最新的群組走，v4.3.1 起在 v431）
         # ================= 手機 =================
         pctx, pp = self._ctx(page.context.browser, {'width': 390, 'height': 844}, touch=True)
-        # 打開 App 的第一個畫面就看得到第一場賽事（v4.2 是 1,044px，在畫面外）
+        # 打開 App 的第一個畫面就看得到第一場賽事（v4.2 是 1,044px，在畫面外）。
+        # 量的時候關掉今日一句：v4.7.0 起它在下一場卡上面，高度每天不同（中文版面 102–194px，原文是日文、
+        # 英文的句子多兩行原文），56 句裡有 27 句會把第一場推到 844px 的下緣之外（只露出上緣；日文 0 句、
+        # 英文 1 句）。原本直接量，結果跟著「今天是哪一句」變，v4.10.0 回歸時（10/3）才第一次失敗、
+        # v4.9.0 一樣失敗。這一項守的是 v4.3.0 的「下一場卡夠精簡」；今日一句打開時的第一個畫面要不要
+        # 調整，是 HANDOFF「待你回報」裡等決定的事，不在這裡用當天的句子碰運氣
         c['phone_first_race_on_first_screen'] = self.ev(pp, """async()=>{ """ + W + """
             near.schedule.startTime='06:30'; near.bibNumber='B77'; near.goals[gi].targetTimeSeconds=hmsToSec('3:15:00');
             near.equipmentChecklist=Array.from({length:12},(_,i)=>Object.assign(LIST_META.equipmentChecklist.factory(),{itemName:'裝備 '+i,isPacked:i<7}));
-            await persist(); renderAll(); scrollTo(0,0); await wait(200);
-            const f=card(), first=document.querySelector('#calendar .cal-list-item'); if(!f||!first) return false;
-            const fb=f.getBoundingClientRect(), lb=first.getBoundingClientRect();
-            return state.phoneView==='list' && fb.height<=200 && lb.top>fb.bottom && lb.bottom<=innerHeight && first.dataset.id===near.id; }""")
+            await persist(); localStorage.setItem(DAILY_QUOTE_PREF_KEY,'off'); renderAll(); scrollTo(0,0); await wait(200);
+            try{
+              const f=card(), first=document.querySelector('#calendar .cal-list-item'); if(!f||!first) return false;
+              const fb=f.getBoundingClientRect(), lb=first.getBoundingClientRect();
+              return !document.querySelector('#focus-panel-slot .dq-card') && state.phoneView==='list' && fb.height<=200 && lb.top>fb.bottom && lb.bottom<=innerHeight && first.dataset.id===near.id;
+            }finally{ localStorage.removeItem(DAILY_QUOTE_PREF_KEY); renderAll(); scrollTo(0,0); await wait(200); } }""")
         # 手機清單：「比完了嗎？」在的時候先不放「下一場」卡（它就在清單第一列）；月曆上兩張都放；按「之後再說」卡片回來
         c['phone_list_prompt_takes_card_place'] = self.ev(pp, """async()=>{ """ + W + """
             const y=emptyRace('昨天的路跑','road_running','registered',addDaysStr(todayISO(),-1)); state.races.push(y); await persist(); renderAll(); await wait(200);
@@ -9299,7 +9312,7 @@ class V48RaceBgm(V47DailyQuote):
               if(!txt.includes(key[l])||!txt.includes('Spotify')||!txt.includes('30')||!txt.includes('intl-ja')) bad.push(l);
               document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(100); }
             setLang('zh'); await __wait(80); if(bad.length) console.log('v48: help',bad.join(' | ')); return bad.length===0; }""")
-        c['version_is_v4_8_0'] = self.ev(pg, "()=>APP_VERSION==='v4.8.0'")
+        # 版本號的檢查跟著最新的群組走，v4.9.0 起在 v49
         ctx.close()
         # ================= 手機各寬度 × 中日英 × 三種字級 =================
         FIT = r"""async()=>{ const S=__SP, bad=[];
@@ -9344,6 +9357,699 @@ class V48RaceBgm(V47DailyQuote):
         lctx.close()
 
 
+# ---------------------------------------------------------------------------
+# v4.9.0：隱私權政策與使用條款
+# ---------------------------------------------------------------------------
+PRIVACY_PATH = os.path.join(os.path.dirname(os.path.abspath(APP)), 'privacy', 'index.html')
+PRIVACY_URL = 'file://' + PRIVACY_PATH
+
+# App 會連到的外部服務（字型、程式庫、地圖、天氣、播放器、雲端）。index.html 多了一個這裡沒有的網域，
+# 測試就會失敗——提醒先把它寫進隱私權政策第 2 節，再加到這張表
+PRIVACY_SERVICE_OF_HOST = (
+    ('fonts.googleapis.com', 'Google Fonts'), ('fonts.gstatic.com', 'Google Fonts'),
+    ('cdn.jsdelivr.net', 'jsDelivr'), ('unpkg.com', 'unpkg'),
+    ('www.gstatic.com', 'Firebase'), ('firestore.googleapis.com', 'Firebase'),
+    ('tile.openstreetmap.org', 'OpenStreetMap'), ('tile.opentopomap.org', 'OpenTopoMap'),
+    ('open-meteo.com', 'Open-Meteo'), ('open.spotify.com', 'Spotify'),
+)
+
+
+def app_request_hosts(html):
+    """index.html 自己會發出請求的網域。只算載入程式、樣式、字型、圖磚、API、播放器這些；
+    使用者點了才離開的連結（官網、名言出處、Google 表單）不算，那些不是我們送出的資料。"""
+    pats = [r'<script src="(https://[^"]+)"', r'<link href="(https://[^"]+)"',
+            r"(?:script\.src|cssLink\.href)='(https://[^']+)'", r"const XLSX_SRC='(https://[^']+)'",
+            r'from "(https://[^"]+)"', r"L\.tileLayer\(\s*'(https://[^']+)'",
+            r"fetch\('(https://[^']+)'", r"const url=`(https://[^`$]+)", r"`(https://open\.spotify\.com/embed/)"]
+    hosts = set()
+    for pat in pats:
+        for u in re.findall(pat, html):
+            hosts.add(re.sub(r'^https://', '', u).split('/')[0].lower())
+    return hosts
+
+
+PRIVACY_PAGE_JS = r"""
+window.__visible=()=>document.body.innerText;
+window.__shown=sel=>[...document.querySelectorAll(sel)].filter(e=>getComputedStyle(e).display!=='none'&&e.getClientRects().length);
+window.__pick=async l=>{ document.querySelector('[data-set-lang="'+l+'"]').click(); await new Promise(r=>setTimeout(r,30)); };
+"""
+
+
+class V49Privacy(V48RaceBgm):
+    """v4.9.0：隱私權政策與使用條款。獨立頁面 privacy/：中日英、沿用 App 的深淺色與字級、不載入任何外部資源、
+    內容涵蓋 Spotify 嵌入條款 V.5–V.6 要求的每一項，也跟程式實際連到的服務、保存天數對得上。App 裡頭像選單、
+    登入按鈕下、Spotify 播放器下、使用說明、公開連結頁都連過去，網址帶目前的語言；Service Worker 不再把
+    同一個網站底下的其他頁面存成 App 的離線快取。"""
+
+    ECHO = ('v49:',)
+
+    def _priv(self, browser, url=PRIVACY_URL, viewport=None, locale='en-US', color_scheme='light', init=None):
+        ctx = browser.new_context(viewport=viewport or {'width': 390, 'height': 844}, locale=locale,
+                                  color_scheme=color_scheme, is_mobile=True, has_touch=True)
+        if init:
+            ctx.add_init_script(init)
+        pg = ctx.new_page()
+        pg.on('pageerror', lambda e: self.errors.append('privacy: ' + str(e)))
+        pg.on('console', self._echo)
+        self.priv_requests = []
+        pg.on('request', lambda r: self.priv_requests.append(r.url))
+        pg.goto(url)
+        pg.wait_for_timeout(250)
+        pg.add_script_tag(content=FIELD_FRAME_JS + WALL_SEED_JS + PRIVACY_PAGE_JS)
+        return ctx, pg
+
+    def _sw_check(self, browser):
+        """開過 privacy/ 之後，離線開 App 還是 App（v4.8.0 以前會變成政策頁）。
+        SW 不能在 file:// 註冊：起一個本機伺服器，「離線」就是把伺服器關掉——Playwright 的
+        set_offline 攔不到 Service Worker 自己送出的請求，用它測不出這個問題。"""
+        import http.server, socketserver, threading, functools
+        directory = os.path.dirname(os.path.abspath(APP))
+
+        class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *a, **k):
+                pass
+        socketserver.TCPServer.allow_reuse_address = True
+        srv = socketserver.TCPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=directory))
+        base = f'http://127.0.0.1:{srv.server_address[1]}/'
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        ok = False
+        ctx = full_mode_context(browser, viewport={'width': 390, 'height': 844}, service_workers='allow')
+        try:
+            pg = ctx.new_page()
+            pg.on('pageerror', lambda e: self.errors.append('sw: ' + str(e)))
+            pg.goto(base + 'index.html')
+            pg.wait_for_timeout(800)
+            pg.evaluate("async()=>{ await navigator.serviceWorker.ready; await new Promise(r=>setTimeout(r,1500)); }")
+            pg.reload()
+            pg.wait_for_timeout(800)
+            controlled = pg.evaluate('!!navigator.serviceWorker.controller')
+            pg.goto(base + 'privacy/?lang=en')
+            pg.wait_for_timeout(500)
+            on_privacy = pg.title().startswith('Privacy Policy')
+            cached_app = pg.evaluate(r"""async()=>{ const key=new URL('/index.html',location.origin).href;
+                for(const n of await caches.keys()){ const r=await (await caches.open(n)).match(key);
+                  if(r) return /<title>賽事紀錄<\/title>/.test(await r.text()); } return null; }""")
+            srv.shutdown()
+            srv.server_close()
+            srv = None
+            pg.goto(base + 'index.html')
+            pg.wait_for_timeout(1500)
+            offline_app = pg.evaluate("()=>typeof APP_VERSION!=='undefined'&&!!document.getElementById('app-version')")
+            ok = bool(controlled and on_privacy and cached_app and offline_app)
+            if not ok:
+                print('    v49: sw', controlled, on_privacy, cached_app, offline_app)
+        except Exception as exc:                      # noqa: BLE001
+            print('    v49: sw ⚠', str(exc).split('\n')[0][:200])
+        finally:
+            ctx.close()
+            if srv:
+                srv.shutdown()
+                srv.server_close()
+        return ok
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        app_html = open(APP, encoding='utf-8').read()
+        priv = open(PRIVACY_PATH, encoding='utf-8').read() if os.path.exists(PRIVACY_PATH) else ''
+        # ================= 政策頁本身 =================
+        c['privacy_page_deployed_next_to_app'] = bool(priv)
+        # 講隱私權的頁面本身不再把訪客送去第三方：沒有外部字型、樣式、程式、圖片（<a> 連結、canonical 不算）
+        c['privacy_page_source_has_no_external_resources'] = bool(priv) and not re.search(
+            r'<(?:script|img|iframe|link)\b[^>]*\b(?:src|href)="https?://(?!ai-sub3\.github\.io/Race-Day/privacy/")|@import|url\(\s*["\']?https?:', priv)
+        # 聯絡管道：App 裡的意見回饋表單，同一個網址（表單換了，兩邊要一起換）
+        fb = re.search(r"const FEEDBACK_FORM_URL='([^']+)'", app_html)
+        fb_links = re.findall(r'class="js-feedback" href="([^"]+)"', priv)
+        c['privacy_contact_is_the_app_feedback_form'] = bool(fb) and len(fb_links) >= 9 and all(u == fb.group(1) for u in fb_links)
+        names, unknown = [], []
+        for h in sorted(app_request_hosts(app_html)):
+            n = next((name for suf, name in PRIVACY_SERVICE_OF_HOST if h == suf or h.endswith('.' + suf)), None)
+            (names.append(n) if n else unknown.append(h))
+        if unknown:
+            print('    v49: 政策裡沒寫到的外部網域', unknown)
+        trash = re.search(r'const TRASH_RETENTION_DAYS=(\d+)', app_html)
+        cover = re.search(r'function processCoverImage[\s\S]{0,900}?const maxDim=(\d+)', app_html)
+
+        ctx, pg = self._priv(browser, PRIVACY_URL + '?lang=zh')
+        c['privacy_page_requests_nothing_external'] = bool(self.priv_requests) and all(u.startswith('file://') for u in self.priv_requests)
+        if not c['privacy_page_requests_nothing_external']:
+            print('    v49: external', [u for u in self.priv_requests if not u.startswith('file://')][:5])
+        # 三種語言一一對應：每一節都有中日英三份，小標、條列、服務、連結的數目一樣（少翻一段就抓得到）
+        c['privacy_three_languages_same_structure'] = self.ev(pg, r"""()=>{ const bad=[];
+            for(const id of ['summary','privacy','cookies','terms','contact']){ const sec=document.getElementById(id);
+              if(!sec){ bad.push('no '+id); continue; }
+              const blocks=[...sec.children].filter(e=>e.classList.contains('l10n'));
+              const langs=blocks.map(b=>b.getAttribute('lang')).sort().join(',');
+              if(langs!=='en,ja,zh-Hant') bad.push(id+' langs '+langs);
+              const sig=b=>['h3','li','dt','a'].map(t=>b.querySelectorAll(t).length).join('/');
+              if(new Set(blocks.map(sig)).size!==1) bad.push(id+' '+blocks.map(b=>b.lang+':'+sig(b)).join(' ')); }
+            if(bad.length) console.log('v49: structure',bad.join(' | ')); return bad.length===0; }""")
+        # Spotify 嵌入條款 V.5–V.6 要的每一項，三種語言都寫到：依政策處理、蒐集什麼、怎麼用與分享、
+        # 自己有沒有用 Cookie、允許第三方設 Cookie 蒐集瀏覽活動、怎麼管理 Cookie；還有使用者條款
+        c['privacy_covers_spotify_widget_terms_each_language'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const need={zh:['依照本政策','我們蒐集的資料','使用目的','誰會接觸到你的資料','本服務自己不設定 Cookie','我們允許下列第三方在你的瀏覽器設定 Cookie','瀏覽活動','管理 Cookie 的方式','Google Analytics','使用條款'],
+              ja:['本ポリシーに従います','収集するデータ','利用目的','データにアクセスできる人','Cookie を設定しません','第三者があなたのブラウザに Cookie を設定','閲覧活動','Cookie の管理方法','Google アナリティクス','利用規約'],
+              en:['in accordance with this policy','Data we collect','How we use data','Who can access your data',"doesn't set cookies",'We allow the third parties below to place cookies','browsing activity','Managing cookies','Google Analytics','Terms of Use']};
+            for(const l of ['zh','ja','en']){ await __pick(l); const txt=__visible(); need[l].forEach(k=>{ if(!txt.includes(k)) bad.push(l+' '+k); }); }
+            if(bad.length) console.log('v49: widget terms',bad.join(' | ')); return bad.length===0; }""")
+        # 跟程式對得上：App 會連到的每個外部服務都寫到（三種語言）；保存天數、封面縮小的像素跟程式一樣
+        c['privacy_lists_every_service_the_app_calls'] = (not unknown) and bool(names) and self.ev(pg, r"""async(names)=>{ const bad=[];
+            for(const l of ['zh','ja','en']){ await __pick(l); const txt=__visible(); names.forEach(n=>{ if(!txt.includes(n)) bad.push(l+' '+n); }); }
+            if(bad.length) console.log('v49: services',bad.join(' | ')); return bad.length===0; }""", sorted(set(names)))
+        c['privacy_numbers_match_app_code'] = bool(trash and cover) and self.ev(pg, r"""async(nums)=>{ const bad=[];
+            for(const l of ['zh','ja','en']){ await __pick(l); const txt=__visible(); nums.forEach(n=>{ if(!txt.includes(n)) bad.push(l+' '+n); }); }
+            if(bad.length) console.log('v49: numbers',bad.join(' | ')); return bad.length===0; }""", [trash.group(1), cover.group(1)] if trash and cover else [])
+        # 切語言：只換這一頁，網址的 ?lang= 跟著改（#錨點留著），App 的語言設定不動
+        c['privacy_switcher_changes_this_page_only'] = self.ev(pg, r"""async()=>{
+            localStorage.setItem('lang-pref-v1','zh'); location.hash='#cookies'; await new Promise(r=>setTimeout(r,30));
+            await __pick('en');
+            const d=document.documentElement, pressed=[...document.querySelectorAll('[data-set-lang]')].map(b=>b.dataset.setLang+':'+b.getAttribute('aria-pressed')).join(',');
+            const ok=d.dataset.lang==='en'&&d.lang==='en'&&/[?&]lang=en(&|$)/.test(location.search)&&!/lang=zh/.test(location.search)&&location.hash==='#cookies'
+              &&pressed==='zh:false,ja:false,en:true'&&localStorage.getItem('lang-pref-v1')==='zh'&&document.title.startsWith('Privacy Policy')
+              &&__shown('.l10n[lang="zh-Hant"]').length===0&&__shown('.l10n[lang="en"]').length>10;
+            if(!ok) console.log('v49: switch',d.dataset.lang,location.search,location.hash,pressed,localStorage.getItem('lang-pref-v1'),document.title); return ok; }""")
+        ctx.close()
+        # 用哪種語言打開：網址的 ?lang=（App 的連結都會帶）→ App 存的語言 → 瀏覽器語言（中日以外用英文）
+        lang_ok = []
+        clear = "try{localStorage.removeItem('lang-pref-v1')}catch(e){}"
+        for url, locale, init, want in (
+                (PRIVACY_URL + '?lang=ja', 'en-US', None, 'ja'),
+                (PRIVACY_URL + '?lang=en', 'zh-TW', None, 'en'),
+                (PRIVACY_URL, 'en-US', "try{localStorage.setItem('lang-pref-v1','ja')}catch(e){}", 'ja'),
+                (PRIVACY_URL, 'ja-JP', clear, 'ja'),
+                (PRIVACY_URL, 'zh-TW', clear, 'zh'),
+                (PRIVACY_URL, 'de-DE', clear, 'en'),
+                (PRIVACY_URL + '?lang=xx', 'zh-TW', clear, 'zh')):
+            lctx, lp = self._priv(browser, url, locale=locale, init=init)
+            got = self.ev(lp, """()=>{ const d=document.documentElement, map={zh:'zh-Hant',ja:'ja',en:'en'};
+                return [d.dataset.lang, d.lang, document.title, __shown('.l10n').every(e=>e.lang===map[d.dataset.lang])]; }""")
+            ok = bool(got) and got[0] == want and got[1] == {'zh': 'zh-Hant', 'ja': 'ja', 'en': 'en'}[want] and got[3]
+            if not ok:
+                print('    v49: lang', url.split('/')[-1], locale, got)
+            lang_ok.append(ok)
+            lctx.close()
+        c['privacy_language_from_link_then_app_then_browser'] = all(lang_ok)
+        # 深淺色、字級沿用 App 的設定（App 選了淺色，系統深色也維持淺色）；沒設定就跟系統
+        th_ok = []
+        for scheme, init, want_theme, want_font, want_px in (
+                ('light', "localStorage.setItem('theme-pref-v1','dark');localStorage.setItem('font-scale-v1','large');", 'dark', 'large', '18.4px'),
+                ('dark', "localStorage.setItem('theme-pref-v1','light');", 'light', None, '16px'),
+                ('dark', "localStorage.removeItem('theme-pref-v1');", 'dark', None, '16px'),
+                ('light', "localStorage.setItem('font-scale-v1','small');", 'light', 'small', '14.4px')):
+            tctx, tp = self._priv(browser, PRIVACY_URL + '?lang=zh', color_scheme=scheme, init='try{' + init + '}catch(e){}')
+            got = self.ev(tp, """()=>[document.documentElement.dataset.theme, document.documentElement.dataset.font||null,
+                getComputedStyle(document.body).backgroundColor, getComputedStyle(document.body).fontSize]""")
+            bg = 'rgb(13, 16, 19)' if want_theme == 'dark' else 'rgb(230, 233, 230)'
+            ok = bool(got) and got[0] == want_theme and got[1] == want_font and got[2] == bg and got[3] == want_px
+            if not ok:
+                print('    v49: theme', scheme, init, got)
+            th_ok.append(ok)
+            tctx.close()
+        c['privacy_follows_app_theme_and_font_size'] = all(th_ok)
+        for w in (320, 390):
+            fctx, fp = self._priv(browser, PRIVACY_URL + '?lang=zh', viewport={'width': w, 'height': 760})
+            c[f'privacy_fits_{w}_every_language_theme_font'] = self.ev(fp, r"""async()=>{ const bad=[], d=document.documentElement;
+                for(const th of ['light','dark']) for(const fs of ['small',null,'large']) for(const l of ['zh','ja','en']){
+                  d.dataset.theme=th; if(fs) d.dataset.font=fs; else delete d.dataset.font; await __pick(l);
+                  const tag=l+' '+th+' '+(fs||'medium');
+                  if(d.scrollWidth>d.clientWidth) bad.push(tag+' hscroll '+d.scrollWidth);
+                  const br=document.querySelector('.brand').getBoundingClientRect(), lr=document.querySelector('.lang').getBoundingClientRect();
+                  if(br.right>lr.left+0.5) bad.push(tag+' brand under switcher');
+                  if(lr.right>d.clientWidth+0.5) bad.push(tag+' switcher off screen');
+                  const vis=document.querySelector('.brand>span'); if(vis&&vis.getBoundingClientRect().width>1&&vis.scrollWidth>vis.clientWidth+1) bad.push(tag+' brand cut');
+                  document.querySelectorAll('.lang button').forEach(b=>{ if(b.getBoundingClientRect().height<31.5) bad.push(tag+' small button'); });
+                  document.querySelectorAll('.card').forEach(e=>{ if(e.scrollWidth>e.clientWidth+1) bad.push(tag+' card overflow '+e.id); }); }
+                d.dataset.theme='light'; delete d.dataset.font;
+                if(bad.length) console.log('v49: fit '+innerWidth,bad.slice(0,8).join(' | ')); return bad.length===0; }""")
+            if w == 390:
+                c['privacy_text_contrast_light_dark'] = self.ev(fp, r"""async()=>{ const bad=[], d=document.documentElement; await __pick('zh');
+                  for(const th of ['light','dark']){ d.dataset.theme=th; await new Promise(r=>setTimeout(r,20));
+                    ['h1 .l10n[lang="zh-Hant"]','.updated .l10n[lang="zh-Hant"]','#privacy p','#privacy .note','#cookies .svc dd','#cookies .refs a',
+                     '#summary a','.toc a','.lang button[aria-pressed="true"]','.lang button[aria-pressed="false"]','footer a','footer .wrap>span'].forEach(s=>{
+                      const e=document.querySelector(s); if(!e){ bad.push(th+' missing '+s); return; }
+                      const cr=__textCr(e); if(cr<4.5) bad.push(th+' '+s+' '+cr.toFixed(2)); }); }
+                  d.dataset.theme='light';
+                  if(bad.length) console.log('v49: contrast',bad.join(' | ')); return bad.length===0; }""")
+                # 播放器下那行說明連到 #cookies：跳過去不會被固定在上面的頁首蓋住
+                c['privacy_anchor_not_hidden_under_header'] = self.ev(fp, r"""async()=>{
+                  location.hash=''; window.scrollTo(0,0); await new Promise(r=>setTimeout(r,30));
+                  location.hash='#cookies'; await new Promise(r=>setTimeout(r,150));
+                  const top=document.getElementById('cookies').getBoundingClientRect().top, hb=document.querySelector('.top').getBoundingClientRect().bottom;
+                  const ok=top>=hb-1&&top<=hb+40; if(!ok) console.log('v49: anchor',top,hb); return ok; }""")
+            fctx.close()
+
+        # ================= App 裡的入口 =================
+        ctx, pg = self._bgm_ctx(browser, viewport={'width': 390, 'height': 844}, touch=True)
+        c['menu_link_below_feedback_follows_language'] = self.ev(pg, r"""async()=>{ const bad=[], want={zh:'隱私權政策與使用條款',ja:'プライバシーポリシーと利用規約',en:'Privacy Policy & Terms'};
+            for(const l of ['zh','ja','en','zh']){ setLang(l); await __wait(60); const a=document.getElementById('btn-privacy');
+              if(!a||a.tagName!=='A'){ bad.push('not a link'); break; }
+              if(a.getAttribute('href')!=='privacy/?lang='+l) bad.push(l+' href '+a.getAttribute('href'));
+              if(a.textContent.trim()!==want[l]) bad.push(l+' text '+a.textContent.trim());
+              if(a.target!=='_blank'||!/noopener/.test(a.rel)) bad.push('target/rel');
+              if(!a.closest('#account-menu-panel')) bad.push('not in menu'); }
+            const fbk=document.getElementById('btn-feedback'), a=document.getElementById('btn-privacy');
+            if(!a||!(fbk.compareDocumentPosition(a)&Node.DOCUMENT_POSITION_FOLLOWING)) bad.push('not below feedback');
+            if(bad.length) console.log('v49: menu',bad.join(' | ')); return bad.length===0; }""")
+        # 登入之前看得到同意的是什麼：一般的登入按鈕、有資料時的提醒卡，兩種下面都有那行小字；登入後就不再顯示
+        c['sign_in_note_under_both_sign_in_entries'] = self.ev(pg, r"""async()=>{ const bad=[], prev={cloud:window.__cloud,user:state.user,known:authKnown};
+            window.__cloud=Object.assign({},prev.cloud||{},{enabled:true}); state.user=null;
+            const look=tag=>{ renderAuthArea(); const area=document.getElementById('auth-area'), btn=area.querySelector('#btn-signin'), note=area.querySelector('.auth-legal');
+              if(!btn){ bad.push(tag+' no sign-in button'); return; }
+              if(!note){ bad.push(tag+' no note'); return; }
+              if(!(btn.compareDocumentPosition(note)&Node.DOCUMENT_POSITION_FOLLOWING)) bad.push(tag+' note above button');
+              const a=note.querySelector('a'); if(!a||a.getAttribute('href')!=='privacy/?lang=zh'||a.target!=='_blank') bad.push(tag+' link '+(a&&a.getAttribute('href'))); };
+            authKnown=true; look('nudge'); if(!document.querySelector('#auth-area .backup-nudge')) bad.push('nudge not shown');
+            authKnown=false; look('button');
+            state.user={uid:'u1',displayName:'Aaron'}; renderAuthArea();
+            if(document.querySelector('#auth-area .auth-legal')) bad.push('still shown when signed in');
+            window.__cloud=prev.cloud; state.user=prev.user; authKnown=prev.known; renderAuthArea();
+            if(bad.length) console.log('v49: signin',bad.join(' | ')); return bad.length===0; }""")
+        c['sign_in_note_translated'] = self.ev(pg, r"""async()=>{ const bad=[], prev={cloud:window.__cloud,user:state.user,known:authKnown};
+            window.__cloud=Object.assign({},prev.cloud||{},{enabled:true}); state.user=null; authKnown=false;
+            const want={zh:'登入即表示你同意使用條款與隱私權政策。',ja:'ログインすると、利用規約とプライバシーポリシーに同意したものとみなされます。',en:'By signing in, you agree to the Terms of Use and Privacy Policy.'};
+            for(const l of ['ja','en','zh']){ setLang(l); await __wait(60); const n=document.querySelector('#auth-area .auth-legal');
+              if(!n||n.textContent.trim()!==want[l]) bad.push(l+' '+(n&&n.textContent.trim()));
+              else if(n.querySelector('a').getAttribute('href')!=='privacy/?lang='+l) bad.push(l+' href'); }
+            window.__cloud=prev.cloud; state.user=prev.user; authKnown=prev.known; renderAuthArea();
+            if(bad.length) console.log('v49: signin lang',bad.join(' | ')); return bad.length===0; }""")
+        # 播放器一載入 Spotify 就會設 Cookie：說明放在播放器正下方，連到政策的 Cookie 那一節
+        c['player_has_cookie_note_linking_cookies_section'] = self.ev(pg, r"""async()=>{
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open(); await __wait(150);
+            const box=__bgm(), f=__frame(), n=box&&box.querySelector('.dh-bgm-legal'), a=n&&n.querySelector('a');
+            const ok=!!(box&&f&&n&&a)&&box.dataset.bgmState==='player'&&!!(f.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING)
+              &&a.getAttribute('href')==='privacy/?lang=zh#cookies'&&a.target==='_blank'&&/noopener/.test(a.rel)
+              &&n.textContent.includes('Spotify')&&n.textContent.includes('Cookie')&&box.querySelectorAll('.dh-bgm-legal').length===1;
+            if(!ok) console.log('v49: note',box&&box.outerHTML.slice(0,300)); return ok; }""")
+        # 播放器照 Spotify 給的樣子顯示（嵌入條款）：說明寫在外面、不蓋到播放器，播放器的高度、寬度不變
+        c['cookie_note_outside_player_unaltered'] = self.ev(pg, r"""async()=>{
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open(); await __wait(150);
+            const f=__frame(), b=__bgm(), n=b&&b.querySelector('.dh-bgm-legal'); if(!f||!n) return false;
+            const fr=f.getBoundingClientRect(), nr=n.getBoundingClientRect(), br=b.getBoundingClientRect();
+            const ok=n.parentElement===b&&nr.top>=fr.bottom-0.5&&Math.round(fr.height)===152&&Math.abs(fr.width-br.width)<=1;
+            if(!ok) console.log('v49: unaltered',fr.height,fr.width,br.width,nr.top,fr.bottom); return ok; }""")
+        # 只有真的載入播放器才需要說明：其他音樂平台、短網址、離線都只放連結，不會載入 Spotify；連上網路後播放器和說明一起回來
+        no_note = self.ev(pg, r"""async()=>{ const bad=[];
+            for(const url of ['https://music.apple.com/tw/album/run/1234567890','https://spotify.link/AbCdEf1234']){
+              await __setLinks([{type:'music',url}]); await __open(); await __wait(120); const b=__bgm();
+              if(!b||b.dataset.bgmState!=='link') bad.push('state '+url+' '+(b&&b.dataset.bgmState));
+              else if(b.querySelector('.dh-bgm-legal')) bad.push('note on link card '+url); }
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track2}]);
+            if(bad.length) console.log('v49: link cards',bad.join(' | ')); return bad.length===0; }""")
+        ctx.set_offline(True)
+        offline = self.ev(pg, r"""async()=>{ await __wait(100); await __open(); await __wait(150); const b=__bgm();
+            const ok=!!b&&b.dataset.bgmState==='offline'&&!b.querySelector('.dh-bgm-legal'); if(!ok) console.log('v49: offline',b&&b.dataset.bgmState); return ok; }""")
+        ctx.set_offline(False)
+        back = self.ev(pg, r"""async()=>{ await __wait(300); const b=__bgm(); const ok=!!b&&b.dataset.bgmState==='player'&&!!b.querySelector('.dh-bgm-legal');
+            if(!ok) console.log('v49: back online',b&&b.dataset.bgmState); return ok; }""")
+        c['cookie_note_only_when_player_loads'] = bool(no_note and offline and back)
+        # 改欄位、整頁重畫：說明還在、只有一行，播放器沒被重新載入（支援 moveBefore 的瀏覽器）
+        c['cookie_note_survives_header_redraws'] = self.ev(pg, r"""async()=>{
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open(); await __wait(150);
+            const before=__frame(); updateDetailHeaderBits(); await __wait(60); renderDetail(); await __wait(120);
+            const b=__bgm(), n=b?b.querySelectorAll('.dh-bgm-legal'):[], f=__frame();
+            const kept=typeof Element.prototype.moveBefore!=='function'||f===before;
+            const ok=!!b&&n.length===1&&!!f&&!!(f.compareDocumentPosition(n[0])&Node.DOCUMENT_POSITION_FOLLOWING)&&kept;
+            if(!ok) console.log('v49: redraw',n.length,!!f,kept); return ok; }""")
+        c['cookie_note_translated'] = self.ev(pg, r"""async()=>{ const bad=[], want={zh:['播放器由 Spotify 提供','隱私權政策'],ja:['プレーヤーは Spotify が提供','プライバシーポリシー'],en:['This player is provided by Spotify','Privacy Policy']};
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]);
+            for(const l of ['ja','en','zh']){ setLang(l); await __wait(80); await __open(); await __wait(120); const n=__bgm()&&__bgm().querySelector('.dh-bgm-legal'), a=n&&n.querySelector('a');
+              if(!a||!n.textContent.includes(want[l][0])||a.textContent!==want[l][1]||a.getAttribute('href')!=='privacy/?lang='+l+'#cookies') bad.push(l+' '+(n&&n.textContent)); }
+            if(bad.length) console.log('v49: note lang',bad.join(' | ')); return bad.length===0; }""")
+        c['cookie_note_contrast_light_dark'] = self.ev(pg, r"""async()=>{ const bad=[];
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]); await __open();
+            for(const th of ['light','dark']){ applyTheme(th); await __wait(150);
+              for(const s of ['.dh-bgm-legal','.dh-bgm-legal a']){ const e=document.querySelector('.detail-header '+s); if(!e){ bad.push(th+' missing '+s); continue; }
+                const cr=__textCr(e); if(cr<4.5) bad.push(th+' '+s+' '+cr.toFixed(2)); } }
+            applyTheme('light'); await __wait(80);
+            if(bad.length) console.log('v49: note contrast',bad.join(' | ')); return bad.length===0; }""")
+        c['help_links_policy_three_languages'] = self.ev(pg, r"""async()=>{ const bad=[], want={zh:'隱私權政策與使用條款',ja:'プライバシーポリシーと利用規約',en:'Privacy Policy & Terms of Use'};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(80); openHelpModal(); await __wait(200);
+              const a=[...document.querySelectorAll('#help-modal a')].find(x=>x.getAttribute('href')==='privacy/?lang='+l);
+              if(!a||a.textContent.trim()!==want[l]||a.target!=='_blank'||!/noopener/.test(a.rel)) bad.push(l+' '+(a&&a.textContent));
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(100); }
+            setLang('zh'); await __wait(60); if(bad.length) console.log('v49: help',bad.join(' | ')); return bad.length===0; }""")
+        # 版本號的檢查跟著最新的群組走，v4.10.0 起在 v410
+        # 公開連結頁（看的人多半沒有帳號）：頁尾也有政策的連結
+        c['public_page_footer_links_policy'] = self.ev(pg, r"""async()=>{ setLang('en'); await __wait(60);
+            renderPublicShareView({v:1,name:'Test',raceDate:'2026-03-01',startTime:'06:30',sportType:'trail_running',city:'Chiayi',country:'Taiwan',
+              results:{chipTimeSeconds:16000,isPb:false,overallRank:null,ageGroupRank:null},route:{distanceKm:42,elevationGainM:2300,track:[]},performance:{avgHr:null},
+              shoeName:null,fuel:[],coverThumb:null,photos:[],og:null});
+            await __wait(60); const a=[...document.querySelectorAll('.pubview-foot a')].find(x=>x.getAttribute('href')==='privacy/?lang=en');
+            const ok=!!a&&a.textContent==='Privacy Policy & Terms'&&a.target==='_blank';
+            if(!ok) console.log('v49: pubview',(document.querySelector('.pubview-foot')||{}).innerHTML); return ok; }""")
+        ctx.close()
+        # 手機最窄的 320px：選單裡的連結、登入小字、播放器下的說明，三種語言、三種字級都放得下
+        mctx, mp = self._bgm_ctx(browser, viewport={'width': 320, 'height': 700}, touch=True)
+        c['menu_and_notes_fit_320_every_language_font_size'] = self.ev(mp, r"""async()=>{ const bad=[], prev={cloud:window.__cloud,user:state.user,known:authKnown};
+            window.__cloud=Object.assign({},prev.cloud||{},{enabled:true}); state.user=null; authKnown=false;
+            await __setLinks([{type:'music',url:'https://open.spotify.com/track/'+__SP.track}]);
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(60);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); await __wait(40); const tag=l+' '+fs;
+                await __open(); window.scrollTo(0,0); await __wait(80);
+                const h=document.querySelector('.detail-header').getBoundingClientRect(), n=document.querySelector('.dh-bgm-legal');
+                if(!n) bad.push(tag+' no note'); else { const r=n.getBoundingClientRect(); if(r.left<h.left-0.5||r.right>h.right+0.5) bad.push(tag+' note outside'); if(n.scrollWidth>n.clientWidth+1) bad.push(tag+' note overflow'); }
+                if(document.documentElement.scrollWidth>innerWidth) bad.push(tag+' hscroll');
+                document.getElementById('btn-account-menu').click(); await __wait(150);
+                const panel=document.getElementById('account-menu-panel');
+                if(panel.hidden){ bad.push(tag+' menu closed'); continue; }
+                const pr=panel.getBoundingClientRect();
+                for(const e of [document.getElementById('btn-privacy'),panel.querySelector('.auth-legal')]){ if(!e){ bad.push(tag+' missing'); continue; }
+                  const r=e.getBoundingClientRect(); if(r.left<pr.left-0.5||r.right>pr.right+0.5) bad.push(tag+' outside '+(e.id||e.className));
+                  if(e.scrollWidth>e.clientWidth+1) bad.push(tag+' overflow '+(e.id||e.className)); }
+                if(pr.right>innerWidth+0.5||pr.left<-0.5) bad.push(tag+' panel off screen');
+                document.getElementById('btn-account-menu').click(); await __wait(100); } }
+            window.__cloud=prev.cloud; state.user=prev.user; authKnown=prev.known; setLang('zh'); applyFontScale('medium');
+            if(bad.length) console.log('v49: fit320',bad.slice(0,8).join(' | ')); return bad.length===0; }""")
+        mctx.close()
+        # ================= Service Worker =================
+        c['sw_other_pages_do_not_replace_offline_app'] = self._sw_check(browser)
+
+
+# ---------------------------------------------------------------------------
+# v4.10.0：訓練頁改版（設計稿 A＋D 的備戰卡）
+# ---------------------------------------------------------------------------
+# 範例：今天 2026-10-03（六），12/13 有一場已報名的全馬（週跑量目標 56 km）；本週 49.6 km、上週 47.9 km
+TR410_SEED_JS = r"""
+// v4.10.0 畫面檢查用的範例：今天 2026-10-03（六），12/13 有一場已報名的全馬（週跑量目標 56 km）
+window.__seed410=async function(opts){ opts=opts||{};
+  const loop=(n,rx,ry,wob)=>{ const a=[]; for(let i=0;i<100;i++){ const t=i/100*Math.PI*2; a.push(+(0.5+rx*Math.cos(t)+wob*Math.sin(3*t)).toFixed(3),+(0.5+ry*Math.sin(t)+wob*Math.cos(2*t)).toFixed(3)); } return a; };
+  shoes.length=0;
+  shoes.push({id:'sA',name:'Trainer A',targetKm:600,isRetired:false,trainingKm:0},{id:'sB',name:'Racer B',targetKm:400,isRetired:false,trainingKm:0});
+  const T=[]; let n=0;
+  const add=(date,time,km,sec,hr,elev,name,shoe,sport)=>T.push(migrateTraining({id:'t'+(n++),date,startTime:time,sport:sport||'run',name:name||'',
+    distanceKm:km,durationSeconds:sec,elevationGainM:elev,avgHr:hr,shoeId:shoe===undefined?'sA':shoe,thumb:loop(n,0.32+((n*7)%5)/50,0.22+((n*3)%5)/40,0.05),fingerprint:'fp'+n}));
+  // 本週
+  add('2026-10-03','06:12',21.4,7447,147,312,'週六長跑');
+  add('2026-10-01','06:20',7.2,2592,131,40,'恢復跑');
+  add('2026-09-30','18:40',12.6,3667,163,65,'節奏跑','sB');
+  add('2026-09-29','06:05',8.4,2948,138,30,'輕鬆跑');
+  // 上週（47.9 km）
+  add('2026-09-26','06:10',19.5,6922,149,280,'週六長跑');
+  add('2026-09-24','06:15',6.8,2462,132,35,'恢復跑');
+  add('2026-09-23','18:30',12.0,3540,161,60,'');
+  add('2026-09-22','06:00',9.6,3360,140,42,'');
+  // 再往前 10 週：每週 4 次，週末長跑
+  const weekly=[41.2,38.0,44.6,74.7,52.0,45.1,33.6,49.3,47.0,30.2];   // 新到舊
+  weekly.forEach((tot,i)=>{ const mon=addDaysStr('2026-09-21',-7*(i+1));
+    const long=Math.round(tot*0.42*10)/10, a=Math.round(tot*0.22*10)/10, b=Math.round(tot*0.2*10)/10, c=+(tot-long-a-b).toFixed(1);
+    add(addDaysStr(mon,1),'06:05',a,Math.round(a*350),140,40,'');
+    add(addDaysStr(mon,2),'18:40',b,Math.round(b*300),158,50,'');
+    add(addDaysStr(mon,3),'06:20',c,Math.round(c*360),132,30,'');
+    add(addDaysStr(mon,5),'06:10',long,Math.round(long*345),148,250,''); });
+  if(opts.ride) add('2026-10-02','07:00',42.0,5400,128,380,'週五騎車',null,'ride');
+  trainings=T; await persistTrainings();
+  const r=emptyRace('範例全程馬拉松','road_running','registered','2026-12-13');
+  r.id='prep-full'; r.schedule.startTime='06:30'; r.route.distanceKm=42.195; r.location.city='台北市';
+  r.goals=[{tier:'A',targetTimeSeconds:14100},{tier:'B',targetTimeSeconds:14340},{tier:'C',targetTimeSeconds:null}];
+  if(opts.goal!==false) r.trainingPlan.weeklyMileageTargetKm=56;
+  state.races=state.races.filter(x=>x.id!=='prep-full'); if(opts.race!==false) state.races.push(r);
+  await persist(); renderAll();
+};
+"""
+TR410_JS = r"""
+window.__ov=()=>document.getElementById('training-overlay');
+window.__q=s=>__ov().querySelector(s);
+window.__qa=s=>[...__ov().querySelectorAll(s)];
+window.__open410=async(o)=>{ await __seed410(o); openTrainingOverlay(); await __wait(120); };
+window.__tab=async v=>{ __q('[data-training-period="'+v+'"]').click(); await __wait(80); };
+window.__sport=async v=>{ __q('[data-training-sport="'+v+'"]').click(); await __wait(80); };
+window.__px=e=>parseFloat(getComputedStyle(e).fontSize);
+"""
+
+
+class V410Training(V49Privacy):
+    """v4.10.0：訓練頁改版。「本週」：備戰中的賽事卡（已報名／抽籤中、已進入準備期的最近一場；倒數、A／B 目標、
+    賽前第幾週、準備期／減量期）、本週卡（大數字、比上週同期、週目標＝賽事訓練計畫的週跑量、每天的長條）、三格小卡、
+    本週解讀、近 12 週里程；「本月」：每天的長條與近 12 個月；「全部」維持年月收合。兩種以上的運動時可以篩選，
+    不同運動的公里數不相加。字級照設計稿（16／17／24／15，圖表至少 13，都乘 --fs），點擊範圍至少 44px。"""
+
+    ECHO = ('v410:',)
+
+    def _tr(self, browser, viewport=None, touch=True, lang='zh', theme='light', now='2026-10-03T09:00:00'):
+        ctx, pg = self._ctx(browser, viewport=viewport or {'width': 390, 'height': 844}, touch=touch, lang=lang, theme=theme, now=now, seed=False)
+        pg.add_script_tag(content=TR410_SEED_JS + TR410_JS)
+        return ctx, pg
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        c['seed_available'] = bool(TR410_SEED_JS)
+        ctx, pg = self._tr(browser)
+        # ================= 備戰中的賽事卡 =================
+        c['prep_card_shows_nearest_race_in_prep_window'] = self.ev(pg, r"""async()=>{ await __open410();
+            const card=__q('.trp-card'); if(!card) return false;
+            const txt=card.innerText.replace(/\s+/g,' ');
+            const segs=card.querySelectorAll('.trp-seg'), taper=card.querySelectorAll('.trp-seg.is-taper'), now=card.querySelectorAll('.trp-seg.is-now');
+            const past=card.querySelectorAll('.trp-seg.is-past');
+            // 10/3 → 12/13 是 71 天；全馬準備 16 週、減量 3 週；賽前第 11 週＝備戰第 6 週
+            const ok=txt.includes('範例全程馬拉松')&&/\b71\b/.test(card.querySelector('.trp-days').innerText)&&txt.includes('A 3:55:00')&&txt.includes('B 3:59:00')
+              &&txt.includes('賽前第 11 週')&&txt.includes('備戰第 6 週 / 共 16 週')&&txt.includes('12/13（日）06:30 起跑')&&txt.includes('42.2 km')
+              &&segs.length===16&&taper.length===3&&now.length===1&&past.length===5&&[...segs].indexOf(now[0])===5
+              &&card.compareDocumentPosition(__q('.trw-card'))&Node.DOCUMENT_POSITION_FOLLOWING;
+            if(!ok) console.log('v410: prep',txt.slice(0,200),segs.length,taper.length,past.length); return !!ok; }""")
+        c['prep_card_only_for_committed_races_in_window'] = self.ev(pg, r"""async()=>{ const bad=[], r=state.races.find(x=>x.id==='prep-full');
+            const look=async()=>{ refreshTrainingOverlay(); await __wait(40); return __q('.trp-card'); };
+            r.status='considering'; if(await look()) bad.push('considering shown');
+            r.status='lottery_pending'; let c1=await look(); if(!c1||!c1.innerText.includes(labelFor(STATUS_OPTIONS,'lottery_pending','status'))) bad.push('lottery chip');
+            r.status='registered'; r.schedule.raceDate='2027-03-01'; if(await look()) bad.push('outside 16-week window shown');
+            // 最近那場還沒進準備期（10K 準備 6 週），下一場進了：放下一場
+            r.schedule.raceDate='2026-12-13';
+            const tenk=emptyRace('十公里','road_running','registered','2026-11-29'); tenk.id='tenk'; tenk.route.distanceKm=10; state.races.push(tenk);
+            let c2=await look(); if(!c2||!c2.innerText.includes('範例全程馬拉松')) bad.push('should skip race not yet in window');
+            tenk.schedule.raceDate='2026-11-08';   // 5 週後、10K 準備 6 週：進了，而且比較近
+            let c3=await look(); if(!c3||!c3.innerText.includes('十公里')) bad.push('nearest in window');
+            state.races=state.races.filter(x=>x.id!=='tenk'); r.deletedAt=new Date().toISOString(); if(await look()) bad.push('deleted shown');
+            r.deletedAt=null; refreshTrainingOverlay(); await __wait(40);
+            if(bad.length) console.log('v410: prep filter',bad.join(' | ')); return bad.length===0; }""")
+        c['prep_card_opens_race_page'] = self.ev(pg, r"""async()=>{ __q('.trp-card').click(); await __wait(200);
+            const ok=__ov().hidden&&state.selectedId==='prep-full'&&!!currentRace&&currentRace.id==='prep-full';
+            openTrainingOverlay(); await __wait(80); return ok; }""")
+        # ================= 本週卡 =================
+        c['week_card_total_and_vs_same_days_last_week'] = self.ev(pg, r"""async()=>{
+            const card=__q('.trw-card'), km=card.querySelector('.trw-km b').textContent, chip=card.querySelector('.tr-chip');
+            // 本週一到今天（週六）49.6；上週一到上週六 47.9 → +3.5% 四捨五入 4%
+            const ok=km==='49.6'&&!!chip&&chip.textContent.includes('4%')&&chip.textContent.includes('↑')&&chip.textContent.includes('上週同期')
+              &&card.querySelector('.trw-range').textContent==='9/28 – 10/4';
+            if(!ok) console.log('v410: week',km,chip&&chip.textContent); return ok; }""")
+        c['week_days_today_rest_future'] = self.ev(pg, r"""async()=>{
+            const days=__qa('.trw-day'), vals=days.map(d=>d.querySelector('.trw-day-val').textContent), names=days.map(d=>d.querySelector('.trw-day-name').textContent);
+            const today=days.findIndex(d=>d.classList.contains('is-today'));
+            const ok=days.length===7&&JSON.stringify(names)===JSON.stringify(['一','二','三','四','五','六','日'])
+              &&JSON.stringify(vals)===JSON.stringify(['休','8.4','12.6','7.2','休','21.4','—'])&&today===5&&days[6].classList.contains('is-future');
+            if(!ok) console.log('v410: days',vals.join(','),today); return ok; }""")
+        c['week_goal_from_race_training_plan'] = self.ev(pg, r"""async()=>{
+            const g=__q('.trw-goal'); if(!g) return false; const txt=g.innerText.replace(/\s+/g,' ');
+            const bar=g.querySelector('[role="progressbar"]');
+            const ok=txt.includes('週目標 56 km')&&txt.includes('89%')&&txt.includes('再 6.4 km 達標')&&txt.includes('範例全程馬拉松')&&bar.getAttribute('aria-valuenow')==='89';
+            if(!ok) console.log('v410: goal',txt); return ok; }""")
+        c['week_goal_reached_and_missing'] = self.ev(pg, r"""async()=>{ const bad=[], r=state.races.find(x=>x.id==='prep-full');
+            r.trainingPlan.weeklyMileageTargetKm=40; refreshTrainingOverlay(); await __wait(40);
+            let t1=__q('.trw-goal').innerText; if(!t1.includes('已達標，多跑了 9.6 km')||!t1.includes('124%')) bad.push('over '+t1);
+            r.trainingPlan.weeklyMileageTargetKm=null; refreshTrainingOverlay(); await __wait(40);
+            if(__q('.trw-goal')) bad.push('goal without target');
+            const link=__q('[data-action="training-set-goal"]'); if(!link) bad.push('no set-goal link');
+            else{ link.click(); await __wait(250);
+              const field=[...document.querySelectorAll('#drawer-content [data-path]')].find(x=>x.dataset.path==='trainingPlan.weeklyMileageTargetKm');
+              if(!(__ov().hidden&&currentRace&&currentRace.id==='prep-full'&&drawerOpenSection==='trainingPlan'&&field&&document.activeElement===field)) bad.push('link target');
+              closeDrawer(); }
+            r.trainingPlan.weeklyMileageTargetKm=56; openTrainingOverlay(); await __wait(80);
+            if(bad.length) console.log('v410: goal states',bad.join(' | ')); return bad.length===0; }""")
+        c['tiles_count_time_climb'] = self.ev(pg, r"""async()=>{
+            const tiles=__qa('.trw-card + .tr-tiles .tr-tile b').map(b=>b.textContent);
+            const items=trainingsInRange('2026-09-28','2026-10-03',['run']);
+            const want=[String(items.length),fmtTrainingHM(trSumSec(items)),Math.round(trSumElev(items)).toLocaleString('en-US')];
+            const ok=JSON.stringify(tiles)===JSON.stringify(want)&&tiles[0]==='4';
+            if(!ok) console.log('v410: tiles',tiles.join(','),want.join(',')); return ok; }""")
+        c['hours_never_show_60_minutes'] = self.ev(pg, r"""()=>fmtTrainingHM(14399)==='4:00'&&fmtTrainingHM(3570)==='1:00'&&fmtTrainingHM(0)==='0:00'
+            &&trainingGroupStatsHtml([{distanceKm:10,durationSeconds:14380}]).endsWith('4:00')""")
+        c['week_read_above_average_and_longest'] = self.ev(pg, r"""async()=>{
+            const p=__q('.tr-read p'); if(!p) return false; const txt=p.textContent;
+            // 本週之前 4 週：41.2、47.9、38.0（不含本週）… 平均用程式算出來比對
+            const had=trainingsInRange('2026-08-31','2026-09-27',['run']), avg=trSumKm(had)/4, pct=Math.round((49.6/avg-1)*100);
+            const ok=txt.includes('目前 49.6 km')&&txt.includes('（'+trFmtKm(avg)+' km）')&&txt.includes('多 '+pct+'%')&&txt.includes('最長一次是週六的 21.4 km，佔本週的 43%');
+            if(!ok) console.log('v410: read',txt,avg); return ok; }""")
+        c['twelve_week_chart_average_line_and_labels'] = self.ev(pg, r"""async()=>{
+            const card=__q('.trc-card'); if(!card) return false;
+            const cols=[...card.querySelectorAll('.trc-col')], vals=[...card.querySelectorAll('.trc-val')].map(v=>v.textContent);
+            const area=card.querySelector('.trc-area').getBoundingClientRect(), line=card.querySelector('.trc-avg').getBoundingClientRect();
+            const kms=cols.map(c=>{ const m=c.title.match(/([\d.]+) km$/); return m?Number(m[1]):NaN; });
+            const avg=(kms[7]+kms[8]+kms[9]+kms[10])/4, max=Math.max(avg,...kms);
+            const expectY=area.bottom-avg/max*area.height;   // 虛線畫在框的上緣，框的底邊就是平均值的位置
+            const lastBar=cols[11].querySelector('.trc-bar').getBoundingClientRect(), peakBar=cols[kms.indexOf(Math.max(...kms.slice(0,11)))].querySelector('.trc-bar').getBoundingClientRect();
+            const ok=cols.length===12&&cols[11].classList.contains('is-cur')&&kms[11]===49.6&&Math.abs(line.bottom-expectY)<=1.5
+              &&vals.includes('74.7')&&vals.includes('49.6')&&vals.length===2&&Math.abs(peakBar.height-area.height)<=1.5
+              &&card.querySelector('.trc-legend').textContent.includes(trFmtKm(avg))&&card.querySelector('.trc-x-cur').textContent==='本週'
+              // x 軸的字都在同一排（指定欄位又重疊時，後面那個會被擠到下一排）
+              &&new Set([...card.querySelectorAll('.trc-x span')].map(e=>Math.round(e.getBoundingClientRect().top))).size===1;
+            if(!ok) console.log('v410: chart',kms.join(','),line.top,expectY,vals.join(',')); return ok; }""")
+        c['week_list_this_and_last_week'] = self.ev(pg, r"""async()=>{
+            const heads=__qa('.training-list-head'), rows=__qa('.training-group:first-child .training-row').length;
+            const ok=heads.length===2&&heads[0].innerText.startsWith('本週')&&heads[0].innerText.includes('4 次')&&heads[1].innerText.startsWith('上週')
+              &&rows===4&&__qa('.training-row').length===8;
+            if(!ok) console.log('v410: list',heads.map(h=>h.innerText).join(' / ')); return ok; }""")
+        # ================= 週還沒過完、週一、週日 =================
+        ctx.close()
+        mctx, mp = self._tr(browser, now='2026-09-28T07:00:00')   # 週一早上，這週還沒跑
+        c['monday_morning_no_misleading_minus_100'] = self.ev(mp, r"""async()=>{ await __open410();
+            const card=__q('.trw-card'), chip=card.querySelector('.tr-chip'), read=__q('.tr-read p');
+            // 上週同期（上週一）沒有訓練：不放比較；不說「少 100%」；解讀說還沒有訓練
+            const ok=card.querySelector('.trw-km b').textContent==='0.0'&&!chip&&!!read&&read.textContent.includes('本週還沒有訓練')&&!/少/.test(read.textContent)
+              &&__qa('.training-group')[0].innerText.includes('本週還沒有訓練');
+            if(!ok) console.log('v410: monday',chip&&chip.textContent,read&&read.textContent); return ok; }""")
+        mctx.close()
+        tctx, tp = self._tr(browser, now='2026-10-01T21:00:00')   # 週四晚上：49.6 的前半段，還沒到平均
+        c['midweek_below_average_says_gap_not_less'] = self.ev(tp, r"""async()=>{ await __open410();
+            const txt=__q('.tr-read p').textContent;
+            const ok=/近 4 週平均 [\d.]+ km，還差 [\d.]+ km。/.test(txt)&&!/少 \d+%/.test(txt);
+            if(!ok) console.log('v410: midweek',txt); return ok; }""")
+        tctx.close()
+        sctx, sp = self._tr(browser, now='2026-09-27T20:00:00')   # 週日：週過完了，少就說少
+        c['sunday_week_done_can_say_less'] = self.ev(sp, r"""async()=>{ await __open410();
+            const txt=__q('.tr-read p').textContent; const ok=/比近 4 週平均（[\d.]+ km）(多|少) \d+%|差不多/.test(txt);
+            if(!ok) console.log('v410: sunday',txt); return ok; }""")
+        sctx.close()
+        # ================= 運動篩選 =================
+        rctx, rp = self._tr(browser)
+        c['sport_filter_defaults_to_race_sport'] = self.ev(rp, r"""async()=>{ await __open410({ride:true});
+            const btns=__qa('[data-training-sport]').map(b=>b.dataset.trainingSport+':'+b.getAttribute('aria-pressed'));
+            const km=__q('.trw-km b').textContent, rows=__qa('.training-row').length;
+            const ok=JSON.stringify(btns)===JSON.stringify(['run:true','ride:false','all:false'])&&km==='49.6'&&rows===8
+              &&!__q('.tr-mix')&&__q('.trw-goal')&&!__qa('.training-title').some(e=>e.textContent==='週五騎車');
+            if(!ok) console.log('v410: sport default',btns.join(','),km,rows); return ok; }""")
+        c['sport_filter_all_sums_and_explains'] = self.ev(rp, r"""async()=>{ await __sport('all');
+            const km=__q('.trw-km b').textContent, mix=__q('.tr-mix'), goal=__q('.trw-goal');
+            const ok=km==='91.6'&&!!mix&&mix.textContent.includes('跑步 49.6')&&mix.textContent.includes('騎車 42.0')
+              &&!!goal&&goal.innerText.includes('（跑步）')&&goal.innerText.includes('89%')&&__qa('.training-row').length===9;
+            if(!ok) console.log('v410: sport all',km,mix&&mix.textContent,goal&&goal.innerText); return ok; }""")
+        c['sport_filter_other_sport_hides_run_goal'] = self.ev(rp, r"""async()=>{ await __sport('ride');
+            const ok=__q('.trw-km b').textContent==='42.0'&&!__q('.trw-goal')&&!__q('[data-action="training-set-goal"]')&&__qa('.training-row').length===1
+              &&__q('.training-title').textContent==='週五騎車'; await __sport('run'); return ok; }""")
+        c['sport_filter_without_race_uses_most_sessions'] = self.ev(rp, r"""async()=>{
+            state.races=state.races.filter(x=>x.id!=='prep-full'); closeTrainingOverlay(); openTrainingOverlay(); await __wait(80);
+            const on=__q('[data-training-sport][aria-pressed="true"]');
+            const ok=!!on&&on.dataset.trainingSport==='run'&&!__q('.trp-card'); return ok; }""")
+        c['single_sport_has_no_filter_row'] = self.ev(rp, r"""async()=>{ await __open410(); return !__q('.training-sports')&&__q('.trw-km b').textContent==='49.6'; }""")
+        # ================= 本月、全部 =================
+        c['month_tab_card_strip_and_twelve_months'] = self.ev(rp, r"""async()=>{ await __open410(); await __tab('month');
+            const card=__q('.trw-card'), strip=card.querySelectorAll('.trm-day'), cols=__qa('.trc-col');
+            const items=trainingsInRange('2026-10-01','2026-10-03',['run']);
+            const chip=card.querySelector('.tr-chip');
+            const prev=trSumKm(trainingsInRange('2026-09-01','2026-09-03',['run'])), pct=Math.round((trSumKm(items)/prev-1)*100);
+            const ok=card.querySelector('.trw-km b').textContent===trFmtKm(trSumKm(items))&&strip.length===31&&card.querySelector('.trm-day.is-today')===strip[2]
+              &&cols.length===12&&__q('.trc-x-cur').textContent==='本月'&&(!prev||(chip&&chip.textContent.includes(Math.abs(pct)+'%')))
+              &&__qa('.training-row').length===items.length&&!__q('[data-training-year]');
+            if(!ok) console.log('v410: month',strip.length,cols.length,chip&&chip.textContent); return ok; }""")
+        c['all_tab_totals_and_groups'] = self.ev(rp, r"""async()=>{ await __tab('all');
+            const all=liveTrainings(), km=Math.round(trSumKm(all)).toLocaleString('en-US');
+            const ok=__q('.trw-card .trw-km b').textContent===km&&__qa('.tr-tile b')[0].textContent===String(all.length)&&!!__q('[data-training-year]');
+            await __tab('week'); return ok; }""")
+        # ================= 字級與點擊範圍 =================
+        c['type_scale_matches_design_times_font_setting'] = self.ev(rp, r"""async()=>{ const bad=[];
+            for(const [fs,k] of [['small',0.9],['medium',1],['large',1.15]]){ applyFontScale(fs); refreshTrainingOverlay(); await __wait(60);
+              const near=(e,px)=>e&&Math.abs(__px(e)-px*k)<0.3;
+              if(!near(__q('.training-inner'),16)) bad.push(fs+' body');
+              if(!near(__q('.training-title'),17)) bad.push(fs+' title');
+              if(!near(__q('.training-dist b'),24)) bad.push(fs+' distance');
+              if(!near(__q('.training-stats'),15)) bad.push(fs+' stats');
+              if(!near(__q('.training-date'),15)) bad.push(fs+' date');
+              // 畫面上所有看得到的字至少 13px（乘上字級）
+              const tiny=__qa('*').filter(e=>e.childNodes.length&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&e.getClientRects().length&&__px(e)<13*k-0.3);
+              if(tiny.length) bad.push(fs+' tiny: '+tiny.slice(0,3).map(e=>e.className+' '+__px(e)).join(';')); }
+            applyFontScale('medium'); refreshTrainingOverlay(); await __wait(40);
+            if(bad.length) console.log('v410: type',bad.join(' | ')); return bad.length===0; }""")
+        c['tap_targets_at_least_44px'] = self.ev(rp, r"""async()=>{ const bad=[];
+            __qa('button,select,a').filter(e=>e.getClientRects().length&&!e.classList.contains('training-shoe')&&!e.classList.contains('trp-card')).forEach(e=>{
+              const r=e.getBoundingClientRect(); if(r.height<43.5) bad.push((e.dataset.action||e.dataset.trainingPeriod||e.className)+' '+r.height.toFixed(0)); });
+            // 鞋款膠囊看起來 32px，上下各 6px 也點得到
+            const chip=__q('.training-shoe'); chip.scrollIntoView({block:'center'}); await __wait(50); const r=chip.getBoundingClientRect();
+            const hit=y=>{ const e=document.elementFromPoint(r.left+r.width/2,y); return !!(e&&e.closest('.training-shoe')===chip); };
+            if(!(hit(r.top-5.5)&&hit(r.bottom+5.5))) bad.push('shoe chip hit area');
+            if(bad.length) console.log('v410: taps',bad.slice(0,6).join(' | ')); return bad.length===0; }""")
+        c['shoe_chip_still_edits_and_deletes'] = self.ev(rp, r"""async()=>{
+            const row=__q('.training-row'), id=row.dataset.trainingId; row.querySelector('[data-action="training-edit"]').click(); await __wait(60);
+            const sel=__q('[data-training-shoe="'+id+'"]'); if(!sel) return false;
+            sel.value='sB'; sel.dispatchEvent(new Event('change',{bubbles:true})); await __wait(150);
+            const changed=trainings.find(x=>x.id===id).shoeId==='sB'&&__q('[data-training-id="'+id+'"] .training-shoe').textContent.trim()==='Racer B';
+            __q('[data-training-id="'+id+'"] [data-action="training-edit"]').click(); await __wait(60);
+            __q('[data-action="training-delete"][data-id="'+id+'"]').click(); await __wait(150);
+            const gone=!!trainings.find(x=>x.id===id).deletedAt&&!__q('[data-training-id="'+id+'"]');
+            await __open410(); return changed&&gone; }""")
+        rctx.close()
+        # ================= 三種語言：沒有漏翻 =================
+        lang_bad = []
+        for lang in ('ja', 'en'):
+            lctx, lp = self._tr(browser, lang=lang)
+            got = self.ev(lp, r"""async(lang)=>{ await __open410({ride:true}); const out=[]; let seen=0;
+                const scan=()=>{ // 使用者資料（賽事名稱、訓練名稱、鞋款）不算
+                  const skip=new Set([...__qa('.trp-name,.training-title,.training-shoe,.trw-goal-src')]);
+                  const walk=document.createTreeWalker(__ov(),NodeFilter.SHOW_TEXT); let n; const txt=[];
+                  while((n=walk.nextNode())){ const el=n.parentElement; if([...skip].some(s=>s.contains(el))) continue; if(el.getClientRects().length) txt.push(n.textContent); }
+                  return txt.join(' '); };
+                for(const tab of ['week','month','all']){ await __tab(tab); await __sport('all');
+                  const t=scan(); seen+=t.length;
+                  if(lang==='en'){ const han=t.match(/[一-鿿]+/g); if(han) out.push(tab+': '+[...new Set(han)].slice(0,6).join(',')); }
+                  else{ ['本週','本月','跑步','騎車','次訓練','總時數','週目標','備戰','減量期','近 12','上週','爬升'].forEach(w=>{ if(t.includes(w)) out.push(tab+': '+w); }); } }
+                // 什麼都沒掃到（頁面沒畫出來）不算通過
+                if(seen<300) out.push('page did not render ('+seen+' chars)');
+                return out; }""", lang)
+            if not isinstance(got, list):
+                lang_bad.append(lang + ' crashed')
+            elif got:
+                lang_bad.append(lang + ' ' + '; '.join(got))
+            lctx.close()
+        if lang_bad:
+            print('    v410: untranslated', lang_bad)
+        c['ja_en_fully_translated'] = not lang_bad
+        # ================= 手機各寬度 × 三語 × 三種字級：不左右滑、字不被擠出去 =================
+        FIT = r"""async()=>{ const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(60);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); await __open410({ride:true});
+                // 標題列：標題一定一行（放不下時按鈕換到上面一排，不是把標題擠成「トレーニング記／録」）、
+                // 關閉鈕在右上角；中文放得下，標題跟按鈕要在同一排（不能為了日文讓每種語言都變兩排）
+                { const top=__q('.training-top'), h=top.querySelector('h2'), x=top.querySelector('.training-close');
+                  const g=document.createRange(); g.selectNodeContents(h); const lines=new Set([...g.getClientRects()].map(q=>Math.round(q.top))).size;
+                  const tb=top.getBoundingClientRect(), hb=h.getBoundingClientRect(), xb=x.getBoundingClientRect();
+                  if(lines!==1) bad.push(lang+' '+fs+' title lines '+lines);
+                  if(Math.abs(xb.right-tb.right)>1||xb.top>hb.top+1) bad.push(lang+' '+fs+' close not top-right');
+                  if(lang==='zh'&&!(xb.top<hb.bottom&&xb.bottom>hb.top)) bad.push(lang+' '+fs+' zh header not one row'); }
+                for(const tab of ['week','month','all']){ await __tab(tab); for(const s of ['run','all']){ await __sport(s); const tag=lang+' '+fs+' '+tab+' '+s;
+                  const ov=__ov(); if(ov.scrollWidth>ov.clientWidth) bad.push(tag+' hscroll '+ov.scrollWidth);
+                  __qa('.tr-tile b,.trw-day-val,.training-dist,.trp-goal,.trw-km b,.trp-days-num,.training-sport,.training-tab').forEach(e=>{ if(e.scrollWidth>e.clientWidth+1) bad.push(tag+' overflow '+e.className); });
+                  // 運動按鈕整顆都在畫面裡（橫向捲動時最後一顆被切一半，看不出還有）
+                  __qa('.training-sport').forEach(e=>{ const q=e.getBoundingClientRect(); if(q.right>ov.clientWidth+0.5||q.left<-0.5) bad.push(tag+' sport chip cut'); });
+                  const cards=__qa('.tr-card'); cards.forEach(cd=>{ const r=cd.getBoundingClientRect(); [...cd.querySelectorAll('*')].forEach(x=>{ if(!x.getClientRects().length||x.closest('.trc-val')) return; const q=x.getBoundingClientRect(); if(q.width&&(q.right>r.right+1||q.left<r.left-1)) bad.push(tag+' outside card '+x.className); }); });
+                  // x 軸的字不疊在一起
+                  __qa('.trc-x').forEach(x=>{ const sp=[...x.children].map(s=>{ const g=document.createRange(); g.selectNodeContents(s); return g.getBoundingClientRect(); }).filter(q=>q.width);
+                    for(let i=0;i<sp.length;i++) for(let j=i+1;j<sp.length;j++) if(sp[i].right>sp[j].left+0.5&&sp[j].right>sp[i].left+0.5&&Math.abs(sp[i].top-sp[j].top)<4) bad.push(tag+' x labels overlap'); });
+                  // 每天的數字不擠在一起
+                  const dv=__qa('.trw-day-val').map(v=>{ const g=document.createRange(); g.selectNodeContents(v); return g.getBoundingClientRect(); });
+                  for(let i=0;i<dv.length-1;i++) if(dv[i].right>dv[i+1].left-2) bad.push(tag+' day values touch '+i); } } } }
+            setLang('zh'); applyFontScale('medium');
+            if(bad.length) console.log('v410: fit '+innerWidth,[...new Set(bad)].slice(0,8).join(' | ')); return bad.length===0; }"""
+        for w in (320, 360, 390):
+            fctx, fp = self._tr(browser, viewport={'width': w, 'height': 800})
+            c[f'fits_{w}_three_languages_three_font_sizes'] = self.ev(fp, FIT)
+            fctx.close()
+        # ================= 深淺色的對比 =================
+        cctx, cp = self._tr(browser)
+        c['contrast_light_dark'] = self.ev(cp, r"""async()=>{ const bad=[]; await __open410({ride:true});
+            const sels=['.trp-chip','.trp-meta','.trp-when','.trp-week','.trp-phases span','.trw-range','.tr-chip','.trw-goal-row','.trw-goal-foot','.trw-goal-src',
+              '.trw-day-name','.trw-day-val','.tr-tile span','.tr-read p','.trc-legend','.trc-val','.trc-x span','.training-date','.training-stats','.training-shoe span','.training-group-stats','.training-sport'];
+            for(const th of ['light','dark']){ applyTheme(th); await __wait(120);
+              sels.forEach(s=>{ const e=__q(s); if(!e){ bad.push(th+' missing '+s); return; } const cr=__textCr(e); if(cr<4.5) bad.push(th+' '+s+' '+cr.toFixed(2)); }); }
+            applyTheme('light'); await __wait(60);
+            if(bad.length) console.log('v410: contrast',bad.join(' | ')); return bad.length===0; }""")
+        # 說明頁頂端本來就印著版本號，只找「v4.10.0」少了這一段也會過：找這一段特有的句子（備戰卡、不同運動不相加）
+        c['help_mentions_training_page_three_languages'] = self.ev(cp, r"""async()=>{ const bad=[], key={zh:'不同運動的公里數不會加在一起',ja:'種目の違う距離は合計しません',en:'distances from different sports are never added together'};
+            closeTrainingOverlay();
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(80); openHelpModal(); await __wait(150);
+              const txt=document.getElementById('help-modal').innerText; if(!txt.includes(key[l])) bad.push(l);
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(80); }
+            setLang('zh'); await __wait(60); if(bad.length) console.log('v410: help',bad.join(' | ')); return bad.length===0; }""")
+        c['version_is_v4_10_0'] = self.ev(cp, "()=>APP_VERSION==='v4.10.0'")
+        cctx.close()
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -9382,6 +10088,8 @@ GROUPS = {
     'v47':        lambda: V47DailyQuote('v47'),
     'v471':       lambda: V471TaglineFit('v471'),
     'v48':        lambda: V48RaceBgm('v48'),
+    'v49':        lambda: V49Privacy('v49'),
+    'v410':       lambda: V410Training('v410'),
 }
 
 
