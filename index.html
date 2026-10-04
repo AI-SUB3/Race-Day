@@ -461,8 +461,10 @@
   .account-trigger.has-alert::before{content:'';position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;
     background:var(--flag);box-shadow:0 0 0 2px var(--paper);pointer-events:none;}
   @media (forced-colors:active){ .account-trigger.has-alert::before{forced-color-adjust:none;background:Highlight;box-shadow:0 0 0 2px Canvas;} }
+  /* 提示要在所有全螢幕圖層上面（v4.11.0）：原本 100，訓練頁（208）、生涯回顧（210）開著的時候
+     「已刪除」「已匯入」的提示被蓋住，看不到 */
   .foreground-toast{
-    position:fixed;bottom:20px;right:20px;max-width:320px;z-index:100;
+    position:fixed;bottom:20px;right:20px;max-width:320px;z-index:260;
     background:var(--ink);color:var(--surface);border-radius:4px;padding:14px 16px;
     display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 18px rgba(0,0,0,0.25);
   }
@@ -1825,19 +1827,28 @@
   .training-list-head{display:flex;justify-content:space-between;align-items:baseline;gap:2px 8px;flex-wrap:wrap;padding:14px 2px 6px;border-bottom:1px solid var(--rule);}
   .training-list-label{font-size:calc(17px*var(--fs,1));font-weight:700;}
   .training-list-head .training-group-stats{margin-left:auto;}
-  .training-row{display:grid;grid-template-columns:calc(56px*var(--fs,1)) minmax(0,1fr) auto;column-gap:12px;row-gap:2px;align-items:center;
+  .training-row{position:relative;display:grid;grid-template-columns:calc(56px*var(--fs,1)) minmax(0,1fr) auto;column-gap:12px;row-gap:2px;align-items:center;
     padding:14px 0;border-bottom:1px solid var(--rule);}
   /* 縮圖軌跡：深色模式維持深底金線；淺色模式改成淺底、深一點的金色（亮金色在白底上看不到） */
   .training-thumb{grid-row:1 / span 3;align-self:start;width:calc(56px*var(--fs,1));height:calc(56px*var(--fs,1));box-sizing:border-box;
     border-radius:12px;border:1px solid var(--rule);background:var(--thumb-bg);color:var(--stone);display:flex;align-items:center;justify-content:center;}
   .training-thumb svg{width:100%;height:100%;}
   .training-title{grid-column:2;grid-row:1;font-size:calc(17px*var(--fs,1));font-weight:700;line-height:1.35;overflow-wrap:anywhere;}
+  /* 整列點得到（v4.11.0）：標題是按鈕（讀螢幕唸得到名稱），用 ::after 撐滿整列；鞋款膠囊、
+     編輯列疊在它上面（z-index 1），照舊各自點 */
+  .training-open{justify-self:start;max-width:100%;padding:0;border:none;background:none;color:inherit;font-family:inherit;text-align:left;cursor:pointer;}
+  .training-open::after{content:'';position:absolute;inset:0;}
+  .training-open:focus-visible{outline:none;box-shadow:none;}
+  .training-open:focus-visible::after{outline:2px solid var(--trail);outline-offset:-2px;border-radius:10px;}
+  @media (hover:hover){ .training-row:hover .training-open{text-decoration:underline;text-underline-offset:3px;} }
+  .training-note-line{grid-column:2 / span 2;grid-row:4;min-width:0;font-size:calc(15px*var(--fs,1));color:var(--stone);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .training-dist{grid-column:3;grid-row:1;text-align:right;white-space:nowrap;}
   .training-dist b{font-size:calc(24px*var(--fs,1));font-weight:700;line-height:1.2;}
   .training-dist span{font-size:calc(15px*var(--fs,1));color:var(--ink-soft);margin-left:4px;}
   .training-date{grid-column:2;grid-row:2;font-size:calc(15px*var(--fs,1));color:var(--stone);}
   .training-chipcell{grid-column:3;grid-row:2;justify-self:end;}
-  .training-shoe{position:relative;display:inline-flex;align-items:center;min-height:32px;max-width:calc(150px*var(--fs,1));padding:0 12px;
+  .training-shoe{position:relative;z-index:1;display:inline-flex;align-items:center;min-height:32px;max-width:calc(150px*var(--fs,1));padding:0 12px;
     border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink-soft);font:inherit;font-size:calc(14px*var(--fs,1));cursor:pointer;}
   .training-shoe span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* 膠囊看起來 32px 高，點擊範圍往外擴到 44px（偽元素從框線裡面算起：30＋7＋7） */
@@ -1846,10 +1857,11 @@
   .training-shoe:hover{color:var(--ink);border-color:var(--field-border);}
   .training-shoe:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
   .training-stats{grid-column:2 / span 2;grid-row:3;font-size:calc(15px*var(--fs,1));color:var(--ink-soft);}
-  .training-edit{grid-column:2 / span 2;grid-row:4;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  .training-edit{grid-column:2 / span 2;grid-row:5;position:relative;z-index:1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;}
   .training-edit select{min-height:44px;max-width:100%;font:inherit;font-size:calc(16px*var(--fs,1));padding:0 10px;border-radius:10px;
     border:1px solid transparent;box-shadow:var(--field-ring);background:var(--field-bg);color:var(--ink);}
-  .training-delete{min-height:44px;color:var(--flag);font-size:calc(15px*var(--fs,1));}
+  /* 紅字在頁面底色上只有 4.39:1：往 --ink 混兩成，淺色變深、深色變亮（v4.11.0） */
+  .training-delete{min-height:44px;color:color-mix(in srgb,var(--flag) 80%,var(--ink));font-size:calc(15px*var(--fs,1));}
   .training-footer{margin-top:18px;text-align:center;}
   .training-footer .btn-text-small{min-height:44px;font-size:calc(15px*var(--fs,1));}
   .training-group-head{
@@ -1863,6 +1875,156 @@
   .training-group-label{flex-shrink:0;}
   .training-group-stats{margin-left:auto;color:var(--stone);font-weight:400;font-size:calc(15px*var(--fs,1));text-align:right;}
   .training-month-rows{padding-left:0;}
+  /* ---- 單次訓練詳細（v4.11.0，設計稿 E）：疊在訓練頁上面的全螢幕一層（z-index 230：訓練頁 208 之上、
+     訓練的匯入視窗 245 之下）。字級跟訓練頁同一套：正文 16、小標 17、統計 15、圖上的字 13，都乘 --fs ---- */
+  .training-detail{position:fixed;inset:0;z-index:230;overflow-y:auto;overscroll-behavior:contain;background:var(--paper);color:var(--ink);}
+  .training-detail[hidden]{display:none;}
+  .trd-inner{max-width:720px;margin:0 auto;padding:10px 16px 120px;font-size:calc(16px*var(--fs,1));line-height:1.5;}
+  .trd-top{display:flex;align-items:center;min-height:52px;}
+  .trd-back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px 0 8px;margin-left:-8px;border:none;border-radius:12px;
+    background:transparent;color:var(--ink);font:inherit;font-size:calc(16px*var(--fs,1));font-weight:700;cursor:pointer;}
+  .trd-back:hover{background:var(--hover-overlay);}
+  .trd-back:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .trd-back-arrow{font-size:calc(26px*var(--fs,1));line-height:1;margin-top:-3px;}
+  .trd-title{margin:4px 0 2px;font-size:calc(24px*var(--fs,1));line-height:1.3;overflow-wrap:anywhere;}
+  /* 標題拿到焦點是程式移過去的（讀螢幕從標題開始唸），不是可以操作的東西，不畫外框 */
+  .trd-title:focus,.trd-title:focus-visible{outline:none;box-shadow:none;}
+  .trd-meta{font-size:calc(15px*var(--fs,1));color:var(--stone);margin-bottom:14px;}
+  .trd-card h3{margin:0 0 6px;font-size:calc(17px*var(--fs,1));line-height:1.35;}
+  .trd-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin-bottom:10px;}
+  .trd-card-head h3{margin:0;}
+  .trd-sub{margin:0;font-size:calc(15px*var(--fs,1));color:var(--ink-soft);line-height:1.55;}
+  .trd-note{margin:10px 0 0;font-size:calc(13px*var(--fs,1));color:var(--stone);line-height:1.55;}
+  /* 數字：距離大字（跟本週卡同一套），下面四格——手機兩格一排、筆電四格一排 */
+  .trd-hero .trw-km{margin-top:0;}
+  .trd-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(130px*var(--fs,1)),1fr));gap:14px 12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule);}
+  .trd-stat{min-width:0;}
+  .trd-stat span{display:block;font-size:calc(15px*var(--fs,1));color:var(--stone);}
+  .trd-stat b{display:block;font-size:calc(22px*var(--fs,1));line-height:1.25;white-space:nowrap;letter-spacing:-0.01em;}
+  /* 時間下面的「不含暫停 1:10」（v4.13.0） */
+  .trd-stat-sub{display:block;margin-top:2px;font-style:normal;font-size:calc(13px*var(--fs,1));line-height:1.45;color:var(--stone);}
+  .trd-stat small{margin-left:3px;font-size:calc(15px*var(--fs,1));font-weight:400;color:var(--ink-soft);letter-spacing:0;}
+  /* 路線圖：起終點、公里數字是 HTML（字級固定），線是 SVG（線寬固定幾 px） */
+  .trd-legend{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:calc(13px*var(--fs,1));color:var(--stone);}
+  .trd-legend>span{display:inline-flex;align-items:center;white-space:nowrap;}
+  .trd-legend i{display:inline-block;margin-right:5px;}
+  .trd-legend i.is-start{width:10px;height:10px;border-radius:50%;background:var(--trail);}
+  .trd-legend i.is-end{width:9px;height:9px;border-radius:2px;background:var(--ink);}
+  .trd-route-stage{position:relative;margin:0 auto;box-sizing:border-box;border:1px solid var(--rule);border-radius:12px;background:var(--thumb-bg);overflow:hidden;}
+  .trd-route-stage svg{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  .trd-pin{position:absolute;transform:translate(-50%,-50%);pointer-events:none;}
+  .trd-pin.is-start{width:14px;height:14px;border-radius:50%;background:var(--trail);box-shadow:0 0 0 3px var(--surface);}
+  .trd-pin.is-end{width:12px;height:12px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 3px var(--surface);}
+  .trd-km{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+    min-width:calc(24px*var(--fs,1));height:calc(24px*var(--fs,1));padding:0 5px;border-radius:999px;border:1.5px solid var(--thumb-line);
+    background:var(--surface);color:var(--ink);font-size:calc(13px*var(--fs,1));font-weight:700;line-height:1;font-variant-numeric:tabular-nums;pointer-events:none;}
+  /* 跟距離相近的比：一句話＋這次與最近五次。欄寬固定，數字對齊；日期那欄吃剩下的寬度 */
+  .trd-say{margin:8px 0 0;font-size:calc(16px*var(--fs,1));line-height:1.65;}
+  .trd-sim-list{margin-top:12px;border-top:1px solid var(--rule);}
+  .trd-sim-row{display:grid;grid-template-columns:minmax(0,1fr) calc(60px*var(--fs,1)) calc(46px*var(--fs,1)) calc(34px*var(--fs,1));align-items:center;gap:8px;
+    width:100%;min-height:44px;padding:6px 4px;box-sizing:border-box;border:none;border-bottom:1px solid var(--rule);background:transparent;color:var(--ink);
+    font:inherit;font-size:calc(15px*var(--fs,1));line-height:1.35;text-align:left;}
+  .trd-sim-row>span{justify-self:end;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .trd-sim-row>.trd-sim-date{justify-self:start;white-space:normal;overflow-wrap:anywhere;}
+  .trd-sim-row.is-head{min-height:0;padding-top:8px;padding-bottom:6px;font-size:calc(13px*var(--fs,1));color:var(--stone);}
+  .trd-sim-row.is-this{font-weight:700;background:var(--hover-overlay);}
+  button.trd-sim-row{cursor:pointer;}
+  button.trd-sim-row:hover{background:var(--hover-overlay);}
+  button.trd-sim-row:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
+  /* 主觀強度：1–10 兩排、每顆至少 44px 高；選中的反白，再按一次清除 */
+  .trd-rpe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:12px;}
+  .trd-rpe-btn{min-height:44px;padding:0;border:1px solid var(--rule);border-radius:12px;background:var(--paper);color:var(--ink);
+    font:inherit;font-size:calc(17px*var(--fs,1));font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;}
+  .trd-rpe-btn:hover{border-color:var(--field-border);}
+  .trd-rpe-btn.is-on{background:var(--ink);border-color:var(--ink);color:var(--surface);}
+  .trd-rpe-btn:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  .trd-rpe-desc{margin-top:10px;min-height:1.5em;font-size:calc(16px*var(--fs,1));font-weight:700;}
+  .trd-rpe-desc.is-empty{font-weight:400;color:var(--stone);}
+  .trd-field{display:block;margin-top:12px;}
+  .trd-field>span{display:block;margin-bottom:4px;font-size:calc(15px*var(--fs,1));font-weight:700;color:var(--ink-soft);}
+  .trd-field input,.trd-field textarea{display:block;width:100%;box-sizing:border-box;min-height:44px;padding:10px 12px;border:1px solid transparent;border-radius:10px;
+    box-shadow:var(--field-ring);background:var(--field-bg);color:var(--ink);font:inherit;font-size:calc(16px*var(--fs,1));line-height:1.5;}
+  .trd-field textarea{min-height:calc(112px*var(--fs,1));resize:vertical;}
+  .trd-field input:focus,.trd-field textarea:focus{outline:none;box-shadow:var(--field-ring-focus);}
+  .trd-field ::placeholder{color:var(--stone);opacity:1;}
+  .trd-save{min-height:1.5em;margin-top:6px;font-size:calc(13px*var(--fs,1));color:var(--stone);}
+  .trd-shoe select{min-height:44px;max-width:100%;padding:0 10px;border:1px solid transparent;border-radius:10px;box-shadow:var(--field-ring);
+    background:var(--field-bg);color:var(--ink);font:inherit;font-size:calc(16px*var(--fs,1));}
+  .trd-shoe .trd-sub{margin-top:8px;}
+  .trd-foot{margin-top:18px;text-align:center;}
+  .trd-foot .training-delete{min-height:44px;padding:0 12px;}
+  /* ---- 每公里配速與高度（v4.12.0）：長條比平均快的往上（綠）、慢的往下（金），下面的高度剖面共用橫軸。
+     兩個顏色用 dataviz 的檢查跑過：淺色在卡片底色上對比 5.4／3.4、色盲模擬 ΔE 10（≥8）；深色 4.5／7.8、ΔE 12.6
+     （深色的金就是 App 原本的 --gold，比 dataviz 建議的亮度上限亮一點；長條的方向本身就帶著快慢）。
+     品牌的 --trail 彩度太低（讀起來偏灰），長條用彩度高一點的同色系。右邊一欄放刻度；圖上的字 13px × 字級 ---- */
+  :root{--trd-fast:#2A7547;--trd-slow:#A8842A;}
+  [data-theme="dark"]{--trd-fast:#469868;--trd-slow:#D9B15C;}
+  .trd-sp-avg{font-size:calc(15px*var(--fs,1));color:var(--ink-soft);white-space:nowrap;}
+  .trd-sp-avg b{color:var(--ink);font-variant-numeric:tabular-nums;}
+  .trd-sp-readout{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 12px;min-height:calc(17px*1.5*var(--fs,1));margin:12px 0 8px;
+    font-size:calc(15px*var(--fs,1));line-height:1.5;color:var(--stone);}
+  .trd-sp-readout.is-on{color:var(--ink-soft);}
+  .trd-sp-readout b{color:var(--ink);font-size:calc(17px*var(--fs,1));font-variant-numeric:tabular-nums;}
+  .trd-sp-readout span{white-space:nowrap;}
+  .trd-sp-chart{position:relative;margin-top:4px;outline:none;touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .trd-sp-chart[role="slider"]{cursor:pointer;}
+  .trd-sp-chart:focus-visible{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--trail);border-radius:4px;}
+  .trd-sp-row{display:grid;grid-template-columns:minmax(0,1fr) calc(48px*var(--fs,1));column-gap:8px;}
+  .trd-sp-plot{position:relative;height:calc(128px*var(--fs,1));}
+  .trd-sp-edge{position:absolute;left:0;right:0;border-top:1px solid var(--rule);pointer-events:none;}
+  .trd-sp-edge.is-top{top:0;}
+  .trd-sp-edge.is-bot{bottom:0;}
+  .trd-sp-mid{position:absolute;left:0;right:0;border-top:1px solid var(--ink-soft);pointer-events:none;}
+  .trd-sp-col{position:absolute;top:0;bottom:0;}
+  /* 長條最寬 24px、兩根之間留 2px 底色；資料那一端圓角 4px、貼著平均線的那一端是平的 */
+  .trd-sp-bar{position:absolute;left:50%;transform:translateX(-50%);width:calc(100% - 2px);max-width:24px;min-height:2px;}
+  /* 平均線的位置（top／bottom）跟長度寫在每一根的 style 裡 */
+  .trd-sp-bar.is-fast{background:var(--trd-fast);border-radius:4px 4px 0 0;}
+  .trd-sp-bar.is-slow{background:var(--trd-slow);border-radius:0 0 4px 4px;}
+  /* 超出刻度、截在邊上的長條：末端留一道 3px 的缺口 */
+  .trd-sp-bar.is-fast.is-clip{background:linear-gradient(to top,var(--trd-fast) calc(100% - 9px),transparent calc(100% - 9px),transparent calc(100% - 6px),var(--trd-fast) calc(100% - 6px));}
+  .trd-sp-bar.is-slow.is-clip{background:linear-gradient(to bottom,var(--trd-slow) calc(100% - 9px),transparent calc(100% - 9px),transparent calc(100% - 6px),var(--trd-slow) calc(100% - 6px));}
+  .trd-sp-chart.has-sel .trd-sp-bar{opacity:.3;}
+  .trd-sp-chart.has-sel .trd-sp-col.is-sel .trd-sp-bar{opacity:1;}
+  .trd-sp-col.is-sel::after{content:'';position:absolute;top:0;bottom:0;left:50%;border-left:1px solid var(--ink-soft);opacity:.5;}
+  .trd-sp-y{position:relative;font-size:calc(13px*var(--fs,1));color:var(--stone);font-variant-numeric:tabular-nums;}
+  .trd-sp-y span{position:absolute;left:0;white-space:nowrap;line-height:1.2;}
+  .trd-sp-y .is-top{top:0;}
+  .trd-sp-y .is-mid{transform:translateY(-50%);color:var(--ink-soft);font-weight:700;}
+  .trd-sp-y .is-bot{bottom:0;}
+  .trd-sp-cap{margin-top:14px;font-size:calc(13px*var(--fs,1));color:var(--stone);}
+  .trd-sp-elev{position:relative;height:calc(64px*var(--fs,1));margin-top:4px;border-bottom:1px solid var(--rule);}
+  .trd-sp-elev svg{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  .trd-sp-elev .is-area{fill:var(--contour);fill-opacity:.12;stroke:none;}
+  .trd-sp-elev .is-line{fill:none;stroke:var(--contour);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
+  .trd-sp-band{position:absolute;top:0;bottom:0;display:none;background:var(--hover-overlay);box-shadow:inset 1px 0 0 var(--ink-soft),inset -1px 0 0 var(--ink-soft);pointer-events:none;}
+  .trd-sp-chart.has-sel .trd-sp-band{display:block;}
+  .trd-sp-x{position:relative;height:calc(13px*1.5*var(--fs,1));margin-top:4px;font-size:calc(13px*var(--fs,1));line-height:1.5;color:var(--stone);font-variant-numeric:tabular-nums;}
+  .trd-sp-x span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap;}
+  .trd-sp-x span.is-first{transform:none;}
+  .trd-sp-x span.is-last{transform:translateX(-100%);}
+  .trd-sp-x-unit{margin-top:4px;font-size:calc(13px*var(--fs,1));line-height:1.5;color:var(--stone);}
+  .trd-sp-more{margin-top:12px;border-top:1px solid var(--rule);}
+  .trd-sp-more summary{display:flex;align-items:center;min-height:44px;cursor:pointer;list-style:none;font-size:calc(15px*var(--fs,1));font-weight:700;color:var(--ink-soft);}
+  .trd-sp-more summary::-webkit-details-marker{display:none;}
+  .trd-sp-more summary::before{content:'▸';display:inline-block;width:1.1em;color:var(--stone);}
+  .trd-sp-more[open] summary::before{content:'▾';}
+  .trd-sp-more summary:focus-visible{outline:2px solid var(--trail);outline-offset:2px;border-radius:6px;}
+  .trd-sp-table{width:100%;border-collapse:collapse;font-size:calc(15px*var(--fs,1));font-variant-numeric:tabular-nums;}
+  .trd-sp-table th{padding:2px 0 6px;font-size:calc(13px*var(--fs,1));font-weight:400;color:var(--stone);text-align:right;white-space:nowrap;}
+  .trd-sp-table td{padding:7px 0;border-top:1px solid var(--rule);text-align:right;white-space:nowrap;}
+  .trd-sp-table th:first-child,.trd-sp-table td:first-child{text-align:left;}
+  .trd-sp-reimport{min-height:44px;margin-top:12px;padding:0 16px;font-size:calc(15px*var(--fs,1));}
+  /* Windows 高對比：長條跟線都用系統的文字色（方向本身就帶著快慢），選到的那一根用強調色 */
+  @media (forced-colors:active){
+    .trd-sp-bar{forced-color-adjust:none;background:CanvasText!important;}
+    .trd-sp-chart.has-sel .trd-sp-col.is-sel .trd-sp-bar{background:Highlight!important;}
+    .trd-sp-bar.is-fast.is-clip{background:linear-gradient(to top,CanvasText calc(100% - 9px),transparent calc(100% - 9px),transparent calc(100% - 6px),CanvasText calc(100% - 6px))!important;}
+    .trd-sp-bar.is-slow.is-clip{background:linear-gradient(to bottom,CanvasText calc(100% - 9px),transparent calc(100% - 9px),transparent calc(100% - 6px),CanvasText calc(100% - 6px))!important;}
+    .trd-sp-elev svg{forced-color-adjust:none;}
+    .trd-sp-elev .is-line{stroke:CanvasText;}
+    .trd-sp-elev .is-area{fill:CanvasText;fill-opacity:.15;}
+  }
   #training-import-modal{z-index:245;}
   .training-progress{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;margin:8px 0 14px;}
   .training-progress span{display:block;height:100%;background:var(--trail);transition:width .2s;}
@@ -1892,7 +2054,11 @@
   .buildup-foot{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--ink-soft);margin-top:4px;}
   .buildup-drill{margin-top:8px;border-top:1px dashed var(--rule);padding-top:8px;}
   .buildup-drill-head{color:var(--stone);margin-bottom:4px;}
-  .buildup-drill-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:calc(13px*var(--fs,1));padding:3px 0;}
+  /* 點了打開那一筆的詳細（v4.11.0）：每一列是按鈕，至少 44px 高 */
+  .buildup-drill-row{display:flex;justify-content:space-between;align-items:center;gap:2px 10px;flex-wrap:wrap;width:100%;min-height:44px;padding:4px 2px;box-sizing:border-box;
+    border:none;border-bottom:1px dashed var(--rule);background:transparent;color:var(--ink);font:inherit;font-size:calc(13px*var(--fs,1));text-align:left;cursor:pointer;}
+  .buildup-drill-row:hover{background:var(--hover-overlay);}
+  .buildup-drill-row:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
   .buildup-drill-row .mono{color:var(--ink-soft);}
   /* ---- 觸控裝置（手機、平板）關掉大面積的合成效果（v3.88.0）----
      使用者回報 iPhone Safari 開網站就「重複發生問題」（分頁一直崩潰）。
@@ -1930,7 +2096,7 @@
      狀態列底下。 ---- */
   :root{--sat:env(safe-area-inset-top,0px);}
   #topbar{border-top:var(--sat) solid transparent;}
-  .training-overlay,.hof-overlay,.fatigue-overlay{border-top:var(--sat) solid transparent;}
+  .training-overlay,.training-detail,.hof-overlay,.fatigue-overlay{border-top:var(--sat) solid transparent;}
   /* ---- 賽事旅程（v3.93.0）：純 SVG，不用 filter／blend／backdrop（iPhone 崩潰的教訓） ---- */
   .year-in-review-opt{display:inline-flex;align-items:center;gap:5px;color:var(--ink-soft);cursor:pointer;}
   .year-in-review-opt input:disabled+*{opacity:.5;}
@@ -3599,6 +3765,7 @@
 <div id="story-mode-overlay" class="story-overlay" hidden></div>
 <div id="hof-overlay" class="hof-overlay" hidden></div>
 <div id="training-overlay" class="training-overlay" hidden></div>
+<div id="training-detail" class="training-detail" role="dialog" aria-modal="true" aria-labelledby="trd-title" hidden></div>
 <div id="training-import-modal" class="modal-overlay" hidden></div>
 <input type="file" id="training-file-input" accept=".fit,.gpx,.tcx" multiple style="display:none">
 <div id="career-share-modal" class="modal-overlay" hidden></div>
@@ -4930,7 +5097,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／完賽牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.10.0';
+const APP_VERSION='v4.13.0';
 
 /* ============================================================
    多語系（i18n）
@@ -5399,6 +5566,9 @@ const JA={
       <ul>
         <li>ホームは3つのタブに分かれています。「大会」は今日の名言、「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。</li>
         <li><strong>トレーニング画面</strong>（v4.10.0 で刷新）：「今週」のいちばん上は準備中の大会（エントリー済みまたは抽選待ちで、準備期間に入った直近の大会：カウントダウン、A／B 目標、レースまで第何週）。その下に今週の距離、先週の同じ時点との比較、週間目標（大会画面の「トレーニング計画」の週間走行距離）、日ごとの棒グラフ、今週のまとめ、直近12週の距離が並びます。「今月」は日ごとの棒グラフと直近12か月、「すべて」は年・月ごとにたたんで表示します。種目が2つ以上あるときはタブの下で種目を選べ、種目の違う距離は合計しません。各記録の右にあるシューズのボタンから、シューズの変更や削除ができます。</li>
+        <li><strong>トレーニングの詳細</strong>（v4.11.0）：記録をタップすると開き、距離、タイム、ペース、心拍、獲得標高とコースが見られます（v4.11.0 以降に取り込んだものは数 km ごとの位置を表示。それ以前のものはコースの長さから推定し、何周もするコースはスタートとゴールだけ）。過去1年の距離が近い同じ種目と、ペース・心拍・獲得標高を比べます。主観的運動強度（RPE 1–10）、名前、メモ（入力すると自動で保存）、シューズも設定できます。削除した直後は「元に戻す」で戻せます。</li>
+        <li><strong>1kmごとのペースと高度</strong>（v4.12.0）：FIT・GPX・TCX を取り込むときに1kmごとのタイムと高度の変化も保存します（スイムは100mごと、バイクは速度）。詳細画面ではバーで表示し、全体の平均より速い区間は上へ、遅い区間は下へ伸びます。その下が高度のグラフで、遅かった区間が上り坂だったかどうかが分かります。バーをタップするとその区間の数字が出て、「区間ごとの数字」を開くと全部見られます。FIT ファイルのタイムは時計を一時停止していた分を含みません（時計の1kmごとのタイムと同じ）。GPX・TCX には一時停止の記録がないため、止まっていた分もその区間に含まれます。以前に取り込んだトレーニングは、元のファイルをもう一度取り込むと追加されます。名前・メモ・主観的運動強度・シューズは変わりません。</li>
+        <li><strong>一時停止を除いたタイム</strong>（v4.13.0）：FIT ファイルから取り込んだトレーニングのタイムは、時計と同じく一時停止を含みません（タイマー時間）。ペースや週の合計時間もこれで計算します。10秒以上一時停止した場合は、詳細画面のタイムの下に「一時停止 1:10 を除く」と表示します。v4.12.0 で取り込んだ FIT ファイルは自動で差し引かれます（時計と1〜2秒ずれることがあり、もう一度取り込むと一致します）。それより前に取り込んだものは、元のファイルをもう一度取り込むと変わります。GPX には一時停止の記録がないため、これまでどおり開始から終了までの時間です。</li>
         <li><strong>「次の大会」カード</strong>：14日以内に大会があると、「大会」タブの一番上にカウントダウン・日時・場所、その下に3つのマス（荷造り・A目標・ゼッケン）が出ます。大会ページの「レース前の4項目」と同じで、タップするとそのマスの入力欄が開きます（空のマスはカーソルがその欄に入ります）。天気予報（取得したライブ予報か、自分で入れた予報）があると3つ目は天気に、7日以内で GPS 軌跡があってまだ取得していないときは「予報を取得」になります。大会名をタップすると大会ページが開き、カバー写真があればカードの背景になります。「一時的に隠す」で閉じられます。スマホのリストで「走り終えましたか？」が出ている間は、このカードは出ません（次の大会はリストの一番上にあります）。</li>
         <li><strong>今日の名言</strong>：「大会」タブの一番上に、ランナーたちが実際に口にした言葉を毎日ひとつ表示します。パソコンでは「次の大会」カードの右、スマートフォンやタブレットではその上です。1日にひとつで、日付が変わると次の言葉になり、同じ日ならどの端末でも同じ言葉です。日本語表示では日本語だけを表示します（元の言葉が日本語ならそのまま、英語や中国語なら日本語訳）。タップすると、誰がどんな場面で言ったのか、出典とリンクが見られます。どの言葉も出典を確認済みで、翻訳はこのアプリによるものです。表示したくない場合は、アカウントメニューの「表示」にある「今日の名言」をオフにしてください。</li>
         <li>キャリアの数字はタップできます：年ごとの棒グラフ、ヒートマップのマス、「完走レース数」「年間走行距離」をタップすると、下にその大会の一覧が出ます（1件タップで開き、戻る操作ではまず一覧が閉じます）。フルマラソン自己ベストのタイムをタップすると、その記録を出した大会が開きます。フルマラソンはランニング系の大会だけを数えます（42km の自転車レースは入りません）。</li>
@@ -5531,6 +5701,65 @@ const JA={
   'ui.trLastWeek':'先週',
   'ui.trainingMore':'その他の操作',
   'ui.trainingShoeAria':'今回履いたシューズ',
+  // 訓練單次詳細（v4.11.0）
+  'ui.trdBack':'戻る','ui.trdTime':'タイム','ui.trdPace':'ペース','ui.trdSpeed':'平均速度','ui.trdHr':'平均心拍','ui.trdElev':'獲得標高',
+  'ui.trdStatsAria':'今回の数値',
+  'ui.trdRoute':'コース','ui.trdStart':'スタート','ui.trdEnd':'ゴール','ui.trdKmLegend':'数字は km',
+  'ui.trdRouteAria':'コース図、{list} km の位置を表示','ui.trdRouteAriaPlain':'コース図',
+  'ui.trdKmEstimated':'km の数字はコースの長さから推定した位置で、数百 m ずれることがあります。',
+  'ui.trdKmLaps':'何周もするコースのため推定した km の位置が正確でなく、スタートとゴールだけを表示しています。',
+  'ui.trdCompareTitle':'距離の近い{sport}と比べる',
+  'ui.trdCompareSub':'過去1年の {lo}–{hi} km の{sport}、{n} 回',
+  'ui.trdCompareNone':'過去1年に距離の近い（{lo}–{hi} km）{sport}はありません。',
+  'ui.trdCompareSay':'{n} 回の平均と比べて：{parts}。',
+  'ui.trdCompareSayOne':'前回（{date}）と比べて：{parts}。',
+  'ui.trdPaceFaster':'{n} 秒／{u} 速い','ui.trdPaceSlower':'{n} 秒／{u} 遅い','ui.trdPaceSame':'ペースはほぼ同じ',
+  'ui.trdSpeedFaster':'{n} km/h 速い','ui.trdSpeedSlower':'{n} km/h 遅い','ui.trdSpeedSame':'平均速度はほぼ同じ',
+  'ui.trdHrLower':'心拍が {n} 低い','ui.trdHrHigher':'心拍が {n} 高い','ui.trdHrSame':'心拍はほぼ同じ',
+  'ui.trdElevMore':'獲得標高が {n} m 多い','ui.trdElevLess':'獲得標高が {n} m 少ない',
+  'ui.trdFastest':'過去1年でこの距離の最速です。',
+  'ui.trdThis':'今回','ui.trdColDate':'日付','ui.trdColDist':'距離','ui.trdColHr':'心拍',
+  'ui.trdFeelTitle':'今回の感覚','ui.trdRpeSub':'主観的運動強度（RPE、1–10）','ui.trdRpeNone':'未入力',
+  'ui.trdRpeHint':'運動の30分ほど後に、全体の感覚で付けます。もう一度押すと消えます。',
+  'ui.trdRpe1':'とても楽','ui.trdRpe2':'楽','ui.trdRpe3':'ふつう','ui.trdRpe4':'ややきつい','ui.trdRpe5':'きつい',
+  'ui.trdRpe6':'きつい','ui.trdRpe7':'かなりきつい','ui.trdRpe8':'かなりきつい','ui.trdRpe9':'非常にきつい','ui.trdRpe10':'限界',
+  'ui.trdRpeAria':'{n}、{label}',
+  'ui.trdNotesTitle':'名前とメモ','ui.trdName':'名前','ui.trdNote':'メモ','ui.trdNotePh':'今回の感覚、天気、体の調子など',
+  'ui.trdSaved':'保存しました',
+  'ui.trdShoeTitle':'シューズ','ui.trdShoeTotal':'このシューズの累計 {n} km','ui.trdShoeTotalTarget':'このシューズの累計 {n} km（目安 {t} km）',
+  'ui.trdDeletedN':'{n} 件のトレーニングを削除しました',
+  // 刪除的提示原本沒有日文、英文（一直顯示中文）
+  'ui.trainingDeleted':'このトレーニングを削除しました',
+  // 每公里配速與高度（v4.12.0）
+  'ui.trdSpTitlePace':'1kmごとのペース','ui.trdSpTitlePaceN':'{n}kmごとのペース','ui.trdSpTitleSpeed':'1kmごとの速度','ui.trdSpTitleSpeedN':'{n}kmごとの速度',
+  'ui.trdSpTitleSwim':'100mごとのペース','ui.trdSpTitleSwimN':'{n}mごとのペース','ui.trdSpTitleElev':'高度の変化',
+  'ui.trdSpAvg':'平均','ui.trdSpSegKm':'{n}km目','ui.trdSpSegRange':'{a}–{b}km','ui.trdSpSegRangeM':'{a}–{b}m',
+  'ui.trdSpFastSlow':'一番速かったのは{fast}（{fv}）、一番遅かったのは{slow}（{sv}）。',
+  'ui.trdSpHalvesFaster':'後半は前半より{d}速かったです。','ui.trdSpHalvesSlower':'後半は前半より{d}遅かったです。','ui.trdSpHalvesSame':'前半と後半はほぼ同じでした。',
+  'ui.trdSpDiffPace':'{n}秒/{u}','ui.trdSpElevRange':'最高 {max}m、最低 {min}m。','ui.trdSpElevCap':'高度 {min}–{max}m',
+  'ui.trdSpHint':'バーをタップすると区間の数字が出ます',
+  'ui.trdSpChartAria':'区間ごとのペースと高度のグラフ。左右キーで1区間ずつ見られます',
+  'ui.trdSpSpokenPace':'1kmあたり{m}分{s}秒','ui.trdSpSpokenSwim':'100mあたり{m}分{s}秒','ui.trdSpSpokenSpeed':'時速{v}km',
+  'ui.trdSpUp':'{n}m上り','ui.trdSpDown':'{n}m下り','ui.trdSpFlat':'平坦',
+  'ui.trdSpTable':'区間ごとの数字','ui.trdSpColKm':'km','ui.trdSpColM':'m','ui.trdSpColElev':'高低差（m）',
+  'ui.trdSpOldTitle':'1kmごとのペースと高度',
+  'ui.trdSpOldText':'v4.12.0 より前に取り込んだ記録のため、区間ごとのタイムと高度は保存されていません。元のファイル（FIT・GPX・TCX）をもう一度取り込むと追加され、FIT ファイルは合計タイムからも一時停止が除かれます。名前・メモ・主観的運動強度・シューズはそのままです。',
+  'ui.trdSpReimport':'元のファイルを取り込む',
+  'ui.trainingImportUpgradeN':'{n} 件を更新','ui.trainingImportBothN':'{a} 件を取り込み、{b} 件を更新',
+  // 一時停止を除いたタイム（v4.13.0）
+  'ui.trdPausedSub':'一時停止 {t} を除く',
+  'ui.trainingUpLead':'件は取り込み済み：','ui.trainingUpData':'区間ペースと高度を追加','ui.trainingUpDataN':'{n} 件に区間ペースと高度を追加',
+  'ui.trainingUpTime':'タイムから一時停止を除外','ui.trainingUpTimeN':'{n} 件のタイムから一時停止を除外',
+  'ui.trainingUpgraded':'{n} 件を更新しました','ui.trainingImportedBoth':'{a} 件を取り込み、{b} 件を更新しました',
+  // トレーニングの取り込みでずっと中国語のままだった文字（v4.13.0 で追加）
+  'ui.trainingImportN':'{n} 件を取り込む','ui.trainingImported':'{n} 件のトレーニングを取り込みました',
+  'ui.trainingParsing':'読み込み中 {a}／{b}…','ui.trainingFailedDetail':'読み込めなかったファイル',
+  'ui.trainingShoeForAll':'ランニング系トレーニングのシューズ（あとで1件ずつ変更できます）',
+  'ui.trainingRaceDayHint':'以下は日付と距離が大会と一致するため、大会当日の記録と思われます。大会の距離はすでにシューズに加算されているので、既定ではトレーニングとして取り込みません（二重に数えられます）。完走記録はその大会の「完走記録ファイル／コース GPX を読み込む」から取り込んでください。',
+  'ui.trainingErrNoData':'ファイルに距離やタイムのデータがありません','ui.trainingErrNoDate':'ファイルに日付が見つかりません',
+  'ui.trainingErrType':'FIT・GPX・TCX ファイルのみ対応しています','ui.trainingExportName':'トレーニング記録',
+  'ui.buildupWeekAria':'レース{n}週前','ui.buildupInProgress':'今週はまだ途中','ui.buildupWeekEmpty':'この週のトレーニング記録はありません',
+  'ui.shoeImportedKm':'取り込んだトレーニングの {n} km も自動で加算',
   // 隱私權政策與使用條款（v4.9.0）
   'ui.privacyLink':'プライバシーポリシーと利用規約','ui.privacyPolicy':'プライバシーポリシー',
   'ui.legalLinkText':'利用規約とプライバシーポリシー','ui.signInAgree':'ログインすると、{n}に同意したものとみなされます。',
@@ -5995,6 +6224,9 @@ const EN={
       <ul>
         <li>The home page has three tabs. “Races” holds the quote of the day, the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log.</li>
         <li><strong>Training page</strong> (redesigned in v4.10.0): at the top of “Week” is the race you are preparing for (the nearest registered or lottery-pending race whose prep period has started: countdown, A/B goals, weeks to go). Below it: this week’s distance, a comparison with the same days last week, your weekly goal (the weekly mileage in the race’s “Training Plan”), daily bars, a short summary and the last 12 weeks. “Month” shows daily bars and the last 12 months; “All” groups sessions by year and month. If you log more than one sport, pick one under the tabs, so distances from different sports are never added together. Tap the shoe button on a session to change the shoes or delete it.</li>
+        <li><strong>Session details</strong> (v4.11.0): tap a session to see its distance, time, pace, heart rate, elevation gain and route (sessions imported from v4.11.0 on show a marker every few kilometres; older ones are estimated from the route length, and routes that loop several times show only the start and finish), plus how its pace, heart rate and climbing compare with similar-distance sessions of the same sport from the past year. You can also rate perceived exertion (RPE 1–10), rename it, add notes (saved as you type) and change the shoes. Right after deleting, tap “Undo” to bring it back.</li>
+        <li><strong>Splits and elevation</strong> (v4.12.0): importing a FIT, GPX or TCX file now also saves the time and elevation change for every kilometre (every 100 m for swims; speed for rides). Session details show them as bars: splits faster than your average for the whole session go up, slower ones go down, with the elevation profile underneath so you can see whether the slow ones were climbs. Tap a bar to see that split, or open “All splits” for the full table. Times from FIT files leave out the time the watch was paused (matching your watch’s own splits); GPX and TCX files don’t record pauses, so time spent stopped counts towards that split. For sessions imported earlier, import the original file again to add them; the name, notes, RPE and shoes stay as they are.</li>
+        <li><strong>Times without pauses</strong> (v4.13.0): sessions imported from FIT files now use the watch’s timer time, which leaves out pauses just like your watch; pace and weekly totals follow it. If you paused for 10 seconds or more, session details show “excl. 1:10 paused” under the time. FIT files imported with v4.12.0 are adjusted automatically (possibly a second or two off your watch; import the file again to match exactly); for sessions imported earlier, import the original file again. GPX files don’t record pauses, so their time still runs from start to finish.</li>
         <li><strong>Next-race card</strong>: when a race is within 14 days, the top of “Races” shows the countdown, date, start time and place, with three tiles underneath — Packed, Goal A and Bib. They’re the same tiles as on the race page: tap one to open where you fill it in (an empty tile puts the cursor right in that field). When there’s a forecast (a live one you fetched, or one you typed in), the third tile shows the weather; within 7 days, with a GPS track and no forecast yet, it says “Get forecast”. Tap the race name to open the race; a cover photo becomes the card’s background; “Hide for now” tucks the card away. In a phone’s list, while “Did you finish?” is showing, the card steps aside — the next race is the first row of the list.</li>
         <li><strong>Quote of the day</strong>: the top of “Races” shows one thing a runner actually said, every day — to the right of the next-race card on a computer, above it on phones and tablets. It changes at midnight, and every device shows the same quote on the same day. In English you only see English: the original words if they were said in English, otherwise an English translation. Tap it to see who said it and when, with the source and a link. Every quote has been checked against its source; the translations are ours. To hide it, turn off “Quote of the day” under Display in the account menu.</li>
         <li>Career numbers are tappable: tap a year’s bar, a heatmap square, “Races finished” or “Distance this year” to list those races underneath (tap one to open it; back closes the list first). Tap the marathon PB time to open the race where you set it. Only running races count as marathons (a 42 km bike race doesn’t).</li>
@@ -6127,6 +6359,68 @@ const EN={
   'ui.trLastWeek':'Last week',
   'ui.trainingMore':'More actions',
   'ui.trainingShoeAria':'Shoes worn',
+  // 訓練單次詳細（v4.11.0）
+  'ui.trdBack':'Back','ui.trdTime':'Time','ui.trdPace':'Pace','ui.trdSpeed':'Avg speed','ui.trdHr':'Avg HR','ui.trdElev':'Elevation gain',
+  'ui.trdStatsAria':'Session stats',
+  'ui.trdRoute':'Route','ui.trdStart':'Start','ui.trdEnd':'Finish','ui.trdKmLegend':'Numbers are km',
+  'ui.trdRouteAria':'Route map with markers at {list} km','ui.trdRouteAriaPlain':'Route map',
+  'ui.trdKmEstimated':'Kilometre markers are estimated from the route length and may be off by a few hundred metres.',
+  'ui.trdKmLaps':'This route loops several times, so estimated kilometre positions would be wrong. Only the start and finish are shown.',
+  'ui.trdCompareTitle':'Compared with similar-distance {sport}',
+  'ui.trdCompareSub':'{n} {sport} of {lo}–{hi} km in the past year',
+  'ui.trdCompareNone':'No {sport} of a similar distance ({lo}–{hi} km) in the past year to compare with.',
+  'ui.trdCompareSay':'Against the average of these {n}: {parts}.',
+  'ui.trdCompareSayOne':'Against the previous one ({date}): {parts}.',
+  'ui.trdPaceFaster':'{n} s/{u} faster','ui.trdPaceSlower':'{n} s/{u} slower','ui.trdPaceSame':'about the same pace',
+  'ui.trdSpeedFaster':'{n} km/h faster','ui.trdSpeedSlower':'{n} km/h slower','ui.trdSpeedSame':'about the same speed',
+  'ui.trdHrLower':'HR {n} lower','ui.trdHrHigher':'HR {n} higher','ui.trdHrSame':'about the same HR',
+  'ui.trdElevMore':'{n} m more climbing','ui.trdElevLess':'{n} m less climbing',
+  'ui.trdFastest':'Your fastest at this distance in the past year.',
+  'ui.trdThis':'This one','ui.trdColDate':'Date','ui.trdColDist':'Distance','ui.trdColHr':'HR',
+  // 英文的運動名稱在句子裡要分單複數
+  'ui.trdSportNoun.run':'runs','ui.trdSportNoun.ride':'rides','ui.trdSportNoun.swim':'swims','ui.trdSportNoun.walk':'walks','ui.trdSportNoun.hike':'hikes',
+  'ui.trdSportNounOne.run':'run','ui.trdSportNounOne.ride':'ride','ui.trdSportNounOne.swim':'swim','ui.trdSportNounOne.walk':'walk','ui.trdSportNounOne.hike':'hike',
+  'ui.trdFeelTitle':'How did it feel?','ui.trdRpeSub':'Perceived exertion (RPE, 1–10)','ui.trdRpeNone':'Not rated yet',
+  'ui.trdRpeHint':'Rate the whole session about 30 minutes after you finish. Tap again to clear.',
+  'ui.trdRpe1':'Very easy','ui.trdRpe2':'Easy','ui.trdRpe3':'Moderate','ui.trdRpe4':'Somewhat hard','ui.trdRpe5':'Hard',
+  'ui.trdRpe6':'Hard','ui.trdRpe7':'Very hard','ui.trdRpe8':'Very hard','ui.trdRpe9':'Extremely hard','ui.trdRpe10':'Maximal',
+  'ui.trdRpeAria':'{n}, {label}',
+  'ui.trdNotesTitle':'Name and notes','ui.trdName':'Name','ui.trdNote':'Notes','ui.trdNotePh':'How it felt, the weather, how your body was…',
+  'ui.trdSaved':'Saved',
+  'ui.trdShoeTitle':'Shoes','ui.trdShoeTotal':'{n} km on these so far','ui.trdShoeTotalTarget':'{n} km on these so far (target {t} km)',
+  'ui.trdDeletedN':'{n} sessions deleted',
+  // 刪除的提示原本沒有日文、英文（一直顯示中文）
+  'ui.trainingDeleted':'Session deleted',
+  // Splits and elevation (v4.12.0)
+  'ui.trdSpTitlePace':'Pace per km','ui.trdSpTitlePaceN':'Pace per {n} km','ui.trdSpTitleSpeed':'Speed per km','ui.trdSpTitleSpeedN':'Speed per {n} km',
+  'ui.trdSpTitleSwim':'Pace per 100 m','ui.trdSpTitleSwimN':'Pace per {n} m','ui.trdSpTitleElev':'Elevation',
+  'ui.trdSpAvg':'Avg','ui.trdSpSegKm':'km {n}','ui.trdSpSegRange':'{a}–{b} km','ui.trdSpSegRangeM':'{a}–{b} m',
+  'ui.trdSpFastSlow':'Fastest: {fast} ({fv}). Slowest: {slow} ({sv}).',
+  'ui.trdSpHalvesFaster':'The second half was {d} faster than the first.','ui.trdSpHalvesSlower':'The second half was {d} slower than the first.','ui.trdSpHalvesSame':'Both halves were about even.',
+  'ui.trdSpDiffPace':'{n} s/{u}','ui.trdSpElevRange':'Highest {max} m, lowest {min} m.','ui.trdSpElevCap':'Elevation {min}–{max} m',
+  'ui.trdSpHint':'Tap a bar to see that split',
+  'ui.trdSpChartAria':'Splits and elevation chart; use the arrow keys to step through the splits',
+  'ui.trdSpSpokenPace':'{m} min {s} s per km','ui.trdSpSpokenSwim':'{m} min {s} s per 100 m','ui.trdSpSpokenSpeed':'{v} km/h',
+  'ui.trdSpUp':'up {n} m','ui.trdSpDown':'down {n} m','ui.trdSpFlat':'flat',
+  'ui.trdSpTable':'All splits','ui.trdSpColKm':'km','ui.trdSpColM':'m','ui.trdSpColElev':'Elev. (m)',
+  'ui.trdSpOldTitle':'Splits and elevation',
+  'ui.trdSpOldText':'This session was imported before v4.12.0, so its splits and elevation were not saved. Import the original file (FIT, GPX or TCX) again to add them; for FIT files the total time will also leave out pauses. The name, notes, RPE and shoes stay as they are.',
+  'ui.trdSpReimport':'Import the file again',
+  'ui.trainingImportUpgradeN':'Update {n}','ui.trainingImportBothN':'Import {a}, update {b}',
+  // Times without pauses (v4.13.0)
+  'ui.trdPausedSub':'excl. {t} paused',
+  'ui.trainingUpLead':'already imported: ','ui.trainingUpData':'splits and elevation will be added','ui.trainingUpDataN':'{n} get splits and elevation',
+  'ui.trainingUpTime':'times will leave out pauses','ui.trainingUpTimeN':'{n} get times without pauses',
+  'ui.trainingUpgraded':'Sessions updated: {n}','ui.trainingImportedBoth':'Sessions imported: {a} · updated: {b}',
+  // Training import strings that had always stayed in Chinese (added in v4.13.0)
+  'ui.trainingImportN':'Import {n}','ui.trainingImported':'Sessions imported: {n}',
+  'ui.trainingParsing':'Reading {a} of {b}…','ui.trainingFailedDetail':'Files that could not be read',
+  'ui.trainingShoeForAll':'Shoes for the running sessions (you can change each one later)',
+  'ui.trainingRaceDayHint':'These match one of your races by date and distance, so they look like race-day recordings. They are not imported as training by default: the race already counts toward your shoes, so the distance would be counted twice. To add the finish record, open that race and use “Import Finish Record / Course GPX”.',
+  'ui.trainingErrNoData':'The file has no distance or time data','ui.trainingErrNoDate':'No date found in the file',
+  'ui.trainingErrType':'Only FIT, GPX and TCX files are supported','ui.trainingExportName':'training-log',
+  'ui.buildupWeekAria':'Week {n} before race day','ui.buildupInProgress':'week in progress','ui.buildupWeekEmpty':'No training logged this week',
+  'ui.shoeImportedKm':'Plus {n} km from imported training, added automatically',
   // Privacy & terms (v4.9.0)
   'ui.privacyLink':'Privacy Policy & Terms','ui.privacyPolicy':'Privacy Policy',
   'ui.legalLinkText':'Terms of Use and Privacy Policy','ui.signInAgree':'By signing in, you agree to the {n}.',
@@ -7499,7 +7793,7 @@ async function handleAuthChange(user){
         const changed=trainings.length!==before.size||trainings.some(x=>before.get(x.id)!==(x.updatedAt||''));
         if(changed) await saveJson(TRAININGS_KEY,trainings);
         await cloudSyncTrainings();
-        if(changed){ refreshTrainingOverlay(); if(currentRace) renderDetailKeepOpen(); }
+        if(changed){ refreshTrainingOverlay(); refreshTrainingDetail(); if(currentRace) renderDetailKeepOpen(); }
       }
     }catch(err){
       console.error('訓練紀錄雲端讀取失敗',err);
@@ -15068,14 +15362,15 @@ function buildRacesByDate(races){
 // formatSwimPace(secPer100m)：游泳慣用的「分'秒"/100m」。跟 formatPace
 // 分開而不是加參數：兩者的輸入單位不同（一個是每公里秒數、一個是每
 // 100 公尺秒數），合在一起很容易在呼叫端傳錯。
+// 先四捨五入成整秒再拆分秒（v4.11.0）：分開算的話 5 分 59.6 秒會顯示成「5'60"」（跟總時數的 3:60 同一種錯）
 function formatSwimPace(secPer100m){
   if(secPer100m==null||!isFinite(secPer100m)) return '—';
-  const m=Math.floor(secPer100m/60),s=Math.round(secPer100m%60);
+  const v=Math.round(secPer100m), m=Math.floor(v/60), s=v%60;
   return `${m}'${String(s).padStart(2,'0')}"/100m`;
 }
 function formatPace(secPerKm){
   if(secPerKm==null||!isFinite(secPerKm)||secPerKm<=0) return null;
-  const m=Math.floor(secPerKm/60),s=Math.round(secPerKm%60);
+  const v=Math.round(secPerKm), m=Math.floor(v/60), s=v%60;
   return `${m}'${String(s).padStart(2,'0')}"`;
 }
 /* ============================================================
@@ -17568,11 +17863,40 @@ function trainingSportLabel(v){
   const o=TRAINING_SPORTS.find(x=>x.value===v)||TRAINING_SPORTS[TRAINING_SPORTS.length-1];
   return t('opt.trainingSport.'+o.value,o.label);
 }
+// 詳細頁的新欄位（v4.11.0）：主觀強度 1–10、備註、匯入時算好的公里標記；名稱、備註有長度上限
+// （一個月的訓練是雲端的一份文件，上限 1MB，一筆備註寫滿也只多 3KB）
+const TRAINING_NOTE_MAX=1000;
+const TRAINING_NAME_MAX=80;
+// 每幾公里標一個：短的每公里，越長越疏，地圖上最多十來個
+function trainingKmStep(km){ return km<=10.5?1:km<=25?2:km<=60?5:km<=150?10:25; }
+function validKmMarks(m,step){
+  return Array.isArray(m)&&m.length>=2&&m.length<=120&&m.length%2===0&&Number(step)>0
+    &&m.every(v=>typeof v==='number'&&isFinite(v)&&v>=0&&v<=1);
+}
 function migrateTraining(x){
   const r=Object.assign({id:uid(),date:'',startTime:null,sport:'run',name:'',distanceKm:null,
     durationSeconds:null,elevationGainM:null,avgHr:null,shoeId:null,thumb:null,fingerprint:'',
-    source:'',importedAt:null,updatedAt:null,deletedAt:null},x||{});
+    source:'',importedAt:null,updatedAt:null,deletedAt:null,rpe:null,note:'',kmStep:null,kmMarks:null,
+    paceSplits:null,elevProfile:null,pausedSeconds:null},x||{});
   if(!r.updatedAt) r.updatedAt=r.importedAt||new Date().toISOString();
+  // 雲端、JSON 備份來的也走這裡：型別不對的一律清掉，畫面上就不必每個地方再檢查
+  const rp=Number(r.rpe);
+  r.rpe=(r.rpe!=null&&Number.isInteger(rp)&&rp>=1&&rp<=10)?rp:null;
+  r.note=typeof r.note==='string'?r.note.slice(0,TRAINING_NOTE_MAX):'';
+  r.name=typeof r.name==='string'?r.name.slice(0,TRAINING_NAME_MAX):'';
+  if(!validKmMarks(r.kmMarks,r.kmStep)){ r.kmMarks=null; r.kmStep=null; }
+  // 每公里配速與高度（v4.12.0）：格式不對的整個不要（畫出錯的圖比沒有圖糟）
+  if(!validPaceSplits(r.paceSplits)) r.paceSplits=null;
+  if(!validElevProfile(r.elevProfile)) r.elevProfile=null;
+  /* 總時間不含暫停（v4.13.0）：durationSeconds 是計時時間，pausedSeconds 是暫停了幾秒；null＝不知道（GPX、TCX，
+     或 v4.13.0 以前匯入的，那時候的時間是含暫停的經過時間）。
+     v4.12.0 匯入的 FIT 檔，每公里配速那份資料記著扣掉了多少暫停（paceSplits.paused），這裡直接從總時間扣掉，不用再
+     匯入一次——用的是計時事件的秒數（整秒），可能跟手錶差一兩秒，再匯入一次原始檔就換成手錶記的。扣完 pausedSeconds
+     就有值，下次不會再扣；不改 updatedAt：每台裝置載入時都算出一樣的結果，不必為了這個同步 */
+  const ps=Number(r.pausedSeconds);
+  r.pausedSeconds=(r.pausedSeconds!=null&&r.pausedSeconds!==''&&Number.isInteger(ps)&&ps>=0&&ps<=864000)?ps:null;
+  const sp=r.paceSplits, dur=Math.round(Number(r.durationSeconds));
+  if(r.pausedSeconds==null&&sp&&Number.isInteger(sp.paused)&&dur>sp.paused){ r.durationSeconds=dur-sp.paused; r.pausedSeconds=sp.paused; }
   return r;
 }
 function liveTrainings(){ return trainings.filter(x=>!x.deletedAt); }
@@ -17608,7 +17932,7 @@ async function cloudSyncTrainings(){
       const before=new Map(trainings.map(x=>[x.id,x.updatedAt||'']));
       mergeTrainings(incoming);
       const grew=trainings.length!==before.size||trainings.some(x=>before.get(x.id)!==(x.updatedAt||''));
-      if(grew){ await persistTrainings(); refreshTrainingOverlay(); if(currentRace) renderDetailKeepOpen(); }
+      if(grew){ await persistTrainings(); refreshTrainingOverlay(); refreshTrainingDetail(); if(currentRace) renderDetailKeepOpen(); }
     }
     await saveCloudSyncStore();
     trainingSyncError=null;
@@ -17639,7 +17963,10 @@ function dedupeTrainingsByFingerprint(list){
     const win=earlier(x,cur)?x:cur, lose=win===x?cur:x;
     keep.set(x.fingerprint,win);
     if(!win.shoeId&&lose.shoeId){ win.shoeId=lose.shoeId; win.updatedAt=now; }
-    lose.deletedAt=now; lose.updatedAt=now; lose.thumb=null;
+    // 匯入時才算得出來的（公里標記、每公里配速與高度、不含暫停的時間）一樣：一台是舊版匯入、一台是新版匯入時，留下來的是舊的那筆（v4.12.0）
+    const up=trainingUpgradeFields(win,lose);
+    if(up){ Object.assign(win,up); win.updatedAt=now; }
+    lose.deletedAt=now; lose.updatedAt=now; lose.thumb=null; lose.kmStep=null; lose.kmMarks=null; lose.paceSplits=null; lose.elevProfile=null;
     n++;
   });
   return n;
@@ -17700,8 +18027,9 @@ function mapTrainingSport(raw){
   return s?'other':'run';
 }
 /* 縮圖軌跡：400 點降到 100 點，並依經緯度框正規化到 0～1。
-   經度要乘 cos(緯度) 修正，不然越靠近高緯度路線會被橫向拉寬。 */
-function buildTrainingThumb(pts){
+   經度要乘 cos(緯度) 修正，不然越靠近高緯度路線會被橫向拉寬。
+   投影拆成 trainingThumbFrame（v4.11.0）：匯入時算公里標記要用同一套投影，標記才會落在縮圖的線上 */
+function trainingThumbFrame(pts){
   const valid=(pts||[]).filter(p=>p&&p.lat!=null&&p.lon!=null);
   if(valid.length<2) return null;
   const step=Math.max(1,Math.floor(valid.length/100));
@@ -17712,43 +18040,260 @@ function buildTrainingThumb(pts){
   const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
   const span=Math.max(maxX-minX,maxY-minY)||1;
   const ox=(1-(maxX-minX)/span)/2, oy=(1-(maxY-minY)/span)/2;
+  return {s,proj:(lat,lon)=>[ox+(lon*k-minX)/span, oy+(-lat-minY)/span]};
+}
+function buildTrainingThumb(pts){
+  const f=trainingThumbFrame(pts);
+  if(!f) return null;
   const out=[];
-  s.forEach((p,i)=>{
-    out.push(+(ox+(xs[i]-minX)/span).toFixed(3), +(oy+(ys[i]-minY)/span).toFixed(3));
-  });
+  f.s.forEach(p=>{ const q=f.proj(p.lat,p.lon); out.push(+q[0].toFixed(3), +q[1].toFixed(3)); });
   return out;
+}
+/* 公里標記（v4.11.0）：匯入時用完整的點算第幾公里在哪裡，投影到縮圖的座標存起來（kmStep＋
+   kmMarks，一場半馬 20 個數字）。事後只用 100 點的縮圖推算，彎多、繞圈的路線會差很多
+   （拿真實的 FIT 檔量：繞圈的全馬差到地圖的一成），所以趁完整軌跡還在的時候算。
+   累積距離優先用手錶記的（FIT 每一點的 dist），跟手錶每公里的提示對得上；沒有就用 GPS 點
+   一段一段加。位置照「k ÷ 總距離」放；離終點不到間隔三成的那一個不標，免得跟終點疊在一起 */
+function buildTrainingKmMarks(dense,framePts,distanceKm){
+  const f=trainingThumbFrame(framePts), D=Number(distanceKm)||0;
+  const v=(dense||[]).filter(p=>p&&p.lat!=null&&p.lon!=null);
+  if(!f||v.length<2||!(D>0)) return null;
+  const watch=v.every((p,i)=>p.dist!=null&&isFinite(p.dist)&&(i===0||p.dist>=v[i-1].dist))&&v[v.length-1].dist>v[0].dist;
+  const cum=[0];
+  for(let i=1;i<v.length;i++) cum.push(watch?(v[i].dist-v[0].dist)/1000:cum[i-1]+haversineKm(v[i-1].lat,v[i-1].lon,v[i].lat,v[i].lon));
+  const total=cum[cum.length-1];
+  if(!(total>0)) return null;
+  const step=trainingKmStep(D), out=[];
+  let i=1;
+  for(let km=step;km<D-step*0.3;km+=step){
+    const target=km/D*total;
+    while(i<cum.length-1&&cum[i]<target) i++;
+    const g=(target-cum[i-1])/((cum[i]-cum[i-1])||1);
+    const q=f.proj(v[i-1].lat+(v[i].lat-v[i-1].lat)*g, v[i-1].lon+(v[i].lon-v[i-1].lon)*g);
+    out.push(+Math.min(1,Math.max(0,q[0])).toFixed(3), +Math.min(1,Math.max(0,q[1])).toFixed(3));
+  }
+  return out.length&&out.length<=120?{kmStep:step,kmMarks:out}:null;
+}
+/* 每公里配速與高度（v4.12.0）：匯入時用完整的點算好存起來。訓練只存摘要（v3.76.0 方案 B），
+   事後只剩 100 點的縮圖，算不出每公里幾分、也沒有高度——所以要趁完整的檔案還在手上的時候算。
+   - 累積距離：手錶記的（FIT 每一點的 dist）優先，跟手錶每公里的提示、v4.11.0 的公里標記對得上；
+     沒有就用 GPS 一段一段加
+   - 時間：FIT 扣掉手錶暫停（計時的 stop／start 事件），跟手錶上每公里的時間一樣。GPX、TCX 沒有
+     暫停的紀錄，點跟點之間差多久就算多久（停紅燈的時間也算在那一公里）。不用「兩點隔很久」去猜
+     暫停：智慧紀錄本來就可能十幾二十秒才記一點（使用者的真實 FIT 檔最長隔 32 秒，那時候人在騎車）
+   - 高度：先依距離分格（10 m 一格，長的路線最多 1,000 格）取平均；剖面再把每 1/59 的範圍平均成
+     一個數字（60 點）；每段的高度變化拿分界前後 50 m 的平均相減——GPS 的高度一點一點跳，單點相減
+     一公里會差好幾公尺
+   - 不合理的不存：任何一段 0 秒、跑步類快過每公里 1 分 40 秒、騎車快過時速 200 公里、游泳快過
+     每 100 m 50 秒——多半是 GPS 跳點，畫出來只會誤導
+   存下來的（一場半馬約 0.35KB、全馬約 0.6KB；一個月的訓練是雲端的一份文件，上限 1MB）：
+   paceSplits {step:每段幾公里（游泳 0.1＝每 100 m）, secs:[每一整段的秒數], tail:[最後不滿一段的
+     公里數, 秒數]|null, elev:[每段的淨高度變化（公尺，tail 也有一格）]|null, paused:扣掉的暫停秒數
+     （FIT；GPX、TCX 不知道就是 null）}
+   elevProfile {km:這條軌跡多長, z:[沿著距離平均分布的 60 個高度（公尺）]} */
+const TRAINING_SPLIT_STEPS=[0.1,0.2,0.5,1,2,5,10];
+const TRAINING_SPLIT_MAX=400;     // 一筆最多幾段：200 km 的騎車每公里一段也放得下
+const TRAINING_ELEV_POINTS=60;
+// 有「配速」可以算的運動才存分段（跟詳細頁的配速／均速一樣）；高度除了游泳都存
+function trainingHasSplits(sport){ return ['run','walk','hike','ride','swim'].includes(sport); }
+function validPaceSplits(s){
+  if(!s||typeof s!=='object'||!TRAINING_SPLIT_STEPS.includes(s.step)) return false;
+  const secs=s.secs;
+  if(!Array.isArray(secs)||secs.length<2||secs.length>TRAINING_SPLIT_MAX||!secs.every(v=>Number.isInteger(v)&&v>0&&v<=86400)) return false;
+  const tl=s.tail;
+  if(tl!=null&&!(Array.isArray(tl)&&tl.length===2&&typeof tl[0]==='number'&&tl[0]>0&&tl[0]<s.step&&Number.isInteger(tl[1])&&tl[1]>0&&tl[1]<=86400)) return false;
+  if(s.elev!=null&&!(Array.isArray(s.elev)&&s.elev.length===secs.length+(tl?1:0)&&s.elev.every(v=>Number.isInteger(v)&&Math.abs(v)<=9000))) return false;
+  if(s.paused!=null&&!(Number.isInteger(s.paused)&&s.paused>=0&&s.paused<=864000)) return false;
+  return true;
+}
+function validElevProfile(p){
+  return !!p&&typeof p==='object'&&typeof p.km==='number'&&isFinite(p.km)&&p.km>0&&p.km<=5000
+    &&Array.isArray(p.z)&&p.z.length>=2&&p.z.length<=120&&p.z.every(v=>typeof v==='number'&&isFinite(v)&&v>=-500&&v<=9000);
+}
+// 高度依距離分格平均；沒有點的格子用前後兩格內插，頭尾延用最近的值。回傳 {at:d(km)→高度, val, g, K}
+function trainingElevGrid(v,cum,R){
+  const idx=[];
+  v.forEach((p,i)=>{ if(p.ele!=null&&isFinite(p.ele)&&p.ele>=-500&&p.ele<=9000) idx.push(i); });
+  // 一半以上的點沒有高度：這個檔的高度不可靠，不畫
+  if(idx.length<2||idx.length<v.length*0.5) return null;
+  const g=Math.max(0.01,R/1000), K=Math.max(1,Math.ceil(R/g-1e-9));
+  const sum=new Array(K+1).fill(0), cnt=new Array(K+1).fill(0);
+  idx.forEach(i=>{ const k=Math.min(K,Math.max(0,Math.round(cum[i]/g))); sum[k]+=v[i].ele; cnt[k]++; });
+  const val=sum.map((s,k)=>cnt[k]?s/cnt[k]:null);
+  let prev=-1;
+  for(let k=0;k<=K;k++){
+    if(val[k]==null) continue;
+    if(prev<0) for(let j=0;j<k;j++) val[j]=val[k];
+    else for(let j=prev+1;j<k;j++) val[j]=val[prev]+(val[k]-val[prev])*(j-prev)/(k-prev);
+    prev=k;
+  }
+  for(let j=prev+1;j<=K;j++) val[j]=val[prev];
+  const at=d=>{ const x=Math.min(K,Math.max(0,d/g)), k=Math.floor(x); return k>=K?val[K]:val[k]+(val[k+1]-val[k])*(x-k); };
+  // d 前後 w 公里內格子的平均（範圍裡沒有格子就用內插的值）
+  const near=(d,w)=>{ const a=Math.max(0,Math.ceil((d-w)/g-1e-9)), b=Math.min(K,Math.floor((d+w)/g+1e-9)); let s=0,n=0; for(let k=a;k<=b;k++){ s+=val[k]; n++; } return n?s/n:at(d); };
+  return {at,near,val,g,K};
+}
+function trainingElevProfileFrom(E,R){
+  const N=TRAINING_ELEV_POINTS, h=R/(N-1)/2, z=[];
+  for(let j=0;j<N;j++){
+    const d=j/(N-1)*R;
+    z.push(Math.round(E.near(d,h))||0);   // ||0：-0.4 四捨五入是 -0，JSON 會寫成 0、畫面上卻可能出現「-0」
+  }
+  return {km:+R.toFixed(3),z};
+}
+function trainingPaceSplitsFrom(v,cum0,R0,sport,pauses,E){
+  // 只用有時間的點（距離照全部的點算）：GPX 偶爾有幾點沒寫時間，不必整筆放棄；一半以上沒有就不算
+  const idx=[];
+  v.forEach((p,i)=>{ if(p.time instanceof Date&&!isNaN(p.time)) idx.push(i); });
+  if(idx.length<2||idx.length<v.length*0.5) return null;
+  const tm=idx.map(i=>v[i].time.getTime()), cum=idx.map(i=>cum0[i]-cum0[idx[0]]), R=cum[cum.length-1];
+  if(!(R>0)) return null;
+  const pz=(pauses||[]).filter(q=>Array.isArray(q)&&q[1]>q[0]).sort((a,b)=>a[0]-b[0]);
+  // 每一點的「計時」秒數：兩點之間的時間扣掉跟暫停重疊的部分（時間倒退的當成 0）
+  const mv=[0];
+  for(let i=1;i<tm.length;i++){
+    let dt=Math.max(0,tm[i]-tm[i-1]);
+    for(const q of pz){ const o=Math.min(q[1],tm[i])-Math.max(q[0],tm[i-1]); if(o>0) dt-=o; }
+    mv.push(mv[i-1]+Math.max(0,dt)/1000);
+  }
+  const base=sport==='swim'?0.1:1;
+  const step=[1,2,5,10].map(f=>+(base*f).toFixed(1)).find(s=>Math.floor(R/s+1e-9)<=TRAINING_SPLIT_MAX);
+  if(!step) return null;
+  const n=Math.floor(R/step+1e-9);
+  if(n<2) return null;
+  // 第 k 段的終點：在跨過 k×step 的那兩點之間內插計時秒數
+  const T=[0]; let i=1;
+  for(let k=1;k<=n;k++){
+    const d=Math.min(k*step,R);
+    while(i<cum.length-1&&cum[i]<d) i++;
+    const f=(d-cum[i-1])/((cum[i]-cum[i-1])||1);
+    T.push(mv[i-1]+(mv[i]-mv[i-1])*Math.min(1,Math.max(0,f)));
+  }
+  // 累積秒數先四捨五入再相減：每段加起來剛好是總秒數，不會因為每段各自進位差好幾秒
+  const secs=[];
+  for(let k=1;k<=n;k++) secs.push(Math.round(T[k])-Math.round(T[k-1]));
+  const minPerKm=sport==='swim'?500:sport==='ride'?18:100;
+  if(secs.some(s=>!(s>0)||s<minPerKm*step)) return null;
+  // 最後不滿一段：至少一段的一成（100 m／10 m）才留，太短的配速只是雜訊
+  let tail=null;
+  const tailKm=R-n*step;
+  if(tailKm>=step*0.1){
+    const s=Math.round(mv[mv.length-1])-Math.round(T[n]);
+    if(s>0&&s>=minPerKm*tailKm) tail=[+tailKm.toFixed(3),s];
+  }
+  let elev=null;
+  if(E){
+    // 分界的高度取前後 50 m 的平均（游泳沒有高度）：GPS 的高度一點一點跳，拿單一點相減，一公里會差好幾公尺
+    const off=cum0[idx[0]], zAt=d=>E.near(d+off,0.05);
+    elev=[];
+    for(let k=1;k<=n;k++) elev.push(Math.round(zAt(k*step)-zAt((k-1)*step))||0);
+    if(tail) elev.push(Math.round(zAt(n*step+tail[0])-zAt(n*step))||0);
+  }
+  let paused=null;
+  if(Array.isArray(pauses)){
+    const a=tm[0], b=tm[tm.length-1]; let s=0;
+    pz.forEach(q=>{ const o=Math.min(q[1],b)-Math.max(q[0],a); if(o>0) s+=o; });
+    paused=Math.round(s/1000);
+  }
+  return {step,secs,tail,elev,paused};
+}
+function buildTrainingAnalysis(dense,sport,pauses){
+  const out={paceSplits:null,elevProfile:null};
+  if(sport==='multisport') return out;   // 游泳＋騎車＋跑步加在一起的每公里沒有意義
+  const v=(dense||[]).filter(p=>p&&p.lat!=null&&p.lon!=null&&isFinite(p.lat)&&isFinite(p.lon));
+  if(v.length<2) return out;
+  const watch=v.every((p,i)=>p.dist!=null&&isFinite(p.dist)&&(i===0||p.dist>=v[i-1].dist))&&v[v.length-1].dist>v[0].dist;
+  const cum=[0];
+  for(let i=1;i<v.length;i++) cum.push(watch?(v[i].dist-v[0].dist)/1000:cum[i-1]+haversineKm(v[i-1].lat,v[i-1].lon,v[i].lat,v[i].lon));
+  const R=cum[cum.length-1];
+  if(!(R>0)) return out;
+  // 游泳是平的水面，手錶在水裡的高度只是雜訊
+  const E=sport==='swim'?null:trainingElevGrid(v,cum,R);
+  if(E) out.elevProfile=trainingElevProfileFrom(E,R);
+  if(trainingHasSplits(sport)) out.paceSplits=trainingPaceSplitsFrom(v,cum,R,sport,pauses,E);
+  return out;
+}
+/* 已經匯入過、這次的檔案有舊的那筆沒有的東西：只動這幾樣，名稱、備註、主觀強度、鞋款、距離都不動
+   - 每公里配速與高度（v4.12.0 以前匯入的沒有）、公里標記（v4.11.0 以前的沒有）：沒有就補
+   - 時間（v4.13.0）：這次的檔案知道暫停了多久（FIT），而且時間跟存著的不一樣（v4.13.0 以前匯入的是含暫停的經過時間；
+     v4.12.0 匯入、載入時扣過的可能差一兩秒；舊的那筆是同一次運動的 GPX）就換成這次的計時時間。每公里配速也一起換
+     （舊的那份不知道暫停在哪裡時），總時間跟每公里才對得起來 */
+function trainingUpgradeFields(old,rec){
+  const f={};
+  const knows=rec.pausedSeconds!=null&&Number(rec.durationSeconds)>0;
+  if(knows&&Math.round(Number(old.durationSeconds)||0)!==rec.durationSeconds){ f.durationSeconds=rec.durationSeconds; f.pausedSeconds=rec.pausedSeconds; }
+  if(validPaceSplits(rec.paceSplits)&&(!validPaceSplits(old.paceSplits)||(old.paceSplits.paused==null&&rec.paceSplits.paused!=null&&'durationSeconds' in f))) f.paceSplits=rec.paceSplits;
+  if(!validElevProfile(old.elevProfile)&&validElevProfile(rec.elevProfile)) f.elevProfile=rec.elevProfile;
+  if(!validKmMarks(old.kmMarks,old.kmStep)&&validKmMarks(rec.kmMarks,rec.kmStep)){ f.kmStep=rec.kmStep; f.kmMarks=rec.kmMarks; }
+  // 有別的要補、這次的檔案又知道暫停多久：一起記下來（時間沒變，例如沒有暫停）。只有這一樣的話不算要更新
+  if(Object.keys(f).length&&knows&&old.pausedSeconds==null&&!('pausedSeconds' in f)){ f.durationSeconds=rec.durationSeconds; f.pausedSeconds=rec.pausedSeconds; }
+  return Object.keys(f).length?f:null;
+}
+/* 計時時間（v4.13.0）：跟手錶一樣不含暫停。FIT session 的 total_timer_time（欄位 8）是手錶自己記的；少數手錶沒寫，
+   就用經過時間扣掉那一段裡的暫停（計時事件，v4.12.0 起讀的）。兩樣都沒有：不知道，回傳 null，照舊用經過時間。
+   多項運動照舊不算轉換區（呼叫端傳進來的 ses 已經拿掉了） */
+function pauseOverlapMs(pauses,a,b){
+  let ms=0;
+  (pauses||[]).forEach(q=>{ const o=Math.min(q[1],b)-Math.max(q[0],a); if(o>0) ms+=o; });
+  return ms;
+}
+function fitTimerSeconds(ses,pauses){
+  let timer=0, elapsed=0;
+  for(const x of ses||[]){
+    const el=Number(x.elapsedSeconds);
+    if(!(el>0)) return null;
+    let tm=x.timerSeconds!=null?Number(x.timerSeconds):NaN;
+    // 計時時間不會比經過時間長（留 1 秒的誤差）；不合理就當作沒寫
+    if(!(isFinite(tm)&&tm>0&&tm<=el+1)){
+      if(!Array.isArray(pauses)||!x.startTime) return null;
+      const a=x.startTime.getTime();
+      tm=el-pauseOverlapMs(pauses,a,a+el*1000)/1000;
+    }
+    timer+=Math.min(tm,el); elapsed+=el;
+  }
+  return timer>0?{timer,elapsed}:null;
 }
 async function parseTrainingFile(file){
   const buf=await file.arrayBuffer();
   const fingerprint=await fingerprintBuffer(buf);
   const ext=(file.name.split('.').pop()||'').toLowerCase();
-  let summary=null, sport='run', startAt=null, name='';
+  let summary=null, sport='run', startAt=null, name='', dense=null, pauses=null, pausedSeconds=null;
   if(ext==='fit'){
     const points=parseFitPoints(buf);
+    dense=points; pauses=points.pauses||null;
     const ses=(points.sessions||[]).filter(s=>s.sport!=='transition');
     const main=ses[0]||null;
     if(points.length>=2){ try{ summary=summarizeTrackPoints(points); }catch(e){ summary=null; } }
     if(main){
       startAt=main.startTime;
       sport=ses.length>=2?'multisport':mapTrainingSport(main.sport);
-      // 手錶自己記的總距離／總時間是權威數字，GPS 點重算的會有些微誤差
+      // 手錶自己記的總距離／總時間是權威數字，GPS 點重算的會有些微誤差。時間用計時時間（不含暫停，v4.13.0）
       const totalM=ses.reduce((a,s)=>a+(s.distanceM||0),0);
       const totalSec=ses.reduce((a,s)=>a+(s.elapsedSeconds||0),0);
+      const tt=fitTimerSeconds(ses,pauses);
+      if(tt) pausedSeconds=Math.max(0,Math.round(tt.elapsed)-Math.round(tt.timer));
       const ascents=ses.map(s=>s.totalAscent).filter(v=>v!=null);
       const sesAscent=ascents.length?ascents.reduce((a,b)=>a+b,0):null;
       summary=Object.assign({trackPoints:[]},summary||{},{
         distanceKm:totalM>0?+(totalM/1000).toFixed(2):(summary?summary.distanceKm:null),
-        durationSeconds:totalSec>0?Math.round(totalSec):(summary?summary.durationSeconds:null),
+        durationSeconds:tt?Math.round(tt.timer):(totalSec>0?Math.round(totalSec):(summary?summary.durationSeconds:null)),
         // 爬升與心率同樣以手錶記錄為準：爬升多半來自氣壓計，比 GPS 高度
         // 重算準；session 沒記才退回用軌跡點算的
         elevationGainM:(sesAscent!=null)?sesAscent:(summary?summary.elevationGainM:null),
         avgHr:(main.avgHr!=null)?main.avgHr:(summary?summary.avgHr:null),
       });
+    }else if(summary&&Array.isArray(pauses)&&summary.durationSeconds>0){
+      // 沒有 session（檔案不完整）：點的頭尾時間扣掉中間的暫停
+      const tp=points.filter(p=>p.time);
+      pausedSeconds=Math.min(summary.durationSeconds,Math.round(pauseOverlapMs(pauses,tp[0].time.getTime(),tp[tp.length-1].time.getTime())/1000));
+      summary.durationSeconds-=pausedSeconds;
     }
     if(!summary) throw new Error(t('ui.trainingErrNoData','檔案裡沒有距離或時間資料'));
   }else if(ext==='gpx'||ext==='tcx'){
     const text=new TextDecoder().decode(buf);
     summary=parseGpxOrTcx(text);
+    // 算公里標記、每公里配速與高度用：檔案裡全部的點（v4.12.0；之前用最多 2,000 點的有時間軌跡）
+    dense=summary.allPoints||((summary.timedTrackPoints||[]).length>=(summary.trackPoints||[]).length?summary.timedTrackPoints:summary.trackPoints);
     const sportAttr=(text.match(/<Activity[^>]*Sport="([^"]+)"/i)||[])[1]
       ||(text.match(/<type>([^<]+)<\/type>/i)||[])[1];
     sport=mapTrainingSport(sportAttr);
@@ -17760,6 +18305,10 @@ async function parseTrainingFile(file){
   }
   const date=startAt?localDateStr(startAt):(summary.startDate||'');
   if(!date) throw new Error(t('ui.trainingErrNoDate','檔案裡找不到日期'));
+  const thumb=buildTrainingThumb(summary.trackPoints);
+  // 公里標記（v4.11.0）：游泳＋騎車＋跑步的多項運動不標
+  const km=thumb&&sport!=='multisport'?buildTrainingKmMarks(dense,summary.trackPoints,summary.distanceKm):null;
+  const an=buildTrainingAnalysis(dense,sport,pauses);
   const now=new Date().toISOString();
   return migrateTraining({
     date,startTime:startAt?localTimeStr(startAt):null,sport,name,
@@ -17767,7 +18316,8 @@ async function parseTrainingFile(file){
     durationSeconds:summary.durationSeconds!=null?summary.durationSeconds:null,
     elevationGainM:summary.elevationGainM!=null?Math.round(summary.elevationGainM):null,
     avgHr:summary.avgHr!=null?summary.avgHr:null,
-    thumb:buildTrainingThumb(summary.trackPoints),
+    thumb,kmStep:km?km.kmStep:null,kmMarks:km?km.kmMarks:null,
+    paceSplits:an.paceSplits,elevProfile:an.elevProfile,pausedSeconds,
     fingerprint,source:ext,importedAt:now,updatedAt:now,
   });
 }
@@ -17903,8 +18453,8 @@ function trainingBuildupHtml(race){
   if(open!=null){
     const w=b.weeks.find(x=>x.k===open);
     drill=`<div class="buildup-drill"><div class="small buildup-drill-head">${tf('ui.buildupWeekAria','賽前第 {n} 週',w.k)}（${w.from.slice(5)}–${w.to.slice(5)}・${w.km.toFixed(1)} km${w.inProgress?'・'+t('ui.buildupInProgress','這週還沒過完'):''}）</div>
-      ${w.items.length?w.items.map(x=>`<div class="buildup-drill-row"><span>${x.date.slice(5)} ${escapeHtml(trainingSportLabel(x.sport))} ${x.distanceKm!=null?x.distanceKm.toFixed(1)+' km':''}</span>
-        <span class="mono">${x.durationSeconds?fmtTrainingDuration(x.durationSeconds):''}${x.durationSeconds&&x.distanceKm&&SHOE_SPORTS.includes(x.sport)?'・'+formatPace(x.durationSeconds/x.distanceKm):''}${x.avgHr?'・♥'+x.avgHr:''}</span></div>`).join('')
+      ${w.items.length?w.items.map(x=>`<button type="button" class="buildup-drill-row" data-action="training-open-detail" data-id="${escapeHtml(x.id)}"><span>${x.date.slice(5)} ${escapeHtml(x.name||trainingSportLabel(x.sport))} ${x.distanceKm!=null?x.distanceKm.toFixed(1)+' km':''}</span>
+        <span class="mono">${x.durationSeconds?fmtTrainingDuration(x.durationSeconds):''}${x.durationSeconds&&x.distanceKm&&SHOE_SPORTS.includes(x.sport)?'・'+formatPace(x.durationSeconds/x.distanceKm):''}${x.avgHr?'・♥'+x.avgHr:''}</span></button>`).join('')
         :`<p class="empty-hint small">${t('ui.buildupWeekEmpty','這一週沒有訓練紀錄')}</p>`}</div>`;
   }
   return `<div class="subsection buildup-card">${title}
@@ -18345,18 +18895,22 @@ function trainingRowHtml(x){
   const shoe=shoes.find(s=>s.id===x.shoeId);
   const canShoe=SHOE_SPORTS.includes(x.sport);
   const pace=x.durationSeconds&&x.distanceKm&&canShoe?formatPace(x.durationSeconds/x.distanceKm):'';
-  const stats=[x.durationSeconds?fmtTrainingDuration(x.durationSeconds):'',pace?pace+'/km':'',x.avgHr?'♥'+x.avgHr:''].filter(Boolean).join(trSep());
+  const stats=[x.durationSeconds?fmtTrainingDuration(x.durationSeconds):'',pace?pace+'/km':'',x.avgHr?'♥'+x.avgHr:'',x.rpe?'RPE\u00a0'+x.rpe:''].filter(Boolean).join(trSep());   // 不換行空白：「RPE」跟數字不會被拆到兩行
   const editing=trainingEditId===x.id;
+  const title=x.name||trainingSportLabel(x.sport);
+  // 讀螢幕唸「名稱，日期，距離」：只唸名稱的話，一整排「跑步」分不出是哪一筆
+  const openAria=[title,trDayLabel(x.date)+(x.startTime?(currentLang==='en'?' ':'')+x.startTime:''),x.distanceKm!=null?trFmtKm(x.distanceKm)+' km':''].filter(Boolean).join(trListSep());
   const chip=canShoe
     ?`<button type="button" class="training-shoe${shoe?'':' is-empty'}" data-action="training-edit" data-id="${x.id}" aria-expanded="${editing}"><span>${escapeHtml(shoe?shoe.name:t('ui.trainingPickShoe','選擇鞋款'))}</span></button>`
     :`<button type="button" class="training-shoe is-more" data-action="training-edit" data-id="${x.id}" aria-expanded="${editing}" aria-label="${escapeHtml(t('ui.trainingMore','更多操作'))}"><span>⋯</span></button>`;
   return `<div class="training-row" data-training-id="${x.id}">
     <div class="training-thumb">${thumbSvg(x.thumb,56)}</div>
-    <div class="training-title">${escapeHtml(x.name||trainingSportLabel(x.sport))}</div>
+    <button type="button" class="training-title training-open" data-action="training-open-detail" data-id="${escapeHtml(x.id)}" aria-label="${escapeHtml(openAria)}">${escapeHtml(title)}</button>
     <div class="training-dist">${x.distanceKm!=null?`<b class="mono">${trFmtKm(x.distanceKm)}</b><span>km</span>`:''}</div>
     <div class="training-date">${escapeHtml(trDayLabel(x.date)+(x.startTime?(currentLang==='en'?' ':'')+x.startTime:''))}</div>
     <div class="training-chipcell">${chip}</div>
     ${stats?`<div class="training-stats mono">${escapeHtml(stats)}</div>`:''}
+    ${x.note?`<div class="training-note-line">${escapeHtml(x.note.split('\n')[0])}</div>`:''}
     ${editing?`<div class="training-edit">${canShoe?`<select data-training-shoe="${x.id}" aria-label="${escapeHtml(t('ui.trainingShoeAria','這次穿的鞋'))}">${trainingShoeOptions(x.shoeId)}</select>`:''}
       <button type="button" class="btn-text-small training-delete" data-action="training-delete" data-id="${x.id}">${t('ui.trainingDelete','刪除這筆')}</button></div>`:''}
   </div>`;
@@ -18422,6 +18976,7 @@ function openTrainingOverlay(){
   logFeatureUse('open_training');
 }
 function closeTrainingOverlay(){
+  closeTrainingDetail(true);
   const el=document.getElementById('training-overlay');
   el.hidden=true; el.innerHTML=''; trainingEditId=null;
   document.body.classList.remove('overlay-open');
@@ -18430,13 +18985,691 @@ function refreshTrainingOverlay(){
   const el=document.getElementById('training-overlay');
   if(el&&!el.hidden) el.innerHTML=trainingOverlayHtml();
 }
+/* ============================================================
+   單次訓練詳細（v4.11.0，設計稿 E）
+   點列表的一筆打開：數字、路線（含公里標記）、跟過去一年距離相近的同種運動比較、
+   主觀強度（RPE）、名稱與備註、鞋款。疊在訓練頁上面的全螢幕一層：「‹ 返回」、Esc、
+   手機的返回鍵都是回上一層；從「相近的訓練」點進去的會疊上去，返回時一筆一筆退。
+   - 只用存下來的資料：訓練只存摘要和 100 點的縮圖軌跡（v3.76.0 方案 B），沒有心率曲線。時間是計時時間
+     （不含暫停，v4.13.0），暫停了多久（pausedSeconds）寫在時間下面。
+     每公里配速與高度剖面是 v4.12.0 起匯入時多存的（paceSplits、elevProfile）；之前匯入的
+     再匯入一次原始檔就會補上
+   - 公里標記：v4.11.0 起匯入時用完整軌跡算好位置存起來（kmMarks）；之前匯入的只有
+     縮圖，用縮圖的路徑長度推算，畫面註明是推算的。繞圈的路線推算會差到地圖的一成以上
+     （用真實的 FIT 檔量過），那種只標起點、終點
+   - 名稱、備註打字時自動存（停 0.6 秒、離開欄位、關掉這一頁都會存），不用按儲存
+   ============================================================ */
+// 配速／均速：跑步、健走、登山是每公里幾分；騎車是每小時幾公里；游泳是每 100 公尺幾分。
+// 多項、其他運動的「配速」沒有意義，不算
+function trainingRate(x){
+  const km=Number(x.distanceKm)||0, sec=Number(x.durationSeconds)||0;
+  if(!(km>0&&sec>0)) return null;
+  if(x.sport==='ride') return {kind:'speed',v:km/(sec/3600)};
+  if(x.sport==='swim') return {kind:'swim',v:sec/(km*10)};
+  if(SHOE_SPORTS.includes(x.sport)) return {kind:'pace',v:sec/km};
+  return null;
+}
+// 「2026/10/3（六）」；英文「Sat, Oct 3, 2026」。詳細頁要看得出是哪一年
+function trFullDateLabel(s){
+  const d=new Date(s+'T00:00:00');
+  if(currentLang==='en') return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${weekdayLabels()[d.getDay()]}）`;
+}
+function trListSep(){ return currentLang==='en'?', ':currentLang==='ja'?'、':'，'; }
+function trainingThumbPairs(thumb){
+  const out=[];
+  if(!Array.isArray(thumb)) return out;
+  for(let i=0;i+1<thumb.length;i+=2){
+    const x=Number(thumb[i]), y=Number(thumb[i+1]);
+    if(isFinite(x)&&isFinite(y)) out.push([x,y]);
+  }
+  return out;
+}
+/* 舊資料（v4.11.0 之前匯入、沒有 kmMarks）用縮圖推算公里標記：沿著縮圖的折線量長度，
+   第 k 公里放在「k ÷ 總距離」的位置。縮圖只有 100 點，彎多的地方會抄近路；路線簡單時
+   差地圖的 2～3%（幾十到一百多公尺），繞圈的路線差到一成以上——路徑長度是範圍長邊的
+   6 倍以上就當成繞圈（田徑場、公園繞好幾圈、繞圈的馬拉松），不標 */
+function estimateKmMarksFromThumb(thumb,distanceKm){
+  const P=trainingThumbPairs(thumb), D=Number(distanceKm)||0;
+  if(P.length<2||!(D>0)) return null;
+  const L=[0];
+  for(let i=1;i<P.length;i++) L.push(L[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
+  const total=L[L.length-1];
+  const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]);
+  const extent=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+  if(!(total>0)||!(extent>0)) return null;
+  if(total/extent>6) return {laps:true};
+  const step=trainingKmStep(D), out=[];
+  for(let km=step;km<D-step*0.3;km+=step){
+    const target=km/D*total;
+    let i=1; while(i<L.length-1&&L[i]<target) i++;
+    const g=(target-L[i-1])/((L[i]-L[i-1])||1);
+    out.push(+(P[i-1][0]+(P[i][0]-P[i-1][0])*g).toFixed(3),+(P[i-1][1]+(P[i][1]-P[i-1][1])*g).toFixed(3));
+  }
+  return {kmStep:step,kmMarks:out};
+}
+function trainingRouteMarks(x){
+  if(x.sport==='multisport') return {kind:'none'};   // 游泳＋騎車＋跑步的公里數加在一起沒有意義
+  if(validKmMarks(x.kmMarks,x.kmStep)) return {kind:'exact',step:x.kmStep,pts:trainingThumbPairs(x.kmMarks)};
+  const e=estimateKmMarksFromThumb(x.thumb,x.distanceKm);
+  if(!e) return {kind:'none'};
+  if(e.laps) return {kind:'laps'};
+  return e.kmMarks.length?{kind:'estimated',step:e.kmStep,pts:trainingThumbPairs(e.kmMarks)}:{kind:'none'};
+}
+/* 路線圖：線用 SVG 畫（vector-effect 讓線寬固定是幾 px，不跟著縮放），起終點和公里數字
+   用 HTML 疊上去——SVG 的字會跟著寬度縮放（v4.10.0 圖表同一個理由），HTML 的字就是
+   設定的 13px × 字級。地圖的長寬比跟路線一樣（太扁的路線把短邊撐開，最扁 1:2.2），
+   高度最多 340px */
+function trainingRouteHtml(x){
+  const P=trainingThumbPairs(x.thumb);
+  if(P.length<2) return '';
+  const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]);
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const ext=Math.max(maxX-minX,maxY-minY)||0.02;
+  let vx=minX-ext*0.1, vy=minY-ext*0.1, vw=(maxX-minX)+ext*0.2, vh=(maxY-minY)+ext*0.2;
+  if(vw/vh>2.2){ const nh=vw/2.2; vy-=(nh-vh)/2; vh=nh; }
+  if(vw/vh<0.6){ const nw=vh*0.6; vx-=(nw-vw)/2; vw=nw; }
+  const ar=vw/vh;
+  const pos=(p)=>`left:${((p[0]-vx)/vw*100).toFixed(2)}%;top:${((p[1]-vy)/vh*100).toFixed(2)}%`;
+  const d=P.map((p,i)=>(i?'L':'M')+p[0].toFixed(3)+' '+p[1].toFixed(3)).join('');
+  const marks=trainingRouteMarks(x);
+  const start=P[0], end=P[P.length-1];
+  // 標記跟起終點、跟彼此太近就跳過，數字不會疊在一起。「太近」用畫面上的距離算：地圖畫出來多寬
+  // （手機 254～324px、筆電最多約 690px）、數字膠囊多寬（兩位數約 30px、三位數約 40px，乘字級）
+  const fsNow=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fs'))||1;
+  const stageW=Math.min(Math.min(720,window.innerWidth||720)-66,340*ar);
+  const pxPerUnit=stageW/vw;
+  const placed=[start,end], labels=[], kmHtml=[];
+  (marks.pts||[]).forEach((p,i)=>{
+    const km=Math.round((i+1)*marks.step*10)/10;
+    const need=((String(km).length>=3?40:30)*fsNow+4)/pxPerUnit;
+    if(placed.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<need)) return;
+    placed.push(p); labels.push(km);
+    kmHtml.push(`<span class="trd-km" style="${pos(p)}">${km}</span>`);
+  });
+  const aria=labels.length?tv('ui.trdRouteAria','路線圖，標了 {list} 公里的位置',{list:labels.join(trListSep())}):t('ui.trdRouteAriaPlain','路線圖');
+  const note=marks.kind==='estimated'&&labels.length?t('ui.trdKmEstimated','公里標記是用路線長度推算的位置，可能差幾百公尺。')
+    :marks.kind==='laps'?t('ui.trdKmLaps','這條路線繞了好幾圈，推算的公里位置會不準，所以只標起點和終點。'):'';
+  return `<section class="tr-card trd-card trd-route" aria-labelledby="trd-route-h">
+    <div class="trd-card-head"><h3 id="trd-route-h">${t('ui.trdRoute','路線')}</h3>
+      <span class="trd-legend" aria-hidden="true"><span><i class="is-start"></i>${t('ui.trdStart','起點')}</span><span><i class="is-end"></i>${t('ui.trdEnd','終點')}</span>${labels.length?`<span>${t('ui.trdKmLegend','數字是公里')}</span>`:''}</span></div>
+    <div class="trd-route-stage" role="img" aria-label="${escapeHtml(aria)}" data-km-kind="${marks.kind}" style="aspect-ratio:${ar.toFixed(4)};width:min(100%,${(340*ar).toFixed(1)}px)">
+      <svg viewBox="${vx.toFixed(4)} ${vy.toFixed(4)} ${vw.toFixed(4)} ${vh.toFixed(4)}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path d="${d}" fill="none" style="stroke:var(--thumb-glow)" stroke-width="9" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="${d}" fill="none" style="stroke:var(--thumb-line)" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+      <span class="trd-pin is-end" style="${pos(end)}"></span><span class="trd-pin is-start" style="${pos(start)}"></span>
+      ${kmHtml.join('')}
+    </div>
+    ${note?`<p class="trd-note">${escapeHtml(note)}</p>`:''}
+  </section>`;
+}
+function trdHeadHtml(x){
+  const when=trFullDateLabel(x.date)+(x.startTime?(currentLang==='en'?' ':'')+x.startTime:'');
+  return `<div class="trd-head"><h2 id="trd-title" class="trd-title" tabindex="-1">${escapeHtml(x.name||trainingSportLabel(x.sport))}</h2>
+    <div class="trd-meta">${escapeHtml(when+trSep()+trainingSportLabel(x.sport))}</div></div>`;
+}
+function trdHeroHtml(x){
+  const km=Number(x.distanceKm)||0, sec=Number(x.durationSeconds)||0, rate=trainingRate(x);
+  // 時間是計時時間、跟手錶一樣不含暫停（v4.13.0）。暫停 10 秒以上在時間下面寫出來，跟牆上的時鐘對得起來
+  const sub=sec>0&&Number(x.pausedSeconds)>=10?`<em class="trd-stat-sub">${escapeHtml(tv('ui.trdPausedSub','不含暫停 {t}',{t:fmtTrainingDuration(x.pausedSeconds)}))}</em>`:'';
+  const big=km>0?`<div class="trw-km"><b class="mono">${trFmtKm(km)}</b><span>km</span></div>`
+    :(sec>0?`<div class="trw-km"><b class="mono">${fmtTrainingDuration(sec)}</b></div>${sub}`:'');
+  const items=[];
+  if(sec>0&&km>0) items.push([t('ui.trdTime','時間'),fmtTrainingDuration(sec),'',sub]);
+  if(rate) items.push(rate.kind==='speed'?[t('ui.trdSpeed','均速'),rate.v.toFixed(1),'km/h']
+    :[t('ui.trdPace','配速'),formatPace(rate.v),rate.kind==='swim'?'/100m':'/km']);
+  if(x.avgHr) items.push([t('ui.trdHr','平均心率'),String(x.avgHr),'bpm']);
+  if(x.elevationGainM!=null) items.push([t('ui.trdElev','爬升'),String(Math.round(x.elevationGainM)),'m']);
+  if(!big&&!items.length) return '';
+  return `<section class="tr-card trd-card trd-hero" aria-label="${escapeHtml(t('ui.trdStatsAria','這次的數字'))}">${big}
+    ${items.length?`<div class="trd-stats">${items.map(([l,v,u,sb])=>`<div class="trd-stat"><span>${escapeHtml(l)}</span><b class="mono">${escapeHtml(v)}${u?`<small>${escapeHtml(u)}</small>`:''}</b>${sb||''}</div>`).join('')}</div>`:''}
+  </section>`;
+}
+/* 跟距離相近的比：同一種運動、這一次之前的一年內、距離差 15% 以內（至少 ±0.5 km，游泳 ±0.1 km）。
+   比配速（騎車比均速）、心率、爬升的平均。差一點點是雜訊：配速差 2 秒以內、心率差 1、均速差不到
+   0.3 km/h 說「差不多」，爬升差不到 10 m 不提。只有一次可以比時說「比上一次」 */
+function trainingSimilar(x){
+  const r0=trainingRate(x);
+  if(!r0) return null;
+  const d0=Number(x.distanceKm), tol=Math.max(d0*0.15,x.sport==='swim'?0.1:0.5);
+  const from=addDaysStr(x.date,-365), key0=x.date+(x.startTime||'');
+  const list=liveTrainings().filter(o=>o.id!==x.id&&o.sport===x.sport&&trainingRate(o)&&o.date>=from
+    &&(o.date+(o.startTime||''))<key0&&Math.abs(Number(o.distanceKm)-d0)<=tol).sort(byNewest);
+  return {list,lo:Math.max(0,d0-tol),hi:d0+tol,rate0:r0};
+}
+function trdCompareHtml(x){
+  const sim=trainingSimilar(x);
+  if(!sim) return '';
+  // 英文要分單複數（runs／a run）；中文、日文直接用運動名稱
+  const noun=n=>t((n===1?'ui.trdSportNounOne.':'ui.trdSportNoun.')+x.sport,trainingSportLabel(x.sport));
+  // 範圍的數字：15 km 以下寫到小數一位（8.5–11.5 km），再長的寫整數（18–25 km）
+  const fr=v=>Number(x.distanceKm)<15?(Math.round(v*10)/10).toFixed(1):String(Math.round(v));
+  const lo=fr(sim.lo), hi=fr(sim.hi), n=sim.list.length;
+  const head=`<div class="trd-card-head"><h3 id="trd-cmp-h">${escapeHtml(tv('ui.trdCompareTitle','跟距離相近的{sport}比',{sport:noun(2)}))}</h3></div>`;
+  if(!n) return `<section class="tr-card trd-card trd-compare" aria-labelledby="trd-cmp-h">${head}
+    <p class="trd-sub">${escapeHtml(tv('ui.trdCompareNone','過去一年沒有距離相近（{lo}–{hi} km）的{sport}可以比。',{lo,hi,sport:noun(2)}))}</p></section>`;
+  const r0=sim.rate0, rates=sim.list.map(o=>trainingRate(o).v);
+  const mean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
+  const avg=mean(rates);
+  const hrAvg=mean(sim.list.map(o=>Number(o.avgHr)).filter(v=>v>0));
+  const elAvg=mean(sim.list.filter(o=>o.elevationGainM!=null).map(o=>Number(o.elevationGainM)));
+  const parts=[];
+  let sameRate;
+  if(r0.kind==='speed'){
+    const dv=r0.v-avg;
+    sameRate=Math.abs(dv)<0.3;
+    parts.push(sameRate?t('ui.trdSpeedSame','均速差不多')
+      :tv(dv>0?'ui.trdSpeedFaster':'ui.trdSpeedSlower',dv>0?'快 {n} km/h':'慢 {n} km/h',{n:Math.abs(dv).toFixed(1)}));
+  }else{
+    const ds=Math.round(r0.v-avg), u=r0.kind==='swim'?'100m':'km';
+    sameRate=Math.abs(ds)<=2;
+    parts.push(sameRate?t('ui.trdPaceSame','配速差不多')
+      :tv(ds<0?'ui.trdPaceFaster':'ui.trdPaceSlower',ds<0?'快 {n} 秒／{u}':'慢 {n} 秒／{u}',{n:Math.abs(ds),u}));
+  }
+  if(Number(x.avgHr)>0&&hrAvg!=null){
+    const dh=Math.round(x.avgHr-hrAvg);
+    parts.push(Math.abs(dh)<=1?t('ui.trdHrSame','心率差不多'):tv(dh<0?'ui.trdHrLower':'ui.trdHrHigher',dh<0?'心率低 {n}':'心率高 {n}',{n:Math.abs(dh)}));
+  }
+  if(x.elevationGainM!=null&&elAvg!=null){
+    const de=Math.round(x.elevationGainM-elAvg);
+    if(Math.abs(de)>=10) parts.push(tv(de>0?'ui.trdElevMore':'ui.trdElevLess',de>0?'爬升多 {n} m':'爬升少 {n} m',{n:Math.abs(de)}));
+  }
+  const joined=parts.join(currentLang==='en'?', ':'、');
+  let say=n===1?tv('ui.trdCompareSayOne','比上一次（{date}）：{parts}。',{date:trMD(sim.list[0].date),parts:joined})
+    :tv('ui.trdCompareSay','比這 {n} 次的平均：{parts}。',{n,parts:joined});
+  // 「最快的一次」只在比平均快得夠多時說：配速差不多又說最快，讀起來自相矛盾
+  const best=r0.kind==='speed'?rates.every(v=>r0.v>v):rates.every(v=>r0.v<v);
+  if(n>=2&&best&&!sameRate) say+=(currentLang==='en'?' ':'')+t('ui.trdFastest','這是過去一年這個距離最快的一次。');
+  const rateCell=o=>{ const r=trainingRate(o); return r.kind==='speed'?r.v.toFixed(1):formatPace(r.v); };
+  const rateHead=r0.kind==='speed'?'km/h':r0.kind==='swim'?'/100m':t('ui.trdPace','配速');
+  const cells=(o,isThis)=>`<span class="trd-sim-date">${escapeHtml(isThis?t('ui.trdThis','這次'):trMD(o.date))}</span><span>${trFmtKm(o.distanceKm)} km</span><span>${escapeHtml(rateCell(o))}</span><span>${o.avgHr?escapeHtml(String(o.avgHr)):'—'}</span>`;
+  return `<section class="tr-card trd-card trd-compare" aria-labelledby="trd-cmp-h">${head}
+    <p class="trd-sub">${escapeHtml(tv('ui.trdCompareSub','過去一年 {lo}–{hi} km 的{sport}，共 {n} 次',{lo,hi,n,sport:noun(n)}))}</p>
+    <p class="trd-say">${escapeHtml(say)}</p>
+    <div class="trd-sim-list">
+      <div class="trd-sim-row is-head" aria-hidden="true"><span class="trd-sim-date">${t('ui.trdColDate','日期')}</span><span>${t('ui.trdColDist','距離')}</span><span>${escapeHtml(rateHead)}</span><span>${t('ui.trdColHr','心率')}</span></div>
+      <div class="trd-sim-row is-this">${cells(x,true)}</div>
+      ${sim.list.slice(0,5).map(o=>`<button type="button" class="trd-sim-row" data-action="training-open-detail" data-id="${escapeHtml(o.id)}">${cells(o,false)}</button>`).join('')}
+    </div>
+  </section>`;
+}
+// 主觀強度的文字：照 Foster 的 session-RPE（CR-10）量表，6、8 沒有自己的描述，跟前一級一樣
+const RPE_LABELS_ZH=['非常輕鬆','輕鬆','中等','有點吃力','吃力','吃力','很吃力','很吃力','非常吃力','全力'];
+function rpeLabel(n){ return t('ui.trdRpe'+n,RPE_LABELS_ZH[n-1]||''); }
+function trdFeelHtml(x){
+  const btns=[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="trd-rpe-btn${x.rpe===n?' is-on':''}" data-rpe="${n}" aria-pressed="${x.rpe===n}" aria-label="${escapeHtml(tv('ui.trdRpeAria','{n}，{label}',{n,label:rpeLabel(n)}))}">${n}</button>`).join('');
+  return `<section class="tr-card trd-card trd-feel" aria-labelledby="trd-feel-h">
+    <h3 id="trd-feel-h">${t('ui.trdFeelTitle','這次感覺如何')}</h3>
+    <p class="trd-sub">${t('ui.trdRpeSub','主觀強度（RPE，1–10）')}</p>
+    <div class="trd-rpe" role="group" aria-labelledby="trd-feel-h">${btns}</div>
+    <div class="trd-rpe-desc${x.rpe?'':' is-empty'}" aria-live="polite">${escapeHtml(x.rpe?x.rpe+trSep()+rpeLabel(x.rpe):t('ui.trdRpeNone','還沒打分數'))}</div>
+    <p class="trd-note">${t('ui.trdRpeHint','練完約 30 分鐘後，憑整體感覺打分數；再按一次可以清除。')}</p>
+  </section>`;
+}
+function trdNotesHtml(x){
+  return `<section class="tr-card trd-card trd-notes" aria-labelledby="trd-notes-h">
+    <h3 id="trd-notes-h">${t('ui.trdNotesTitle','名稱與備註')}</h3>
+    <label class="trd-field"><span>${t('ui.trdName','名稱')}</span>
+      <input type="text" data-trd-field="name" maxlength="${TRAINING_NAME_MAX}" value="${escapeHtml(x.name||'')}" placeholder="${escapeHtml(trainingSportLabel(x.sport))}" autocomplete="off" enterkeyhint="done"></label>
+    <label class="trd-field"><span>${t('ui.trdNote','備註')}</span>
+      <textarea data-trd-field="note" maxlength="${TRAINING_NOTE_MAX}" rows="4" placeholder="${escapeHtml(t('ui.trdNotePh','這次的感覺、天氣、身體狀況…'))}">${escapeHtml(x.note||'')}</textarea></label>
+    <div class="trd-save" aria-live="polite"></div>
+  </section>`;
+}
+function trdShoeHtml(x){
+  if(!SHOE_SPORTS.includes(x.sport)) return '';
+  const shoe=shoes.find(s=>s.id===x.shoeId);
+  let total='';
+  if(shoe){
+    const km=Math.round(computeShoeStats(shoe.id).totalDistance);
+    total=Number(shoe.targetKm)>0?tv('ui.trdShoeTotalTarget','這雙累積 {n} km（目標 {t} km）',{n:km,t:Math.round(shoe.targetKm)})
+      :tv('ui.trdShoeTotal','這雙累積 {n} km',{n:km});
+  }
+  return `<section class="tr-card trd-card trd-shoe" aria-labelledby="trd-shoe-h">
+    <h3 id="trd-shoe-h">${t('ui.trdShoeTitle','鞋款')}</h3>
+    <select data-trd-shoe aria-labelledby="trd-shoe-h">${trainingShoeOptions(x.shoeId)}</select>
+    ${total?`<p class="trd-sub">${escapeHtml(total)}</p>`:''}
+  </section>`;
+}
+/* ---- 每公里配速與高度（v4.12.0）----
+   上面一排長條：每一段比整段平均快的往上長、慢的往下長，長度是差多少（配速差幾秒、騎車差幾 km/h）；
+   下面是高度剖面，橫軸是同一條距離，一眼看得出慢的那幾段是不是在爬坡。
+   - 一張圖最多 50 根：全馬 42 根照每公里；100 km 的騎車每 2 公里一根（表格跟著一樣）
+   - 長條的刻度上下各自取整數、至少 15 秒（游泳 5 秒、騎車 2 km/h），上下同一個比例尺：配速很平均時
+     長條就短短的，不會被放大成忽快忽慢；特別慢（或快）的一兩段截在邊上（數字看表格）
+   - 高度的範圍至少 max(25 m, 每公里 3 m)：平平的路線畫出來就是平的
+   - 點（或滑鼠滑過）長條看那一段的數字；鍵盤：圖可以聚焦，左右鍵一段一段看（role=slider，
+     讀螢幕唸 aria-valuetext）；「每段的數字」表格是整張圖的文字版
+   - 顏色：快＝綠、慢＝金（色盲模擬下也分得開；方向本身也帶著快慢，不是只靠顏色） */
+function trdSplitKind(x){ return x.sport==='ride'?'speed':x.sport==='swim'?'swim':'pace'; }
+// 一段的值：配速＝每公里秒數、游泳＝每 100 m 秒數、騎車＝時速
+function trdSegRate(kind,km,sec){ return kind==='speed'?km/(sec/3600):kind==='swim'?sec/(km*10):sec/km; }
+function trdRateText(kind,v){ return kind==='speed'?v.toFixed(1):formatPace(v); }
+function trdRateUnit(kind){ return kind==='speed'?'km/h':kind==='swim'?'/100m':'/km'; }
+function trdRateWithUnit(kind,v){ return trdRateText(kind,v)+(kind==='speed'?' ':'')+trdRateUnit(kind); }
+function trdNum(v){ return String(Math.round(v*100)/100); }
+function trdRateSpoken(kind,v){
+  if(kind==='speed') return tv('ui.trdSpSpokenSpeed','時速 {v} 公里',{v:v.toFixed(1)});
+  const r=Math.round(v), m=Math.floor(r/60), s=r%60;
+  return kind==='swim'?tv('ui.trdSpSpokenSwim','每 100 公尺 {m} 分 {s} 秒',{m,s}):tv('ui.trdSpSpokenPace','每公里 {m} 分 {s} 秒',{m,s});
+}
+function trdElevSpoken(dz){ return dz>0?tv('ui.trdSpUp','上升 {n} 公尺',{n:dz}):dz<0?tv('ui.trdSpDown','下降 {n} 公尺',{n:-dz}):t('ui.trdSpFlat','持平'); }
+function trdElevShort(dz){ return (dz>0?'↑':dz<0?'↓':'±')+Math.abs(dz)+' m'; }
+function trdSegLabel(seg,unit,swim){
+  if(swim) return tv('ui.trdSpSegRangeM','第 {a}–{b} 公尺',{a:Math.round(seg.d0*1000),b:Math.round(seg.d1*1000)});
+  if(unit===1&&!seg.tail) return tv('ui.trdSpSegKm','第 {n} 公里',{n:Math.round(seg.d1)});
+  return tv('ui.trdSpSegRange','第 {a}–{b} 公里',{a:trdNum(seg.d0),b:trdNum(seg.d1)});
+}
+function trdSplitsModel(x){
+  const sp=validPaceSplits(x.paceSplits)&&trainingHasSplits(x.sport)?x.paceSplits:null;
+  const pf=validElevProfile(x.elevProfile)&&x.sport!=='swim'?x.elevProfile:null;
+  if(!sp&&!pf) return null;
+  const kind=trdSplitKind(x), m={kind,swim:kind==='swim',sp,pf,segs:[]};
+  if(sp){
+    const base=sp.secs.map((s,i)=>({d0:i*sp.step,d1:(i+1)*sp.step,t:s,dz:sp.elev?sp.elev[i]:null,tail:false}));
+    if(sp.tail){ const n=sp.secs.length; base.push({d0:n*sp.step,d1:n*sp.step+sp.tail[0],t:sp.tail[1],dz:sp.elev?sp.elev[n]:null,tail:true}); }
+    const f=[1,2,5,10,25,50].find(k=>Math.ceil(base.length/k)<=50)||50;
+    for(let i=0;i<base.length;i+=f){
+      const g=base.slice(i,i+f);
+      m.segs.push({d0:g[0].d0,d1:g[g.length-1].d1,t:g.reduce((a,s)=>a+s.t,0),
+        dz:g.every(s=>s.dz!=null)?g.reduce((a,s)=>a+s.dz,0):null,tail:g.length<f||g.some(s=>s.tail)});
+    }
+    m.unit=+(sp.step*f).toFixed(1);
+    m.segs.forEach(s=>{ s.v=trdSegRate(kind,s.d1-s.d0,s.t); s.label=trdSegLabel(s,m.unit,m.swim); });
+    m.base=base; m.D=base[base.length-1].d1;
+    m.avg=trdSegRate(kind,m.D,base.reduce((a,s)=>a+s.t,0));
+  }
+  m.R=Math.max(pf?pf.km:0,m.D||0);
+  return m;
+}
+function trdSplitsTitle(m){
+  if(!m.sp) return t('ui.trdSpTitleElev','高度變化');
+  if(m.swim){ const mm=Math.round(m.unit*1000); return mm===100?t('ui.trdSpTitleSwim','每 100 公尺配速'):tv('ui.trdSpTitleSwimN','每 {n} 公尺配速',{n:mm}); }
+  const speed=m.kind==='speed';
+  if(m.unit===1) return speed?t('ui.trdSpTitleSpeed','每公里速度'):t('ui.trdSpTitlePace','每公里配速');
+  return tv(speed?'ui.trdSpTitleSpeedN':'ui.trdSpTitlePaceN',speed?'每 {n} 公里速度':'每 {n} 公里配速',{n:trdNum(m.unit)});
+}
+// 一段話：最快、最慢的是哪一段；後半比前半快還是慢（差一點點說差不多：配速 2 秒、騎車 0.3 km/h，跟比較卡一樣）
+function trdSplitsSay(m){
+  const out=[];
+  if(!m.sp){
+    const z=m.pf.z;
+    out.push(tv('ui.trdSpElevRange','最高 {max} m，最低 {min} m。',{max:Math.max(...z),min:Math.min(...z)}));
+    return out.join('');
+  }
+  const full=m.segs.filter(s=>!s.tail), speed=m.kind==='speed';
+  const val=s=>speed?trdRateWithUnit(m.kind,s.v):trdRateText(m.kind,s.v);
+  if(full.length>=2){
+    const better=(a,b)=>speed?a.v>b.v:a.v<b.v;
+    let fast=full[0], slow=full[0];
+    full.forEach(s=>{ if(better(s,fast)) fast=s; if(better(slow,s)) slow=s; });
+    if(val(fast)!==val(slow)) out.push(tv('ui.trdSpFastSlow','最快是{fast}（{fv}），最慢是{slow}（{sv}）。',{fast:fast.label,fv:val(fast),slow:slow.label,sv:val(slow)}));
+  }
+  if(m.base.length>=4){
+    // 依距離切一半：跨過中點的那一段按比例分
+    const D=m.D, mid=D/2; let t1=0,t2=0;
+    m.base.forEach(s=>{ if(s.d1<=mid) t1+=s.t; else if(s.d0>=mid) t2+=s.t; else { const f=(mid-s.d0)/(s.d1-s.d0); t1+=s.t*f; t2+=s.t*(1-f); } });
+    const a=trdSegRate(m.kind,mid,t1), b=trdSegRate(m.kind,D-mid,t2);
+    let faster=null, d='';
+    if(speed){ const dv=b-a; if(Math.abs(dv)>=0.3){ faster=dv>0; d=Math.abs(dv).toFixed(1)+' km/h'; } }
+    else{ const ds=Math.round(b-a); if(Math.abs(ds)>2){ faster=ds<0; d=tv('ui.trdSpDiffPace','{n} 秒／{u}',{n:Math.abs(ds),u:m.swim?'100m':'km'}); } }
+    out.push(faster==null?t('ui.trdSpHalvesSame','前半和後半差不多。')
+      :tv(faster?'ui.trdSpHalvesFaster':'ui.trdSpHalvesSlower',faster?'後半比前半快 {d}。':'後半比前半慢 {d}。',{d}));
+  }
+  return out.join(currentLang==='en'?' ':'');
+}
+function trdSegSpoken(m,i){
+  const s=m.segs[i], sep=trListSep();
+  return s.label+sep+trdRateSpoken(m.kind,s.v)+(s.dz!=null?sep+trdElevSpoken(s.dz):'');
+}
+function trdSplitsChartHtml(m){
+  const R=m.R, pct=d=>(d/R*100).toFixed(3)+'%';
+  let pace='';
+  if(m.sp){
+    const speed=m.kind==='speed', dev=s=>speed?s.v-m.avg:m.avg-s.v;
+    const full=m.segs.filter(s=>!s.tail);
+    const steps=speed?[2,3,4,5,8,10,15,20,30,40,60,100]:m.swim?[5,10,15,20,30,45,60,90,120,180,300,600]:[15,20,30,45,60,90,120,180,240,300,450,600,900,1200,1800,3600];
+    // 上下各自的刻度、同一個比例尺：上面放到「最快那段差多少」、下面放到「最慢那段差多少」（各自取整數、至少 steps[0]），
+    // 平均線跟著上下的比例移動，差一樣多的長條一樣長。上下同一個刻度的話，騎車（下坡時速可以快 25、上坡最多慢 12）
+    // 下半部空一大塊，最下面的刻度還會算出負的時速
+    // 一兩段特別慢（GPX 沒有暫停紀錄，停下來喝咖啡的那一公里 20 分鐘）時照它畫，其他長條全部扁成一條線：超過
+    // 「四分之三的段落差多少」的 3 倍就截在邊上，末端畫一道缺口（截斷長條的慣例），數字看表格
+    const pool=(full.length?full:m.segs).map(dev), absd=pool.map(Math.abs).sort((a,b)=>a-b);
+    const cap=Math.max(absd[Math.floor((absd.length-1)*0.75)]*3,steps[0]);
+    const side=sg=>{ const v=pool.filter(d=>sg>0?d>0:d<0).map(Math.abs); const want=Math.max(steps[0],Math.min(v.length?Math.max(...v):0,cap)); return steps.find(x=>x>=want)||Math.ceil(want); };
+    const up=side(1), down=side(-1), span=up+down, mid=up/span*100;   // mid：平均線離頂端幾 %
+    const cols=m.segs.map((s,i)=>{ const d=dev(s), lim=d>=0?up:down, h=Math.min(Math.abs(d),lim)/span*100;
+      const pos=d>=0?`bottom:${(100-mid).toFixed(2)}%`:`top:${mid.toFixed(2)}%`;
+      return `<div class="trd-sp-col" data-i="${i}" style="left:${pct(s.d0)};width:${pct(s.d1-s.d0)}"><span class="trd-sp-bar ${d>=0?'is-fast':'is-slow'}${Math.abs(d)>lim?' is-clip':''}" style="${pos};height:${h.toFixed(2)}%"></span></div>`; }).join('');
+    // 刻度：上＝比平均快 up，下＝慢 down（算出來 ≤0 的不標）。平均線太靠近上下緣時，那一邊的刻度讓給平均
+    const top=speed?m.avg+up:m.avg-up, bot=speed?m.avg-down:m.avg+down;
+    const lab=v=>v>0?escapeHtml(trdRateText(m.kind,v)):'';
+    pace=`<div class="trd-sp-row"><div class="trd-sp-plot"><span class="trd-sp-edge is-top"></span><span class="trd-sp-edge is-bot"></span>${cols}<span class="trd-sp-mid" style="top:${mid.toFixed(2)}%"></span></div>
+      <div class="trd-sp-y" aria-hidden="true"><span class="is-top">${mid<20?'':lab(top)}</span><span class="is-mid" style="top:${mid.toFixed(2)}%">${escapeHtml(trdRateText(m.kind,m.avg))}</span><span class="is-bot">${mid>80?'':lab(bot)}</span></div></div>`;
+  }
+  let elev='';
+  if(m.pf){
+    const z=m.pf.z, N=z.length, zmin=Math.min(...z), zmax=Math.max(...z), range=zmax-zmin;
+    const disp=Math.max(range,25,R*3), lo=zmin-(disp-range)/2;
+    const X=j=>(j/(N-1)*m.pf.km/R*1000).toFixed(1), Y=v=>(95-(v-lo)/disp*90).toFixed(1);
+    const line=z.map((v,j)=>(j?'L':'M')+X(j)+' '+Y(v)).join('');
+    const area=`M${X(0)} 100`+z.map((v,j)=>'L'+X(j)+' '+Y(v)).join('')+`L${X(N-1)} 100Z`;
+    elev=`<div class="trd-sp-cap">${escapeHtml(tv('ui.trdSpElevCap','高度 {min}–{max} m',{min:zmin,max:zmax}))}</div>
+      <div class="trd-sp-row"><div class="trd-sp-elev"><svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="is-area" d="${area}"/><path class="is-line" d="${line}" vector-effect="non-scaling-stroke"/></svg>${m.sp?'<span class="trd-sp-band"></span>':''}</div><div></div></div>`;
+  }
+  // 橫軸：最多 6 個數字（游泳寫公尺、最多 4 個）
+  const cand=m.swim?[0.05,0.1,0.2,0.25,0.5,1,2,5]:[0.5,1,2,5,10,20,25,50,100,200,500,1000];
+  const tk=cand.find(c=>Math.floor(R/c+1e-9)<=(m.swim?3:5))||cand[cand.length-1];
+  const ticks=[]; for(let k=0;k*tk<=R+1e-9;k++) ticks.push(k*tk);
+  const xl=ticks.map((d,i)=>`<span class="${i===0?'is-first':d/R>0.94?'is-last':''}" style="left:${pct(d)}">${m.swim?Math.round(d*1000):trdNum(d)}</span>`).join('');
+  const axis=`<div class="trd-sp-row" aria-hidden="true"><div class="trd-sp-x">${xl}</div><div class="trd-sp-x-unit">${m.swim?'m':'km'}</div></div>`;
+  const attrs=m.sp
+    ?` tabindex="0" role="slider" aria-orientation="horizontal" aria-label="${escapeHtml(t('ui.trdSpChartAria','每段的配速與高度圖，用左右鍵一段一段看'))}" aria-valuemin="1" aria-valuemax="${m.segs.length}" aria-valuenow="1" aria-valuetext="${escapeHtml(trdSegSpoken(m,0))}"`
+    :` role="img" aria-label="${escapeHtml(trdSplitsTitle(m)+trListSep()+trdSplitsSay(m))}"`;
+  return `<div class="trd-sp-chart"${attrs}>${pace}${elev}${axis}</div>`;
+}
+function trdSplitsTableHtml(m){
+  const hasZ=m.segs.some(s=>s.dz!=null);
+  const rateHead=m.kind==='speed'?'km/h':m.swim?'/100m':t('ui.trdPace','配速');
+  const rows=m.segs.map(s=>`<tr><td>${m.swim?Math.round(s.d1*1000):trdNum(s.d1)}</td><td>${escapeHtml(trdRateText(m.kind,s.v))}</td>${hasZ?`<td>${s.dz==null?'—':(s.dz>0?'+':s.dz<0?'−':'±')+Math.abs(s.dz)}</td>`:''}</tr>`).join('');
+  return `<details class="trd-sp-more"><summary>${escapeHtml(t('ui.trdSpTable','每段的數字'))}</summary>
+    <table class="trd-sp-table"><thead><tr><th scope="col">${escapeHtml(m.swim?t('ui.trdSpColM','公尺'):t('ui.trdSpColKm','公里'))}</th><th scope="col">${escapeHtml(rateHead)}</th>${hasZ?`<th scope="col">${escapeHtml(t('ui.trdSpColElev','高度（m）'))}</th>`:''}</tr></thead>
+    <tbody>${rows}</tbody></table></details>`;
+}
+let trdSplitsState=null;   // 正在看的那張圖：{id, m, sel}
+function trdSplitsHtml(x){
+  const m=trdSplitsModel(x);
+  if(!m){
+    trdSplitsState=null;
+    // v4.12.0 以前匯入的：有軌跡（再匯入一次算得出來）才提示
+    if(!x.thumb||x.sport==='multisport') return '';
+    return `<section class="tr-card trd-card trd-splits trd-sp-old" aria-labelledby="trd-sp-h">
+      <h3 id="trd-sp-h">${t('ui.trdSpOldTitle','每公里配速與高度')}</h3>
+      <p class="trd-sub">${t('ui.trdSpOldText','這筆是 v4.12.0 以前匯入的，沒有存每公里的時間和高度。再匯入一次原始檔（FIT、GPX、TCX）就會補上，FIT 檔的總時間也會改成不含暫停；名稱、備註、主觀強度和鞋款都不會變。')}</p>
+      <button type="button" class="btn-ghost trd-sp-reimport" data-action="training-detail-reimport">${t('ui.trdSpReimport','重新匯入原始檔')}</button>
+    </section>`;
+  }
+  trdSplitsState={id:x.id,m,sel:-1};
+  const say=trdSplitsSay(m);
+  const avg=m.sp?`<span class="trd-sp-avg">${escapeHtml(t('ui.trdSpAvg','平均'))} <b>${escapeHtml(trdRateText(m.kind,m.avg))}</b>${m.kind==='speed'?' ':''}${trdRateUnit(m.kind)}</span>`:'';
+  return `<section class="tr-card trd-card trd-splits" aria-labelledby="trd-sp-h">
+    <div class="trd-card-head"><h3 id="trd-sp-h">${escapeHtml(trdSplitsTitle(m))}</h3>${avg}</div>
+    ${say?`<p class="trd-say">${escapeHtml(say)}</p>`:''}
+    ${m.sp?`<div class="trd-sp-readout" aria-hidden="true">${escapeHtml(t('ui.trdSpHint','點長條看每一段的數字'))}</div>`:''}
+    ${trdSplitsChartHtml(m)}
+    ${m.sp?trdSplitsTableHtml(m):''}
+  </section>`;
+}
+// 選一段（null＝取消）：只改 class 和文字，不重畫整張圖
+function trdSplitsSelect(i){
+  const el=trainingDetailEl(), st=trdSplitsState;
+  const chart=el&&el.querySelector('.trd-sp-chart[role="slider"]');
+  if(!chart||!st) return;
+  const m=st.m, n=m.segs.length;
+  if(i!=null) i=Math.max(0,Math.min(n-1,i));
+  st.sel=i==null?-1:i;
+  chart.classList.toggle('has-sel',i!=null);
+  chart.querySelectorAll('.trd-sp-col').forEach(c=>c.classList.toggle('is-sel',Number(c.dataset.i)===i));
+  const ro=el.querySelector('.trd-sp-readout');
+  if(i==null){ if(ro){ ro.classList.remove('is-on'); ro.textContent=t('ui.trdSpHint','點長條看每一段的數字'); } return; }
+  const s=m.segs[i], band=chart.querySelector('.trd-sp-band');
+  if(band){ band.style.left=(s.d0/m.R*100).toFixed(3)+'%'; band.style.width=((s.d1-s.d0)/m.R*100).toFixed(3)+'%'; }
+  if(ro){
+    ro.classList.add('is-on');
+    ro.innerHTML=`<span>${escapeHtml(s.label)}</span><span><b>${escapeHtml(trdRateText(m.kind,s.v))}</b>${m.kind==='speed'?' ':''}${trdRateUnit(m.kind)}</span>${s.dz!=null?`<span>${escapeHtml(trdElevShort(s.dz))}</span>`:''}`;
+  }
+  chart.setAttribute('aria-valuenow',String(i+1));
+  chart.setAttribute('aria-valuetext',trdSegSpoken(m,i));
+}
+// 指到的位置是哪一段：用距離找（每一根的寬度跟它的距離成正比）
+function trdSplitsIndexAt(chart,clientX){
+  const plot=chart.querySelector('.trd-sp-plot'), st=trdSplitsState;
+  if(!plot||!st) return null;
+  const r=plot.getBoundingClientRect();
+  const d=Math.max(0,Math.min(1,(clientX-r.left)/(r.width||1)))*st.m.R;
+  const i=st.m.segs.findIndex(s=>d<s.d1);
+  return i<0?st.m.segs.length-1:i;
+}
+function trdFootHtml(){
+  return `<div class="trd-foot"><button type="button" class="btn-text-small training-delete" data-action="training-detail-delete">${t('ui.trainingDelete','刪除這筆')}</button></div>`;
+}
+const TRD_ORDER=['head','hero','route','splits','compare','feel','notes','shoe','foot'];
+function trainingDetailSections(x){
+  return {head:trdHeadHtml(x),hero:trdHeroHtml(x),route:trainingRouteHtml(x),splits:trdSplitsHtml(x),compare:trdCompareHtml(x),
+    feel:trdFeelHtml(x),notes:trdNotesHtml(x),shoe:trdShoeHtml(x),foot:trdFootHtml()};
+}
+let trainingDetailStack=[];      // 最後一個是正在看的；從「相近的訓練」點進去的疊上去
+let trainingDetailOpener=null;   // 打開詳細的那顆按鈕：關掉之後焦點回去
+let trdSaveTimer=null;
+function trainingDetailEl(){ return document.getElementById('training-detail'); }
+function trainingDetailOpen(){ const el=trainingDetailEl(); return !!el&&!el.hidden; }
+function trainingDetailCurrent(){
+  const id=trainingDetailStack[trainingDetailStack.length-1];
+  return trainings.find(r=>r.id===id&&!r.deletedAt)||null;
+}
+// opts.only：只換這幾段（正在打名稱、備註時別台裝置同步過來，不能把輸入框整個換掉，游標會跑掉）
+function renderTrainingDetail(opts){
+  const el=trainingDetailEl(), x=trainingDetailCurrent();
+  if(!el||!x) return;
+  // 每公里配速的圖沒有要重畫時（例如按了主觀強度），留著它選到哪一段（畫每一段的 HTML 時會重設）
+  const keepSplits=opts&&opts.only&&!opts.only.includes('splits')?trdSplitsState:undefined;
+  const s=trainingDetailSections(x);
+  if(keepSplits!==undefined) trdSplitsState=keepSplits;
+  const inner=el.querySelector('.trd-inner');
+  if(inner&&opts&&opts.only){
+    opts.only.forEach(k=>{ const w=inner.querySelector(`[data-trd-sec="${k}"]`); if(w) w.innerHTML=s[k]; });
+    return;
+  }
+  el.innerHTML=`<div class="trd-inner">
+    <div class="trd-top"><button type="button" class="trd-back" data-action="training-detail-back"><span class="trd-back-arrow" aria-hidden="true">‹</span>${t('ui.trdBack','返回')}</button></div>
+    ${TRD_ORDER.map(k=>`<div data-trd-sec="${k}">${s[k]}</div>`).join('')}
+  </div>`;
+}
+function focusTrainingDetailTitle(){ const h=document.getElementById('trd-title'); if(h) h.focus({preventScroll:true}); }
+function openTrainingDetail(id,opts){
+  opts=opts||{};
+  const x=trainings.find(r=>r.id===id&&!r.deletedAt);
+  const el=trainingDetailEl();
+  if(!x||!el) return;
+  flushTrainingDetailSave();
+  if(el.hidden||!opts.push){ trainingDetailStack=[]; trainingDetailOpener=opts.opener||document.activeElement; }
+  if(trainingDetailStack[trainingDetailStack.length-1]!==id) trainingDetailStack.push(id);
+  renderTrainingDetail();
+  el.hidden=false; el.scrollTop=0;
+  focusTrainingDetailTitle();
+  logFeatureUse('open_training_detail');
+}
+// 返回一層：從「相近的訓練」點進來的先退回上一筆，退到底才關掉。all：整個關掉
+function closeTrainingDetail(all){
+  const el=trainingDetailEl();
+  if(!el||el.hidden) return;
+  flushTrainingDetailSave();
+  if(!all&&trainingDetailStack.length>1){
+    trainingDetailStack.pop();
+    if(trainingDetailCurrent()){ renderTrainingDetail(); el.scrollTop=0; focusTrainingDetailTitle(); return; }
+  }
+  const firstId=trainingDetailStack[0];
+  el.hidden=true; el.innerHTML=''; trainingDetailStack=[];
+  // 焦點回到打開它的那一列。列表可能重畫過（改了名稱），用 id 重新找
+  const row=firstId?document.querySelector(`[data-action="training-open-detail"][data-id="${CSS.escape(firstId)}"]`):null;
+  const back=row||(trainingDetailOpener&&trainingDetailOpener.isConnected?trainingDetailOpener:null);
+  trainingDetailOpener=null;
+  if(back) back.focus();
+}
+// 別台裝置同步過來、匯入了新的：重畫，但正在打字的那張卡不動
+function refreshTrainingDetail(){
+  if(!trainingDetailOpen()) return;
+  if(!trainingDetailCurrent()){ closeTrainingDetail(true); return; }   // 在別台裝置刪掉了
+  const a=document.activeElement, el=trainingDetailEl();
+  if(a&&el.contains(a)&&a.matches('[data-trd-field]')){ renderTrainingDetail({only:TRD_ORDER.filter(k=>k!=='notes')}); return; }
+  const sel=a&&el.contains(a)?(a.matches('[data-rpe]')?`[data-rpe="${a.dataset.rpe}"]`:a.matches('[data-trd-shoe]')?'[data-trd-shoe]':a.matches('.trd-back')?'.trd-back':null):null;
+  renderTrainingDetail();
+  const f=sel&&el.querySelector(sel);
+  if(f) f.focus({preventScroll:true}); else if(a&&!a.isConnected) focusTrainingDetailTitle();
+}
+function scheduleTrainingDetailSave(){ clearTimeout(trdSaveTimer); trdSaveTimer=setTimeout(flushTrainingDetailSave,600); }
+// 把輸入框的內容寫回去（名稱、備註）。在 await 之前就改好資料，關掉這一頁時呼叫也不會漏存
+function flushTrainingDetailSave(){
+  clearTimeout(trdSaveTimer); trdSaveTimer=null;
+  const el=trainingDetailEl();
+  if(!el||el.hidden) return;
+  const x=trainingDetailCurrent();
+  if(!x) return;
+  let changed=false;
+  el.querySelectorAll('[data-trd-field]').forEach(inp=>{
+    const f=inp.dataset.trdField;
+    const v=f==='name'?inp.value.trim().slice(0,TRAINING_NAME_MAX):inp.value.slice(0,TRAINING_NOTE_MAX);
+    if((x[f]||'')!==v){ x[f]=v; changed=true; }
+  });
+  if(!changed) return;
+  x.updatedAt=new Date().toISOString();
+  const h=document.getElementById('trd-title');
+  if(h) h.textContent=x.name||trainingSportLabel(x.sport);
+  const st=el.querySelector('.trd-save');
+  if(st) st.textContent=t('ui.trdSaved','已儲存');
+  persistTrainings().then(()=>refreshTrainingOverlay());
+}
+/* 刪除可以復原（v4.11.0）：跟賽事一樣「先刪、給幾秒反悔」。刪除照舊是軟刪除（墓碑會同步），
+   縮圖、公里標記先留在記憶體，按「復原」放回去。原本列表上的刪除沒有復原，提示還被
+   訓練頁蓋住（z-index 100 對 208）看不到——提示的 z-index 一起拉到所有圖層上面 */
+let trainingUndoState=null;   // {items:[{x,thumb,kmMarks,paceSplits,elevProfile}],el,timer}
+async function deleteTrainingWithUndo(x){
+  const now=new Date().toISOString();
+  // 墓碑只留辨識用的欄位；軌跡、公里標記、每公里配速與高度（v4.12.0）先收在記憶體
+  const keep={x,thumb:x.thumb,kmMarks:x.kmMarks,paceSplits:x.paceSplits,elevProfile:x.elevProfile};
+  x.deletedAt=now; x.updatedAt=now; x.thumb=null; x.kmMarks=null; x.paceSplits=null; x.elevProfile=null;
+  trainingEditId=null;
+  await persistTrainings(); refreshTrainingOverlay(); if(currentRace) renderDetailKeepOpen();
+  if(trainingUndoState){ clearTimeout(trainingUndoState.timer); trainingUndoState.items.push(keep); }
+  else{
+    const el=document.createElement('div');
+    el.className='foreground-toast race-undo-toast training-undo-toast';
+    el.setAttribute('role','status');
+    document.body.appendChild(el);
+    trainingUndoState={items:[keep],el,timer:null};
+  }
+  const n=trainingUndoState.items.length;
+  trainingUndoState.el.innerHTML=`<span>${escapeHtml(n>1?tf('ui.trdDeletedN','已刪除 {n} 筆訓練',n):t('ui.trainingDeleted','已刪除這筆訓練'))}</span><button type="button" class="btn-text-small race-undo-btn" data-action="undo-training-delete">${t('ui.undo','復原')}</button>`;
+  trainingUndoState.timer=setTimeout(()=>{ if(trainingUndoState){ trainingUndoState.el.remove(); trainingUndoState=null; } },6000);
+}
+document.addEventListener('click',async e=>{
+  if(!e.target.closest||!e.target.closest('[data-action="undo-training-delete"]')||!trainingUndoState) return;
+  const st=trainingUndoState; trainingUndoState=null;
+  clearTimeout(st.timer); st.el.remove();
+  const now=new Date().toISOString();
+  st.items.forEach(k=>{ k.x.deletedAt=null; k.x.thumb=k.thumb; k.x.kmMarks=k.kmMarks; k.x.paceSplits=k.paceSplits; k.x.elevProfile=k.elevProfile; k.x.updatedAt=now; });
+  await persistTrainings(); refreshTrainingOverlay(); refreshTrainingDetail(); if(currentRace) renderDetailKeepOpen();
+  logFeatureUse('training_delete_undo');
+});
+// 列表的一筆、賽事頁「賽前訓練週期」點開的那一週、詳細頁裡的「相近的訓練」都用同一個動作打開
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-action="training-open-detail"]');
+  if(!b) return;
+  openTrainingDetail(b.dataset.id,{push:!!b.closest('#training-detail'),opener:b});
+});
+document.getElementById('training-detail').addEventListener('click',async e=>{
+  if(e.target.closest('[data-action="training-detail-back"]')){ closeTrainingDetail(); return; }
+  // 舊資料再匯入一次原始檔（v4.12.0）：走一般的匯入，已經有的那筆會補上每公里配速與高度
+  if(e.target.closest('[data-action="training-detail-reimport"]')){ document.getElementById('training-file-input').click(); return; }
+  const x=trainingDetailCurrent();
+  if(!x) return;
+  const rb=e.target.closest('[data-rpe]');
+  if(rb){
+    const n=Number(rb.dataset.rpe);
+    x.rpe=x.rpe===n?null:n; x.updatedAt=new Date().toISOString();
+    renderTrainingDetail({only:['feel']});
+    const again=trainingDetailEl().querySelector(`[data-rpe="${n}"]`); if(again) again.focus({preventScroll:true});
+    await persistTrainings(); refreshTrainingOverlay();
+    return;
+  }
+  if(e.target.closest('[data-action="training-detail-delete"]')){
+    // 焦點要有地方去：記下列表上的下一筆（沒有就上一筆），刪完回到那裡
+    const rows=[...document.querySelectorAll('#training-overlay [data-action="training-open-detail"]')];
+    const i=rows.findIndex(b=>b.dataset.id===x.id);
+    const near=i>=0?(rows[i+1]||rows[i-1]):null;
+    const nearId=near?near.dataset.id:null;
+    flushTrainingDetailSave();
+    trainingDetailStack=[x.id];
+    await deleteTrainingWithUndo(x);
+    closeTrainingDetail(true);
+    const f=nearId?document.querySelector(`#training-overlay [data-action="training-open-detail"][data-id="${CSS.escape(nearId)}"]`):null;
+    if(f) f.focus();
+    return;
+  }
+});
+document.getElementById('training-detail').addEventListener('input',e=>{
+  if(!e.target.matches('[data-trd-field]')) return;
+  const st=trainingDetailEl().querySelector('.trd-save'); if(st) st.textContent='';
+  scheduleTrainingDetailSave();
+});
+document.getElementById('training-detail').addEventListener('focusout',e=>{
+  if(e.target.matches&&e.target.matches('[data-trd-field]')) flushTrainingDetailSave();
+});
+document.getElementById('training-detail').addEventListener('keydown',e=>{
+  // 名稱按 Enter 就是打完了：存起來、收鍵盤
+  if(e.key==='Enter'&&e.target.matches('[data-trd-field="name"]')){ e.preventDefault(); e.target.blur(); }
+  // 每公里配速的圖（v4.12.0）：跟滑桿一樣，左右（上下）一段、PageUp／PageDown 五段、Home／End 頭尾
+  if(e.target.matches('.trd-sp-chart[role="slider"]')&&trdSplitsState){
+    const n=trdSplitsState.m.segs.length, cur=Math.max(0,trdSplitsState.sel);
+    const to={ArrowRight:cur+1,ArrowUp:cur+1,ArrowLeft:cur-1,ArrowDown:cur-1,PageUp:cur+5,PageDown:cur-5,Home:0,End:n-1}[e.key];
+    if(to!=null){ e.preventDefault(); trdSplitsSelect(to); }
+  }
+});
+/* 每公里配速的圖（v4.12.0）：滑鼠滑過就看那一段、移開就收；手指點一下看、左右拖著看（上下拖照樣捲動頁面，
+   touch-action:pan-y），再點同一根取消。圖拿到焦點（Tab）時從第一段開始看，離開就收 */
+let trdSpTouch=null;
+document.getElementById('training-detail').addEventListener('pointerdown',e=>{
+  const chart=e.target.closest('.trd-sp-chart[role="slider"]');
+  if(!chart||!trdSplitsState) return;
+  const i=trdSplitsIndexAt(chart,e.clientX);
+  if(e.pointerType!=='mouse') trdSpTouch={id:e.pointerId,x:e.clientX,again:trdSplitsState.sel===i,moved:false};
+  trdSplitsSelect(i);
+});
+document.getElementById('training-detail').addEventListener('pointermove',e=>{
+  const chart=e.target.closest('.trd-sp-chart[role="slider"]');
+  if(!chart||!trdSplitsState) return;
+  if(e.pointerType==='mouse'){ trdSplitsSelect(trdSplitsIndexAt(chart,e.clientX)); return; }
+  if(trdSpTouch&&trdSpTouch.id===e.pointerId){
+    if(Math.abs(e.clientX-trdSpTouch.x)>6) trdSpTouch.moved=true;
+    trdSplitsSelect(trdSplitsIndexAt(chart,e.clientX));
+  }
+});
+document.getElementById('training-detail').addEventListener('pointerup',e=>{
+  if(!trdSpTouch||trdSpTouch.id!==e.pointerId) return;
+  if(trdSpTouch.again&&!trdSpTouch.moved) trdSplitsSelect(null);
+  trdSpTouch=null;
+});
+document.getElementById('training-detail').addEventListener('pointercancel',()=>{ trdSpTouch=null; });
+document.getElementById('training-detail').addEventListener('pointerout',e=>{
+  if(e.pointerType!=='mouse') return;
+  const chart=e.target.closest&&e.target.closest('.trd-sp-chart[role="slider"]');
+  if(chart&&!chart.contains(e.relatedTarget)&&document.activeElement!==chart) trdSplitsSelect(null);
+});
+document.getElementById('training-detail').addEventListener('focusin',e=>{
+  if(e.target.matches&&e.target.matches('.trd-sp-chart[role="slider"]')&&trdSplitsState&&trdSplitsState.sel<0)
+    trdSplitsSelect((Number(e.target.getAttribute('aria-valuenow'))||1)-1);
+});
+document.getElementById('training-detail').addEventListener('focusout',e=>{
+  if(e.target.matches&&e.target.matches('.trd-sp-chart[role="slider"]')) trdSplitsSelect(null);
+});
+document.getElementById('training-detail').addEventListener('change',async e=>{
+  const sel=e.target.closest('[data-trd-shoe]');
+  if(!sel) return;
+  const x=trainingDetailCurrent(); if(!x) return;
+  x.shoeId=sel.value||null; x.updatedAt=new Date().toISOString();
+  try{ if(sel.value) localStorage.setItem(TRAINING_LAST_SHOE_KEY,sel.value); }catch(err){}
+  renderTrainingDetail({only:['shoe']});
+  const again=trainingDetailEl().querySelector('[data-trd-shoe]'); if(again) again.focus({preventScroll:true});
+  await persistTrainings(); refreshTrainingOverlay();
+});
 /* ---- 匯入：選檔 → 逐一解析（顯示進度）→ 預覽 → 確認才寫入 ---- */
 let trainingImportState=null;
 async function startTrainingImport(files){
   files=[...files].filter(f=>/\.(fit|gpx|tcx)$/i.test(f.name));
   if(!files.length){ showToast(t('ui.trainingErrType','只支援 FIT、GPX、TCX 檔'),'error'); return; }
   const modal=document.getElementById('training-import-modal');
-  trainingImportState={total:files.length,done:0,fresh:[],dupes:[],raceDay:[],failed:[],
+  trainingImportState={total:files.length,done:0,fresh:[],dupes:[],raceDay:[],failed:[],upgrades:[],
     shoeId:(()=>{ try{ return localStorage.getItem(TRAINING_LAST_SHOE_KEY)||''; }catch(e){ return ''; } })(),
     includeRaceDay:{}};
   modal.hidden=false;
@@ -18446,8 +19679,14 @@ async function startTrainingImport(files){
     try{
       const rec=await parseTrainingFile(f);
       rec._fileName=f.name;
-      const dup=findDuplicateTraining(rec)||findDuplicateTraining(rec,seen);
-      if(dup) trainingImportState.dupes.push(rec);
+      const old=findDuplicateTraining(rec), dup=old||findDuplicateTraining(rec,seen);
+      // 已經匯入過、這次的檔案有舊的那筆沒有的（v4.12.0 以前匯入的沒有每公里配速與高度；v4.13.0 以前匯入的 FIT，時間含暫停）：
+      // 更新那一筆，不算重複。data／time 記下是哪一種，匯入視窗分開寫
+      const up=old?trainingUpgradeFields(old,rec):null;
+      if(up&&!trainingImportState.upgrades.some(u=>u.id===old.id)) trainingImportState.upgrades.push({id:old.id,fields:up,
+        data:['paceSplits','elevProfile','kmMarks'].some(k=>k in up),
+        time:'durationSeconds' in up&&Math.round(Number(old.durationSeconds)||0)!==up.durationSeconds});
+      else if(dup) trainingImportState.dupes.push(rec);
       else{
         const race=matchRaceForTraining(rec);
         if(race){ rec._race=race; trainingImportState.raceDay.push(rec); }
@@ -18468,12 +19707,21 @@ function renderTrainingImportModal(){
   const parsing=st.done<st.total;
   const hasShoeSport=st.fresh.concat(st.raceDay).some(x=>SHOE_SPORTS.includes(x.sport));
   const willImport=st.fresh.length+Object.values(st.includeRaceDay).filter(Boolean).length;
+  const nUp=st.upgrades.length;
+  const goLabel=willImport&&nUp?tf2('ui.trainingImportBothN','匯入 {a} 筆、更新 {b} 筆',willImport,nUp)
+    :nUp?tf('ui.trainingImportUpgradeN','更新 {n} 筆',nUp):tf('ui.trainingImportN','匯入 {n} 筆',willImport);
+  // 要更新的：補上每公里配速與高度、時間改成不含暫停（v4.13.0）。兩種都有、又不是每一筆都兩種都有時，各自寫幾筆
+  const nData=st.upgrades.filter(u=>u.data).length, nTime=st.upgrades.filter(u=>u.time).length;
+  const counts=nData&&nTime&&(nData<nUp||nTime<nUp);
+  const upWhat=[nData?(counts?tf('ui.trainingUpDataN','{n} 筆補上每公里配速與高度',nData):t('ui.trainingUpData','補上每公里配速與高度')):'',
+    nTime?(counts?tf('ui.trainingUpTimeN','{n} 筆時間改成不含暫停',nTime):t('ui.trainingUpTime','時間改成不含暫停')):''].filter(Boolean).join(currentLang==='en'?', ':'、');
   modal.innerHTML=`<div class="modal-panel modal-panel-wide">
     <h2>${t('ui.trainingImportTitle','匯入訓練紀錄')}</h2>
     ${parsing?`<p class="modal-hint">${tf2('ui.trainingParsing','解析中 {a}／{b}…',st.done,st.total)}</p>
       <div class="training-progress"><span style="width:${Math.round(st.done/st.total*100)}%"></span></div>`
     :`<ul class="training-import-summary">
       <li><b>${st.fresh.length}</b> ${t('ui.trainingNew','筆新的訓練')}</li>
+      ${nUp?`<li><b>${nUp}</b> ${t('ui.trainingUpLead','筆已經匯入過：')}${escapeHtml(upWhat)}</li>`:''}
       ${st.dupes.length?`<li class="muted"><b>${st.dupes.length}</b> ${t('ui.trainingDupes','筆已經匯入過，略過')}</li>`:''}
       ${st.failed.length?`<li class="warn"><b>${st.failed.length}</b> ${t('ui.trainingFailed','個檔案讀不到')}</li>`:''}
     </ul>
@@ -18484,12 +19732,12 @@ function renderTrainingImportModal(){
         <span class="small muted">${t('ui.trainingStillImport','仍當成訓練匯入')}</span></label>`).join('')}
     </div>`:''}
     ${st.failed.length?`<details class="training-failed"><summary class="small">${t('ui.trainingFailedDetail','讀不到的檔案')}</summary>
-      ${st.failed.map(f=>`<div class="small">${escapeHtml(f.name)}：${escapeHtml(f.reason)}</div>`).join('')}</details>`:''}
+      ${st.failed.map(f=>`<div class="small">${escapeHtml(f.name)}${currentLang==='en'?': ':'：'}${escapeHtml(f.reason)}</div>`).join('')}</details>`:''}
     ${hasShoeSport?`<label class="field"><span>${t('ui.trainingShoeForAll','跑步類訓練穿的鞋（之後可以逐筆修改）')}</span>
       <select data-training-import-shoe><option value="">${t('ui.trainingNoShoe','（不指定鞋款）')}</option>
       ${shoes.filter(s=>!s.isRetired).map(s=>`<option value="${s.id}"${s.id===st.shoeId?' selected':''}>${escapeHtml(s.name)}</option>`).join('')}</select></label>`:''}`}
     <div class="modal-actions">
-      <button class="btn-primary" data-action="confirm-training-import"${parsing||!willImport?' disabled':''}>${tf('ui.trainingImportN','匯入 {n} 筆',willImport)}</button>
+      <button class="btn-primary" data-action="confirm-training-import"${parsing||!(willImport||nUp)?' disabled':''}>${goLabel}</button>
       <button class="btn-ghost" data-action="cancel-training-import">${t('ui.cancel','取消')}</button>
     </div></div>`;
 }
@@ -18500,6 +19748,9 @@ function closeTrainingImportModal(){
 async function confirmTrainingImport(){
   const st=trainingImportState; if(!st) return;
   const picked=st.fresh.concat(st.raceDay.filter((_,i)=>st.includeRaceDay[i]));
+  // 補上每公里配速與高度：只動缺的欄位（這段期間被刪掉的就不補）
+  const nowIso=new Date().toISOString(); let nUp=0;
+  st.upgrades.forEach(u=>{ const x=trainings.find(r=>r.id===u.id&&!r.deletedAt); if(!x) return; Object.assign(x,u.fields); x.updatedAt=nowIso; nUp++; });
   picked.forEach(x=>{
     delete x._fileName; delete x._race;
     if(SHOE_SPORTS.includes(x.sport)&&st.shoeId) x.shoeId=st.shoeId;
@@ -18509,9 +19760,10 @@ async function confirmTrainingImport(){
   await persistTrainings();
   closeTrainingImportModal();
   trainingOpenYears=null; trainingOpenMonths=null;   // 新資料多半在最新的月份，回到預設展開才看得到
-  refreshTrainingOverlay();
+  refreshTrainingOverlay(); refreshTrainingDetail();
   if(currentRace) renderDetailKeepOpen();
-  showToast(tf('ui.trainingImported','已匯入 {n} 筆訓練紀錄',picked.length));
+  showToast(picked.length&&nUp?tf2('ui.trainingImportedBoth','已匯入 {a} 筆、更新 {b} 筆',picked.length,nUp)
+    :picked.length?tf('ui.trainingImported','已匯入 {n} 筆訓練紀錄',picked.length):tf('ui.trainingUpgraded','已更新 {n} 筆',nUp));
   logFeatureUse('training_import');
 }
 document.getElementById('training-import-modal').addEventListener('change',e=>{
@@ -18562,11 +19814,8 @@ document.getElementById('training-overlay').addEventListener('click',async e=>{
   const del=e.target.closest('[data-action="training-delete"]');
   if(del){
     const x=trainings.find(r=>r.id===del.dataset.id); if(!x) return;
-    // 軟刪除：留下墓碑才能跨裝置同步刪除；縮圖拿掉省空間
-    x.deletedAt=new Date().toISOString(); x.updatedAt=x.deletedAt; x.thumb=null;
-    trainingEditId=null;
-    await persistTrainings(); refreshTrainingOverlay(); if(currentRace) renderDetailKeepOpen();
-    showToast(t('ui.trainingDeleted','已刪除這筆訓練'));
+    // 軟刪除：留下墓碑才能跨裝置同步刪除；縮圖先收在記憶體，幾秒內可以按「復原」（v4.11.0）
+    await deleteTrainingWithUndo(x);
     return;
   }
   if(e.target.closest('[data-action="training-export"]')){
@@ -20275,7 +21524,7 @@ document.addEventListener('click',e=>{
    用 MutationObserver 看哪些層打開了，不用在二十幾個 open 函式裡各加一行——
    之後新增的彈窗只要列進 BACK_LAYER_IDS 就好。
    ============================================================ */
-const BACK_LAYER_IDS=['global-drawer','training-overlay','training-import-modal','hof-overlay','story-mode-overlay',
+const BACK_LAYER_IDS=['global-drawer','training-overlay','training-detail','training-import-modal','hof-overlay','story-mode-overlay',
   'fatigue-mode-overlay','share-modal','career-share-modal','help-modal','profile-modal','recovery-modal','import-modal',
   'gpx-modal','paste-modal','paste-note-modal','shoe-modal','nutrition-dict-modal','sync-diag-modal','pacing-modal',
   'focal-point-modal','race-context-sheet','storage-cleanup-modal','report-prompt-fallback-modal','command-palette',
@@ -20285,6 +21534,7 @@ const BACK_LAYER_SELECTOR=BACK_LAYER_IDS.map(id=>'#'+id).join(',')+',.action-men
 const BACK_LAYER_CLOSERS={
   'global-drawer':()=>closeDrawer(),
   'training-overlay':()=>closeTrainingOverlay(),
+  'training-detail':()=>closeTrainingDetail(),
   'training-import-modal':()=>closeTrainingImportModal(),
   'hof-overlay':()=>closeHallOfFame(),
   'story-mode-overlay':()=>closeStoryMode(),
@@ -21331,7 +22581,7 @@ async function importTrainingArray(parsed){
   mergeTrainings(parsed.map(x=>x.id?x:Object.assign({},x,{id:uid()})));
   const added=trainings.filter(x=>!before.has(x.id)&&!x.deletedAt).length;
   await persistTrainings();
-  refreshTrainingOverlay(); if(currentRace) renderDetailKeepOpen();
+  refreshTrainingOverlay(); refreshTrainingDetail(); if(currentRace) renderDetailKeepOpen();
   importToast(t('ui.trainingJsonImportDone','訓練紀錄匯入完成'),tf('ui.trainingJsonImportSummary','新增 {n} 筆（已經有的不會重複）',added));
   return true;
 }
@@ -21357,7 +22607,7 @@ async function importFullBackup(b){
     mergeGlobalListsIntoState(lists);
     await persist(); await persistTrainings(); await persistShoes(); await persistNutritionDictionary();
     await persistTemplates(); await persistUserProfile(); await persistBadgeUnlocks();
-    renderAll(); refreshOpenGlobalListModals(); refreshTrainingOverlay();
+    renderAll(); refreshOpenGlobalListModals(); refreshTrainingOverlay(); refreshTrainingDetail();
     // 結果只列「真的多了什麼」：看得到的賽事、訓練（垃圾桶、墓碑不算）、清單、補上的個人資料欄位
     const sep=t('ui.listSep','、');
     const parts=[
@@ -23064,10 +24314,10 @@ function fitBaseTypeInfo(baseType){
 }
 function parseFitPoints(buffer){
   const view=new DataView(buffer);
-  if(buffer.byteLength<14) throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔'));
+  if(buffer.byteLength<14) throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 FIT、GPX 或 TCX 檔'));
   const headerSize=view.getUint8(0);
   const sig=String.fromCharCode(view.getUint8(8),view.getUint8(9),view.getUint8(10),view.getUint8(11));
-  if(sig!=='.FIT') throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔'));
+  if(sig!=='.FIT') throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 FIT、GPX 或 TCX 檔'));
   const dataSize=view.getUint32(4,true);
   const dataEnd=Math.min(headerSize+dataSize,buffer.byteLength);
   let offset=headerSize;
@@ -23075,6 +24325,7 @@ function parseFitPoints(buffer){
   const points=[];
   const sessions=[];
   const hrSeen={strap:false,wrist:false};
+  const timerEvents=[];
 
   function readField(off,size,baseType,little){
     const info=fitBaseTypeInfo(baseType);
@@ -23146,6 +24397,8 @@ function parseFitPoints(buffer){
           startTime:(rawStart!=null)?new Date(FIT_EPOCH_MS+rawStart*1000):null,
           endTime:(rawEnd!=null)?new Date(FIT_EPOCH_MS+rawEnd*1000):null,
           elapsedSeconds:values[7]!=null?values[7]/1000:null,
+          // 欄位 8：計時時間（total_timer_time，不含暫停）。訓練的總時間用它（v4.13.0），跟手錶上的時間一樣
+          timerSeconds:values[8]!=null?values[8]/1000:null,
           distanceM:values[9]!=null?values[9]/100:null,
           // 訓練匯入用（v3.76.0）：跑步機這類沒有 GPS 的檔案，心率與爬升
           // 只能從 session 拿。無效值（0xFF／0xFFFF）readField 已經轉成 null。
@@ -23157,6 +24410,11 @@ function parseFitPoints(buffer){
       // 5＝手錶內建；device_type（欄位 1）在 ANT+ 時 120＝心率帶，在內建時
       // 10＝手腕光學心率。胸帶在游泳時會自己存心率、存檔時再傳給手錶，
       // 所以有胸帶的話游泳心率是可信的；只有手腕的話在水裡通常偏低。
+      // event（21）：手錶計時的開始／暫停（event 0＝timer；event_type 0＝start，1、4、8、9＝各種 stop）。
+      // 訓練的每公里時間要扣掉暫停，跟手錶上每公里的時間一樣（v4.12.0）
+      if(def.globalMesgNum===21&&values[0]===0&&values[253]!=null&&values[1]!=null){
+        timerEvents.push({type:values[1],t:FIT_EPOCH_MS+values[253]*1000});
+      }
       if(def.globalMesgNum===23){
         if(values[25]===1&&values[1]===120) hrSeen.strap=true;
         else if(values[25]===5&&values[1]===10) hrSeen.wrist=true;
@@ -23190,6 +24448,14 @@ function parseFitPoints(buffer){
   // 分段資訊掛在 .sessions 上，不影響任何既有的使用方式。
   points.sessions=sessions.filter(s=>s.startTime);
   points.hrSource=hrSeen.strap?'strap':(hrSeen.wrist?'wrist':null);
+  // 暫停的區間：stop 到下一個 start。最後一個 stop（按下結束）後面沒有 start，不算。
+  // 檔案裡完全沒有計時事件就是 null（不知道有沒有暫停），跟「確定沒有暫停」的 [] 分開
+  const pauses=[]; let stopAt=null;
+  timerEvents.sort((a,b)=>a.t-b.t).forEach(e=>{
+    if(e.type===0){ if(stopAt!=null&&e.t>stopAt) pauses.push([stopAt,e.t]); stopAt=null; }
+    else if([1,4,8,9].includes(e.type)&&stopAt==null) stopAt=e.t;
+  });
+  points.pauses=timerEvents.length?pauses:null;
   return points;
 }
 // FIT 規格裡 sport 欄位的代號對照。3 是「轉換」——鐵人三項的 T1／T2
@@ -23209,8 +24475,10 @@ function parseGpxDoc(xml){
       cad:cadEl?parseFloat(cadEl.textContent):null,
     };
   });
-  return summarizeTrackPoints(pts);
+  return withAllPoints(summarizeTrackPoints(pts),pts);
 }
+// 訓練匯入要用全部的點算每公里配速與高度（v4.12.0）。不列舉：賽事匯入照舊只看摘要的欄位
+function withAllPoints(summary,pts){ Object.defineProperty(summary,'allPoints',{value:pts}); return summary; }
 function parseTcxDoc(xml){
   const laps=[...xml.getElementsByTagName('Lap')];
   const pts=[...xml.getElementsByTagName('Trackpoint')].map(tp=>{
@@ -23225,7 +24493,7 @@ function parseTcxDoc(xml){
       hr:hrEl?parseFloat(hrEl.textContent):null,
     };
   });
-  if(!laps.length) return summarizeTrackPoints(pts);
+  if(!laps.length) return withAllPoints(summarizeTrackPoints(pts),pts);
 
   // 圈數資料本身沒有海拔欄位，用累積秒數去軌跡點裡找最接近那個時間點
   // 的海拔（抓最近的一筆，不特別內插，軌跡點通常每幾秒一筆已經夠準）。
@@ -23269,7 +24537,7 @@ function parseTcxDoc(xml){
   });
   const elevations=pts.map(p=>p.ele).filter(e=>e!=null);
   const ptHrs=pts.map(p=>p.hr).filter(h=>h!=null);
-  return {
+  return withAllPoints({
     distanceKm:+(totalDistM/1000).toFixed(2),
     durationSeconds:Math.round(totalTimeS)||null,
     elevationGainM:elevations.length>1?computeElevationGain(elevations):null,
@@ -23280,11 +24548,11 @@ function parseTcxDoc(xml){
     elevationProfile:downsampleElevationProfile(pts,50),
     trackPoints:downsampleLatLon(pts,400),
     timedTrackPoints:downsampleTimedTrackPoints(pts,2000),
-  };
+  },pts);
 }
 function parseGpxOrTcx(text){
   const xml=new DOMParser().parseFromString(text,'application/xml');
-  if(xml.getElementsByTagName('parsererror').length) throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 GPX 或 TCX 檔'));
+  if(xml.getElementsByTagName('parsererror').length) throw new Error(t('ui.errCannotParseFile','檔案格式無法解析，請確認是有效的 FIT、GPX 或 TCX 檔'));
   const isTcx=xml.getElementsByTagName('TrainingCenterDatabase').length>0;
   return isTcx?parseTcxDoc(xml):parseGpxDoc(xml);
 }
@@ -23771,6 +25039,9 @@ function helpModalHtml(){
       <ul>
         <li>首頁分成三個分頁：「賽事」是今日一句、「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄。</li>
         <li><strong>訓練頁</strong>（v4.10.0 改版）：「本週」最上面是備戰中的賽事（已報名或抽籤中、已經進入準備期的最近一場：倒數、A／B 目標、賽前第幾週），下面是本週的公里數、跟上週同一段時間比、週目標（賽事頁「訓練計畫」填的週跑量）、每天的長條、本週解讀和近 12 週的里程；「本月」換成每天的長條和近 12 個月；「全部」依年份、月份收合。有兩種以上的運動時，分頁下面可以選要看哪一種，不同運動的公里數不會加在一起。每一筆右邊的鞋款按鈕點了可以換鞋或刪除。</li>
+        <li><strong>單次訓練詳細</strong>（v4.11.0）：點一筆訓練打開，看距離、時間、配速、心率、爬升和路線（v4.11.0 起匯入的標出每幾公里的位置；之前匯入的用路線長度推算，繞好幾圈的路線只標起點和終點），再跟過去一年距離相近的同種運動比配速、心率和爬升。還可以打主觀強度（RPE 1–10）、改名稱、寫備註（打字就自動儲存）、換鞋款。刪除後幾秒內可以按「復原」。</li>
+        <li><strong>每公里配速與高度</strong>（v4.12.0）：匯入 FIT、GPX、TCX 時多存每公里的時間和高度變化（游泳是每 100 公尺、騎車看速度），單次詳細頁畫成一排長條：比整段平均快的往上、慢的往下，下面是高度剖面，看得出慢的那幾段是不是在爬坡。點長條看那一段的數字，展開「每段的數字」看全部。FIT 檔的時間不含手錶暫停（跟手錶上每公里的時間一樣）；GPX、TCX 沒有暫停的紀錄，停下來的時間也算在那一段。之前匯入的訓練，再匯入一次原始檔就會補上，名稱、備註、主觀強度和鞋款都不會變。</li>
+        <li><strong>時間不含暫停</strong>（v4.13.0）：FIT 檔匯入的訓練，時間跟手錶一樣不含暫停（計時時間），配速、週時數都照這個算；暫停 10 秒以上，單次詳細頁的時間下面會寫「不含暫停 1:10」。v4.12.0 匯入的 FIT 檔已經自動扣掉（可能跟手錶差一兩秒，再匯入一次就一樣）；更早匯入的，再匯入一次原始檔就會改。GPX 沒有暫停的紀錄，照舊從開始算到結束。</li>
         <li><strong>「下一場」卡</strong>：14 天內有比賽時，「賽事」分頁最上面是倒數、日期時間和地點，下面三格：打包、A 目標、號碼布——跟賽事頁的賽前四格同一套，點一下就打開那一格要填的地方（空的格子游標直接停在那一欄）。有天氣預報（抓到的即時預報，或自己填的預報）時第三格換成天氣；7 天內、有 GPS 軌跡還沒抓的，第三格是「抓取預報」。點賽名打開那一場；有封面照時照片是卡片的底圖；「暫時隱藏」可以先收起來。手機清單上還在問「比完了嗎？」的時候，這張卡先不放（下一場就在清單第一列）。</li>
         <li><strong>今日一句</strong>：「賽事」分頁最上面每天一句跑者說過的話——電腦放在「下一場」卡右邊，手機、平板放在它上面。一天一句，過了午夜換下一句，同一天每台裝置都一樣。中文版面先寫中文翻譯，原文是日文或英文時下面附原文；日文、英文版面只顯示那個語言（原文不是那個語言就顯示翻譯）。點一下看說話者是誰、在什麼情況下說的，以及出處和連結。每一句都核對過出處，翻譯是本站翻的。不想看的話，頭像選單「顯示」裡的「今日一句」可以關掉。</li>
         <li>生涯數據可以點：年份長條、熱力圖的格子、「總完賽場次」「今年累計里程」點下去，下面會列出那幾場（點一場就打開，返回鍵先關掉列表）；點全馬 PB 的時間，直接打開締造 PB 的那一場。全馬只算跑步類的賽事（42 公里的自行車賽不算）。</li>
@@ -25504,6 +26775,9 @@ document.addEventListener('keydown',e=>{
   // 先收起最上面那一層。
   const trImport=document.getElementById('training-import-modal');
   if(trImport&&!trImport.hidden){ closeTrainingImportModal(); return; }
+  // 單次詳細疊在訓練頁上面：先退它（v4.11.0）
+  const trDetail=document.getElementById('training-detail');
+  if(trDetail&&!trDetail.hidden){ closeTrainingDetail(); return; }
   const trOverlay=document.getElementById('training-overlay');
   if(trOverlay&&!trOverlay.hidden){ closeTrainingOverlay(); return; }
   const hof=document.getElementById('hof-overlay');
@@ -25999,7 +27273,7 @@ init();
     // 資料量都很小；而且一次寫入就全部到齊，不會發生「範本寫成功、徽章
     // 寫失敗」這種各自半套的狀態。
     /* 訓練紀錄：users/{uid}/trainings/{YYYY-MM}，一個月一份文件。
-       一筆約 1.5KB（含縮圖），一個月就算 100 筆也才 150KB，遠低於 1MB
+       一筆約 1.5KB（含縮圖；v4.12.0 起有每公里配速與高度的再多 0.3～1KB），一個月就算 100 筆也才 250KB，遠低於 1MB
        的文件上限。刪除是留墓碑（deletedAt）的軟刪除，月份文件不用刪。
        （v4.3.1 拿掉沒有在用的 replaceTrainings：它會刪掉本機沒有的月份，
        哪天被接上去，另一台裝置的訓練就整個月不見） */
