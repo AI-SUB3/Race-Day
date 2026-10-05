@@ -12762,13 +12762,14 @@ class V416FindRaces(Group):
         try:
             f = json.load(open(feed_path, encoding='utf-8'))
             if f.get('v') != 1: bad.append('v')
-            if sorted(s['id'] for s in f.get('sources', [])) != ['ctrun', 'irunner', 'joinnow', 'sportsnet']: bad.append('sources')
+            # v4.18.0 起八個網站（加了跑者廣場、超馬協會、JTB、MSPO）
+            if sorted(s['id'] for s in f.get('sources', [])) != ['ctau', 'ctrun', 'irunner', 'joinnow', 'jtb', 'mspo', 'runplaza', 'sportsnet']: bad.append('sources')
             races = f.get('races', [])
             if len(races) < 30: bad.append('few %d' % len(races))
             ids = [r.get('id') for r in races]
             if len(set(ids)) != len(ids): bad.append('dup ids')
             for r in races:
-                if not r.get('name') or r.get('source') not in ('irunner', 'ctrun', 'joinnow', 'sportsnet'): bad.append('field ' + str(r.get('id')))
+                if not r.get('name') or r.get('source') not in ('irunner', 'ctrun', 'joinnow', 'sportsnet', 'runplaza', 'ctau', 'jtb', 'mspo'): bad.append('field ' + str(r.get('id')))
                 if r.get('url') and not re.match(r'^https?://', r['url']): bad.append('url ' + r['id'])
                 if r.get('type') not in ('road_running', 'trail_running', 'ultra_marathon', 'duathlon', 'triathlon', 'cycling', 'swimming', 'obstacle_race', 'other'): bad.append('type ' + r['id'])
             keys = [(r.get('date') or (r.get('month', '') + '-99')) for r in races]
@@ -12812,7 +12813,8 @@ class V416FindRaces(Group):
         rows = self.ev(pg, js_rows) or []
         ids = [r['id'] for r in rows]
         # 預設「還能報名」：報名中、剩幾天、即將開放、還沒公布；已截止、額滿、延期、截止日已過的不列；已經比完的永遠不列
-        want = {'ctrun:today', 'irunner:urgent', 'irunner:open', 'joinnow:soon', 'sportsnet:2027-2', 'sportsnet:2027-4', 'irunner:tbd', 'ctrun:bike', 'joinnow:swim', 'joinnow:bad', 'irunner:okinawa'}
+        # v4.18.0 起國家預設「臺灣」：沖繩馬拉松（海外、日本）要選「日本」才看得到
+        want = {'ctrun:today', 'irunner:urgent', 'irunner:open', 'joinnow:soon', 'sportsnet:2027-2', 'sportsnet:2027-4', 'irunner:tbd', 'ctrun:bike', 'joinnow:swim', 'joinnow:bad'}
         c['default_can_still_enter'] = set(ids) == want
         if set(ids) != want:
             print('    v416: default rows', sorted(set(ids) ^ want))
@@ -12909,20 +12911,20 @@ class V416FindRaces(Group):
             set('find-only','can'); set('find-type','bike'); await __wait(60); const bike=ids();
             set('find-type','all'); set('find-region','islands'); await __wait(60); const isl=ids(), regTxt=document.querySelector('#find-region').closest('.find-sel').querySelector('.find-sel-txt').textContent;
             set('find-region','all'); await __wait(60);
-            const ok=before.join('|')==='還能報名（11）|報名中（8）|即將開放（1）|已截止、額滿（4）|全部狀態（15）'
+            const ok=before.join('|')==='還能報名（10）|報名中（7）|即將開放（1）|已截止、額滿（4）|全部狀態（14）'
               && closed==='ctrun:closed,ctrun:full,irunner:cancel,irunner:stale' && pills==='已截止,已截止,延期／停辦,額滿'
               && soon==='joinnow:soon' && bike==='ctrun:bike' && isl==='sportsnet:2027-2' && regTxt==='離島'
-              && document.getElementById('find-count').textContent==='共 11 場';
+              && document.getElementById('find-count').textContent==='共 10 場';
             if(!ok) console.log('v416: filters',before.join('|'),closed,pills,soon,bike,isl,regTxt); return ok; }""")
         # 數量 0 的種類不列（沒有越野以外的山徑、沒有鐵人）；沒篩的膠囊只寫「種類」「地區」，篩了才變綠
         c['zero_types_hidden_and_pill_text'] = self.ev(pg, r"""()=>{ const types=[...document.getElementById('find-type').options].map(o=>o.value).join(',');
             const pill=k=>document.getElementById('find-'+k).closest('.find-sel');
-            return types==='all,road,trail,bike,swim' && pill('type').querySelector('.find-sel-txt').textContent==='種類' && !pill('type').classList.contains('is-on')
+            return types==='all,road,trail,bike,swim' && pill('type').querySelector('.find-sel-txt').textContent==='運動別' && !pill('type').classList.contains('is-on')
               && pill('only').classList.contains('is-on') && pill('only').querySelector('.find-sel-txt').textContent==='還能報名'; }""")
         c['sort_by_deadline'] = self.ev(pg, r"""async()=>{ const s=document.getElementById('find-sort'); s.value='deadline'; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(60);
             const ids=[...document.querySelectorAll('.find-line')].map(b=>b.dataset.id), groups=document.querySelectorAll('.find-month h3').length;
             s.value='date'; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(60);
-            const want=['ctrun:today','irunner:urgent','irunner:open','irunner:tbd','ctrun:bike','irunner:okinawa','joinnow:bad','joinnow:swim','joinnow:soon'];
+            const want=['ctrun:today','irunner:urgent','irunner:open','irunner:tbd','ctrun:bike','joinnow:bad','joinnow:swim','joinnow:soon','sportsnet:2027-2'];
             const ok=JSON.stringify(ids.slice(0,9))===JSON.stringify(want) && groups===0;
             if(!ok) console.log('v416: sort',ids.join(',')); return ok; }""")
         # 搜尋：名稱、縣市、地點都找得到，「台」「臺」都算；打字時搜尋框不會被重畫（焦點、游標都在）
@@ -12936,10 +12938,10 @@ class V416FindRaces(Group):
             await type('');
             const ok=a==='irunner:open,sportsnet:2027-4' && b==='sportsnet:2027-2' && c2==='joinnow:soon' && d==='' && empty && same;
             if(!ok) console.log('v416: search',a,'|',b,'|',c2,'|',d,empty,same); return ok; }""")
-        c['clear_filters_resets'] = self.ev(pg, r"""async()=>{ const s=document.getElementById('find-region'); s.value='overseas'; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(40);
+        c['clear_filters_resets'] = self.ev(pg, r"""async()=>{ const s=document.getElementById('find-country'); s.value='jp'; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(40);
             const inp=document.getElementById('find-q'); inp.value='沒有這場'; inp.dispatchEvent(new Event('input',{bubbles:true})); await __wait(40);
             document.querySelector('[data-action="find-clear"]').click(); await __wait(80);
-            return findState.region==='all' && findState.q==='' && findState.only==='can' && document.querySelectorAll('.find-line').length===11 && document.getElementById('find-q').value===''; }""")
+            return findState.country==='tw' && findState.region==='all' && findState.q==='' && findState.only==='can' && document.querySelectorAll('.find-line').length===10 && document.getElementById('find-q').value===''; }""")
         # 篩選記在這台裝置上（搜尋字不記）
         self.ev(pg, r"""async()=>{ const s=document.getElementById('find-region'); s.value='south'; s.dispatchEvent(new Event('change',{bubbles:true}));
             const inp=document.getElementById('find-q'); inp.value='港都'; inp.dispatchEvent(new Event('input',{bubbles:true})); await __wait(40); }""")
@@ -12975,7 +12977,7 @@ class V416FindRaces(Group):
         ctx, pg, st = self._ctx(self.browser, viewport={'width': 1280, 'height': 900})
         self._open_find(pg)
         c['laptop_table_columns_in_order'] = self.ev(pg, r"""()=>{ const th=[...document.querySelectorAll('.find-tbl thead th')].map(x=>x.textContent.trim());
-            const ok=JSON.stringify(th.slice(0,5))===JSON.stringify(['賽事日期','地點','名稱','種類與距離','報名期間']) && th.length===6
+            const ok=JSON.stringify(th.slice(0,5))===JSON.stringify(['賽事日期','地點','名稱','運動別與距離','報名期間']) && th.length===6
               && document.querySelectorAll('.find-tbl .find-mrow').length>=6 && !document.querySelector('.find-row');
             if(!ok) console.log('v416: th',th.join('|')); return ok; }""")
         c['laptop_row_buttons'] = self.ev(pg, r"""()=>{ const tr=[...document.querySelectorAll('.find-trow')].find(x=>x.dataset.id==='irunner:open');
@@ -13024,7 +13026,7 @@ class V416FindRaces(Group):
         no_retry_storm = st['hits'] == hits1
         st['status'] = 200
         self.ev(pg, "async()=>{ document.querySelector('[data-action=\"find-retry\"]').click(); for(let i=0;i<40&&!document.querySelector('.find-row');i++) await __wait(50); }")
-        rec = self.ev(pg, "()=>document.querySelectorAll('.find-row').length===11")
+        rec = self.ev(pg, "()=>document.querySelectorAll('.find-row').length===10")
         c['error_then_retry_recovers'] = bool(err and no_retry_storm and rec)
         if not c['error_then_retry_recovers']:
             print('    v416: retry', err, no_retry_storm, rec, hits1, st['hits'])
@@ -13048,7 +13050,7 @@ class V416FindRaces(Group):
         ctx.close()
 
         # ================= 日文、英文 =================
-        for lang, tab, pill, add, cnt in (('ja', '大会を探す', 'あと3日', '＋ 自分の大会に追加', '11件'), ('en', 'Find races', '3 days left', '＋ Add to my races', '11 races')):
+        for lang, tab, pill, add, cnt in (('ja', '大会を探す', 'あと3日', '＋ 自分の大会に追加', '10件'), ('en', 'Find races', '3 days left', '＋ Add to my races', '10 races')):
             ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, lang=lang)
             self._open_find(pg)
             c[f'{lang}_labels'] = self.ev(pg, r"""async(w)=>{ const [tab,pill,add,cnt,lang]=w;
@@ -13063,8 +13065,9 @@ class V416FindRaces(Group):
         ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
         c['find_keys_translated'] = self.ev(pg, r"""()=>{ const src=document.documentElement.outerHTML;
             const used=new Set([...src.matchAll(/'(ui\.find[A-Za-z]+(?:\.[a-z]+)?)'/g)].map(m=>m[1]).filter(k=>!k.endsWith('.')));
-            ['north','central','south','east','islands','overseas'].forEach(x=>used.add('ui.findRegion.'+x));
-            ['road','trail','ultra','tri','bike','swim','other'].forEach(x=>used.add('ui.findType.'+x));
+            // v4.18.0 起地區跟著國家（臺灣、日本），運動別換成使用者的七類
+            Object.values(FIND_REGIONS_BY).forEach(l=>l.forEach(o=>used.add('ui.findRegion.'+o.id)));
+            FIND_TYPES.forEach(o=>used.add('ui.findType.'+o.id));
             ['can','open','soon','closed','all'].forEach(x=>used.add('ui.findOnly.'+x));
             used.add('ui.tabFind');
             const miss=[...used].filter(k=>!(k in JA)||!(k in EN)||/[\u4e00-\u9fff]/.test(EN[k]));
@@ -13135,7 +13138,8 @@ class V417PasteUrl(V416FindRaces):
     def _body(self):
         c = self.checks
         html = open(APP, encoding='utf-8').read()
-        c['version_4_17_0'] = "const APP_VERSION='v4.17.0';" in html
+        mv = re.search(r"const APP_VERSION='v(\d+)\.(\d+)\.(\d+)';", html)
+        c['version_at_least_4_17_0'] = bool(mv) and tuple(int(x) for x in mv.groups()) >= (4, 17, 0)
         repo = os.environ.get('V416_REPO') or os.path.dirname(os.path.abspath(APP))
 
         # ================= 網址比對、解析（純函式） =================
@@ -13504,6 +13508,281 @@ class V417PasteUrl(V416FindRaces):
             ctx.close()
 
 
+# 找賽事（v4.18.0）：國家、運動別、地區的測試用清單（名稱都是虛構的）
+def _r418(id_, name, date, country, region, city, type_, source, url='', reg=('2026-09-01', '2026-11-20'), state='open', dists=None, venue=''):
+    r = {"id": id_, "name": name, "date": date, "dateEnd": None, "month": date[:7], "city": city, "region": region, "venue": venue,
+         "type": type_, "distances": dists or [], "cats": [], "regOpen": reg[0], "regClose": reg[1], "siteState": state,
+         "url": url, "urlKind": "register", "source": source, "also": []}
+    if country is not None:
+        r["country"] = country
+    return r
+
+
+FIND418_FEED = {
+    "v": 1, "updatedAt": "2026-10-05T04:17:00+08:00",
+    "sources": [{"id": s_, "name": s_, "url": "https://example.com/", "ok": True, "count": 3, "error": None, "stale": False}
+                for s_ in ('irunner', 'ctrun', 'joinnow', 'sportsnet', 'runplaza', 'ctau', 'jtb', 'mspo')],
+    "races": [
+        _r418('tw:road', '2026 河岸晨光馬拉松', '2026-10-25', 'tw', 'north', '臺北市', 'road_running', 'irunner', 'https://irunner.biji.co/riverdawn', dists=[42.195, 21.0975], venue='河濱公園'),
+        _r418('tw:closed', '2026 港灣半程馬拉松', '2026-10-31', 'tw', 'south', '高雄市', 'road_running', 'ctrun', 'https://www.ctrun.com.tw/Activity?EventMain_ID=901', reg=('2026-07-01', '2026-09-30'), state='closed'),
+        _r418('tw:trail', '2026 雲霧山徑越野賽', '2026-11-08', 'tw', 'south', '屏東縣', 'trail_running', 'runplaza', 'https://bao-ming.com/eb/content/9001', dists=[25, 12]),
+        _r418('tw:duo', '2026 稻浪鐵人兩項', '2026-11-15', 'tw', 'central', '彰化縣', 'duathlon', 'joinnow', 'https://www.joinnow.com.tw/about.php?cnt_id=901'),
+        _r418('tw:ultra', '2026 山海超級馬拉松', '2026-11-21', 'tw', 'north', '宜蘭縣', 'ultra_marathon', 'ctau', '', reg=(None, '2026-10-20'), dists=[100, 50]),
+        _r418('tw:obs', '2026 城市障礙挑戰賽', '2026-11-22', 'tw', 'north', '新北市', 'obstacle_race', 'ctrun', 'https://www.ctrun.com.tw/Activity?EventMain_ID=902'),
+        _r418('tw:swim', '2026 湖光公開水域游泳', '2026-11-29', 'tw', 'central', '南投縣', 'swimming', 'joinnow', 'https://www.joinnow.com.tw/about.php?cnt_id=902', dists=[3, 1.5]),
+        _r418('tw:tri', '2026 碧海鐵人三項', '2026-12-06', 'tw', 'east', '臺東縣', 'triathlon', 'runplaza', 'https://bao-ming.com/eb/content/9002', dists=[51.5]),
+        _r418('tw:bike', '2026 縱谷單車挑戰', '2026-12-13', 'tw', 'east', '花蓮縣', 'cycling', 'ctrun', 'https://www.ctrun.com.tw/Activity?EventMain_ID=903', dists=[100]),
+        _r418('tw:walk', '2026 古道健行日', '2026-12-20', 'tw', 'islands', '澎湖縣', 'other', 'sportsnet', 'https://www.sportsnet.org.tw/20261220_web/'),
+        _r418('tw:future', '2027 夜光競走', '2027-01-09', 'tw', 'north', '臺北市', 'race_walking', 'irunner', 'https://irunner.biji.co/nightwalk'),
+        _r418('tw:old', '2027 舊清單路跑', '2027-01-17', None, 'north', '基隆市', 'road_running', 'irunner', 'https://irunner.biji.co/oldfeed'),
+        _r418('jp:kanto', '2026 湾岸リバーサイドマラソン', '2026-11-01', 'jp', 'kanto', '東京都', 'road_running', 'mspo', 'https://www.mspo.jp/events/90001'),
+        _r418('jp:kinki', '2026 古都サイクリング', '2026-11-23', 'jp', 'kinki', '京都府', 'cycling', 'jtb', 'https://jtbsports.jp/detail/abc12'),
+        _r418('jp:okinawa', '2027 美ら海トライアスロン', '2027-04-18', 'jp', 'kyushu-okinawa', '沖縄県', 'triathlon', 'mspo', 'https://www.mspo.jp/events/90002', reg=('2026-10-01', '2026-12-31')),
+        _r418('jp:old', '2027 雪原マラソン', '2027-02-14', None, 'overseas', '北海道', 'road_running', 'irunner', 'https://irunner.biji.co/snowfield'),
+        _r418('ot:isle', '2026 島嶼ライド', '2026-11-22', 'other', '', '', 'cycling', 'jtb', 'https://jtbsports.jp/detail/isl99'),
+        _r418('ot:old', '2027 雷龍之國馬拉松', '2027-03-06', None, 'overseas', '不丹', 'road_running', 'irunner', 'https://irunner.biji.co/thunder'),
+    ]
+}
+
+
+class V418FindCountries(V416FindRaces):
+    """v4.18.0：找賽事多了四個網站（跑者廣場、超馬協會、日本的 JTB、MSPO），選單改成國家、運動別、報名狀態、地區四個下拉。
+    運動別照使用者的分法（路跑、越野跑、單車、游泳、鐵人三項（兩項）、體能挑戰、其他；超馬算路跑）；地區跟著國家換；
+    同一場在好幾個網站上（同一天、名稱相近或報名網址一樣）只列一次（抓資料的程式做，node 測試另外驗）。"""
+
+    ECHO = ('v418:',)
+
+    def _set(self, pg, key, val, wait=60):
+        return self.ev(pg, """async([k,v,w])=>{ const s=document.getElementById('find-'+k); s.value=v; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(w); return s.value===v; }""", [key, val, wait])
+
+    def _ids(self, pg):
+        return self.ev(pg, "()=>[...document.querySelectorAll('.find-line,.find-trow')].map(b=>b.dataset.id).sort().join(',')") or ''
+
+    def _opts(self, pg, key):
+        return self.ev(pg, "(k)=>{ const s=document.getElementById('find-'+k); return s?[...s.options].map(o=>o.value+'='+o.textContent).join('|'):''; }", key) or ''
+
+    def _body(self):
+        c = self.checks
+        html = open(APP, encoding='utf-8').read()
+        c['version_4_18_0'] = "const APP_VERSION='v4.18.0';" in html
+        repo = os.environ.get('V416_REPO') or os.path.dirname(os.path.abspath(APP))
+
+        # ================= 一起交付的清單：八個網站、每一場有國家、地區對得上國家 =================
+        bad = []
+        try:
+            f = json.load(open(os.path.join(repo, 'race-feed.json'), encoding='utf-8'))
+            srcs = [x['id'] for x in f.get('sources', [])]
+            if srcs != ['irunner', 'ctrun', 'joinnow', 'sportsnet', 'runplaza', 'ctau', 'jtb', 'mspo']: bad.append('sources ' + ','.join(srcs))
+            if not all(x.get('ok') for x in f.get('sources', [])): bad.append('source failed')
+            races = f.get('races', [])
+            tw_reg = {'north', 'central', 'south', 'east', 'islands', ''}
+            jp_reg = {'hokkaido-tohoku', 'kanto', 'chubu', 'kinki', 'chugoku-shikoku', 'kyushu-okinawa', ''}
+            n = {'tw': 0, 'jp': 0, 'other': 0}
+            for r in races:
+                cc = r.get('country')
+                if cc not in n: bad.append('country ' + str(r.get('id'))); continue
+                n[cc] += 1
+                if cc == 'tw' and r.get('region') not in tw_reg: bad.append('tw region ' + r['id'])
+                if cc == 'jp' and r.get('region') not in jp_reg: bad.append('jp region ' + r['id'])
+                if re.search('ストライダー|STRIDER', r.get('name', ''), re.I): bad.append('strider ' + r['id'])
+                if r.get('source') in ('jtb', 'mspo') and cc == 'tw': bad.append('jp source as tw ' + r['id'])
+            if n['tw'] < 150 or n['jp'] < 30: bad.append('counts %r' % n)
+            ids = [r.get('id') for r in races]
+            if len(set(ids)) != len(ids): bad.append('dup ids')
+            # 實際看到的重複：草鞋墩、慵懶跑者聚樂部只能各一場；同一天同名的不能出現兩次
+            for word in ('草鞋墩馬拉松', '慵懶跑者聚樂部'):
+                if sum(1 for r in races if word in r.get('name', '')) != 1: bad.append('dup ' + word)
+            seen = {}
+            for r in races:
+                k = (r.get('date'), re.sub(r'\s+', '', r.get('name', '')))
+                if r.get('date') and k in seen and seen[k] != r.get('source'): bad.append('same name same day ' + r['id'])
+                seen[k] = r.get('source')
+        except Exception as e:                        # noqa: BLE001
+            bad.append('read ' + str(e)[:80])
+        if bad:
+            print('    v418: shipped feed', bad[:8])
+        c['shipped_feed_eight_sources_countries'] = not bad
+
+        # ================= 四個下拉選單、國家預設臺灣 =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, feed=FIND418_FEED)
+        self._open_find(pg)
+        c['four_dropdowns_in_order'] = self.ev(pg, r"""()=>{ const sels=[...document.querySelectorAll('.find-filters select')];
+            const ids=sels.map(s=>s.id).join(','), labels=sels.map(s=>s.getAttribute('aria-label')).join(',');
+            const ok=ids==='find-country,find-type,find-only,find-region' && labels==='國家,運動別,報名狀態,地區';
+            if(!ok) console.log('v418: dropdowns',ids,labels); return ok; }""")
+        opts = self._opts(pg, 'country')
+        c['country_default_taiwan_counts'] = (self.ev(pg, "()=>findState.country") == 'tw'
+            and opts == 'all=全部國家|tw=臺灣（11）|jp=日本（4）|other=其他國家（2）')
+        if not c['country_default_taiwan_counts']:
+            print('    v418: country opts', opts)
+        ids = self._ids(pg)
+        c['default_list_only_taiwan'] = ids == 'tw:bike,tw:duo,tw:future,tw:obs,tw:old,tw:road,tw:swim,tw:trail,tw:tri,tw:ultra,tw:walk'
+        if not c['default_list_only_taiwan']:
+            print('    v418: default ids', ids)
+        # 運動別：使用者的七類、照他的順序；數字跟著國家、報名狀態
+        topts = self._opts(pg, 'type')
+        c['type_options_user_categories'] = topts == 'all=全部運動別|road=路跑（3）|trail=越野跑（1）|bike=單車（1）|swim=游泳（1）|tri=鐵人三項（兩項）（2）|fitness=體能挑戰（1）|other=其他（2）'
+        if not c['type_options_user_categories']:
+            print('    v418: type opts', topts)
+        # 超馬算路跑、二鐵算鐵人、障礙賽算體能挑戰、清單裡沒列的種類（以後新增的）算其他
+        self._set(pg, 'type', 'road'); road = self._ids(pg)
+        self._set(pg, 'type', 'tri'); tri = self._ids(pg)
+        tri_pill = self.ev(pg, "()=>{ const w=document.getElementById('find-type').closest('.find-sel'); return w.querySelector('.find-sel-txt').textContent+'|'+w.classList.contains('is-on'); }")
+        self._set(pg, 'type', 'fitness'); fit = self._ids(pg)
+        self._set(pg, 'type', 'other'); oth = self._ids(pg)
+        self._set(pg, 'type', 'all')
+        c['type_groups_ultra_duathlon_obstacle_unknown'] = (road == 'tw:old,tw:road,tw:ultra' and tri == 'tw:duo,tw:tri' and fit == 'tw:obs'
+            and oth == 'tw:future,tw:walk' and tri_pill == '鐵人三項（兩項）|true')
+        if not c['type_groups_ultra_duathlon_obstacle_unknown']:
+            print('    v418: type groups', road, tri, fit, oth, tri_pill)
+        # 膠囊上的字：國家寫選的那一國（篩著所以是綠的）；運動別沒篩寫「運動別」
+        c['pill_texts_country_and_type'] = self.ev(pg, r"""()=>{ const p=k=>document.getElementById('find-'+k).closest('.find-sel');
+            return p('country').querySelector('.find-sel-txt').textContent==='臺灣' && p('country').classList.contains('is-on')
+              && p('type').querySelector('.find-sel-txt').textContent==='運動別' && !p('type').classList.contains('is-on'); }""")
+        # ================= 地區跟著國家換 =================
+        ropts_tw = self._opts(pg, 'region')
+        self._set(pg, 'region', 'north'); north = self._ids(pg)
+        # 選了臺灣的「北部」：國家選單的數字不套用地區，日本照樣在、照樣 4 場（不然換不過去）
+        copts_north = self._opts(pg, 'country')
+        self._set(pg, 'country', 'jp'); after_jp = self.ev(pg, "()=>findState.region"); ropts_jp = self._opts(pg, 'region'); jp_ids = self._ids(pg)
+        self._set(pg, 'region', 'kanto'); kanto = self._ids(pg)
+        jp_pill = self.ev(pg, "()=>document.getElementById('find-region').closest('.find-sel').querySelector('.find-sel-txt').textContent")
+        c['region_options_follow_country'] = (ropts_tw == 'all=全部地區|north=北部（5）|central=中部（2）|south=南部（1）|east=東部（2）|islands=離島（1）'
+            and north == 'tw:future,tw:obs,tw:old,tw:road,tw:ultra' and copts_north == 'all=全部國家|tw=臺灣（11）|jp=日本（4）|other=其他國家（2）'
+            and ropts_jp == 'all=全部地區|kanto=關東（1）|kinki=近畿（1）|kyushu-okinawa=九州・沖繩（1）'
+            and after_jp == 'all' and jp_ids == 'jp:kanto,jp:kinki,jp:okinawa,jp:old' and kanto == 'jp:kanto' and jp_pill == '關東')
+        if not c['region_options_follow_country']:
+            print('    v418: regions', ropts_tw, '|', north, '|', copts_north, '|', ropts_jp, '|', after_jp, jp_ids, kanto, jp_pill)
+        # 日本的「關東」換回臺灣：地區回到全部；其他國家、全部國家不分地區（地區選單藏起來）
+        self._set(pg, 'country', 'tw'); back_tw = self.ev(pg, "()=>findState.region+'|'+document.getElementById('find-region').value")
+        self._set(pg, 'country', 'other'); other = self._ids(pg)
+        hid_other = self.ev(pg, "()=>{ const w=document.getElementById('find-region').closest('.find-sel'); return w.hidden && getComputedStyle(w).display==='none'; }")
+        self._set(pg, 'country', 'all'); all_n = self.ev(pg, "()=>document.querySelectorAll('.find-line').length")
+        hid_all = self.ev(pg, "()=>document.getElementById('find-region').closest('.find-sel').hidden")
+        self._set(pg, 'country', 'tw'); shown_tw = self.ev(pg, "()=>!document.getElementById('find-region').closest('.find-sel').hidden")
+        c['country_switch_resets_region_and_hides'] = (back_tw == 'all|all' and other == 'ot:isle,ot:old' and bool(hid_other)
+            and all_n == 17 and bool(hid_all) and bool(shown_tw))
+        if not c['country_switch_resets_region_and_hides']:
+            print('    v418: switch', back_tw, other, hid_other, all_n, hid_all, shown_tw)
+        # 舊清單（沒有 country）：有臺灣地區的算臺灣，「海外」的看地名（北海道→日本，不丹→其他國家）
+        c['old_feed_country_fallback'] = self.ev(pg, r"""()=>{ const g=id=>findCountry(findState.feed.races.find(r=>r.id===id));
+            return g('tw:old')==='tw' && g('jp:old')==='jp' && g('ot:old')==='other' && findCountry({region:''})==='tw' && findCountry({country:'jp',region:'north'})==='jp'; }""")
+        # 清除篩選：國家回到臺灣
+        self._set(pg, 'country', 'jp'); self._set(pg, 'type', 'swim')      # 日本沒有游泳：清單空了才有「清除篩選」
+        c['clear_resets_country_to_taiwan'] = self.ev(pg, r"""async()=>{ const b=document.querySelector('[data-action="find-clear"]'); if(!b) return false; b.click(); await __wait(80);
+            return findState.country==='tw' && findState.type==='all' && findState.region==='all' && document.getElementById('find-country').value==='tw' && document.querySelectorAll('.find-line').length===11; }""")
+        # ================= 資料來源那一行：臺灣、日本兩組，八個連結 =================
+        c['source_line_grouped_tw_jp'] = self.ev(pg, r"""()=>{ const p=document.querySelector('.find-src'), a=[...p.querySelectorAll('a')];
+            const txt=p.textContent, hrefs=a.map(x=>x.getAttribute('href'));
+            const ok=txt==='資料來源：運動筆記、全統、一起報名、路協、跑者廣場、超馬協會（臺灣）；JTB、MSPO（日本）・每天清晨檢查（清單更新於 10/5）'
+              && a.length===8 && hrefs[4]==='http://www.taipeimarathon.org.tw/contest.aspx' && hrefs[5].startsWith('https://www.ctau.org.tw/')
+              && hrefs[6]==='https://jtbsports.jp/list.php?orderby=3&accepting=0&keyword=' && hrefs[7]==='https://www.mspo.jp/athletic/triathlon'
+              && a.every(x=>x.target==='_blank' && /noopener/.test(x.rel));
+            if(!ok) console.log('v418: src',txt,JSON.stringify(hrefs)); return ok; }""")
+        # 超馬協會沒有報名連結的：給「看超馬協會」（行事曆）；來源寫「超馬協會」
+        c['new_source_fallback_link_and_name'] = self.ev(pg, r"""async()=>{ const q=id=>[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id===id);
+            q('tw:ultra').click(); await __wait(80); const li=q('tw:ultra').closest('.find-row'); const a=li.querySelector('a[data-action="find-go"]');
+            const dl=[...li.querySelectorAll('.find-detail dt')].map(x=>x.textContent+'='+x.nextElementSibling.textContent);
+            const ok=a && a.textContent.trim()==='看超馬協會 ↗' && a.getAttribute('href')===FIND_SOURCES.ctau.home && dl.includes('來源=超馬協會');
+            q('tw:ultra').click(); await __wait(40); if(!ok) console.log('v418: fallback',a&&a.outerHTML,JSON.stringify(dl)); return ok; }""")
+        # ＋ 加入：日本的帶「日本」、沒寫縣市的臺灣賽事也帶「臺灣」（清單有寫國家）
+        c['add_race_country_from_feed'] = self.ev(pg, r"""async()=>{ const n0=state.races.length;
+            addFindRace('jp:okinawa'); await __wait(150); const a=state.races[state.races.length-1];
+            const f=findState.feed.races.find(r=>r.id==='tw:walk'); const keep=f.city; f.city=''; addFindRace('tw:walk'); await __wait(150); f.city=keep;
+            const b=state.races[state.races.length-1];
+            const ok=state.races.length===n0+2 && a.name==='2027 美ら海トライアスロン' && a.location.country==='日本' && a.location.city==='沖縄県' && a.sportType==='triathlon'
+              && !!b.location.country && isTaiwanCountry(b.location.country);   // isTaiwanCountry('') 也是 true（沒寫算主場），要另外確認有寫
+            if(!ok) console.log('v418: add',JSON.stringify([a.location,b.location])); return ok; }""")
+        # 貼報名網址（v4.17.0）也認得新網站的網址：JTB 的賽事頁多了追蹤參數也是同一場
+        c['paste_url_matches_new_sources'] = self.ev(pg, r"""()=>{ const U=u=>(findFeedRaceByUrl(u)||{}).id||null;
+            return U('https://jtbsports.jp/detail/abc12?utm_source=line')==='jp:kinki' && U('https://www.mspo.jp/events/90001/')==='jp:kanto' && U('https://jtbsports.jp/detail/zzz')===null; }""")
+        # 手機：四顆膠囊排一行（375px）、320px 也不會左右捲
+        ctx.close()
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 375, 'height': 812}, touch=True, feed=FIND418_FEED)
+        self._open_find(pg)
+        c['phone_375_four_pills_one_row'] = self.ev(pg, r"""()=>{ const w=[...document.querySelectorAll('.find-filters .find-sel')].filter(x=>!x.hidden);
+            const tops=new Set(w.map(x=>Math.round(x.getBoundingClientRect().top))); const h=w.every(x=>x.getBoundingClientRect().height>=43.5);
+            const ok=w.length===4 && tops.size===1 && h && document.documentElement.scrollWidth<=innerWidth;
+            if(!ok) console.log('v418: pills',JSON.stringify(w.map(x=>[x.textContent,Math.round(x.getBoundingClientRect().top),Math.round(x.getBoundingClientRect().width)]))); return ok; }""")
+        ctx.close()
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 320, 'height': 700}, touch=True, feed=FIND418_FEED)
+        self._open_find(pg)
+        self._set(pg, 'type', 'tri')
+        c['phone_320_no_hscroll_long_type'] = self.ev(pg, "()=>document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('.find-sel')].every(x=>x.getBoundingClientRect().right<=innerWidth+0.5)")
+        ctx.close()
+
+        # ================= 記在這台裝置上；v4.18.0 以前記的「超馬」「海外」轉成新的 =================
+        old_prefs = "try{localStorage.setItem('race-day-find-prefs-v1',JSON.stringify({only:'all',type:'ultra',region:'overseas',sort:'date'}));}catch(e){}"
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, feed=FIND418_FEED, init=old_prefs)
+        self._open_find(pg)
+        c['old_prefs_migrated'] = self.ev(pg, r"""()=>findState.type==='road' && findState.country==='all' && findState.region==='all' && findState.only==='all'
+            && document.getElementById('find-type').value==='road' && document.getElementById('find-region').closest('.find-sel').hidden""")
+        ctx.close()
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, feed=FIND418_FEED)
+        self._open_find(pg)
+        self._set(pg, 'country', 'jp'); self._set(pg, 'region', 'kinki')
+        saved = self.ev(pg, "()=>localStorage.getItem('race-day-find-prefs-v1')") or ''
+        pg.reload()
+        pg.wait_for_function("()=>typeof state!=='undefined'", timeout=30000)
+        pg.wait_for_timeout(500)
+        pg.add_script_tag(content=V47_JS)
+        self._open_find(pg)
+        c['country_region_prefs_persist'] = ('"country":"jp"' in saved and '"region":"kinki"' in saved
+            and self.ev(pg, "()=>findState.country==='jp' && findState.region==='kinki' && [...document.querySelectorAll('.find-line')].map(b=>b.dataset.id).join(',')==='jp:kinki'"))
+        ctx.close()
+
+        # ================= 筆電：表頭、四顆膠囊同一列 =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 1280, 'height': 900}, feed=FIND418_FEED)
+        self._open_find(pg)
+        c['laptop_header_and_filters_row'] = self.ev(pg, r"""()=>{ const th=[...document.querySelectorAll('.find-tbl thead th')].map(x=>x.textContent.trim());
+            const w=[...document.querySelectorAll('.find-filters .find-sel')]; const tops=new Set(w.map(x=>Math.round(x.getBoundingClientRect().top)));
+            const ok=th[3]==='運動別與距離' && w.length===4 && tops.size===1;
+            if(!ok) console.log('v418: laptop',th.join('|'),tops.size); return ok; }""")
+        self._set(pg, 'country', 'jp')
+        c['laptop_japan_rows_place'] = self.ev(pg, r"""()=>{ const tr=[...document.querySelectorAll('.find-trow')].find(x=>x.dataset.id==='jp:kanto');
+            const tds=tr?[...tr.children].map(td=>td.textContent.replace(/\s+/g,' ').trim()):[];
+            const ok=tds[1]==='東京都' && /湾岸リバーサイドマラソン/.test(tds[2]) && /MSPO$/.test(tds[2]) && tds[3].startsWith('路跑');
+            if(!ok) console.log('v418: jp row',JSON.stringify(tds)); return ok; }""")
+        ctx.close()
+
+        # ================= 日文、英文 =================
+        for lang, want in (('ja', {'country': '台湾', 'type': '種目', 'tri': 'トライアスロン（デュアスロン）', 'fit': '体力チャレンジ', 'kanto': '関東', 'all': 'すべての国', 'src': '（台湾）；'}),
+                           ('en', {'country': 'Taiwan', 'type': 'Sport', 'tri': 'Triathlon (duathlon)', 'fit': 'Fitness challenge', 'kanto': 'Kanto', 'all': 'All countries', 'src': ' (Taiwan); '})):
+            ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, lang=lang, feed=FIND418_FEED)
+            self._open_find(pg)
+            got = self.ev(pg, r"""async()=>{ const txt=k=>document.getElementById('find-'+k).closest('.find-sel').querySelector('.find-sel-txt').textContent;
+                const opt=(k,v)=>{ const o=[...document.getElementById('find-'+k).options].find(o=>o.value===v); return o?o.textContent.replace(/[（(]\d+[）)]$/,'').trim():''; };
+                const out={country:txt('country'), type:txt('type'), tri:opt('type','tri'), fit:opt('type','fitness'), all:opt('country','all'), src:document.querySelector('.find-src').textContent};
+                const s=document.getElementById('find-country'); s.value='jp'; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(60);
+                out.kanto=opt('region','kanto');
+                out.chrome=[...document.querySelectorAll('.find-sel-txt,.find-filters option,.find-head h2,.find-count')].map(e=>e.textContent).join(' ');
+                return out; }""") or {}
+            ok = all(got.get(k) == v for k, v in want.items() if k != 'src') and want['src'] in (got.get('src') or '')
+            if lang == 'en':
+                ok = ok and not re.search(r'[一-鿿]', got.get('chrome', ''))
+            c[f'{lang}_country_sport_region_labels'] = bool(ok)
+            if not ok:
+                print('    v418:', lang, {k: got.get(k) for k in list(want) + ['chrome']})
+            ctx.close()
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, feed=FIND418_FEED)
+        c['new_keys_translated'] = self.ev(pg, r"""()=>{ const keys=['ui.findCountryLabel','ui.findSrcCountry','ui.findSrcGroupSep','ui.findCountry.all'];
+            FIND_COUNTRIES.forEach(o=>keys.push('ui.findCountry.'+o.id));
+            Object.values(FIND_REGIONS_BY).forEach(l=>l.forEach(o=>keys.push('ui.findRegion.'+o.id)));
+            FIND_TYPES.forEach(o=>keys.push('ui.findType.'+o.id)); keys.push('ui.findType.all','ui.findTypeLabel','ui.findColKind');
+            const miss=keys.filter(k=>!(k in JA)||!(k in EN)||/[一-鿿]/.test(EN[k]));
+            const stale=['ui.findType.ultra','ui.findRegion.overseas'].filter(k=>(k in JA)||(k in EN));
+            if(miss.length||stale.length) console.log('v418: keys',miss.join(','),stale.join(',')); return keys.length>=26 && !miss.length && !stale.length; }""")
+        # 使用說明：三種語言的「找賽事」都寫了 v4.18.0、八個網站、國家和運動別
+        c['help_find_v418_three_langs'] = self.ev(pg, r"""async()=>{ const out={};
+            const name={zh:'找賽事',ja:'大会を探す',en:'Find races'}, need={zh:['v4.18.0','跑者廣場','超馬協會','JTB','MSPO','體能挑戰','國家','九州・沖繩'],
+              ja:['v4.18.0','跑者廣場','JTB','MSPO','体力チャレンジ','国','九州・沖縄'], en:['v4.18.0','Runners Plaza','JTB','MSPO','fitness challenge','country','Kyushu & Okinawa']};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(30); const box=document.createElement('div'); box.innerHTML=helpModalHtml();
+              const li=[...box.querySelectorAll('.help-body li')].map(x=>x.textContent).filter(x=>x.startsWith(name[l]));
+              out[l]=li.length===1 && need[l].every(w=>li[0].includes(w)); }
+            setLang('zh'); await __wait(30);
+            if(!out.zh||!out.ja||!out.en) console.log('v418: help',JSON.stringify(out)); return out.zh&&out.ja&&out.en; }""")
+        ctx.close()
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -13551,6 +13830,7 @@ GROUPS = {
     'v415':       lambda: V415HeartRatePlurals('v415'),
     'v416':       lambda: V416FindRaces('v416'),
     'v417':       lambda: V417PasteUrl('v417'),
+    'v418':       lambda: V418FindCountries('v418'),
 }
 
 

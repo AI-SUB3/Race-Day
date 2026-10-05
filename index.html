@@ -2551,7 +2551,7 @@
   .find-search-ico{color:var(--stone);font-size:calc(17px*var(--fs,1));line-height:1;}
   .find-search input{flex:1;min-width:0;min-height:42px;border:none;background:none;outline:none;font:inherit;font-size:calc(15px*var(--fs,1));color:var(--ink);}
   .find-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-  /* 篩選選單：畫面上是自己畫的膠囊（只寫「種類」「地區」，手機上三顆排得下一行），上面疊一個透明的原生選單——
+  /* 篩選選單：畫面上是自己畫的膠囊（只寫「運動別」「地區」，手機上四顆排得下一行），上面疊一個透明的原生選單——
      點下去是系統的選單（手機是滾輪），選項裡有各自的場數；讀螢幕軟體讀的也是原生選單 */
   .find-sel{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 30px 0 14px;box-sizing:border-box;
     border:1px solid var(--rule);border-radius:999px;background:var(--surface);color:var(--ink);
@@ -2561,6 +2561,9 @@
   .find-sel:has(select:focus-visible){outline:2px solid var(--trail);outline-offset:2px;}
   .find-sel.is-on{background:color-mix(in srgb,var(--trail) 13%,var(--surface));border-color:color-mix(in srgb,var(--trail) 50%,var(--rule));color:var(--find-on);}
   .find-sel.is-on::after{color:var(--find-on);}
+  .find-sel[hidden]{display:none;}   /* 上面寫了 display:inline-flex，hidden 屬性要自己補 */
+  /* 四顆膠囊（v4.18.0 加了國家）：窄手機上左右留白收一點，375px 寬排得下一行 */
+  @media (max-width:420px){ .find-filters{gap:6px;} .find-sel{padding:0 24px 0 11px;} .find-sel::after{right:9px;} }
   .find-countbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 0;}
   .find-count{margin:0;color:var(--stone);font-size:calc(13px*var(--fs,1));}
   .find-sort{border-color:transparent;background:none;color:var(--ink-soft);font-weight:500;padding-left:8px;}
@@ -5376,7 +5379,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／完賽牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.17.0';
+const APP_VERSION='v4.18.0';
 
 /* ============================================================
    多語系（i18n）
@@ -5465,10 +5468,12 @@ const JA={
   'ui.tabFind':'大会を探す','ui.findSourcesLabel':'情報元：','ui.findDaily':'・毎朝チェック','ui.findUpdated':'（リスト更新：{d}）',
   'ui.findNote':'大会情報と受付期間は申込サイトから自動で集めたものです。申し込む前に申込サイトの案内を確認してください。',
   'ui.findStaleWarn':'リストが{n}日間更新されていません。受付状況が変わっている可能性があります。','ui.findSourceFail':'{names}は今回取得できなかったため、前回のデータを表示しています。',
-  'ui.findSearchLabel':'大会を検索','ui.findSearchPh':'大会名・場所で検索','ui.findOnlyLabel':'受付状況','ui.findTypeLabel':'種目','ui.findRegionLabel':'地域','ui.findSortLabel':'並べ替え',
+  'ui.findSearchLabel':'大会を検索','ui.findSearchPh':'大会名・場所で検索','ui.findOnlyLabel':'受付状況','ui.findTypeLabel':'種目','ui.findRegionLabel':'地域','ui.findSortLabel':'並べ替え','ui.findCountryLabel':'国',
   'ui.findOnly.can':'申込可能','ui.findOnly.open':'受付中','ui.findOnly.soon':'まもなく受付','ui.findOnly.closed':'締切・定員到達','ui.findOnly.all':'すべての状況',
-  'ui.findType.all':'すべての種目','ui.findType.road':'ロード','ui.findType.trail':'トレイル','ui.findType.ultra':'ウルトラ','ui.findType.tri':'トライアスロン','ui.findType.bike':'自転車','ui.findType.swim':'水泳','ui.findType.other':'その他',
-  'ui.findRegion.all':'すべての地域','ui.findRegion.north':'北部','ui.findRegion.central':'中部','ui.findRegion.south':'南部','ui.findRegion.east':'東部','ui.findRegion.islands':'離島','ui.findRegion.overseas':'海外',
+  'ui.findType.all':'すべての種目','ui.findType.road':'ロード','ui.findType.trail':'トレイル','ui.findType.bike':'自転車','ui.findType.swim':'水泳','ui.findType.tri':'トライアスロン（デュアスロン）','ui.findType.fitness':'体力チャレンジ','ui.findType.other':'その他',
+  'ui.findCountry.all':'すべての国','ui.findCountry.tw':'台湾','ui.findCountry.jp':'日本','ui.findCountry.other':'その他の国','ui.findSrcCountry':'（{c}）','ui.findSrcGroupSep':'；',
+  'ui.findRegion.all':'すべての地域','ui.findRegion.north':'北部','ui.findRegion.central':'中部','ui.findRegion.south':'南部','ui.findRegion.east':'東部','ui.findRegion.islands':'離島',
+  'ui.findRegion.hokkaido-tohoku':'北海道・東北','ui.findRegion.kanto':'関東','ui.findRegion.chubu':'中部','ui.findRegion.kinki':'近畿','ui.findRegion.chugoku-shikoku':'中国・四国','ui.findRegion.kyushu-okinawa':'九州・沖縄',
   'ui.findSort.date':'開催日順','ui.findSort.deadline':'締切順','ui.findOptCount':'{label}（{n}）','ui.findCount':'{n}件','ui.findMonthCount':'{n}件',
   'ui.findStOpen':'受付中','ui.findStLeft':'あと{n}日','ui.findStToday':'今日締切','ui.findStSoon':'{d} 受付開始','ui.findStSoonNoDate':'まもなく受付','ui.findStClosed':'締切','ui.findStFull':'定員到達','ui.findStCancelled':'延期・中止','ui.findStUnknown':'公式で確認',
   'ui.findPerUntil':'〜{d}','ui.findPerFrom':'{d}〜','ui.findPerCloseLong':'{d} 締切','ui.findPerOpenLong':'{d} 受付開始','ui.findPerNoneLong':'未発表（大会サイトで確認してください）',
@@ -5877,7 +5882,7 @@ const JA={
       <h3>ホーム：大会／キャリア／トレーニング／大会を探す</h3>
       <ul>
         <li>ホームは4つのタブに分かれています。「大会」は今日の名言、「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。「大会を探す」は申込サイトに載っている、これから開催される大会の一覧です。</li>
-        <li><strong>大会を探す</strong>（v4.16.0）：運動筆記、全統、一起報名、路跑協会（路協）の4サイトに載っている、これから開催される大会を毎朝自動で更新します。最初は「申込可能」（受付中・まもなく受付・未発表）だけを表示。大会名や場所で検索、受付状況・種目・地域で絞り込み（次回も覚えています）、締切順への並べ替えができます。スマホでは大会をタップすると種目、受付期間（あと何日）、会場、情報元が開き、「申込ページへ」で申込サイトを開き、「＋ 自分の大会に追加」で「検討中」の大会を作成します（大会名、日付、場所、種目、受付期間、申込URLを入力済み）。パソコンでは表で表示し、各行の右にボタンがあります。追加済みの大会には「✓ 追加済み」と表示されます。大会情報と受付期間は申込サイトから自動で集めたものなので、申し込む前に申込サイトの案内を確認してください。</li>
+        <li><strong>大会を探す</strong>（v4.16.0、v4.18.0 でサイト・国・種目を追加）：台湾の運動筆記、全統、一起報名、路跑協会（路協）、跑者廣場、超級馬拉松協会と、日本の JTB、MSPO の8サイトに載っている、これから開催される大会を毎朝自動で更新します。同じ大会が複数のサイトに載っているとき（同じ日で名前が似ている、または申込URLが同じ）は1件にまとめます。上の4つのメニューで国（最初は台湾）、種目（ロード、トレイル、自転車、水泳、トライアスロン（デュアスロン）、体力チャレンジ、その他。ウルトラはロード、トレイルのウルトラはトレイル）、受付状況（最初は「申込可能」：受付中・まもなく受付・未発表）、地域（国によって変わります。台湾は北部・中部・南部・東部・離島、日本は北海道・東北、関東、中部、近畿、中国・四国、九州・沖縄）を絞り込めます（次回も覚えています）。大会名や場所で検索、締切順への並べ替えもできます。スマホでは大会をタップすると種目、受付期間（あと何日）、会場、情報元が開き、「申込ページへ」で申込サイトを開き、「＋ 自分の大会に追加」で「検討中」の大会を作成します（大会名、日付、場所、国、種目、受付期間、申込URLを入力済み）。パソコンでは表で表示し、各行の右にボタンがあります。追加済みの大会には「✓ 追加済み」と表示されます。大会情報と受付期間は申込サイトから自動で集めたものなので、申し込む前に申込サイトの案内を確認してください。</li>
         <li><strong>申込URLから追加</strong>（v4.17.0）：「大会を探す」の上にある「見つからないときは」に申込ページのURLを貼り付けます（ホームで入力欄を選んでいないときに貼り付けても、リストにあってまだ追加していない大会ならここに移動します）。リストにある大会はその大会が表示されるので「＋ 自分の大会に追加」を押します。リストにない大会は、ブラウザの制限でアプリがほかのサイトを読み込めないため、申込ページの文字をすべて選択してコピーし、貼り付けてください。大会名・日付・会場・受付期間・種目を読み取って「大会を作成」に入力するので、確認してから作成します。「URLだけ保存して残りは自分で入力」も選べます。「大会を作成」の公式サイト欄にリストにある大会のURLを貼り付けたときも「入力する」が表示されます。</li>
         <li><strong>トレーニング画面</strong>（v4.10.0 で刷新）：「今週」のいちばん上は準備中の大会（エントリー済みまたは抽選待ちで、準備期間に入った直近の大会：カウントダウン、A／B 目標、レースまで第何週）。その下に今週の距離、先週の同じ時点との比較、週間目標（大会画面の「トレーニング計画」の週間走行距離）、日ごとの棒グラフ、今週のまとめ、直近12週の距離が並びます。「今月」は日ごとの棒グラフと直近12か月、「すべて」は年・月ごとにたたんで表示します。種目が2つ以上あるときはタブの下で種目を選べ、種目の違う距離は合計しません。各記録の右にあるシューズのボタンから、シューズの変更や削除ができます。</li>
         <li><strong>トレーニングの詳細</strong>（v4.11.0）：記録をタップすると開き、距離、タイム、ペース、心拍、獲得標高とコースが見られます（v4.11.0 以降に取り込んだものは数 km ごとの位置を表示。それ以前のものはコースの長さから推定し、何周もするコースはスタートとゴールだけ）。過去1年の距離が近い同じ種目と、ペース・心拍・獲得標高を比べます。主観的運動強度（RPE 1–10）、名前、メモ（入力すると自動で保存）、シューズも設定できます。削除した直後は「元に戻す」で戻せます。</li>
@@ -6190,10 +6195,12 @@ const EN={
   'ui.tabFind':'Find races','ui.findSourcesLabel':'Sources: ','ui.findDaily':' · checked every morning','ui.findUpdated':' (list updated {d})',
   'ui.findNote':'Races and registration dates are collected automatically from the sign-up sites — check the site before you register.',
   'ui.findStaleWarn':'The list hasn\u2019t changed for {n} days, so registration status may be out of date.','ui.findSourceFail':'Couldn\u2019t fetch {names} this time — showing the previous data.',
-  'ui.findSearchLabel':'Search races','ui.findSearchPh':'Search by name or place','ui.findOnlyLabel':'Registration status','ui.findTypeLabel':'Type','ui.findRegionLabel':'Region','ui.findSortLabel':'Sort',
+  'ui.findSearchLabel':'Search races','ui.findSearchPh':'Search by name or place','ui.findOnlyLabel':'Registration status','ui.findTypeLabel':'Sport','ui.findRegionLabel':'Region','ui.findSortLabel':'Sort','ui.findCountryLabel':'Country',
   'ui.findOnly.can':'Can still enter','ui.findOnly.open':'Open now','ui.findOnly.soon':'Opening soon','ui.findOnly.closed':'Closed or full','ui.findOnly.all':'Any status',
-  'ui.findType.all':'All types','ui.findType.road':'Road','ui.findType.trail':'Trail','ui.findType.ultra':'Ultra','ui.findType.tri':'Tri & duathlon','ui.findType.bike':'Cycling','ui.findType.swim':'Swim','ui.findType.other':'Other',
-  'ui.findRegion.all':'All regions','ui.findRegion.north':'North','ui.findRegion.central':'Central','ui.findRegion.south':'South','ui.findRegion.east':'East','ui.findRegion.islands':'Islands','ui.findRegion.overseas':'Overseas',
+  'ui.findType.all':'All sports','ui.findType.road':'Road','ui.findType.trail':'Trail','ui.findType.bike':'Cycling','ui.findType.swim':'Swim','ui.findType.tri':'Triathlon (duathlon)','ui.findType.fitness':'Fitness challenge','ui.findType.other':'Other',
+  'ui.findCountry.all':'All countries','ui.findCountry.tw':'Taiwan','ui.findCountry.jp':'Japan','ui.findCountry.other':'Other countries','ui.findSrcCountry':' ({c})','ui.findSrcGroupSep':'; ',
+  'ui.findRegion.all':'All regions','ui.findRegion.north':'North','ui.findRegion.central':'Central','ui.findRegion.south':'South','ui.findRegion.east':'East','ui.findRegion.islands':'Islands',
+  'ui.findRegion.hokkaido-tohoku':'Hokkaido & Tohoku','ui.findRegion.kanto':'Kanto','ui.findRegion.chubu':'Chubu','ui.findRegion.kinki':'Kinki','ui.findRegion.chugoku-shikoku':'Chugoku & Shikoku','ui.findRegion.kyushu-okinawa':'Kyushu & Okinawa',
   'ui.findSort.date':'By race date','ui.findSort.deadline':'By deadline','ui.findOptCount':'{label} ({n})','ui.findCount':'{n} {n:race|races}','ui.findMonthCount':'{n} {n:race|races}',
   'ui.findStOpen':'Open','ui.findStLeft':'{n} {n:day|days} left','ui.findStToday':'Closes today','ui.findStSoon':'Opens {d}','ui.findStSoonNoDate':'Opening soon','ui.findStClosed':'Closed','ui.findStFull':'Full','ui.findStCancelled':'Postponed/cancelled','ui.findStUnknown':'Check site',
   'ui.findPerUntil':'until {d}','ui.findPerFrom':'from {d}','ui.findPerCloseLong':'closes {d}','ui.findPerOpenLong':'opens {d}','ui.findPerNoneLong':'Not announced yet — check the race site',
@@ -6201,7 +6208,7 @@ const EN={
   'ui.findCats':'Categories','ui.findRegPeriod':'Registration','ui.findPlace':'Venue','ui.findSource':'Source',
   'ui.findGo':'Register ↗','ui.findGoShort':'Register ↗','ui.findGoSite':'Race site ↗','ui.findGoSiteShort':'Site ↗','ui.findGoSource':'Open {name} ↗',
   'ui.findAdd':'＋ Add to my races','ui.findAddShort':'＋ Add','ui.findAddedTag':'✓ Added','ui.findInMine':'✓ In your races','ui.findView':'View','ui.findAddedToast':'Added to Races: {name} (considering)',
-  'ui.findColDate':'Date','ui.findColPlace':'Place','ui.findColName':'Race','ui.findColKind':'Type & distance','ui.findColReg':'Registration','ui.findColAct':'Register and add',
+  'ui.findColDate':'Date','ui.findColPlace':'Place','ui.findColName':'Race','ui.findColKind':'Sport & distance','ui.findColReg':'Registration','ui.findColAct':'Register and add',
   'ui.findEmpty':'No races match.','ui.findClear':'Clear filters','ui.findLoading':'Loading races…','ui.findError':'Couldn\u2019t load the list. You may be offline, or the site is updating.','ui.findRetry':'Try again',
   'ui.findPasteQ':'Can\u2019t find your race?','ui.findPastePh':'Paste the sign-up link','ui.findPasteGo':'Look up',
   'ui.findPasteInvalid':'That doesn\u2019t look like a link. Paste the sign-up page address (starting with https://).','ui.findPasteLoading':'Checking the list…',
@@ -6590,7 +6597,7 @@ const EN={
       <h3>Home: Races / Career / Training / Find races</h3>
       <ul>
         <li>The home page has four tabs. “Races” holds the quote of the day, the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log. “Find races” lists upcoming races from the sign-up sites.</li>
-        <li><strong>Find races</strong> (v4.16.0): upcoming races from four Taiwanese sites (iRunner, CTRUN, JoinNow and the Chinese Taipei Road Running Association), refreshed automatically every morning. It starts with “Can still enter” (open now, opening soon, or not announced yet). Search by name or place, filter by registration status, type and region (remembered next time), or sort by deadline. On a phone, tap a race to see its categories, registration period (days left), venue and source; “Register” opens the sign-up site and “＋ Add to my races” creates a “considering” race with the name, date, place, type, registration dates and sign-up link filled in. On a laptop it is a table with the buttons at the right of each row. Races you have already added show “✓ Added”. Race details and registration dates are collected automatically, so check the sign-up site before you register.</li>
+        <li><strong>Find races</strong> (v4.16.0; sites, countries and sports added in v4.18.0): upcoming races from eight sites — iRunner, CTRUN, JoinNow, the Chinese Taipei Road Running Association, Runners Plaza and the Chinese Taipei Association of Ultrarunners in Taiwan, plus JTB Sports and MSPO ENTRY in Japan — refreshed automatically every morning. A race listed on several sites (same day and a similar name, or the same sign-up link) appears once. Four menus at the top filter by country (Taiwan to start with), sport (road, trail, cycling, swim, triathlon (duathlon), fitness challenge, other — ultras count as road unless they are trail ultras), registration status (“Can still enter” to start with: open now, opening soon, or not announced yet) and region (it follows the country: North, Central, South, East and Islands for Taiwan; Hokkaido & Tohoku, Kanto, Chubu, Kinki, Chugoku & Shikoku and Kyushu & Okinawa for Japan); your choices are remembered next time. You can also search by name or place, or sort by deadline. On a phone, tap a race to see its categories, registration period (days left), venue and source; “Register” opens the sign-up site and “＋ Add to my races” creates a “considering” race with the name, date, place, country, type, registration dates and sign-up link filled in. On a laptop it is a table with the buttons at the right of each row. Races you have already added show “✓ Added”. Race details and registration dates are collected automatically, so check the sign-up site before you register.</li>
         <li><strong>Add from a sign-up link</strong> (v4.17.0): paste a race’s sign-up link into “Can’t find your race?” at the top of Find races (pasting on the home page with no box selected also brings you here when the race is on the list and not added yet). If the race is on the list it is shown right away — tap “＋ Add to my races”. If not, browsers don’t let the app read other websites, so select all the text on the sign-up page, copy it and paste it in: the app picks out the name, date, venue, registration dates and distances and fills in a new race for you to check before creating it. You can also choose “Just save the link”. Pasting a listed race’s link into the race-site box of Create Race offers “Fill in” too.</li>
         <li><strong>Training page</strong> (redesigned in v4.10.0): at the top of “Week” is the race you are preparing for (the nearest registered or lottery-pending race whose prep period has started: countdown, A/B goals, weeks to go). Below it: this week’s distance, a comparison with the same days last week, your weekly goal (the weekly mileage in the race’s “Training Plan”), daily bars, a short summary and the last 12 weeks. “Month” shows daily bars and the last 12 months; “All” groups sessions by year and month. If you log more than one sport, pick one under the tabs, so distances from different sports are never added together. Tap the shoe button on a session to change the shoes or delete it.</li>
         <li><strong>Session details</strong> (v4.11.0): tap a session to see its distance, time, pace, heart rate, elevation gain and route (sessions imported from v4.11.0 on show a marker every few kilometres; older ones are estimated from the route length, and routes that loop several times show only the start and finish), plus how its pace, heart rate and climbing compare with similar-distance sessions of the same sport from the past year. You can also rate perceived exertion (RPE 1–10), rename it, add notes (saved as you type) and change the shoes. Right after deleting, tap “Undo” to bring it back.</li>
@@ -21446,30 +21453,54 @@ function phoneListHtml(){
 }
 /* ============================================================
    找賽事（v4.16.0）：首頁第四個分頁，列出報名網站上還沒比的賽事
-   資料是 race-feed.json：GitHub 每天清晨照 robots.txt 讀運動筆記、全統、一起報名、路協公開的清單整理好的
+   資料是 race-feed.json：GitHub 每天清晨照 robots.txt 讀臺灣的運動筆記、全統、一起報名、路協、跑者廣場、超馬協會，
+   和日本的 JTB、MSPO 公開的清單整理好的（v4.18.0 加了後面四個；同一場在好幾個網站上只列一次：同一天、名稱相近或報名網址一樣）
    （程式在 tools/race-feed/、排程在 .github/workflows/race-feed.yml），跟 App 放在同一個網站。
    為什麼不讓 App 直接讀那些網站：瀏覽器不准一個網站讀另一個網站的內容（CORS），我們也沒有伺服器。
    報名狀態在這裡用「今天」重新算：清單幾天沒更新，「剩 3 天」也不會一直停在那裡。
    ============================================================ */
 const FIND_FEED_URL='race-feed.json';
 const FIND_PREF_KEY='race-day-find-prefs-v1';
+// c：資料來源那一行分「臺灣」「日本」兩組列（v4.18.0）
 const FIND_SOURCES={
-  irunner:{zh:'運動筆記',en:'iRunner',home:'https://irunner.biji.co/list'},
-  ctrun:{zh:'全統',en:'CTRUN',home:'https://www.ctrun.com.tw/'},
-  joinnow:{zh:'一起報名',en:'JoinNow',home:'https://www.joinnow.com.tw/'},
-  sportsnet:{zh:'路協',en:'CTRRA',home:'https://www.sportsnet.org.tw/schedule.php'},
+  irunner:{zh:'運動筆記',en:'iRunner',home:'https://irunner.biji.co/list',c:'tw'},
+  ctrun:{zh:'全統',en:'CTRUN',home:'https://www.ctrun.com.tw/',c:'tw'},
+  joinnow:{zh:'一起報名',en:'JoinNow',home:'https://www.joinnow.com.tw/',c:'tw'},
+  sportsnet:{zh:'路協',en:'CTRRA',home:'https://www.sportsnet.org.tw/schedule.php',c:'tw'},
+  runplaza:{zh:'跑者廣場',en:'Runners Plaza',home:'http://www.taipeimarathon.org.tw/contest.aspx',c:'tw'},
+  ctau:{zh:'超馬協會',en:'CTAU',home:'https://www.ctau.org.tw/%E8%B3%BD%E4%BA%8B%E8%88%87%E8%A8%93%E7%B7%B4/%E8%B3%BD%E4%BA%8B%E8%A1%8C%E4%BA%8B%E6%9B%86/%E5%9C%8B%E5%85%A7%E8%B3%BD%E4%BA%8B%E8%A1%8C%E4%BA%8B%E6%9B%86/',c:'tw'},
+  jtb:{zh:'JTB',en:'JTB Sports',home:'https://jtbsports.jp/list.php?orderby=3&accepting=0&keyword=',c:'jp'},
+  mspo:{zh:'MSPO',en:'MSPO ENTRY',home:'https://www.mspo.jp/athletic/triathlon',c:'jp'},
 };
-// 種類篩選把相近的合成一類（三鐵＋二鐵、障礙賽＋其他），選單才不會太長
+/* 運動別（v4.18.0 照使用者的分法：路跑、越野跑、單車、游泳、鐵人三項（兩項）、體能挑戰、其他）。
+   超馬算路跑：越野的超馬名稱裡有「越野」「trail」，清單整理時已經分到越野跑；障礙賽、HYROX、登高賽是體能挑戰。
+   清單裡沒列在這裡的種類（以後新增的）一律算「其他」，不會哪一類都找不到 */
 const FIND_TYPES=[
-  {id:'road',types:['road_running'],zh:'路跑'},
-  {id:'trail',types:['trail_running'],zh:'越野'},
-  {id:'ultra',types:['ultra_marathon'],zh:'超馬'},
-  {id:'tri',types:['triathlon','duathlon'],zh:'鐵人'},
-  {id:'bike',types:['cycling'],zh:'自行車'},
+  {id:'road',types:['road_running','ultra_marathon'],zh:'路跑'},
+  {id:'trail',types:['trail_running'],zh:'越野跑'},
+  {id:'bike',types:['cycling'],zh:'單車'},
   {id:'swim',types:['swimming'],zh:'游泳'},
-  {id:'other',types:['obstacle_race','other'],zh:'其他'},
+  {id:'tri',types:['triathlon','duathlon'],zh:'鐵人三項（兩項）'},
+  {id:'fitness',types:['obstacle_race'],zh:'體能挑戰'},
+  {id:'other',types:['other'],zh:'其他'},
 ];
-const FIND_REGIONS=[{id:'north',zh:'北部'},{id:'central',zh:'中部'},{id:'south',zh:'南部'},{id:'east',zh:'東部'},{id:'islands',zh:'離島'},{id:'overseas',zh:'海外'}];
+function findTypeGroup(type){ const o=FIND_TYPES.find(o=>o.types.includes(type)); return o?o.id:'other'; }
+// 國家（v4.18.0）：預設臺灣；日本的地區跟臺灣的不一樣，地區選單跟著國家換，「其他國家」「全部國家」不分地區
+const FIND_COUNTRIES=[{id:'tw',zh:'臺灣'},{id:'jp',zh:'日本'},{id:'other',zh:'其他國家'}];
+const FIND_REGIONS_BY={
+  tw:[{id:'north',zh:'北部'},{id:'central',zh:'中部'},{id:'south',zh:'南部'},{id:'east',zh:'東部'},{id:'islands',zh:'離島'}],
+  jp:[{id:'hokkaido-tohoku',zh:'北海道・東北'},{id:'kanto',zh:'關東'},{id:'chubu',zh:'中部'},{id:'kinki',zh:'近畿'},{id:'chugoku-shikoku',zh:'中國・四國'},{id:'kyushu-okinawa',zh:'九州・沖繩'}],
+};
+function findRegionList(){ return FIND_REGIONS_BY[findState.country]||[]; }
+/* 一場是哪一國：v4.18.0 起的清單每場都有 country。App 先更新、清單還是舊的那幾個小時，用地區推：
+   有臺灣的地區就是臺灣；「海外」的看名稱、地點有沒有日本的地名（運動筆記上的沖繩馬拉松） */
+const FIND_JP_WORDS=/日本|沖繩|沖縄|東京|大阪|京都|名古屋|北海道|福岡|橫濱|横浜|神戶|神戸|札幌|仙台|廣島|広島|奈良|富士山|熊本|鹿兒島|鹿児島|宮古島|石垣島|千葉|埼玉|長野|靜岡|静岡/;
+function findCountry(r){
+  if(r.country==='tw'||r.country==='jp'||r.country==='other') return r.country;
+  if(r.region&&r.region!=='overseas') return 'tw';
+  if(r.region==='overseas') return FIND_JP_WORDS.test([r.city,r.venue,r.name].join(' '))?'jp':'other';
+  return 'tw';
+}
 // 報名狀態。預設「還能報名」：報名中、即將開放、還沒公布的都留著，已截止和額滿先收起來
 const FIND_ONLY=[
   {id:'can',zh:'還能報名',keep:k=>k==='open'||k==='urgent'||k==='soon'||k==='unknown'},
@@ -21478,18 +21509,22 @@ const FIND_ONLY=[
   {id:'closed',zh:'已截止、額滿',keep:k=>k==='closed'||k==='full'||k==='cancelled'},
   {id:'all',zh:'全部狀態',keep:()=>true},
 ];
-const FIND_DEFAULTS={only:'can',type:'all',region:'all',sort:'date'};
-const findState={feed:null,status:'idle',error:'',loadedAt:0,q:'',only:'can',type:'all',region:'all',sort:'date',open:null};
-// 篩選記在這台裝置上（下次打開還是「北部」「越野」）；搜尋的字不記
+const FIND_DEFAULTS={country:'tw',only:'can',type:'all',region:'all',sort:'date'};
+const findState={feed:null,status:'idle',error:'',loadedAt:0,q:'',country:'tw',only:'can',type:'all',region:'all',sort:'date',open:null};
+// 篩選記在這台裝置上（下次打開還是「日本」「越野跑」）；搜尋的字不記
 try{
   const p=JSON.parse(localStorage.getItem(FIND_PREF_KEY)||'{}')||{};
   if(FIND_ONLY.some(o=>o.id===p.only)) findState.only=p.only;
-  if(p.type==='all'||FIND_TYPES.some(o=>o.id===p.type)) findState.type=p.type;
-  if(p.region==='all'||FIND_REGIONS.some(o=>o.id===p.region)) findState.region=p.region;
+  // v4.18.0 以前記的：「超馬」併進路跑；地區選「海外」的改成國家「全部國家」（海外現在用國家分）
+  const type=p.type==='ultra'?'road':p.type;
+  if(type==='all'||FIND_TYPES.some(o=>o.id===type)) findState.type=type;
+  if(p.country==='all'||FIND_COUNTRIES.some(o=>o.id===p.country)) findState.country=p.country;
+  else if(p.region==='overseas') findState.country='all';
+  if(p.region==='all'||findRegionList().some(o=>o.id===p.region)) findState.region=p.region;
   if(p.sort==='date'||p.sort==='deadline') findState.sort=p.sort;
 }catch(e){}
 function saveFindPrefs(){
-  try{ localStorage.setItem(FIND_PREF_KEY,JSON.stringify({only:findState.only,type:findState.type,region:findState.region,sort:findState.sort})); }catch(e){}
+  try{ localStorage.setItem(FIND_PREF_KEY,JSON.stringify({country:findState.country,only:findState.only,type:findState.type,region:findState.region,sort:findState.sort})); }catch(e){}
 }
 const FIND_WIDE_MQ=window.matchMedia?window.matchMedia('(min-width:900px)'):null;
 function findWide(){ return !!(FIND_WIDE_MQ&&FIND_WIDE_MQ.matches); }
@@ -21607,7 +21642,7 @@ function findItems(){
     if(!r||!r.name||!r.id) continue;
     const d=r.date||(r.month?r.month+'-28':'');
     if(!d||(r.dateEnd||d)<today) continue;     // 清單幾天沒更新時，已經比完的不列
-    out.push({r,s:findStatus(r,today),hay:findNorm([r.name,r.city,r.venue,(r.cats||[]).join(' ')].join(' '))});
+    out.push({r,s:findStatus(r,today),c:findCountry(r),t:findTypeGroup(r.type),hay:findNorm([r.name,r.city,r.venue,(r.cats||[]).join(' ')].join(' '))});
   }
   return out;
 }
@@ -21615,9 +21650,11 @@ function findItems(){
 function findMatch(x,skip){
   const q=findNorm(findState.q);
   if(q&&!x.hay.includes(q)) return false;
+  if(skip!=='country'&&findState.country!=='all'&&x.c!==findState.country) return false;
   if(skip!=='only'){ const o=FIND_ONLY.find(o=>o.id===findState.only)||FIND_ONLY[0]; if(!o.keep(x.s.k)) return false; }
-  if(skip!=='type'&&findState.type!=='all'){ const o=FIND_TYPES.find(o=>o.id===findState.type); if(o&&!o.types.includes(x.r.type)) return false; }
-  if(skip!=='region'&&findState.region!=='all'&&x.r.region!==findState.region) return false;
+  if(skip!=='type'&&findState.type!=='all'&&x.t!==findState.type) return false;
+  // 國家選單的數字不套用地區（地區跟著國家換）：選了臺灣的「北部」時，日本照樣寫日本全部的場數，不會變 0 被藏起來、換不過去
+  if(skip!=='region'&&skip!=='country'&&findState.region!=='all'&&x.r.region!==findState.region) return false;
   return true;
 }
 function findSorted(list){
@@ -21628,53 +21665,57 @@ function findSorted(list){
   const k=x=>(x.s.k==='open'||x.s.k==='urgent')&&x.r.regClose?'0'+x.r.regClose:(x.s.k==='soon'&&x.r.regOpen?'1'+x.r.regOpen:'2');
   return list.slice().sort((a,b)=>k(a).localeCompare(k(b))||byDate(a,b));
 }
-function findFiltersActive(){ return !!findState.q||['only','type','region'].some(k=>findState[k]!==FIND_DEFAULTS[k]); }
+function findFiltersActive(){ return !!findState.q||['country','only','type','region'].some(k=>findState[k]!==FIND_DEFAULTS[k]); }
 function findCountText(n){ return tv('ui.findCount','共 {n} 場',{n}); }
 function findOptionLists(items){
   const cnt=(skip,pred)=>items.filter(x=>findMatch(x,skip)&&pred(x)).length;
   const lab=(label,n)=>tv('ui.findOptCount','{label}（{n}）',{label,n});
-  // 數量 0 的種類、地區不列（目前選著的例外），選單短一點
+  // 數量 0 的國家、運動別、地區不列（目前選著的例外），選單短一點
   const keep=(list,key)=>list.filter(o=>o.v==='all'||o.n>0||o.v===findState[key]);
   return {
+    country:keep([{v:'all',n:1,t:t('ui.findCountry.all','全部國家')}].concat(FIND_COUNTRIES.map(o=>{ const n=cnt('country',x=>x.c===o.id); return {v:o.id,n,t:lab(t('ui.findCountry.'+o.id,o.zh),n)}; })),'country'),
     only:FIND_ONLY.map(o=>({v:o.id,t:lab(t('ui.findOnly.'+o.id,o.zh),cnt('only',x=>o.keep(x.s.k)))})),
-    type:keep([{v:'all',n:1,t:t('ui.findType.all','全部種類')}].concat(FIND_TYPES.map(o=>{ const n=cnt('type',x=>o.types.includes(x.r.type)); return {v:o.id,n,t:lab(t('ui.findType.'+o.id,o.zh),n)}; })),'type'),
-    region:keep([{v:'all',n:1,t:t('ui.findRegion.all','全部地區')}].concat(FIND_REGIONS.map(o=>{ const n=cnt('region',x=>x.r.region===o.id); return {v:o.id,n,t:lab(t('ui.findRegion.'+o.id,o.zh),n)}; })),'region'),
+    type:keep([{v:'all',n:1,t:t('ui.findType.all','全部運動別')}].concat(FIND_TYPES.map(o=>{ const n=cnt('type',x=>x.t===o.id); return {v:o.id,n,t:lab(t('ui.findType.'+o.id,o.zh),n)}; })),'type'),
+    region:keep([{v:'all',n:1,t:t('ui.findRegion.all','全部地區')}].concat(findRegionList().map(o=>{ const n=cnt('region',x=>x.r.region===o.id); return {v:o.id,n,t:lab(t('ui.findRegion.'+o.id,o.zh),n)}; })),'region'),
     sort:[{v:'date',t:t('ui.findSort.date','依比賽日期')},{v:'deadline',t:t('ui.findSort.deadline','依報名截止')}],
   };
 }
 function findOptionsHtml(list,cur){ return list.map(o=>`<option value="${escapeHtml(o.v)}"${o.v===cur?' selected':''}>${escapeHtml(o.t)}</option>`).join(''); }
-const FIND_SEL_LABEL={only:['ui.findOnlyLabel','報名狀態'],type:['ui.findTypeLabel','種類'],region:['ui.findRegionLabel','地區'],sort:['ui.findSortLabel','排序']};
-// 膠囊上的字：沒篩的時候只寫「種類」「地區」，選了就寫選的那一個；狀態、排序寫目前的選項（不帶場數）
+const FIND_SEL_LABEL={country:['ui.findCountryLabel','國家'],only:['ui.findOnlyLabel','報名狀態'],type:['ui.findTypeLabel','運動別'],region:['ui.findRegionLabel','地區'],sort:['ui.findSortLabel','排序']};
+// 膠囊上的字：沒篩的時候只寫「運動別」「地區」，選了就寫選的那一個；國家、狀態、排序寫目前的選項（不帶場數）
 function findSelText(key){
   const v=findState[key];
   if(key==='only'){ const o=FIND_ONLY.find(o=>o.id===v)||FIND_ONLY[0]; return t('ui.findOnly.'+o.id,o.zh); }
   if(key==='sort') return v==='deadline'?t('ui.findSort.deadline','依報名截止'):t('ui.findSort.date','依比賽日期');
+  if(key==='country'){ const o=FIND_COUNTRIES.find(o=>o.id===v); return o?t('ui.findCountry.'+o.id,o.zh):t('ui.findCountry.all','全部國家'); }
   if(v==='all') return t(FIND_SEL_LABEL[key][0],FIND_SEL_LABEL[key][1]);
-  const o=(key==='type'?FIND_TYPES:FIND_REGIONS).find(o=>o.id===v);
+  const o=(key==='type'?FIND_TYPES:findRegionList()).find(o=>o.id===v);
   const pre=key==='type'?'ui.findType.':'ui.findRegion.';
   return o?t(pre+o.id,o.zh):v;
 }
 function findSelHtml(key,lists){
   const on=key!=='sort'&&findState[key]!=='all';
-  return `<label class="find-sel${key==='sort'?' find-sort':''}${on?' is-on':''}"><span class="find-sel-txt" aria-hidden="true">${escapeHtml(findSelText(key))}</span><select id="find-${key}" aria-label="${escapeHtml(t(FIND_SEL_LABEL[key][0],FIND_SEL_LABEL[key][1]))}">${findOptionsHtml(lists[key],findState[key])}</select></label>`;
+  const hide=key==='region'&&!findRegionList().length;     // 其他國家、全部國家不分地區
+  return `<label class="find-sel${key==='sort'?' find-sort':''}${on?' is-on':''}"${hide?' hidden':''}><span class="find-sel-txt" aria-hidden="true">${escapeHtml(findSelText(key))}</span><select id="find-${key}" aria-label="${escapeHtml(t(FIND_SEL_LABEL[key][0],FIND_SEL_LABEL[key][1]))}">${findOptionsHtml(lists[key],findState[key])}</select></label>`;
 }
 function findToolsHtml(items){
   const lists=findOptionLists(items);
   return `<div class="find-tools">
     <label class="find-search"><span class="find-search-ico" aria-hidden="true">⌕</span><span class="sr-only">${escapeHtml(t('ui.findSearchLabel','搜尋賽事'))}</span><input type="search" id="find-q" value="${escapeHtml(findState.q)}" placeholder="${escapeHtml(t('ui.findSearchPh','搜尋賽事名稱、地點'))}" autocomplete="off" enterkeyhint="search"></label>
-    <div class="find-filters">${findSelHtml('only',lists)}${findSelHtml('type',lists)}${findSelHtml('region',lists)}</div>
+    <div class="find-filters">${findSelHtml('country',lists)}${findSelHtml('type',lists)}${findSelHtml('only',lists)}${findSelHtml('region',lists)}</div>
   </div>`;
 }
 // 篩選選單換值之後：只換選項的字和數字，不重畫選單本身（鍵盤操作的焦點才不會跑掉）
 function refreshFindControls(items){
   const lists=findOptionLists(items);
-  ['only','type','region','sort'].forEach(key=>{
+  ['country','type','only','region','sort'].forEach(key=>{
     const el=document.getElementById('find-'+key);
     if(!el) return;
     el.innerHTML=findOptionsHtml(lists[key],findState[key]);
     el.value=findState[key];
     const wrap=el.closest('.find-sel');
     if(!wrap) return;
+    if(key==='region') wrap.hidden=!findRegionList().length;
     if(key!=='sort') wrap.classList.toggle('is-on',findState[key]!=='all');
     const txt=wrap.querySelector('.find-sel-txt');
     if(txt) txt.textContent=findSelText(key);
@@ -21683,7 +21724,9 @@ function refreshFindControls(items){
 function findHeadHtml(){
   const f=findState.feed;
   const sep=t('ui.listSep','、');
-  const links=Object.keys(FIND_SOURCES).map(id=>`<a href="${FIND_SOURCES[id].home}" target="_blank" rel="noopener">${escapeHtml(findSourceName(id))}</a>`).join(escapeHtml(sep));
+  // 八個網站分兩組：「運動筆記、全統…（臺灣）；JTB、MSPO（日本）」
+  const group=c=>Object.keys(FIND_SOURCES).filter(id=>FIND_SOURCES[id].c===c).map(id=>`<a href="${FIND_SOURCES[id].home}" target="_blank" rel="noopener">${escapeHtml(findSourceName(id))}</a>`).join(escapeHtml(sep));
+  const links=FIND_COUNTRIES.filter(o=>o.id!=='other').map(o=>group(o.id)+escapeHtml(tv('ui.findSrcCountry','（{c}）',{c:t('ui.findCountry.'+o.id,o.zh)}))).join(escapeHtml(t('ui.findSrcGroupSep','；')));
   let upd='';
   const warns=[];
   if(f&&f.updatedAt){
@@ -21776,7 +21819,7 @@ function findTrHtml(x){
 function findTableHtml(shown){
   const th=(k,label)=>`<th scope="col">${escapeHtml(t(k,label))}</th>`;
   const rows=findGroups(shown).map(g=>(g.k?`<tr class="find-mrow"><th colspan="6" scope="colgroup">${escapeHtml(findMonthTitle(g.k))}<span>${escapeHtml(findMonthCount(g.rows.length))}</span></th></tr>`:'')+g.rows.map(findTrHtml).join('')).join('');
-  return `<table class="find-tbl"><thead><tr>${th('ui.findColDate','賽事日期')}${th('ui.findColPlace','地點')}${th('ui.findColName','名稱')}${th('ui.findColKind','種類與距離')}${th('ui.findColReg','報名期間')}<th scope="col"><span class="sr-only">${escapeHtml(t('ui.findColAct','報名與加入'))}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table class="find-tbl"><thead><tr>${th('ui.findColDate','賽事日期')}${th('ui.findColPlace','地點')}${th('ui.findColName','名稱')}${th('ui.findColKind','運動別與距離')}${th('ui.findColReg','報名期間')}<th scope="col"><span class="sr-only">${escapeHtml(t('ui.findColAct','報名與加入'))}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function findResultsHtml(shown){
   if(!shown.length){
@@ -21832,7 +21875,9 @@ function addFindRace(id){
   race.schedule.registrationCloseDate=r.regClose||'';
   race.location.venueName=r.venue||'';
   race.location.city=r.city||'';
-  race.location.country=(r.city&&guessCountryFromCity(r.city))||'';
+  // 清單有寫國家（v4.18.0）就照寫，日本的縣名、臺灣沒寫縣市的也帶得到；舊清單照縣市猜
+  const ck=r.country==='jp'?'JP':r.country==='tw'?'TW':null;
+  race.location.country=(ck&&countryDisplayName(ck))||(r.city&&guessCountryFromCity(r.city))||'';
   const url=findSafeUrl(r.url);
   if(url) race.officialUrl=url;
   if(Array.isArray(r.distances)&&r.distances.length===1) race.route.distanceKm=r.distances[0];
@@ -22477,7 +22522,7 @@ document.addEventListener('click',e=>{
   if(act==='find-go'){ logFeatureUse('find_go_register'); return; }   // 連結照常在新分頁打開
   if(act==='find-retry'){ loadFindFeed(true); return; }
   if(act==='find-clear'){
-    findState.q=''; Object.assign(findState,{only:FIND_DEFAULTS.only,type:FIND_DEFAULTS.type,region:FIND_DEFAULTS.region}); findState.open=null;
+    findState.q=''; Object.assign(findState,{country:FIND_DEFAULTS.country,only:FIND_DEFAULTS.only,type:FIND_DEFAULTS.type,region:FIND_DEFAULTS.region}); findState.open=null;
     saveFindPrefs(); calendarEl.innerHTML=findTabHtml(); return;
   }
   if(act==='find-add'){ addFindRace(el.dataset.id); return; }
@@ -22512,8 +22557,10 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const id=e.target&&e.target.id;
-  if(!['find-only','find-type','find-region','find-sort'].includes(id)) return;
+  if(!['find-country','find-only','find-type','find-region','find-sort'].includes(id)) return;
   findState[id.slice(5)]=e.target.value; findState.open=null;
+  // 換國家：原本選的地區不是這個國家的（臺灣的「北部」換到日本），地區回到全部
+  if(id==='find-country'&&!findRegionList().some(o=>o.id===findState.region)) findState.region='all';
   saveFindPrefs();
   renderFindResults();
 });
@@ -26922,7 +26969,7 @@ function helpModalHtml(){
       <h3>首頁：賽事／生涯數據／訓練／找賽事</h3>
       <ul>
         <li>首頁分成四個分頁：「賽事」是今日一句、「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄；「找賽事」列出報名網站上還沒比的賽事。</li>
-        <li><strong>找賽事</strong>（v4.16.0）：運動筆記、全統、一起報名、路協四個網站上還沒比的賽事，每天清晨自動更新一次。預設只列「還能報名」的（報名中、即將開放、還沒公布）；可以搜尋名稱或地點，依報名狀態、種類、地區篩選（下次打開會記得），或改成依報名截止日排。手機上點一場展開，看組別、報名期間（剩幾天）、地點和來源：「前往報名」打開報名網站，「＋ 加入我的賽事」直接新增一場「考慮中」的賽事，名稱、日期、地點、種類、報名期間和報名網址都帶好；筆電上是表格，按鈕在每一列右邊。已經加入的會標「✓ 已加入」。賽事和報名期間是程式從報名網站整理的，報名前請以報名網站的公告為準。</li>
+        <li><strong>找賽事</strong>（v4.16.0，v4.18.0 加網站、國家和運動別）：臺灣的運動筆記、全統、一起報名、路協、跑者廣場、超馬協會，和日本的 JTB、MSPO 八個網站上還沒比的賽事，每天清晨自動更新一次；同一場出現在好幾個網站上（同一天、名稱相近，或報名網址一樣）只列一次。上面四個選單：國家（預設臺灣）、運動別（路跑、越野跑、單車、游泳、鐵人三項（兩項）、體能挑戰、其他；超馬算路跑，越野的超馬算越野跑）、報名狀態（預設「還能報名」：報名中、即將開放、還沒公布）、地區（跟著國家換：臺灣分北部、中部、南部、東部、離島，日本分北海道・東北、關東、中部、近畿、中國・四國、九州・沖繩），下次打開會記得；也可以搜尋名稱或地點，或改成依報名截止日排。手機上點一場展開，看組別、報名期間（剩幾天）、地點和來源：「前往報名」打開報名網站，「＋ 加入我的賽事」直接新增一場「考慮中」的賽事，名稱、日期、地點、國家、種類、報名期間和報名網址都帶好；筆電上是表格，按鈕在每一列右邊。已經加入的會標「✓ 已加入」。賽事和報名期間是程式從報名網站整理的，報名前請以報名網站的公告為準。</li>
         <li><strong>貼報名網址帶入</strong>（v4.17.0）：在「找賽事」上面的「找不到想報的？」貼上報名頁的網址（在首頁沒有點任何輸入框時直接貼上也可以：清單裡有、還沒加入的賽事會帶你到這裡）。清單裡有的會直接顯示那一場，按「＋ 加入我的賽事」；清單裡沒有的，因為瀏覽器不讓 App 讀別的網站，請在報名頁全選、複製文字貼上，App 會整理出名稱、日期、地點、報名期間和組別，帶進「新增賽事」讓你確認後再建立，也可以按「只存網址，其他自己填」。「新增賽事」的官網欄貼上清單裡有的網址，也會出現「帶入」。</li>
         <li><strong>訓練頁</strong>（v4.10.0 改版）：「本週」最上面是備戰中的賽事（已報名或抽籤中、已經進入準備期的最近一場：倒數、A／B 目標、賽前第幾週），下面是本週的公里數、跟上週同一段時間比、週目標（賽事頁「訓練計畫」填的週跑量）、每天的長條、本週解讀和近 12 週的里程；「本月」換成每天的長條和近 12 個月；「全部」依年份、月份收合。有兩種以上的運動時，分頁下面可以選要看哪一種，不同運動的公里數不會加在一起。每一筆右邊的鞋款按鈕點了可以換鞋或刪除。</li>
         <li><strong>單次訓練詳細</strong>（v4.11.0）：點一筆訓練打開，看距離、時間、配速、心率、爬升和路線（v4.11.0 起匯入的標出每幾公里的位置；之前匯入的用路線長度推算，繞好幾圈的路線只標起點和終點），再跟過去一年距離相近的同種運動比配速、心率和爬升。還可以打主觀強度（RPE 1–10）、改名稱、寫備註（打字就自動儲存）、換鞋款。刪除後幾秒內可以按「復原」。</li>
