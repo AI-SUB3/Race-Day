@@ -12730,7 +12730,6 @@ class V416FindRaces(Group):
         quick = bool(os.environ.get('V416_QUICK'))
         # ================= 版本、檔案 =================
         html = open(APP, encoding='utf-8').read()
-        c['version_4_16_0'] = "const APP_VERSION='v4.16.0';" in html
         # V416_REPO：突變測試時 index.html 在別的資料夾，sw.js、排程、抓資料的程式還是看這裡
         repo = os.environ.get('V416_REPO') or os.path.dirname(os.path.abspath(APP))
         sw = open(os.path.join(repo, 'sw.js'), encoding='utf-8').read()
@@ -13100,6 +13099,411 @@ class V416FindRaces(Group):
             ctx.close()
 
 
+
+# 貼報名網址帶入（v4.17.0）：使用者從報名頁全選複製下來的文字，幾種常見的寫法
+PASTE417 = {
+    'table': "首頁\t賽事列表\t會員登入\n2026 田中馬拉松\n賽事資訊\n活動日期\t2026年11月8日（日）\n活動地點\t彰化縣田中鎮景崧文化教育園區\n"
+             "報名時間\t2026/05/01 10:00 ~ 2026/10/30 23:59\n競賽組別\n全程馬拉松 42.195K\n半程馬拉松 21.0975K\n10K 健康組\n主辦單位：彰化縣政府",
+    'colon': "跑者廣場 > 賽事\n【2027 鳳梨酥盃路跑】報名開始\n比賽日期：116年3月14日(六) 06:30 鳴槍\n地點：嘉義縣民雄鄉 民雄運動公園\n"
+             "報名期限：即日起至 2027/01/15 止\n組別：21K、10K、5K\n報名費：800 元",
+    'deadline': "2026 太魯閣峽谷馬拉松\n活動時間：2026/11/07 05:30\n活動地點：太魯閣國家公園\n報名截止：8/31\n項目：全程馬拉松、半程馬拉松、5.5K 健跑",
+    'early': "2026 台北星光夜跑\n早鳥報名：2026/06/01~06/15\n一般報名：2026/06/16~2026/07/31\n比賽日期 2026/09/12\n活動地點 臺北市大佳河濱公園",
+    'nolabel': "首頁 | 活動 | 聯絡我們\n2026 花蓮太平洋縱谷馬拉松\n2026/11/15（日）\n花蓮縣 光復鄉 糖廠\n報名截止 2026/09/30\n立即報名",
+    'swim': "2026 日月潭國際萬人泳渡\n活動日期：2026/09/20\n活動地點：南投縣魚池鄉日月潭\n組別：3000公尺 / 1500公尺",
+    'trail': "2026 奇萊越野挑戰賽\n賽事日期：2026-12-05\n組別：50K、25K、健走組 5K",
+    'ja': "大会名：第10回 那覇マラソン\n開催日：2026年12月6日（日）\n会場：沖縄県那覇市 奥武山公園\nエントリー期間：2026年7月1日～2026年8月31日",
+    'noise': "2026 測試路跑\n活動日期：日期待公布\n活動地點：詳見簡章\n交通：距離捷運站 500 公尺\n距離捷運站 800 公尺\n報名期間內退費則取消資格",
+}
+
+
+class V417PasteUrl(V416FindRaces):
+    """v4.17.0：貼報名網址帶入。找賽事頁上面「找不到想報的？［貼上報名網址］［帶入］」：清單裡有的顯示那一場（＋ 加入我的賽事）；
+    沒有的說明 App 不能讀別的網站，讓使用者貼報名頁的文字，整理出名稱、日期、地點、報名期間、組別帶進新增表單；也可以只存網址。
+    新增表單的官網欄貼清單裡有的網址會出現「帶入」；首頁直接貼清單裡有、還沒加過的賽事網址，帶去找賽事頁。"""
+
+    ECHO = ('v417:',)
+
+    def _paste_box(self, pg, url, wait=250):
+        return self.ev(pg, """async([u,w])=>{ const i=document.getElementById('find-url'); i.value=u; i.closest('form').requestSubmit(); await __wait(w);
+            return document.getElementById('find-paste-result').textContent.replace(/\\s+/g,' ').trim(); }""", [url, wait])
+
+    def _gpaste(self, pg, text, wait=450):
+        return self.ev(pg, """async([t,w])=>{ if(document.activeElement&&document.activeElement!==document.body) document.activeElement.blur();
+            const dt=new DataTransfer(); dt.setData('text',t);
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); await __wait(w); return true; }""", [text, wait])
+
+    def _body(self):
+        c = self.checks
+        html = open(APP, encoding='utf-8').read()
+        c['version_4_17_0'] = "const APP_VERSION='v4.17.0';" in html
+        repo = os.environ.get('V416_REPO') or os.path.dirname(os.path.abspath(APP))
+
+        # ================= 網址比對、解析（純函式） =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        self.ev(pg, "async()=>{ await loadFindFeed(true); }")
+        # 運動筆記認第一段路徑：大小寫、報名第二步、utm、結尾斜線都是同一場；網站自己的頁面（list）不是賽事
+        c['url_irunner_variants'] = self.ev(pg, """()=>{ const U=u=>(findFeedRaceByUrl(u)||{}).id||null;
+            return U('https://irunner.biji.co/open')==='irunner:open' && U('https://irunner.biji.co/OPEN/signup?step=2&utm_source=fb')==='irunner:open'
+              && U('http://www.irunner.biji.co/open/')==='irunner:open' && U('https://irunner.biji.co/list')===null && U('https://irunner.biji.co/nope')===null
+              && findUrlKey('https://irunner.biji.co/list').key==='' && findUrlKey('https://irunner.biji.co/Member/123').key===''; }""")
+        # 全統認 EventMain_ID（大小寫都有人寫、報名頁路徑不一樣）；一起報名認 cnt_id（介紹頁、報名頁都算）
+        c['url_ctrun_joinnow_ids'] = self.ev(pg, """()=>{ const U=u=>(findFeedRaceByUrl(u)||{}).id||null;
+            return U('https://www.ctrun.com.tw/Activity?eventmain_id=1&lang=zh')==='ctrun:today' && U('http://ctrun.com.tw/Signup?EventMain_ID=4')==='ctrun:bike'
+              && U('https://www.ctrun.com.tw/Activity?EventMain_ID=99')===null && U('https://www.joinnow.com.tw/about.php?cnt_id=1')==='joinnow:soon'
+              && U('https://www.joinnow.com.tw/index.php')===null; }""")
+        # 路協的賽事官網：/20270117_web/ 底下哪一頁都算；隔壁的 /20270118_web/ 不算
+        c['url_site_path_prefix'] = self.ev(pg, """()=>{ const U=u=>(findFeedRaceByUrl(u)||{}).id||null;
+            return U('https://www.sportsnet.org.tw/20270117_web/news.php?id=3')==='sportsnet:2027-2' && U('http://sportsnet.org.tw/20270117_web/index.html')==='sportsnet:2027-2'
+              && U('https://www.sportsnet.org.tw/20270118_web/')===null && U('https://www.sportsnet.org.tw/20270117_web2/')===null && U('https://www.sportsnet.org.tw/schedule.php')===null; }""")
+        # 清單網址上帶的參數（?id=5）要一樣；utm 這種追蹤參數不算
+        c['url_query_id_must_match'] = self.ev(pg, """()=>{ const U=u=>(findFeedRaceByUrl(u)||{}).id||null; const f=findState.feed;
+            const extra={id:'x:q',name:'參數測試賽',date:'2026-12-01',url:'https://www.event-site.tw/race.php?id=5',source:'sportsnet',also:[]}; f.races.push(extra);
+            const ok=U('https://www.event-site.tw/race.php?id=5&utm_source=fb')==='x:q' && U('https://www.event-site.tw/race.php?id=6')===null && U('https://www.event-site.tw/race.php')===null;
+            f.races.splice(f.races.indexOf(extra),1);
+            // 清單網址自己帶了追蹤參數：貼沒有參數的也要認得
+            const ex2={id:'x:u',name:'追蹤參數測試賽',date:'2026-12-02',url:'https://www.event-site.tw/race.php?id=7&utm_source=sportsnet',source:'sportsnet',also:[]}; f.races.push(ex2);
+            const ok2=U('https://www.event-site.tw/race.php?id=7')==='x:u'; f.races.splice(f.races.indexOf(ex2),1); return ok&&ok2; }""")
+        # 清單上只寫網域的（合併進來的 also 網址）：網域上只有這一場才算；同網域有兩場就不猜
+        c['url_root_only_when_unique'] = self.ev(pg, """()=>{ const U=u=>(findFeedRaceByUrl(u)||{}).id||null;
+            const a=U('https://example-marathon.tw/register.html')==='irunner:open' && U('http://www.example-marathon.tw')==='irunner:open';
+            const f=findState.feed; const extra={id:'x:b',name:'同網域另一場',date:'2026-12-01',url:'http://example-marathon.tw/b.php',source:'sportsnet',also:[]};
+            f.races.push(extra); const b=U('https://example-marathon.tw/register.html')===null && U('http://example-marathon.tw/b.php/2')==='x:b';
+            f.races.splice(f.races.indexOf(extra),1); return a&&b; }""")
+        # 危險的網址不比對；前後多了字也找得出網址、沒打 https:// 的網域補上
+        c['url_clean_and_unsafe'] = self.ev(pg, """()=>findFeedRaceByUrl('javascript:alert(1)')===null && findFeedRaceByUrl('')===null
+            && findCleanPastedUrl('報名網址：https://irunner.biji.co/open。')==='https://irunner.biji.co/open'
+            && findCleanPastedUrl('irunner.biji.co/open')==='https://irunner.biji.co/open'
+            && findCleanPastedUrl('data:text/html,<b>x</b>')==='' && findCleanPastedUrl('2026.11.08')==='' && findCleanPastedUrl('隨便打的字')==='' """)
+        P = lambda k: self.ev(pg, "(t)=>extractPastedRaceDetails(t,'2026-10-05')", PASTE417[k]) or {}
+        r = P('table')
+        c['parse_table_layout'] = (r.get('name') == '2026 田中馬拉松' and r.get('raceDate') == '2026-11-08' and r.get('regOpen') == '2026-05-01'
+                                   and r.get('regClose') == '2026-10-30' and r.get('venue') == '彰化縣田中鎮景崧文化教育園區' and r.get('city') == '彰化縣'
+                                   and r.get('distances') == [42.195, 21.0975, 10] and r.get('sportType') == 'road_running')
+        r = P('colon')
+        # 民國年、「即日起至…止」、麵包屑不是名稱、【】裡的才是名稱、一行寫好幾組
+        c['parse_colon_roc_deadline'] = (r.get('name') == '2027 鳳梨酥盃路跑' and r.get('raceDate') == '2027-03-14' and r.get('regClose') == '2027-01-15'
+                                         and not r.get('regOpen') and r.get('city') == '嘉義縣' and r.get('distances') == [21, 10, 5])
+        # 民國年要真的換算：116年11月8日是 2027 年（只看月日的話會變成今年的 11/8）；報名期間也可以寫民國年
+        c['parse_roc_year'] = self.ev(pg, """()=>{ const r=extractPastedRaceDetails('116年 秋季路跑\\n比賽日期：116年11月8日\\n報名時間：116/06/01~116/09/30','2026-10-05');
+            return r.raceDate==='2027-11-08' && r.regOpen==='2027-06-01' && r.regClose==='2027-09-30'; }""")
+        r = P('early')
+        c['parse_early_and_general_reg'] = r.get('regOpen') == '2026-06-01' and r.get('regClose') == '2026-07-31' and r.get('raceDate') == '2026-09-12'
+        r = P('deadline')
+        # 截止日沒寫年份：取比賽日期之前的那一個；「全程馬拉松、半程馬拉松、5.5K」三組都要認得
+        c['parse_deadline_without_year'] = (r.get('regClose') == '2026-08-31' and r.get('raceDate') == '2026-11-07' and r.get('city') == '花蓮縣'
+                                            and r.get('distances') == [42.195, 21.0975, 5.5])
+        c['parse_deadline_year_before_race'] = self.ev(pg, """()=>{ const r=extractPastedRaceDetails('2027 春季路跑\\n比賽日期：2027/03/14\\n報名截止：12/31','2026-10-05');
+            return r.regClose==='2026-12-31' && r.raceDate==='2027-03-14'; }""")
+        # 只寫月日的比賽日期：取今天以後最近的那一天；「公告日期」這種不是比賽日期
+        c['parse_month_day_race_date'] = self.ev(pg, """()=>extractPastedRaceDetails('2026 秋季路跑\\n比賽日期：11月8日（日）\\n報名期間：2026/09/01~2026/10/15','2026-10-05').raceDate==='2026-11-08'""")
+        c['parse_skips_notice_dates'] = self.ev(pg, """()=>extractPastedRaceDetails('2026 冬季路跑\\n公告日期：2026/10/01\\n2026/12/20 鳴槍','2026-10-05').raceDate==='2026-12-20'""")
+        c['parse_name_cleanup'] = self.ev(pg, """()=>fpCleanName('2026 田中馬拉松｜運動筆記')==='2026 田中馬拉松' && fpCleanName('高雄 - 5000公尺挑戰賽')==='高雄 5000公尺挑戰賽'
+            && fpCleanName('【2027 鳳梨酥盃路跑】報名開始')==='2027 鳳梨酥盃路跑' && fpCleanName('2027富邦人壽高雄馬拉松 - 筆記報名 - 活動簡章')==='2027富邦人壽高雄馬拉松'""")
+        r = P('nolabel')
+        # 沒有標籤的頁面：名稱下面認得出縣市的短行當地點、不在「報名截止」後面的日期當比賽日期
+        c['parse_unlabelled_page'] = (r.get('name') == '2026 花蓮太平洋縱谷馬拉松' and r.get('raceDate') == '2026-11-15' and r.get('regClose') == '2026-09-30'
+                                      and r.get('venue') == '花蓮縣 光復鄉 糖廠' and r.get('city') == '花蓮縣')
+        r = P('swim')
+        c['parse_swim'] = r.get('sportType') == 'swimming' and r.get('distances') == [3, 1.5]
+        r = P('trail')
+        c['parse_type_from_name_first'] = (r.get('sportType') == 'trail_running' and r.get('distances') == [50, 25, 5]
+            and self.ev(pg, """()=>extractPastedRaceDetails('2026 海港馬拉松\\n比賽日期：2026/12/20\\n組別：42K、健走組 3K','2026-10-05').sportType==='road_running'"""))
+        r = P('ja')
+        c['parse_japanese_labels'] = (r.get('name') == '第10回 那覇マラソン' and r.get('raceDate') == '2026-12-06' and r.get('regOpen') == '2026-07-01'
+                                      and r.get('regClose') == '2026-08-31' and '奥武山公園' in (r.get('venue') or ''))
+        r = P('noise')
+        # 「日期待公布」「詳見簡章」「距離捷運站 500 公尺」「報名期間內退費…」都不是資料
+        c['parse_ignores_placeholders'] = (r.get('name') == '2026 測試路跑' and not r.get('raceDate') and not r.get('venue')
+                                           and r.get('distances') == [] and r.get('distanceKm') is None and not r.get('regOpen') and not r.get('regClose'))
+        c['parse_junk_finds_nothing'] = self.ev(pg, """()=>{ const r=extractPastedRaceDetails('今天天氣很好，我們去散步。','2026-10-05');
+            return !r.name && !r.raceDate && r.found.length===0; }""")
+        # 真的報名頁（v4.16.0 存的樣本）：使用者全選複製大概就是 innerText
+        fx = {}
+        p2 = ctx.new_page()
+        for f in ('irunner-detail-2027KHM.html', 'ctrun-detail-362.html', 'joinnow-about-152.html'):
+            p2.goto('file://' + os.path.join(repo, 'tools/race-feed/fixtures', f))
+            fx[f] = p2.evaluate("()=>document.body.innerText")
+        p2.close()
+        a = self.ev(pg, "(t)=>extractPastedRaceDetails(t,'2026-10-05')", fx['irunner-detail-2027KHM.html']) or {}
+        b = self.ev(pg, "(t)=>extractPastedRaceDetails(t,'2026-10-05')", fx['ctrun-detail-362.html']) or {}
+        d = self.ev(pg, "(t)=>extractPastedRaceDetails(t,'2026-10-05')", fx['joinnow-about-152.html']) or {}
+        c['parse_real_sample_pages'] = (a.get('name') == '2027富邦人壽高雄馬拉松' and a.get('regOpen') == '2026-09-21' and a.get('regClose') == '2026-10-23'
+                                        and a.get('city') == '高雄市' and not a.get('raceDate')
+                                        and b.get('name') == '2027 台中都會國際半程馬拉松' and b.get('raceDate') == '2027-01-17'
+                                        and b.get('regOpen') == '2026-09-17' and b.get('regClose') == '2026-10-29' and b.get('city') == '臺中市'
+                                        and d.get('raceDate') == '2026-12-26' and d.get('regClose') == '2026-10-31' and d.get('venue') == '棧貳庫廣場')
+        if not c['parse_real_sample_pages']:
+            print('    samples', a, b, d)
+
+        # ================= 找賽事頁的貼網址框 =================
+        self._open_find(pg)
+        c['paste_row_above_tools'] = self.ev(pg, """()=>{ const f=document.querySelector('form.find-paste'), i=document.getElementById('find-url'), tools=document.querySelector('.find-tools');
+            return !!f && i.type==='url' && f.querySelector('button[type="submit"]').textContent.trim()==='帶入'
+              && f.querySelector('.find-paste-q').textContent.trim()==='找不到想報的？' && i.getAttribute('aria-label')==='貼上報名網址'
+              && !!(f.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING) && document.getElementById('find-paste-result').getAttribute('aria-live')==='polite'; }""")
+        txt = self._paste_box(pg, 'https://irunner.biji.co/URGENT/signup?utm_source=line')
+        c['paste_match_card'] = self.ev(pg, """()=>{ const card=document.querySelector('#find-paste-result .find-paste-card:not(.is-miss)'); if(!card) return false;
+            const go=card.querySelector('[data-action="find-go"]');
+            return card.querySelector('.find-paste-name').textContent==='礁溪溫泉馬拉松' && /清單裡有這一場/.test(card.textContent)
+              && !!card.querySelector('[data-action="find-add"][data-id="irunner:urgent"]') && go && go.getAttribute('href')==='https://irunner.biji.co/urgent'
+              && card.querySelector('.find-pill').textContent.trim()==='剩 3 天' && /報名期間/.test(card.textContent); }""")
+        c['paste_add_from_card'] = self.ev(pg, """async()=>{ const n=state.races.length;
+            document.querySelector('#find-paste-result [data-action="find-add"]').click(); await __wait(250);
+            const r=state.races[state.races.length-1]; const card=document.querySelector('#find-paste-result .find-paste-card');
+            const ok=state.races.length===n+1 && r.name==='礁溪溫泉馬拉松' && r.schedule.registrationCloseDate==='2026-10-08' && r.officialUrl==='https://irunner.biji.co/urgent'
+              && !!card.querySelector('.find-added') && document.activeElement && document.activeElement.dataset.action==='find-view' && document.activeElement.closest('#find-paste-result');
+            // 再按一次（已加入那張卡片上是「查看」）不會多一場
+            document.querySelectorAll('.foreground-toast').forEach(x=>x.remove());
+            return ok && !card.querySelector('[data-action="find-add"]'); }""")
+        # 貼上就比對（不用按「帶入」）
+        c['paste_event_auto_submits'] = self.ev(pg, """async()=>{ const i=document.getElementById('find-url'); i.focus(); i.value='https://www.joinnow.com.tw/about.php?cnt_id=1';
+            const dt=new DataTransfer(); dt.setData('text',i.value); i.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+            await __wait(250); return (document.querySelector('#find-paste-result .find-paste-name')||{}).textContent==='港都耶誕路跑' && document.activeElement===i; }""")
+        c['paste_invalid_message'] = '這不是網址' in (self._paste_box(pg, '我要報名礁溪') or '')
+        t1 = self._paste_box(pg, 'https://irunner.biji.co/2026nothere') or ''
+        c['paste_known_platform_miss'] = ('這是運動筆記的網址' in t1 and '清單裡沒有這一場' in t1 and self.ev(pg, """()=>{ const card=document.querySelector('#find-paste-result .find-paste-card.is-miss');
+            const a=card.querySelector('.find-paste-why a'); return !!document.getElementById('find-paste-text') && a.getAttribute('href')==='https://irunner.biji.co/2026nothere' && a.target==='_blank'
+              && !!card.querySelector('[data-action="find-paste-text"]') && !!card.querySelector('[data-action="find-paste-urlonly"]') && /瀏覽器的限制/.test(card.textContent); }"""))
+        t2 = self._paste_box(pg, 'https://www.tianzhong-marathon.tw/2026/') or ''
+        c['paste_other_host_miss'] = '清單裡沒有這一場。' in t2 and '這是' not in t2 and '運動筆記' not in t2
+        c['paste_text_errors'] = self.ev(pg, """async()=>{ document.querySelector('[data-action="find-paste-text"]').click(); await __wait(80);
+            const e1=(document.querySelector('#find-paste-result .find-paste-err')||{}).textContent||''; const focus1=document.activeElement&&document.activeElement.id==='find-paste-text';
+            const ta=document.getElementById('find-paste-text'); ta.value='今天天氣很好'; ta.dispatchEvent(new Event('input',{bubbles:true}));
+            document.querySelector('[data-action="find-paste-text"]').click(); await __wait(80);
+            const e2=(document.querySelector('#find-paste-result .find-paste-err')||{}).textContent||'';
+            return /先把報名頁的文字貼進/.test(e1) && focus1 && /看不出賽事名稱或日期/.test(e2) && !state.creating && document.getElementById('find-paste-text').value==='今天天氣很好'; }""")
+        # 雲端同步、存檔都會重畫：打到一半的文字、游標都還在
+        c['paste_text_survives_rerender'] = self.ev(pg, """async()=>{ const ta=document.getElementById('find-paste-text'); ta.focus(); ta.value='2026 田中'; ta.dispatchEvent(new Event('input',{bubbles:true}));
+            renderCalendar(); await __wait(50); const q=document.getElementById('find-q');
+            const same=document.getElementById('find-paste-text')===ta && document.activeElement===ta && ta.value==='2026 田中';
+            q.value='礁溪'; q.dispatchEvent(new Event('input',{bubbles:true})); await __wait(50);
+            return same && document.getElementById('find-paste-text')===ta && ta.value==='2026 田中'; }""")
+        self.ev(pg, "async()=>{ const q=document.getElementById('find-q'); q.value=''; q.dispatchEvent(new Event('input',{bubbles:true})); await __wait(30); }")
+        c['paste_text_to_create_form'] = self.ev(pg, """async(txt)=>{ const ta=document.getElementById('find-paste-text'); ta.value=txt; ta.dispatchEvent(new Event('input',{bubbles:true}));
+            document.querySelector('[data-action="find-paste-text"]').click(); await __wait(300);
+            const v=id=>document.getElementById(id).value, ex=document.getElementById('create-extras').textContent.replace(/\\s+/g,' ');
+            const toast=[...document.querySelectorAll('.foreground-toast,.toast')].map(x=>x.textContent).join(' ');
+            const chips=[...document.querySelectorAll('.create-dist-chip')].map(b=>b.textContent);
+            const ok=state.creating && v('new-name')==='2026 田中馬拉松' && v('new-date')==='2026-11-08' && v('new-url')==='https://www.tianzhong-marathon.tw/2026/'
+              && v('new-sport')==='road_running' && v('new-distance')==='' && /建立時也會帶入：報名期間 5\\/1–10\\/30・地點 彰化縣田中鎮景崧文化教育園區/.test(ex)
+              && chips.join(',')==='42.195K,21.1K,10K' && /已帶入名稱、日期、報名期間、地點、距離、種類/.test(toast) && document.activeElement.id==='new-name';
+            if(!ok) console.log('v417: form',v('new-name'),v('new-date'),ex,chips.join(','),toast); return ok; }""", PASTE417['table'])
+        c['dist_chip_fills_distance'] = self.ev(pg, """async()=>{ const b=document.querySelector('.create-dist-chip[data-km="21.0975"]'); b.click(); await __wait(30);
+            return document.getElementById('new-distance').value==='21.0975' && b.getAttribute('aria-pressed')==='true'
+              && document.querySelectorAll('.create-dist-chip[aria-pressed="true"]').length===1; }""")
+        # 按「取消」回到找賽事：剛剛貼的網址和文字都還在
+        c['cancel_keeps_paste'] = self.ev(pg, """async()=>{ document.querySelector('[data-action="cancel-create"]').click(); await __wait(250);
+            const ta=document.getElementById('find-paste-text');
+            return !state.creating && state.homeTab==='find' && !!ta && ta.value.includes('2026 田中馬拉松') && document.getElementById('find-url').value==='https://www.tianzhong-marathon.tw/2026/'; }""")
+        c['create_applies_extras'] = self.ev(pg, """async()=>{ document.querySelector('[data-action="find-paste-text"]').click(); await __wait(300);
+            document.querySelector('.create-dist-chip[data-km="42.195"]').click();
+            document.querySelector('[data-action="confirm-create"]').click(); await __wait(300);
+            const r=state.races.find(x=>x.name==='2026 田中馬拉松'); if(!r) return false;
+            const ok=r.schedule.raceDate==='2026-11-08' && r.schedule.registrationOpenDate==='2026-05-01' && r.schedule.registrationCloseDate==='2026-10-30'
+              && r.location.venueName==='彰化縣田中鎮景崧文化教育園區' && r.location.city==='彰化縣' && !!r.location.country && r.route.distanceKm===42.195
+              && r.officialUrl==='https://www.tianzhong-marathon.tw/2026/' && findState.paste===null && createStagedExtras===null;
+            goBackFromDetail(); await __wait(200); return ok && !document.querySelector('#find-paste-result .find-paste-card') && document.getElementById('find-url').value===''; }""")
+        # 「不要帶入」：報名期間、地點不寫進去，組別按鈕留著
+        c['create_extras_drop'] = self.ev(pg, """async(txt)=>{ const i=document.getElementById('find-url'); i.value='https://www.drop-test.tw/'; i.closest('form').requestSubmit(); await __wait(200);
+            const ta=document.getElementById('find-paste-text'); ta.value=txt.replace('田中馬拉松','不帶入測試賽'); ta.dispatchEvent(new Event('input',{bubbles:true}));
+            document.querySelector('[data-action="find-paste-text"]').click(); await __wait(300);
+            document.querySelector('[data-action="create-extras-drop"]').click(); await __wait(50);
+            const chips=document.querySelectorAll('.create-dist-chip').length, note=/建立時也會帶入/.test(document.getElementById('create-extras').textContent);
+            document.querySelector('[data-action="confirm-create"]').click(); await __wait(300);
+            const r=state.races.find(x=>x.name==='2026 不帶入測試賽'); goBackFromDetail(); await __wait(200);
+            return chips===3 && !note && !!r && !r.schedule.registrationOpenDate && !r.schedule.registrationCloseDate && !r.location.venueName && !r.location.city; }""", PASTE417['table'])
+        c['url_only_opens_form'] = self.ev(pg, """async()=>{ const i=document.getElementById('find-url'); i.value='https://www.only-url.tw/race'; i.closest('form').requestSubmit(); await __wait(200);
+            document.querySelector('[data-action="find-paste-urlonly"]').click(); await __wait(300);
+            const toast=[...document.querySelectorAll('.foreground-toast,.toast')].map(x=>x.textContent).join(' ');
+            const ok=state.creating && document.getElementById('new-url').value==='https://www.only-url.tw/race' && document.getElementById('new-name').value===''
+              && document.activeElement.id==='new-name' && /網址已經填好/.test(toast) && document.getElementById('create-extras').textContent.trim()==='';
+            document.querySelector('[data-action="cancel-create"]').click(); await __wait(200); return ok; }""")
+        c['swim_chips_in_meters'] = self.ev(pg, """async(txt)=>{ const keep=findState.paste; startCreateFromPaste(extractPastedRaceDetails(txt,'2026-10-05')); await __wait(200);
+            const chips=[...document.querySelectorAll('.create-dist-chip')]; const labels=chips.map(b=>b.textContent).join(',');
+            chips[1].click(); await __wait(30); const v=document.getElementById('new-distance').value;
+            document.querySelector('[data-action="cancel-create"]').click(); await __wait(200); findState.paste=keep; renderCalendar(); await __wait(60);
+            return labels==='3000m,1500m' && v==='1500' && document.getElementById('find-paste-text')!=null; }""", PASTE417['swim'])
+        c['paste_clear_button'] = self.ev(pg, """async()=>{ document.querySelector('#find-paste-result [data-action="find-paste-clear"]').click(); await __wait(50);
+            return findState.paste===null && document.getElementById('find-paste-result').innerHTML==='' && document.getElementById('find-url').value===''
+              && document.activeElement.id==='find-url'; }""")
+        c['empty_search_offers_paste'] = self.ev(pg, """async()=>{ const q=document.getElementById('find-q'); q.value='清單裡沒有的賽事名'; q.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            const b=document.querySelector('.find-empty [data-action="find-paste-focus"]'); if(!b) return false; b.click(); await __wait(60);
+            const ok=document.activeElement.id==='find-url';
+            q.value=''; q.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            // 選單裡 0 場的選項不列：直接設篩選再重畫
+            findState.only='soon'; findState.type='swim'; renderFindResults(); await __wait(60);
+            // 只是篩選太嚴（沒有打字搜尋）：只給「清除篩選」
+            const only=!document.querySelector('.find-empty [data-action="find-paste-focus"]') && !!document.querySelector('.find-empty [data-action="find-clear"]');
+            document.querySelector('.find-empty [data-action="find-clear"]').click(); await __wait(60); return ok && only; }""")
+        # 惡意字串只會是字：網址在引號處截斷、貼的文字名稱進輸入框也只是文字
+        c['paste_is_xss_safe'] = self.ev(pg, """async()=>{ window.__pwned=0;
+            const i=document.getElementById('find-url'); i.value='https://example.org/a"><img src=x onerror="window.__pwned=7">'; i.closest('form').requestSubmit(); await __wait(200);
+            const ta=document.getElementById('find-paste-text'); ta.value='<img src=x onerror="window.__pwned=8">2026 惡意馬拉松\\n比賽日期：2026/12/01'; ta.dispatchEvent(new Event('input',{bubbles:true}));
+            document.querySelector('[data-action="find-paste-text"]').click(); await __wait(300);
+            const name=document.getElementById('new-name').value; document.querySelector('[data-action="cancel-create"]').click(); await __wait(200);
+            findState.paste=null; renderCalendar();
+            const f=findState.feed; const bad={id:'x:bad',name:'<img src=x onerror="window.__pwned=9">壞名稱',date:'2026-12-01',url:'https://www.bad-name.tw/',source:'sportsnet',type:'road_running',distances:[],cats:[],also:[]};
+            f.races.push(bad); const i2=document.getElementById('find-url'); i2.value='https://www.bad-name.tw/'; i2.closest('form').requestSubmit(); await __wait(200);
+            const shown=(document.querySelector('#find-paste-result .find-paste-name')||{}).textContent||''; f.races.splice(f.races.indexOf(bad),1); findState.paste=null; renderCalendar();
+            return !window.__pwned && !document.querySelector('img[src="x"]') && /惡意馬拉松/.test(name) && shown.startsWith('<img'); }""")
+
+        # ================= 新增賽事表單：官網欄 =================
+        c['create_url_hint_fill'] = self.ev(pg, """async()=>{ startCreate(); await __wait(200);
+            const u=document.getElementById('new-url'); u.value='https://www.joinnow.com.tw/run-step1.php?cnt_id=1&from=fb'; u.dispatchEvent(new Event('input',{bubbles:true})); await __wait(80);
+            const h=document.getElementById('create-url-hint').textContent.replace(/\\s+/g,' ');
+            document.querySelector('#create-url-hint [data-action="create-fill-feed"]').click(); await __wait(80);
+            const v=id=>document.getElementById(id).value, h2=document.getElementById('create-url-hint').textContent, ex=document.getElementById('create-extras').textContent;
+            return /清單裡有這一場：港都耶誕路跑（一起報名・12\\/26（六））/.test(h) && v('new-name')==='港都耶誕路跑' && v('new-date')==='2026-12-26'
+              && v('new-sport')==='road_running' && /✓ 已從清單帶入/.test(h2) && /報名期間 10\\/12–11\\/30/.test(ex) && /高雄市 棧貳庫廣場/.test(ex)
+              && document.querySelectorAll('.create-dist-chip').length===2; }""")
+        # 手機上「不要帶入」「帶入」、組別按鈕至少 44px 高
+        c['phone_form_buttons_44px'] = self.ev(pg, """async()=>{ const d=document.querySelector('#create-extras [data-action="create-extras-drop"]').getBoundingClientRect().height;
+            const chip=document.querySelector('.create-dist-chip').getBoundingClientRect().height;
+            const u=document.getElementById('new-url'); u.value='https://www.ctrun.com.tw/Activity?EventMain_ID=4'; u.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            const h=document.querySelector('#create-url-hint [data-action="create-fill-feed"]').getBoundingClientRect().height;
+            if(!(d>=44&&chip>=44&&h>=44)) console.log('v417: heights',d,chip,h); return d>=44 && chip>=44 && h>=44; }""")
+        # 單一距離的直接填；游泳寫公尺
+        c['create_url_hint_single_swim'] = self.ev(pg, """async()=>{ const u=document.getElementById('new-url'); u.value='https://www.joinnow.com.tw/run-step1.php?cnt_id=2'; u.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            document.querySelector('#create-url-hint [data-action="create-fill-feed"]').click(); await __wait(60);
+            return document.getElementById('new-sport').value==='swimming' && document.getElementById('new-distance').value==='1500' && document.querySelectorAll('.create-dist-chip').length===0; }""")
+        c['create_url_hint_added_and_unknown'] = self.ev(pg, """async()=>{ const u=document.getElementById('new-url');
+            u.value='https://irunner.biji.co/urgent'; u.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            const h=document.getElementById('create-url-hint'); const added=/已經在「賽事」裡了：礁溪溫泉馬拉松/.test(h.textContent) && !!h.querySelector('[data-action="find-view"]');
+            u.value='https://example.org/whatever'; u.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            const none=h.innerHTML==='' && getComputedStyle(h).display==='none';
+            u.value='https://irunner.biji.co/urgent'; u.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            h.querySelector('[data-action="find-view"]').click(); await __wait(250);
+            const r=state.races.find(x=>x.id===state.selectedId);
+            const ok=added && none && !state.creating && r && r.name==='礁溪溫泉馬拉松'; goBackFromDetail(); await __wait(200); return ok; }""")
+        # 版面：提示橫跨兩欄放在官網欄下面（筆電），沒有提示時不佔位置
+        ctx.close()
+
+        # ================= 首頁直接貼網址 =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        # 清單還沒讀過：等讀到再決定，帶去找賽事頁，焦點在「＋ 加入我的賽事」
+        self._gpaste(pg, 'https://www.ctrun.com.tw/Activity?EventMain_ID=4', 700)
+        c['global_paste_feed_race_to_find'] = self.ev(pg, """()=>state.homeTab==='find' && location.hash==='#find'
+            && (document.querySelector('#find-paste-result .find-paste-name')||{}).textContent==='百K單車挑戰 彰化站'
+            && document.activeElement && document.activeElement.dataset.action==='find-add' && document.getElementById('find-url').value==='https://www.ctrun.com.tw/Activity?EventMain_ID=4'
+            && window.scrollY===0 && document.getElementById('paste-note-modal').hidden""")
+        c['global_paste_feed_loaded_once'] = st['hits'] == 1
+        # 已經加過的：照舊開「存成連結」，而且直接選那一場
+        c['global_paste_added_race_link_modal'] = self.ev(pg, """async()=>{ document.querySelector('#find-paste-result [data-action="find-add"]').click(); await __wait(250);
+            document.querySelectorAll('.foreground-toast').forEach(x=>x.remove());
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await __wait(150);
+            const r=state.races.find(x=>x.name==='百K單車挑戰 彰化站');
+            document.activeElement&&document.activeElement.blur();
+            const dt=new DataTransfer(); dt.setData('text','https://www.ctrun.com.tw/Activity?EventMain_ID=4');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); await __wait(350);
+            const m=document.getElementById('paste-note-modal'); const ok=!m.hidden && pasteNoteState.kind==='url' && pasteNoteState.raceId===r.id
+              && m.querySelector('[data-paste-field="raceId"]').value===r.id && state.homeTab==='races';
+            closePasteNoteModal(); return ok; }""")
+        # 不在清單裡的網址（有賽事時）：照舊存成連結，不切頁
+        self._gpaste(pg, 'https://www.tianzhong-marathon.tw/2026/', 300)
+        c['global_paste_unknown_keeps_link_modal'] = self.ev(pg, """()=>{ const m=document.getElementById('paste-note-modal'); const ok=!m.hidden && pasteNoteState.kind==='url' && state.homeTab==='races';
+            closePasteNoteModal(); return ok; }""")
+        # Strava 這種不是報名頁的網址：完全照舊
+        self._gpaste(pg, 'https://www.strava.com/activities/123456', 300)
+        c['global_paste_media_untouched'] = self.ev(pg, """()=>{ const m=document.getElementById('paste-note-modal'); const ok=!m.hidden && pasteNoteState.type==='gpx_track' && state.homeTab==='races';
+            closePasteNoteModal(); return ok; }""")
+        # 開著某一場：照舊存成這一場的連結
+        c['global_paste_race_open_untouched'] = self.ev(pg, """async()=>{ const r=state.races.find(x=>x.id==='example-alishan-trail')||state.races[0]; selectRace(r.id,{scroll:false}); await __wait(200);
+            document.activeElement&&document.activeElement.blur();
+            const dt=new DataTransfer(); dt.setData('text','https://irunner.biji.co/open');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); await __wait(300);
+            const m=document.getElementById('paste-note-modal'); const ok=!m.hidden && pasteNoteState.raceId===r.id && state.selectedId===r.id && state.homeTab==='races';
+            closePasteNoteModal(); goBackFromDetail(); await __wait(150); return ok; }""")
+        # 在輸入框裡貼：交給瀏覽器
+        c['global_paste_in_input_ignored'] = self.ev(pg, """async()=>{ const s=document.getElementById('search-input')||document.querySelector('input[type="search"]'); s.focus();
+            const dt=new DataTransfer(); dt.setData('text','https://irunner.biji.co/open');
+            const ev=new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}); s.dispatchEvent(ev); await __wait(300);
+            const ok=!ev.defaultPrevented && state.homeTab==='races' && document.getElementById('paste-note-modal').hidden; s.blur(); return ok; }""")
+        ctx.close()
+        # 一場賽事都還沒有：不在清單裡的網址也帶去找賽事頁（原本完全沒反應）
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, seed=False)
+        self._gpaste(pg, 'https://www.strava.com/activities/123456', 600)
+        c['global_paste_no_races_media_ignored'] = self.ev(pg, "()=>state.homeTab==='races' && document.getElementById('paste-note-modal').hidden && !findState.paste")
+        self._gpaste(pg, 'https://www.tianzhong-marathon.tw/2026/', 700)
+        c['global_paste_no_races_unknown_to_find'] = self.ev(pg, """async()=>{ const a=state.races.length===0 && state.homeTab==='find'
+            && /清單裡沒有這一場/.test((document.querySelector('#find-paste-result .find-paste-card.is-miss')||{}).textContent||'') && !!document.getElementById('find-paste-text');
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await __wait(150);
+            document.activeElement&&document.activeElement.blur();
+            const dt=new DataTransfer(); dt.setData('text','https://www.another-race.tw/');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); await __wait(400);
+            return a && state.homeTab==='find' && document.getElementById('find-url').value==='https://www.another-race.tw/'; }""")
+        ctx.close()
+        # 清單還在讀的時候貼：等同一份讀完再比（不是當成清單讀不到）；新增表單在清單讀到之前打開也會有提示
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True,
+                                init="(()=>{ const of=window.fetch; window.fetch=(u,o)=>String(u).includes('race-feed')?new Promise(r=>setTimeout(r,600)).then(()=>of(u,o)):of(u,o); })();")
+        c['paste_while_feed_loading'] = self.ev(pg, """async()=>{ document.querySelector('.home-tab[data-home-tab="find"]').click(); await __wait(30);
+            const loading=findState.status==='loading'; const i=document.getElementById('find-url'); i.value='https://irunner.biji.co/open'; i.closest('form').requestSubmit(); await __wait(60);
+            const wait=/比對清單中/.test(document.getElementById('find-paste-result').textContent);
+            for(let k=0;k<40&&findState.status==='loading';k++) await __wait(50); await __wait(80);
+            return loading && wait && (document.querySelector('#find-paste-result .find-paste-name')||{}).textContent==='台北城市測試馬拉松'; }""")
+        c['paste_while_feed_loading_one_fetch'] = st['hits'] == 1
+        ctx.close()
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        c['create_url_hint_loads_feed'] = self.ev(pg, """async()=>{ const before=findState.feed===null; startCreate(); await __wait(200);
+            const u=document.getElementById('new-url'); u.value='https://irunner.biji.co/open'; u.dispatchEvent(new Event('input',{bubbles:true}));
+            for(let k=0;k<40&&!document.querySelector('#create-url-hint [data-action="create-fill-feed"]');k++) await __wait(50);
+            return before && /台北城市測試馬拉松/.test(document.getElementById('create-url-hint').textContent); }""")
+        ctx.close()
+        # 清單讀不到：貼網址框還是在，貼了直接給「貼網頁文字」那條路，說清單讀不到
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, status=500)
+        self.ev(pg, """async()=>{ document.querySelector('.home-tab[data-home-tab="find"]').click(); for(let i=0;i<40&&findState.status!=='error';i++) await __wait(50); await __wait(60); }""")
+        t3 = self._paste_box(pg, 'https://irunner.biji.co/open', 400) or ''
+        c['paste_when_feed_fails'] = ('清單現在讀不到，沒辦法比對。' in t3 and self.ev(pg, "()=>!!document.getElementById('find-paste-text') && !!document.querySelector('.find-empty [data-action=\"find-retry\"]')")
+                                      and st['hits'] >= 2)
+        ctx.close()
+
+        # ================= 筆電、三種語言、深色 =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 1280, 'height': 900})
+        self._open_find(pg)
+        c['wide_paste_row_one_line'] = self.ev(pg, """()=>{ const q=document.querySelector('.find-paste-q').getBoundingClientRect(), i=document.getElementById('find-url').getBoundingClientRect(),
+              b=document.querySelector('.find-paste button[type="submit"]').getBoundingClientRect();
+            return Math.abs(q.top+q.height/2-(i.top+i.height/2))<4 && Math.abs(i.top-b.top)<2 && q.right<=i.left && i.right<=b.left && i.height>=44 && b.height>=44; }""")
+        self._paste_box(pg, 'https://www.sportsnet.org.tw/20270117_web/news.php')
+        c['wide_card_readable_width'] = self.ev(pg, """()=>{ const card=document.querySelector('#find-paste-result .find-paste-card'); const w=card.getBoundingClientRect().width;
+            return w<=761 && (card.querySelector('.find-paste-name')||{}).textContent==='2027金門馬拉松 KINMEN MARATHON' && /看官網/.test(card.textContent); }""")
+        c['create_url_hint_spans_grid'] = self.ev(pg, """async()=>{ startCreate(); await __wait(200);
+            const u=document.getElementById('new-url'); u.value='https://irunner.biji.co/open'; u.dispatchEvent(new Event('input',{bubbles:true})); await __wait(80);
+            const h=document.getElementById('create-url-hint').getBoundingClientRect(), g=document.querySelector('.create-grid').getBoundingClientRect(), ub=u.getBoundingClientRect(),
+              sp=document.getElementById('new-sport').getBoundingClientRect();
+            const ok=Math.abs(h.left-g.left)<2 && Math.abs(h.right-g.right)<2 && h.top>=ub.bottom && Math.abs(sp.top-ub.top)<2;
+            document.querySelector('[data-action="cancel-create"]').click(); await __wait(150); return ok; }""")
+        c['i18n_paste_keys_ja_en'] = self.ev(pg, r"""()=>{ const src=[...document.scripts].map(s=>s.textContent).join('\n');
+            const used=new Set([...src.matchAll(/t[vf]?\('(ui\.(?:findPaste\w*|findEmptyPaste|createExtras\w*|createCats\w*|createUrlFeed\w*|pasteFilledFrom))'/g)].map(m=>m[1]));
+            ['name','date','reg','place','dist','type'].forEach(k=>used.add('ui.pasteField.'+k));
+            const miss=[...used].filter(k=>!(k in JA)||!(k in EN)||/[一-鿿]/.test(EN[k]));
+            if(miss.length) console.log('v417: keys',miss.join(',')); return used.size>=30 && miss.length===0; }""")
+        c['english_paste_row'] = self.ev(pg, """async()=>{ setLang('en'); await __wait(80);
+            const ok=document.querySelector('.find-paste-q').textContent==='Can\\u2019t find your race?' && document.getElementById('find-url').placeholder==='Paste the sign-up link'
+              && /Can\\u2019t find|Find races/.test(document.body.textContent);
+            setLang('zh'); await __wait(80); return ok; }""")
+        c['help_paste_bullet_three_langs'] = self.ev(pg, r"""async()=>{ const out={};
+            const name={zh:'貼報名網址帶入',ja:'申込URLから追加',en:'Add from a sign-up link'};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(30); const box=document.createElement('div'); box.innerHTML=helpModalHtml();
+              const lis=[...box.querySelectorAll('.help-body li')].map(x=>x.textContent); out[l]=lis.filter(x=>/v4\.17\.0/.test(x)&&x.startsWith(name[l])).length; }
+            setLang('zh'); await __wait(30);
+            const ok=['zh','ja','en'].every(l=>out[l]===1); if(!ok) console.log('v417: help',JSON.stringify(out)); return ok; }""")
+        ctx.close()
+        for theme in ('light', 'dark'):
+            ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, theme=theme)
+            self._open_find(pg)
+            self._paste_box(pg, 'https://irunner.biji.co/2026nothere')
+            self.ev(pg, """async()=>{ document.querySelector('[data-action="find-paste-text"]').click(); await __wait(60); }""")
+            c[f'paste_contrast_{theme}'] = self.ev(pg, r"""()=>{
+                const parse=s=>{ let m=s.match(/rgba?\(([^)]+)\)/); if(m){ const p=m[1].split(/[\s,\/]+/).filter(Boolean).map(Number); return [p[0],p[1],p[2],p.length>3?p[3]:1]; }
+                  m=s.match(/color\(srgb ([^)]+)\)/); if(m){ const p=m[1].split(/[\s\/]+/).filter(Boolean).map(Number); return [p[0]*255,p[1]*255,p[2]*255,p.length>3?p[3]:1]; } return null; };
+                const lum=c=>{ const f=v=>{ v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4); }; return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]); };
+                const bgOf=el=>{ for(let e=el;e;e=e.parentElement){ const b=parse(getComputedStyle(e).backgroundColor); if(b&&b[3]>0.5) return b; } return parse(getComputedStyle(document.body).backgroundColor); };
+                const bad=[]; const els=[...document.querySelectorAll('.find-paste-q,.find-paste-title,.find-paste-why,.find-paste-why a,.find-paste-err,#find-paste-text')];
+                els.forEach(el=>{ const fg=parse(getComputedStyle(el).color), bg=bgOf(el); const L1=lum(fg), L2=lum(bg); const r=(Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);
+                  if(r<4.5) bad.push((el.className||el.tagName)+' '+r.toFixed(2)); });
+                if(bad.length) console.log('v417: contrast',bad.join(' | ')); return els.length>=6 && bad.length===0; }""")
+            ctx.close()
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -13146,6 +13550,7 @@ GROUPS = {
     'v414':       lambda: V414RaceDay('v414'),
     'v415':       lambda: V415HeartRatePlurals('v415'),
     'v416':       lambda: V416FindRaces('v416'),
+    'v417':       lambda: V417PasteUrl('v417'),
 }
 
 

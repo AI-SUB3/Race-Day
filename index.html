@@ -2628,6 +2628,36 @@
   .find-tdetail td{background:var(--surface);padding:0 10px 14px;}
   .find-tdetail .find-detail{padding:0;}
   .find-tdetail dl{margin:0;grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);}
+  /* 貼報名網址帶入（v4.17.0）：找賽事頁上面一行「找不到想報的？［網址］［帶入］」，結果卡片在下面 */
+  .find-paste{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 0;}
+  .find-paste-q{flex:0 0 100%;color:var(--ink-soft);font-size:calc(13px*var(--fs,1));font-weight:600;}
+  .find-wrap.is-wide .find-paste-q{flex:none;}
+  .find-paste-row{display:flex;gap:8px;flex:1 1 auto;min-width:0;}
+  .find-wrap.is-wide .find-paste-row{flex:0 1 480px;}
+  .find-paste input{flex:1;min-width:0;min-height:44px;padding:0 12px;box-sizing:border-box;border:1px solid var(--rule);border-radius:10px;
+    background:var(--surface);font:inherit;font-size:calc(15px*var(--fs,1));color:var(--ink);}
+  .find-paste input:focus{outline:none;border-color:var(--trail);box-shadow:0 0 0 1px var(--trail);}
+  .find-paste .btn-ghost{flex:none;min-height:44px;padding:0 16px;border-radius:10px;}
+  .find-paste-res:empty{display:none;}
+  .find-paste-card{position:relative;margin:10px 0 4px;padding:14px 14px 12px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);}
+  .find-paste-card .find-detail{padding:0;}
+  .find-wrap.is-wide .find-paste-card{max-width:760px;}
+  .find-paste-card .find-act .btn-ghost{background:var(--surface);}
+  .find-paste-title{margin:0 40px 4px 0;color:var(--ink-soft);font-size:calc(13px*var(--fs,1));line-height:1.5;}
+  .find-paste-name{margin:0 40px 4px 0;font-size:calc(17px*var(--fs,1));font-weight:700;line-height:1.35;overflow-wrap:anywhere;}
+  .find-paste-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 10px;color:var(--ink-soft);font-size:calc(13px*var(--fs,1));}
+  .find-paste-x{position:absolute;top:4px;right:4px;width:44px;height:44px;border:none;border-radius:10px;background:none;color:var(--stone);font-size:calc(17px*var(--fs,1));cursor:pointer;}
+  .find-paste-x:hover{color:var(--ink);}
+  .find-paste-x:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
+  .find-paste-why{margin:0 0 10px;font-size:calc(14px*var(--fs,1));line-height:1.65;}
+  .find-paste-why a{color:var(--find-on);font-weight:600;white-space:nowrap;}
+  .find-paste-card textarea{display:block;width:100%;min-height:112px;box-sizing:border-box;padding:10px 12px;border:1px solid var(--rule);border-radius:10px;
+    background:var(--paper);font:inherit;font-size:calc(15px*var(--fs,1));line-height:1.5;color:var(--ink);resize:vertical;}
+  .find-paste-card textarea:focus{outline:none;border-color:var(--trail);box-shadow:0 0 0 1px var(--trail);}
+  .find-paste-card .find-act{margin-top:10px;}
+  .find-paste-err{margin:8px 0 0;color:var(--find-urgent);font-size:calc(13px*var(--fs,1));line-height:1.5;}
+  .find-paste-wait{margin:10px 0 0;color:var(--stone);font-size:calc(13px*var(--fs,1));}
+  .find-empty .find-empty-act{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
   /* 第一次打開、還沒有任何賽事：搜尋篩選列不需要，只留歡迎卡 */
   body.is-first-run:not(.viewing-detail) .topbar-row2{display:none!important;}
   .welcome-card{
@@ -2993,7 +3023,22 @@
   /* 說明文字跟上面的按鈕之間要留白：貼太近會看起來像按鈕的一部分，
      也會跟下面那顆「匯入賽事主視覺」擠在一起分不出層次。 */
   .create-import-hint{color:var(--stone);margin:6px 0 16px;line-height:1.5;}
-  .create-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;}
+  .create-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;grid-auto-flow:row dense;}
+  /* 官網欄的「清單裡有這一場」（v4.17.0）：橫跨兩欄放在官網欄下面，其他欄位往前補位（dense），沒有提示時不佔位置 */
+  .create-url-hint{grid-column:1/-1;margin:-2px 0 8px;font-size:calc(14px*var(--fs,1));line-height:1.55;color:var(--ink-soft);}
+  .create-url-hint:empty{display:none;}
+  .create-extras{margin:10px 0 4px;padding:10px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--trail) 30%,var(--rule));
+    background:color-mix(in srgb,var(--trail) 7%,var(--surface));font-size:calc(14px*var(--fs,1));line-height:1.6;color:var(--ink);}
+  .create-extras:empty{display:none;}
+  .create-extras p{margin:0;}
+  .create-extras p+p{margin-top:6px;}
+  .create-cats-row{display:flex;flex-wrap:wrap;gap:6px;}
+  .create-dist-chip{min-height:44px;padding:0 14px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);
+    font:inherit;font-size:calc(14px*var(--fs,1));font-weight:600;color:var(--ink);cursor:pointer;}
+  .create-dist-chip[aria-pressed="true"]{border-color:var(--trail);background:color-mix(in srgb,var(--trail) 16%,var(--surface));}
+  .create-dist-chip:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+  /* 手機上「帶入」「不要帶入」這兩顆小字按鈕：點擊範圍撐到 44px 高（同焦點卡的「暫時隱藏」） */
+  @media (max-width:640px){ .create-url-hint .btn-text-small,.create-extras .btn-text-small{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;vertical-align:middle;font-size:calc(14px*var(--fs,1));} }
   .create-grid .field{min-width:0;}
   @media (max-width:640px){ .create-grid{grid-template-columns:1fr;} }
   .create-import-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
@@ -5331,7 +5376,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／完賽牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.16.0';
+const APP_VERSION='v4.17.0';
 
 /* ============================================================
    多語系（i18n）
@@ -5433,6 +5478,22 @@ const JA={
   'ui.findAdd':'＋ 自分の大会に追加','ui.findAddShort':'＋ 追加','ui.findAddedTag':'✓ 追加済み','ui.findInMine':'✓「大会」に追加済み','ui.findView':'見る','ui.findAddedToast':'「大会」に追加しました：{name}（検討中）',
   'ui.findColDate':'開催日','ui.findColPlace':'場所','ui.findColName':'大会名','ui.findColKind':'種目と距離','ui.findColReg':'受付期間','ui.findColAct':'申込と追加',
   'ui.findEmpty':'条件に合う大会はありません。','ui.findClear':'絞り込みを解除','ui.findLoading':'大会リストを読み込み中…','ui.findError':'リストを読み込めませんでした。オフラインか、サイトが更新中の可能性があります。','ui.findRetry':'再試行',
+  'ui.findPasteQ':'見つからないときは','ui.findPastePh':'申込ページのURLを貼り付け','ui.findPasteGo':'読み込む',
+  'ui.findPasteInvalid':'URLではないようです。申込ページのURL（https:// で始まるもの）を貼り付けてください。','ui.findPasteLoading':'リストと照合中…',
+  'ui.findPasteMatch':'リストにこの大会があります：','ui.findPasteKnownMiss':'{site}のURLですが、この大会はリストにありません。終了・中止したか、まだリストに入っていない可能性があります。',
+  'ui.findPasteOtherMiss':'この大会はリストにありません。','ui.findPasteNoFeed':'リストを読み込めないため、照合できません。',
+  'ui.findPasteWhy':'ブラウザの制限で、アプリはほかのサイトの内容を直接読み込めません。申込ページの文字をすべて選択してコピーし、下に貼り付けると、大会名・日付・会場・受付期間を読み取って「大会を作成」に入力します（確認してから作成）：',
+  'ui.findPasteOpen':'申込ページを開く ↗','ui.findPasteTextLabel':'申込ページの文字','ui.findPasteTextPh':'ここに申込ページの文字を貼り付け',
+  'ui.findPasteTextGo':'作成フォームに入力','ui.findPasteUrlOnly':'URLだけ保存して残りは自分で入力',
+  'ui.findPasteTextEmpty':'先に上の欄へ申込ページの文字を貼り付けてください。','ui.findPasteTextNothing':'大会名も日付も見つかりませんでした。大会名と日付の行を含めて多めにコピーするか、「URLだけ保存して残りは自分で入力」を押してください。',
+  'ui.findPasteUrlOnlyToast':'URLを入力しました。残りを入力してください','ui.findEmptyPaste':'申込URLから追加',
+  'ui.pasteFilledFrom':'{fields}を入力しました。確認して「大会を作成」を押してください',
+  'ui.pasteField.name':'大会名','ui.pasteField.date':'日付','ui.pasteField.reg':'受付期間','ui.pasteField.place':'会場','ui.pasteField.dist':'距離','ui.pasteField.type':'種目',
+  'ui.createExtrasNote':'作成時にあわせて入力：','ui.createExtrasReg':'受付期間 {d}','ui.createExtrasPlace':'会場 {p}','ui.createExtrasDrop':'入力しない',
+  'ui.createCatsHint':'複数の種目があります。出る種目をタップすると距離に入力します：',
+  'ui.createUrlFeedHint':'リストにこの大会があります：{name}（{meta}）','ui.createUrlFeedFill':'入力する','ui.createUrlFeedAdded':'すでに「大会」にあります：{name}',
+  'ui.createUrlFeedDone':'✓ リストから入力しました：{name}','ui.createUrlFeedFilled':'リストから入力しました。確認して「大会を作成」を押してください',
+  
   
   'ui.viewList':'リスト','ui.viewCalendar':'カレンダー','ui.viewPhotoWall':'完走ウォール','ui.viewSegLabel':'表示方法',
   'ui.listRecent':'最近の大会','ui.listSeeAllHistory':'過去の記録をすべて見る（{n} 件）›',
@@ -5817,6 +5878,7 @@ const JA={
       <ul>
         <li>ホームは4つのタブに分かれています。「大会」は今日の名言、「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。「大会を探す」は申込サイトに載っている、これから開催される大会の一覧です。</li>
         <li><strong>大会を探す</strong>（v4.16.0）：運動筆記、全統、一起報名、路跑協会（路協）の4サイトに載っている、これから開催される大会を毎朝自動で更新します。最初は「申込可能」（受付中・まもなく受付・未発表）だけを表示。大会名や場所で検索、受付状況・種目・地域で絞り込み（次回も覚えています）、締切順への並べ替えができます。スマホでは大会をタップすると種目、受付期間（あと何日）、会場、情報元が開き、「申込ページへ」で申込サイトを開き、「＋ 自分の大会に追加」で「検討中」の大会を作成します（大会名、日付、場所、種目、受付期間、申込URLを入力済み）。パソコンでは表で表示し、各行の右にボタンがあります。追加済みの大会には「✓ 追加済み」と表示されます。大会情報と受付期間は申込サイトから自動で集めたものなので、申し込む前に申込サイトの案内を確認してください。</li>
+        <li><strong>申込URLから追加</strong>（v4.17.0）：「大会を探す」の上にある「見つからないときは」に申込ページのURLを貼り付けます（ホームで入力欄を選んでいないときに貼り付けても、リストにあってまだ追加していない大会ならここに移動します）。リストにある大会はその大会が表示されるので「＋ 自分の大会に追加」を押します。リストにない大会は、ブラウザの制限でアプリがほかのサイトを読み込めないため、申込ページの文字をすべて選択してコピーし、貼り付けてください。大会名・日付・会場・受付期間・種目を読み取って「大会を作成」に入力するので、確認してから作成します。「URLだけ保存して残りは自分で入力」も選べます。「大会を作成」の公式サイト欄にリストにある大会のURLを貼り付けたときも「入力する」が表示されます。</li>
         <li><strong>トレーニング画面</strong>（v4.10.0 で刷新）：「今週」のいちばん上は準備中の大会（エントリー済みまたは抽選待ちで、準備期間に入った直近の大会：カウントダウン、A／B 目標、レースまで第何週）。その下に今週の距離、先週の同じ時点との比較、週間目標（大会画面の「トレーニング計画」の週間走行距離）、日ごとの棒グラフ、今週のまとめ、直近12週の距離が並びます。「今月」は日ごとの棒グラフと直近12か月、「すべて」は年・月ごとにたたんで表示します。種目が2つ以上あるときはタブの下で種目を選べ、種目の違う距離は合計しません。各記録の右にあるシューズのボタンから、シューズの変更や削除ができます。</li>
         <li><strong>トレーニングの詳細</strong>（v4.11.0）：記録をタップすると開き、距離、タイム、ペース、心拍、獲得標高とコースが見られます（v4.11.0 以降に取り込んだものは数 km ごとの位置を表示。それ以前のものはコースの長さから推定し、何周もするコースはスタートとゴールだけ）。過去1年の距離が近い同じ種目と、ペース・心拍・獲得標高を比べます。主観的運動強度（RPE 1–10）、名前、メモ（入力すると自動で保存）、シューズも設定できます。削除した直後は「元に戻す」で戻せます。</li>
         <li><strong>1kmごとのペースと高度</strong>（v4.12.0）：FIT・GPX・TCX を取り込むときに1kmごとのタイムと高度の変化も保存します（スイムは100mごと、バイクは速度）。詳細画面ではバーで表示し、全体の平均より速い区間は上へ、遅い区間は下へ伸びます。その下が高度のグラフで、遅かった区間が上り坂だったかどうかが分かります。バーをタップするとその区間の数字が出て、「区間ごとの数字」を開くと全部見られます。FIT ファイルのタイムは時計を一時停止していた分を含みません（時計の1kmごとのタイムと同じ）。GPX・TCX には一時停止の記録がないため、止まっていた分もその区間に含まれます。以前に取り込んだトレーニングは、元のファイルをもう一度取り込むと追加されます。名前・メモ・主観的運動強度・シューズは変わりません。</li>
@@ -6141,6 +6203,22 @@ const EN={
   'ui.findAdd':'＋ Add to my races','ui.findAddShort':'＋ Add','ui.findAddedTag':'✓ Added','ui.findInMine':'✓ In your races','ui.findView':'View','ui.findAddedToast':'Added to Races: {name} (considering)',
   'ui.findColDate':'Date','ui.findColPlace':'Place','ui.findColName':'Race','ui.findColKind':'Type & distance','ui.findColReg':'Registration','ui.findColAct':'Register and add',
   'ui.findEmpty':'No races match.','ui.findClear':'Clear filters','ui.findLoading':'Loading races…','ui.findError':'Couldn\u2019t load the list. You may be offline, or the site is updating.','ui.findRetry':'Try again',
+  'ui.findPasteQ':'Can\u2019t find your race?','ui.findPastePh':'Paste the sign-up link','ui.findPasteGo':'Look up',
+  'ui.findPasteInvalid':'That doesn\u2019t look like a link. Paste the sign-up page address (starting with https://).','ui.findPasteLoading':'Checking the list…',
+  'ui.findPasteMatch':'This race is on the list:','ui.findPasteKnownMiss':'This is a {site} link, but the race isn\u2019t on the list — it may be over, cancelled or not picked up yet.',
+  'ui.findPasteOtherMiss':'This race isn\u2019t on the list.','ui.findPasteNoFeed':'The list can\u2019t be loaded right now, so the link can\u2019t be checked.',
+  'ui.findPasteWhy':'Browsers don\u2019t let the app read other websites directly. Select all the text on the sign-up page, copy it and paste it below — the app picks out the name, date, venue and registration dates and fills in a new race for you to check:',
+  'ui.findPasteOpen':'Open the page ↗','ui.findPasteTextLabel':'Text from the sign-up page','ui.findPasteTextPh':'Paste the page text here',
+  'ui.findPasteTextGo':'Fill in a new race','ui.findPasteUrlOnly':'Just save the link',
+  'ui.findPasteTextEmpty':'Paste the page text into the box first.','ui.findPasteTextNothing':'Couldn\u2019t find a race name or date. Copy more of the page (including the name and date), or choose \u201cJust save the link\u201d.',
+  'ui.findPasteUrlOnlyToast':'Link filled in — add the rest yourself.','ui.findEmptyPaste':'Add from a sign-up link',
+  'ui.pasteFilledFrom':'Filled in {fields} — check them, then tap \u201cCreate Race\u201d.',
+  'ui.pasteField.name':'name','ui.pasteField.date':'date','ui.pasteField.reg':'registration dates','ui.pasteField.place':'venue','ui.pasteField.dist':'distance','ui.pasteField.type':'type',
+  'ui.createExtrasNote':'Also added when you create it: ','ui.createExtrasReg':'registration {d}','ui.createExtrasPlace':'venue {p}','ui.createExtrasDrop':'Don\u2019t add',
+  'ui.createCatsHint':'This race has several distances — tap yours to fill in the distance:',
+  'ui.createUrlFeedHint':'On the list: {name} ({meta})','ui.createUrlFeedFill':'Fill in','ui.createUrlFeedAdded':'Already in your races: {name}',
+  'ui.createUrlFeedDone':'✓ Filled in from the list: {name}','ui.createUrlFeedFilled':'Filled in from the list — check, then tap \u201cCreate Race\u201d.',
+  
   
   'ui.viewList':'List','ui.viewCalendar':'Calendar','ui.viewPhotoWall':'Finisher wall','ui.viewSegLabel':'View',
   'ui.listRecent':'Recent races','ui.listSeeAllHistory':'See all {n} past races ›',
@@ -6513,6 +6591,7 @@ const EN={
       <ul>
         <li>The home page has four tabs. “Races” holds the quote of the day, the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log. “Find races” lists upcoming races from the sign-up sites.</li>
         <li><strong>Find races</strong> (v4.16.0): upcoming races from four Taiwanese sites (iRunner, CTRUN, JoinNow and the Chinese Taipei Road Running Association), refreshed automatically every morning. It starts with “Can still enter” (open now, opening soon, or not announced yet). Search by name or place, filter by registration status, type and region (remembered next time), or sort by deadline. On a phone, tap a race to see its categories, registration period (days left), venue and source; “Register” opens the sign-up site and “＋ Add to my races” creates a “considering” race with the name, date, place, type, registration dates and sign-up link filled in. On a laptop it is a table with the buttons at the right of each row. Races you have already added show “✓ Added”. Race details and registration dates are collected automatically, so check the sign-up site before you register.</li>
+        <li><strong>Add from a sign-up link</strong> (v4.17.0): paste a race’s sign-up link into “Can’t find your race?” at the top of Find races (pasting on the home page with no box selected also brings you here when the race is on the list and not added yet). If the race is on the list it is shown right away — tap “＋ Add to my races”. If not, browsers don’t let the app read other websites, so select all the text on the sign-up page, copy it and paste it in: the app picks out the name, date, venue, registration dates and distances and fills in a new race for you to check before creating it. You can also choose “Just save the link”. Pasting a listed race’s link into the race-site box of Create Race offers “Fill in” too.</li>
         <li><strong>Training page</strong> (redesigned in v4.10.0): at the top of “Week” is the race you are preparing for (the nearest registered or lottery-pending race whose prep period has started: countdown, A/B goals, weeks to go). Below it: this week’s distance, a comparison with the same days last week, your weekly goal (the weekly mileage in the race’s “Training Plan”), daily bars, a short summary and the last 12 weeks. “Month” shows daily bars and the last 12 months; “All” groups sessions by year and month. If you log more than one sport, pick one under the tabs, so distances from different sports are never added together. Tap the shoe button on a session to change the shoes or delete it.</li>
         <li><strong>Session details</strong> (v4.11.0): tap a session to see its distance, time, pace, heart rate, elevation gain and route (sessions imported from v4.11.0 on show a marker every few kilometres; older ones are estimated from the route length, and routes that loop several times show only the start and finish), plus how its pace, heart rate and climbing compare with similar-distance sessions of the same sport from the past year. You can also rate perceived exertion (RPE 1–10), rename it, add notes (saved as you type) and change the shoes. Right after deleting, tap “Undo” to bring it back.</li>
         <li><strong>Splits and elevation</strong> (v4.12.0): importing a FIT, GPX or TCX file now also saves the time and elevation change for every kilometre (every 100 m for swims; speed for rides). Session details show them as bars: splits faster than your average for the whole session go up, slower ones go down, with the elevation profile underneath so you can see whether the slow ones were climbs. Tap a bar to see that split, or open “All splits” for the full table. Times from FIT files leave out the time the watch was paused (matching your watch’s own splits); GPX and TCX files don’t record pauses, so time spent stopped counts towards that split. For sessions imported earlier, import the original file again to add them; the name, notes, RPE and shoes stay as they are.</li>
@@ -21492,25 +21571,32 @@ function findAddedRace(r){
     return k.length>=4&&key.length>=4&&(k.includes(key)||key.includes(k));
   })||null;
 }
-async function loadFindFeed(force){
-  if(findState.status==='loading') return;
+// 回傳一個讀完（成功或失敗）才完成的 promise：貼網址比對、新增表單的提示都要等清單讀到才比得出來（v4.17.0）。
+// 正在讀的時候又被叫到，回傳同一個，不會重抓
+let findFeedPromise=null;
+function loadFindFeed(force){
+  if(findState.status==='loading') return findFeedPromise||Promise.resolve();
   // 半小時內讀過就用手上的：清單一天只更新一次
-  if(!force&&findState.feed&&Date.now()-findState.loadedAt<30*60*1000) return;
-  if(!force&&findState.status==='error') return;    // 讀不到時等使用者按「再試一次」，不要每次重畫都重抓
+  if(!force&&findState.feed&&Date.now()-findState.loadedAt<30*60*1000) return Promise.resolve();
+  if(!force&&findState.status==='error') return Promise.resolve();    // 讀不到時等使用者按「再試一次」，不要每次重畫都重抓
   findState.status='loading'; findState.error='';
   if(force&&state.homeTab==='find'&&!findState.feed) renderCalendar();
-  try{
-    const res=await fetch(FIND_FEED_URL,{cache:'no-cache'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const j=await res.json();
-    if(!j||!Array.isArray(j.races)) throw new Error('bad feed');
-    findState.feed=j; findState.loadedAt=Date.now(); findState.status='ok';
-  }catch(err){
-    findState.error=String(err&&err.message||err);
-    findState.status=findState.feed?'ok':'error';
-    console.warn('找賽事清單讀不到',err);
-  }
-  if(state.homeTab==='find'&&!state.selectedId&&!state.creating) renderCalendar();
+  findFeedPromise=(async()=>{
+    try{
+      const res=await fetch(FIND_FEED_URL,{cache:'no-cache'});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const j=await res.json();
+      if(!j||!Array.isArray(j.races)) throw new Error('bad feed');
+      findState.feed=j; findState.loadedAt=Date.now(); findState.status='ok';
+    }catch(err){
+      findState.error=String(err&&err.message||err);
+      findState.status=findState.feed?'ok':'error';
+      console.warn('找賽事清單讀不到',err);
+    }
+    findFeedPromise=null;
+    if(state.homeTab==='find'&&!state.selectedId&&!state.creating) renderCalendar();
+  })();
+  return findFeedPromise;
 }
 // 清單裡還沒比完的每一場，先算好狀態和搜尋用的字
 function findItems(){
@@ -21694,7 +21780,10 @@ function findTableHtml(shown){
 }
 function findResultsHtml(shown){
   if(!shown.length){
-    return `<div class="find-empty"><p>${escapeHtml(t('ui.findEmpty','沒有符合的賽事。'))}</p>${findFiltersActive()?`<button type="button" class="btn-ghost" data-action="find-clear">${escapeHtml(t('ui.findClear','清除篩選'))}</button>`:''}</div>`;
+    // 搜尋名稱找不到：多半是清單沒收的賽事，給一顆按鈕跳到上面的貼網址框（v4.17.0）
+    const acts=(findFiltersActive()?`<button type="button" class="btn-ghost" data-action="find-clear">${escapeHtml(t('ui.findClear','清除篩選'))}</button>`:'')
+      +(findState.q?`<button type="button" class="btn-ghost" data-action="find-paste-focus">${escapeHtml(t('ui.findEmptyPaste','貼報名網址帶入'))}</button>`:'');
+    return `<div class="find-empty"><p>${escapeHtml(t('ui.findEmpty','沒有符合的賽事。'))}</p>${acts?`<div class="find-empty-act">${acts}</div>`:''}</div>`;
   }
   return findWide()?findTableHtml(shown):findListHtml(shown);
 }
@@ -21706,10 +21795,11 @@ function findTabHtml(){
     const body=findState.status==='error'
       ?`<div class="find-empty"><p>${escapeHtml(t('ui.findError','清單讀不到。可能是沒有網路，或網站剛好在更新。'))}</p><button type="button" class="btn-ghost" data-action="find-retry">${escapeHtml(t('ui.findRetry','再試一次'))}</button></div>`
       :`<p class="find-loading" role="status">${escapeHtml(t('ui.findLoading','讀取賽事清單中…'))}</p>`;
-    return `<div class="find-wrap">${findHeadHtml()}${body}</div>`;
+    // 清單還在讀、或讀不到的時候也可以貼網址（讀到了再比對；讀不到就直接給「貼網頁文字」那條路）
+    return `<div class="find-wrap">${findHeadHtml()}${findPasteHtml()}${body}</div>`;
   }
   const items=findItems(), shown=findSorted(items.filter(x=>findMatch(x)));
-  return `<div class="find-wrap${findWide()?' is-wide':''}">${findHeadHtml()}${findToolsHtml(items)}
+  return `<div class="find-wrap${findWide()?' is-wide':''}">${findHeadHtml()}${findPasteHtml()}${findToolsHtml(items)}
     <div class="find-countbar"><p class="find-count" id="find-count" role="status">${escapeHtml(findCountText(shown.length))}</p>${findSelHtml('sort',findOptionLists(items))}</div>
     <div id="find-results">${findResultsHtml(shown)}</div></div>`;
 }
@@ -21722,6 +21812,7 @@ function renderFindResults(){
   const c=document.getElementById('find-count');
   if(c) c.textContent=findCountText(shown.length);
   refreshFindControls(items);
+  renderFindPaste();      // 剛按了「＋ 加入」：貼網址那張卡片也要變成「✓ 已在「賽事」」
 }
 function renderFindTab(){
   // 雲端同步、存檔都會叫 renderCalendar：清單沒換、版面沒變的話只重畫清單，打到一半的搜尋字不會被清掉
@@ -21759,6 +21850,626 @@ function addFindRace(id){
   el.querySelector('button').addEventListener('click',()=>{ clearTimeout(timer); el.remove(); selectRace(race.id); });
   logFeatureUse('find_add_race');
 }
+/* ============================================================
+   貼報名網址帶入（v4.17.0）
+   三個入口共用同一套比對：
+   ① 找賽事頁上面的「找不到想報的？［貼上報名網址］［帶入］」
+   ② 新增賽事表單的官網欄：貼上清單裡有的網址，下面出現「清單裡有這一場：○○［帶入］」
+   ③ 首頁沒有點任何輸入框時直接貼網址：清單裡有、還沒加過的，帶去找賽事頁顯示那一場
+   清單裡沒有的：App 不能直接讀別的網站（瀏覽器的 CORS 限制，我們也沒有伺服器；不經過 CORS 代理是 HANDOFF 的決定），
+   所以請使用者在報名頁全選、複製文字貼過來，這裡整理出名稱、日期、地點、報名期間、組別，帶進新增表單讓他看過再建立。
+   不管走哪一條都不會沒問就新增：清單裡有的要按「＋ 加入我的賽事」，貼文字的要在表單按「建立賽事」（先預覽再落地）。
+   ============================================================ */
+/* 網址怎麼比：同一場的網址常常不完全一樣（多了 ?utm=…、報名第二步的頁面、大小寫、http/https、結尾斜線），
+   所以三個報名網站各認「這一場的編號」：
+     運動筆記 irunner.biji.co/<賽事代號>/…（第一段路徑；list、member 這些是網站自己的頁面，不是賽事）
+     全統     ctrun.com.tw/…?EventMain_ID=<數字>（大小寫兩種都有人寫）
+     一起報名 joinnow.com.tw/…?cnt_id=<數字>（報名頁 run-step1.php、介紹頁 about.php 都帶這個）
+   其他網站（路協表上的賽事官網）比「網域＋路徑」：清單上是 /20261018_web/ 的話，底下哪一頁都算同一場；
+   清單上只寫了網域（http://evaairrun.com/）的，要那個網域在清單上只有這一場才算——一個網站辦好幾場時不猜。 */
+const FIND_IRUNNER_PAGES=/^(?:list|signup|member|members|irunner|admin|dashboard|search|news|login|logout|register|user|users|account|about|privacy|terms|faq|help|contact|static|assets|images|img|css|js|api|index\.php|index\.html?)$/i;
+const FIND_URL_JUNK=/^(?:utm_\w+|fbclid|gclid|gbraid|wbraid|igshid|mc_cid|mc_eid|_ga|yclid|spm)$/i;
+function findPlatformOfHost(h){
+  const on=d=>h===d||h.endsWith('.'+d);
+  if(on('irunner.biji.co')) return 'irunner';
+  if(on('ctrun.com.tw')) return 'ctrun';
+  if(on('joinnow.com.tw')) return 'joinnow';
+  if(on('sportsnet.org.tw')) return 'sportsnet';
+  return '';
+}
+function findUrlKey(u){
+  let x;
+  try{ x=new URL(String(u||'').trim()); }catch(e){ return null; }
+  if(x.protocol!=='http:'&&x.protocol!=='https:') return null;
+  const host=x.hostname.toLowerCase().replace(/^www\./,'');
+  const platform=findPlatformOfHost(host);
+  const num=name=>{ for(const [k,v] of x.searchParams){ if(k.toLowerCase()===name&&/^\s*\d+\s*$/.test(v)) return v.trim(); } return ''; };
+  if(platform==='irunner'){
+    let seg=x.pathname.split('/').filter(Boolean)[0]||'';
+    try{ seg=decodeURIComponent(seg); }catch(e){}
+    return {platform,host,key:seg&&!FIND_IRUNNER_PAGES.test(seg)?'irunner:'+seg.toLowerCase():''};
+  }
+  if(platform==='ctrun'){ const id=num('eventmain_id'); return {platform,host,key:id?'ctrun:'+id:''}; }
+  if(platform==='joinnow'){ const id=num('cnt_id'); return {platform,host,key:id?'joinnow:'+id:''}; }
+  let path=x.pathname;
+  try{ path=decodeURIComponent(path); }catch(e){}
+  path=path.replace(/\/index\.(?:html?|php|aspx?)$/i,'/').replace(/\/+$/,'').toLowerCase();
+  const params=[...x.searchParams].filter(([k])=>!FIND_URL_JUNK.test(k)).map(([k,v])=>k.toLowerCase()+'='+v);
+  return {platform,host,key:'',path,params};
+}
+// 0：不是同一場；越大越確定。清單上只寫網域、貼的是那個網域底下某一頁時回傳 'root'（要再看網域上是不是只有這一場）
+function findUrlScore(feed,got){
+  if(feed.key||got.key) return feed.key&&feed.key===got.key?100:0;
+  if(feed.platform&&feed.platform!=='sportsnet') return 0;     // 報名網站上認不出編號的頁面（列表頁之類）：不猜
+  if(feed.host!==got.host) return 0;
+  if(feed.params.some(p=>!got.params.includes(p))) return 0;   // 清單網址上帶的參數（?id=5）要一樣
+  if(feed.path===got.path) return 50;
+  if(feed.path&&got.path.startsWith(feed.path+'/')) return 10+feed.path.length/1000;   // 越深的越像（/a/b 比 /a 準）
+  if(!feed.path) return 'root';
+  return 0;
+}
+function findRaceUrls(r){ return [r.url].concat((r.also||[]).map(a=>a&&a.url)).map(findSafeUrl).filter(Boolean); }
+function findFeedRaceByUrl(u){
+  const f=findState.feed;
+  if(!f||!Array.isArray(f.races)) return null;
+  const got=findUrlKey(findSafeUrl(String(u||'').trim()));
+  if(!got) return null;
+  if(got.platform&&got.platform!=='sportsnet'&&!got.key) return null;
+  let best=null,bestScore=0;
+  const roots=[],onHost=new Set();
+  for(const r of f.races){
+    if(!r||!r.id||!r.name) continue;
+    for(const fu of findRaceUrls(r)){
+      const fk=findUrlKey(fu);
+      if(!fk) continue;
+      if(!fk.key&&fk.host===got.host) onHost.add(r.id);
+      const sc=findUrlScore(fk,got);
+      if(sc==='root'){ if(!roots.includes(r)) roots.push(r); }
+      else if(sc>bestScore){ best=r; bestScore=sc; }
+    }
+  }
+  if(best) return best;
+  return roots.length===1&&onHost.size===1?roots[0]:null;
+}
+// 貼進來的東西裡找出網址：前後多了字（「報名網址：https://…」）也行；沒打 https:// 的網域幫忙補上
+function findCleanPastedUrl(raw){
+  const s=String(raw||'').trim();
+  if(!s) return '';
+  const m=s.match(/https?:\/\/[^\s<>"'「」『』（）()，。、]+/i);
+  let u=m?m[0]:'';
+  if(!u&&/^(?:www\.)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:[/?#]\S*)?$/i.test(s)) u='https://'+s;
+  u=u.replace(/[.,;:!?）)\]」』]+$/,'');
+  try{ const x=new URL(u); if(x.protocol!=='http:'&&x.protocol!=='https:') return ''; }catch(e){ return ''; }
+  return findSafeUrl(u);
+}
+
+/* ---------- 找賽事頁的貼網址框 ----------
+   findState.paste：{url, st, raceId, platform, noFeed, text, err}
+   st：invalid 不是網址、loading 等清單、match 清單裡有、miss 清單裡沒有。重畫找賽事頁時照這份狀態畫回來，
+   文字框裡打到一半的字（text）也記著：雲端同步重畫、從新增表單按取消回來都還在。 */
+let findPasteKey='';
+function findPasteRace(){
+  const p=findState.paste;
+  return p&&p.raceId&&findState.feed&&Array.isArray(findState.feed.races)?findState.feed.races.find(z=>z&&z.id===p.raceId)||null:null;
+}
+function findPasteRenderKey(){
+  const p=findState.paste;
+  if(!p) return '';
+  const r=findPasteRace(), added=r?findAddedRace(r):null;
+  return [p.st,p.url,p.raceId,added?added.id:'',p.err,p.noFeed?1:0,currentLang].join('|');
+}
+function findPasteHtml(){
+  const p=findState.paste;
+  findPasteKey=findPasteRenderKey();
+  const ph=t('ui.findPastePh','貼上報名網址');
+  return `<form class="find-paste" data-find-paste novalidate>
+      <label class="find-paste-q" for="find-url">${escapeHtml(t('ui.findPasteQ','找不到想報的？'))}</label>
+      <span class="find-paste-row"><input type="url" id="find-url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" placeholder="${escapeHtml(ph)}" aria-label="${escapeHtml(ph)}" value="${escapeHtml(p?p.url:'')}"><button type="submit" class="btn-ghost">${escapeHtml(t('ui.findPasteGo','帶入'))}</button></span>
+    </form>
+    <div class="find-paste-res" id="find-paste-result" aria-live="polite">${findPasteResultHtml()}</div>`;
+}
+function findPasteResultHtml(){
+  const p=findState.paste;
+  if(!p) return '';
+  const x=`<button type="button" class="find-paste-x" data-action="find-paste-clear" aria-label="${escapeHtml(t('ui.close','關閉'))}">✕</button>`;
+  if(p.st==='invalid') return `<p class="find-paste-err">${escapeHtml(t('ui.findPasteInvalid','這不是網址。請貼上報名頁的網址（https:// 開頭）。'))}</p>`;
+  if(p.st==='loading') return `<p class="find-paste-wait" role="status">${escapeHtml(t('ui.findPasteLoading','比對清單中…'))}</p>`;
+  const r=p.st==='match'?findPasteRace():null;
+  if(r){
+    const item={r,s:findStatus(r,todayISO())}, added=findAddedRace(r);
+    const when=r.date?findDateWd(r.date)+(r.dateEnd?'–'+findMD(r.dateEnd):''):t('ui.findDateTbd','日期未定');
+    const meta=[when,r.city,findKind(r)].filter(Boolean).join(t('ui.findDot','・'));
+    return `<div class="find-paste-card">${x}<p class="find-paste-title">${escapeHtml(t('ui.findPasteMatch','清單裡有這一場：'))}</p>
+      <p class="find-paste-name">${escapeHtml(r.name)}</p>
+      <p class="find-paste-meta"><span><span class="find-dot" style="background:var(--sport-${findTypeVar(r.type)})"></span>${escapeHtml(meta)}</span>${findPillHtml(item)}</p>
+      ${findDetailHtml(item,added,'find-paste-d',true)}</div>`;
+  }
+  // 清單裡沒有（或清單讀不到）：說明為什麼不能直接讀那個網站，給「貼網頁文字」和「只存網址」兩條路
+  const site=FIND_SOURCES[p.platform]?findSourceName(p.platform):'';
+  const head=p.noFeed?t('ui.findPasteNoFeed','清單現在讀不到，沒辦法比對。')
+    :site?tv('ui.findPasteKnownMiss','這是{site}的網址，但清單裡沒有這一場：可能已經比完、取消，或清單還沒收錄。',{site})
+    :t('ui.findPasteOtherMiss','清單裡沒有這一場。');
+  const err=p.err==='empty'?t('ui.findPasteTextEmpty','先把報名頁的文字貼進上面的框。')
+    :p.err==='nothing'?t('ui.findPasteTextNothing','看不出賽事名稱或日期。多複製一些（包含名稱、日期那幾行），或按「只存網址，其他自己填」。'):'';
+  const url=findSafeUrl(p.url);
+  return `<div class="find-paste-card is-miss">${x}<p class="find-paste-title">${escapeHtml(head)}</p>
+    <p class="find-paste-why">${escapeHtml(t('ui.findPasteWhy','App 沒辦法直接讀其他網站的內容（瀏覽器的限制）。在報名頁全選、複製文字，貼到下面，App 會整理出名稱、日期、地點、報名期間，帶進「新增賽事」讓你確認：'))}${url?` <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(t('ui.findPasteOpen','打開報名頁 ↗'))}</a>`:''}</p>
+    <label class="sr-only" for="find-paste-text">${escapeHtml(t('ui.findPasteTextLabel','報名頁的文字'))}</label>
+    <textarea id="find-paste-text" rows="5" placeholder="${escapeHtml(t('ui.findPasteTextPh','把報名頁的文字貼在這裡'))}">${escapeHtml(p.text||'')}</textarea>
+    ${err?`<p class="find-paste-err" role="alert">${escapeHtml(err)}</p>`:''}
+    <div class="find-act"><button type="button" class="btn-primary" data-action="find-paste-text">${escapeHtml(t('ui.findPasteTextGo','帶入新增表單'))}</button><button type="button" class="btn-ghost" data-action="find-paste-urlonly">${escapeHtml(t('ui.findPasteUrlOnly','只存網址，其他自己填'))}</button></div>
+  </div>`;
+}
+// 只在狀態真的變了才重畫結果那一塊：打字、換篩選都會叫到這裡，文字框裡打到一半的字和游標不能被洗掉
+function renderFindPaste(){
+  const box=document.getElementById('find-paste-result');
+  if(!box) return;
+  const key=findPasteRenderKey();
+  if(key!==findPasteKey){ findPasteKey=key; box.innerHTML=findPasteResultHtml(); }
+  const inp=document.getElementById('find-url');
+  if(inp&&document.activeElement!==inp) inp.value=findState.paste?findState.paste.url:'';
+}
+async function findPasteSubmit(raw,from){
+  const url=findCleanPastedUrl(raw);
+  if(!url){
+    const s=String(raw||'').trim();
+    findState.paste=s?{url:s,st:'invalid',raceId:null,platform:'',noFeed:false,text:'',err:''}:null;
+    renderFindPaste();
+    return;
+  }
+  const keep=findState.paste&&findState.paste.url===url?findState.paste.text:'';
+  const key=findUrlKey(url);
+  findState.paste={url,st:'loading',raceId:null,platform:key?key.platform:'',noFeed:false,text:keep||'',err:''};
+  if(!findState.feed){
+    renderFindPaste();
+    await loadFindFeed(findState.status==='error');   // 之前讀失敗的話，使用者這一下就當作「再試一次」
+  }
+  const p=findState.paste;
+  if(!p||p.url!==url) return;                          // 等清單的時候又貼了別的
+  const r=findFeedRaceByUrl(url);
+  p.st=r?'match':'miss'; p.raceId=r?r.id:null; p.noFeed=!findState.feed;
+  renderFindPaste();
+  logFeatureUse(from==='global'?'global_paste_find_url':'find_paste_url');
+}
+// 從首頁貼過來的：切到找賽事頁、捲到最上面，焦點放在那一場的「＋ 加入我的賽事」（加過的放「查看」）
+async function openFindPaste(url){
+  findState.paste={url,st:'loading',raceId:null,platform:'',noFeed:false,text:'',err:''};
+  if(state.homeTab!=='find') setHomeTab('find'); else renderCalendar();
+  window.scrollTo(0,0);
+  await findPasteSubmit(url,'global');
+  const b=document.querySelector('#find-paste-result [data-action="find-add"],#find-paste-result [data-action="find-view"]');
+  if(b) b.focus();
+}
+/* 首頁直接貼網址（v4.17.0）：要不要接手。
+   接手的：清單裡有的賽事（加過的也先接下來，routePastedUrlToFind 再分），和一場賽事都還沒有時貼的網址（原本是完全沒反應）。
+   其他的照舊：有賽事時貼不在清單裡的網址＝存成某場的連結；Spotify、IG、Strava 這些不是報名頁的網址不接。 */
+function findPasteUrlCandidate(text){
+  if(state.selectedId||state.creating||trainingOverlayOpen()) return null;
+  const info=classifyPastedUrl(text);
+  if(!info||info.type!=='official_site') return null;
+  const hasRaces=state.races.some(x=>!x.deletedAt);
+  if(findState.feed) return findFeedRaceByUrl(info.url)||!hasRaces?info:null;
+  if(findState.status==='error') return hasRaces?null:info;
+  return info;                                          // 清單還沒讀過：先接下來，讀到了再決定
+}
+function openPasteUrlModalFor(info,race){
+  openPasteUrlModal(info);
+  // 這場已經在「賽事」裡：存連結的視窗直接選那一場（選單只列前 40 場，不在裡面就照原本的預設）
+  if(race&&pasteNoteState&&pasteNoteCandidates().slice(0,40).some(r=>r.id===race.id)){ pasteNoteState.raceId=race.id; redrawPasteNoteModal(); }
+}
+async function routePastedUrlToFind(info){
+  if(!findState.feed&&findState.status!=='error'){
+    // 最多等 2.5 秒：網路很慢時不要讓貼上一直沒反應，等不到就照原本的做
+    await Promise.race([loadFindFeed(false),new Promise(res=>setTimeout(res,2500))]);
+  }
+  const hasRaces=state.races.some(x=>!x.deletedAt);
+  // 等清單的時候使用者打開了某一場：照原本的，存成那一場的連結
+  if(state.selectedId||state.creating||trainingOverlayOpen()){
+    if(hasRaces){ openPasteUrlModal(info); logFeatureUse('global_paste_url'); }
+    return;
+  }
+  const r=findState.feed?findFeedRaceByUrl(info.url):null;
+  const added=r?findAddedRace(r):null;
+  if(hasRaces&&(!r||added)){ openPasteUrlModalFor(info,added); logFeatureUse('global_paste_url'); return; }
+  await openFindPaste(info.url);
+}
+function findPasteToCreate(){
+  const p=findState.paste;
+  if(!p) return;
+  const ta=document.getElementById('find-paste-text');
+  if(ta) p.text=ta.value;
+  if(!String(p.text||'').trim()){
+    p.err='empty'; renderFindPaste();
+    const again=document.getElementById('find-paste-text'); if(again) again.focus();
+    return;
+  }
+  const info=extractPastedRaceDetails(p.text);
+  if(!info.name&&!info.raceDate){ p.err='nothing'; renderFindPaste(); return; }
+  p.err='';
+  info.officialUrl=findSafeUrl(p.url);
+  startCreateFromPaste(info,{fromFind:true,toast:pasteFilledToast(info),log:'find_paste_text'});
+}
+function findPasteUrlOnly(){
+  const p=findState.paste;
+  if(!p) return;
+  const ta=document.getElementById('find-paste-text');
+  if(ta) p.text=ta.value;
+  startCreateFromPaste({officialUrl:findSafeUrl(p.url)},{fromFind:true,toast:t('ui.findPasteUrlOnlyToast','網址已經填好，其他的自己填'),log:'find_paste_url_only'});
+}
+const PASTE_FIELD_KEY='ui.pasteField.';
+const PASTE_FIELD_ZH={name:'名稱',date:'日期',reg:'報名期間',place:'地點',dist:'距離',type:'種類'};
+function pasteFilledToast(info){
+  const got=(info.found||[]).map(k=>t(PASTE_FIELD_KEY+k,PASTE_FIELD_ZH[k]||k));
+  return got.length?tv('ui.pasteFilledFrom','已帶入{fields}，確認後按「建立賽事」',{fields:got.join(t('ui.listSep','、'))})
+    :t('ui.pasteNewRaceFilled','已從剪貼簿帶入賽事資料，確認後按「建立賽事」');
+}
+
+/* ---------- 報名頁文字 → 賽事資料 ----------
+   日期、縣市、距離的判斷照 tools/race-feed/parse.mjs（每天整理清單的那支），兩邊認得的寫法才會一樣；
+   這裡多了「標籤：內容」的找法，因為使用者貼的是整頁文字，不是我們看過結構的網頁。
+   貼進來的通常是 Ctrl＋A 整頁：最上面是網站選單，標籤和內容可能在同一行（「活動地點：…」「活動地點<tab>…」，表格複製下來是 tab）、
+   也可能分兩行（「活動日期」換行「2026/12/26 (六)」）。 */
+const fpPad=n=>String(n).padStart(2,'0');
+const fpY=y=>{ y=+y; return y<1000?y+1911:y; };       // 民國年
+function fpYmd(y,m,d){
+  y=fpY(y); m=+m; d=+d;
+  if(!(y>=2000&&y<=2100&&m>=1&&m<=12&&d>=1&&d<=31)) return null;
+  const x=new Date(Date.UTC(y,m-1,d));
+  if(x.getUTCMonth()!==m-1) return null;              // 2/30 這種不存在的日期
+  return `${y}-${fpPad(m)}-${fpPad(d)}`;
+}
+function fpYearFromToday(m,d,today){ const y=+today.slice(0,4); for(const yy of [y,y+1]){ const v=fpYmd(yy,m,d); if(v&&v>=today) return v; } return null; }
+function fpYearBefore(m,d,anchor){ const y=+anchor.slice(0,4); for(const yy of [y,y-1]){ const v=fpYmd(yy,m,d); if(v&&v<=anchor) return v; } return null; }
+const FP_D1='(\\d{4}|1[0-4]\\d)\\s*[年/.\\-]\\s*(\\d{1,2})\\s*[月/.\\-]\\s*(\\d{1,2})';
+const FP_D2='(?:(\\d{4}|1[0-4]\\d)\\s*[年/.\\-]\\s*)?(\\d{1,2})\\s*[月/.\\-]\\s*(\\d{1,2})';
+// 第一個日期後面可能接時間（00時、12:00、23:59:59）、星期（(四)）、「起」「迄」：時間裡的數字不能被當成第二個日期
+const FP_GAP='(?:[^~～至到\\-－—\\d]|\\d{1,2}(?::\\d{2}){1,2}|\\d{1,2}\\s*[時點](?:\\s*\\d{1,2}\\s*分)?){0,24}';
+const FP_SEP='(?:[~～至到\\-－—]+|起至|起迄|迄)';
+const FP_REG_LABEL='(?:(?:早鳥|一般|正式|團體|個人|線上|網路)?(?:報名|受理)(?:時間|日期|期間)|(?:エントリー|申込|申し込み)(?:受付)?期間|registration(?:\\s*(?:period|dates?))?|entry\\s*period)';
+// 緊的：標籤後面馬上就是日期。早鳥、一般報名分開寫的會有好幾組，取最早開始到最晚截止；
+// 「早鳥報名：」「一般報名：」後面沒有「時間／期間」也算（只在緊的這裡放寬：鬆的那條會把「一般報名費」後面 80 字內的日期也抓進來）
+const FP_REG_LABEL_T='(?:(?:早鳥|一般|正式|團體|個人|線上|網路)(?:報名|受理)(?:時間|日期|期間)?|'+FP_REG_LABEL.slice(3);
+const FP_REG_TIGHT=new RegExp(FP_REG_LABEL_T+'\\s*[:：︰]?\\s*(?:[(（][^)）]{0,12}[)）])?\\s*(?:自|從|起)?\\s*'+FP_D1+FP_GAP+FP_SEP+'\\s*'+FP_D2,'gi');
+// 鬆的：表頭「活動日期｜報名時間」、下一列才是值這種，標籤和日期中間隔了別的東西
+const FP_REG_LOOSE=new RegExp(FP_REG_LABEL+'[\\s\\S]{0,80}?'+FP_D1+FP_GAP+FP_SEP+'\\s*'+FP_D2,'i');
+// 只有截止日：「報名截止：10/31」「報名期限 2026/10/31 截止」「報名時間：即日起至 2026/10/15 止」
+const FP_REG_CLOSE=new RegExp('(?:報名截止(?:日期|日)?|截止報名(?:日期|日)?|報名期限|報名至|受理至|(?:エントリー|申込|申し込み)締切|registration\\s*(?:deadline|closes?)|'+FP_REG_LABEL+'\\s*[:：︰]?\\s*即日起)\\s*[:：︰]?\\s*(?:即日起)?\\s*(?:(?:至|到|~|～)\\s*)?'+FP_D2,'i');
+function fpRegFromMatch(m){
+  const y1=fpY(m[1]);
+  const open=fpYmd(y1,m[2],m[3]);
+  let close=fpYmd(m[4]?fpY(m[4]):y1,m[5],m[6]);
+  if(open&&close&&close<open&&!m[4]) close=fpYmd(y1+1,m[5],m[6]);   // 12/20~1/10 跨年、後面沒寫年份
+  return open&&close&&close>=open?{regOpen:open,regClose:close}:null;
+}
+// 標籤後面的日期：有年份的優先（西元或民國），只有月日的取今天以後最近的那一個
+function fpDateIn(v,today){
+  const s=String(v||'');
+  let m=s.match(/(\d{4})\s*[年/.\-]\s*(\d{1,2})\s*[月/.\-]\s*(\d{1,2})/);
+  if(m){ const d=fpYmd(m[1],m[2],m[3]); if(d) return d; }
+  m=s.match(/(?:^|[^\d])(1[0-4]\d)\s*[年/.]\s*(\d{1,2})\s*[月/.]\s*(\d{1,2})/);
+  if(m){ const d=fpYmd(m[1],m[2],m[3]); if(d) return d; }
+  m=s.match(/(?:^|[^\d:])(\d{1,2})\s*[月/]\s*(\d{1,2})(?!\s*[:\d])/);
+  if(m){ const d=fpYearFromToday(m[1],m[2],today); if(d) return d; }
+  return null;
+}
+// 縣市、鄉鎮：跟 parse.mjs 同一份表（鄉鎮要帶「鄉鎮市區」字尾；跨縣市重複的、會撞到一般用語的不收）
+const FP_COUNTIES=['臺北市','新北市','基隆市','桃園市','新竹市','新竹縣','宜蘭縣','苗栗縣','臺中市','彰化縣','南投縣','雲林縣','嘉義市','嘉義縣','臺南市','高雄市','屏東縣','花蓮縣','臺東縣','澎湖縣','金門縣','連江縣'];
+const FP_SHORT={臺北:'臺北市',新北:'新北市',基隆:'基隆市',桃園:'桃園市',宜蘭:'宜蘭縣',苗栗:'苗栗縣',臺中:'臺中市',彰化:'彰化縣',南投:'南投縣',雲林:'雲林縣',臺南:'臺南市',高雄:'高雄市',屏東:'屏東縣',花蓮:'花蓮縣',臺東:'臺東縣',澎湖:'澎湖縣',金門:'金門縣',馬祖:'連江縣',連江:'連江縣',新竹:'新竹',嘉義:'嘉義'};
+const FP_TOWNS={
+  臺北市:'大同區 松山區 萬華區 士林區 北投區 內湖區 南港區 文山區',
+  新北市:'板橋區 三重區 中和區 永和區 新莊區 新店區 樹林區 鶯歌區 三峽區 淡水區 汐止區 瑞芳區 土城區 蘆洲區 五股區 泰山區 林口區 深坑區 石碇區 坪林區 三芝區 石門區 八里區 平溪區 雙溪區 貢寮區 金山區 萬里區 烏來區',
+  基隆市:'仁愛區 安樂區 暖暖區 七堵區',
+  桃園市:'桃園區 中壢區 平鎮區 八德區 楊梅區 蘆竹區 大溪區 龍潭區 龜山區 大園區 觀音區 新屋區 復興區',
+  新竹市:'香山區',
+  新竹縣:'竹北市 竹東鎮 新埔鎮 關西鎮 湖口鄉 新豐鄉 芎林鄉 橫山鄉 北埔鄉 寶山鄉 峨眉鄉 尖石鄉 五峰鄉',
+  苗栗縣:'苗栗市 頭份市 竹南鎮 後龍鎮 通霄鎮 苑裡鎮 卓蘭鎮 造橋鄉 西湖鄉 頭屋鄉 公館鄉 銅鑼鄉 三義鄉 大湖鄉 獅潭鄉 三灣鄉 南庄鄉 泰安鄉',
+  臺中市:'北屯區 西屯區 南屯區 太平區 大里區 霧峰區 烏日區 豐原區 后里區 石岡區 東勢區 和平區 潭子區 大雅區 神岡區 大肚區 沙鹿區 龍井區 梧棲區 清水區 大甲區 外埔區',
+  彰化縣:'彰化市 員林市 鹿港鎮 和美鎮 北斗鎮 溪湖鎮 田中鎮 二林鎮 線西鄉 伸港鄉 福興鄉 秀水鄉 花壇鄉 芬園鄉 大村鄉 埔鹽鄉 埔心鄉 永靖鄉 社頭鄉 二水鄉 田尾鄉 埤頭鄉 芳苑鄉 大城鄉 竹塘鄉 溪州鄉',
+  南投縣:'南投市 埔里鎮 草屯鎮 竹山鎮 集集鎮 名間鄉 鹿谷鄉 中寮鄉 魚池鄉 國姓鄉 水里鄉 信義鄉 仁愛鄉',
+  雲林縣:'斗六市 斗南鎮 虎尾鎮 西螺鎮 土庫鎮 北港鎮 古坑鄉 大埤鄉 莿桐鄉 林內鄉 二崙鄉 崙背鄉 麥寮鄉 東勢鄉 褒忠鄉 臺西鄉 元長鄉 四湖鄉 口湖鄉 水林鄉',
+  嘉義縣:'太保市 朴子市 布袋鎮 大林鎮 民雄鄉 溪口鄉 新港鄉 六腳鄉 東石鄉 義竹鄉 鹿草鄉 水上鄉 中埔鄉 竹崎鄉 梅山鄉 番路鄉 大埔鄉 阿里山鄉',
+  臺南市:'中西區 安平區 安南區 永康區 歸仁區 新化區 左鎮區 玉井區 楠西區 南化區 仁德區 關廟區 龍崎區 官田區 麻豆區 佳里區 西港區 七股區 將軍區 學甲區 北門區 新營區 後壁區 白河區 東山區 六甲區 下營區 柳營區 鹽水區 善化區 大內區 山上區 新市區 安定區',
+  高雄市:'新興區 前金區 苓雅區 鹽埕區 鼓山區 旗津區 前鎮區 三民區 楠梓區 小港區 左營區 仁武區 岡山區 路竹區 阿蓮區 田寮區 燕巢區 橋頭區 梓官區 彌陀區 永安區 湖內區 鳳山區 大寮區 鳥松區 大樹區 旗山區 美濃區 六龜區 內門區 杉林區 甲仙區 桃源區 那瑪夏區 茂林區 茄萣區',
+  屏東縣:'屏東市 潮州鎮 東港鎮 恆春鎮 萬丹鄉 長治鄉 麟洛鄉 九如鄉 里港鄉 鹽埔鄉 高樹鄉 萬巒鄉 內埔鄉 竹田鄉 新埤鄉 枋寮鄉 新園鄉 崁頂鄉 林邊鄉 南州鄉 佳冬鄉 琉球鄉 車城鄉 滿州鄉 枋山鄉 三地門鄉 霧臺鄉 瑪家鄉 泰武鄉 來義鄉 春日鄉 獅子鄉 牡丹鄉',
+  宜蘭縣:'宜蘭市 羅東鎮 蘇澳鎮 頭城鎮 礁溪鄉 壯圍鄉 員山鄉 冬山鄉 五結鄉 三星鄉 大同鄉 南澳鄉',
+  花蓮縣:'花蓮市 鳳林鎮 玉里鎮 新城鄉 吉安鄉 壽豐鄉 光復鄉 豐濱鄉 瑞穗鄉 富里鄉 秀林鄉 萬榮鄉 卓溪鄉',
+  臺東縣:'臺東市 成功鎮 關山鎮 卑南鄉 鹿野鄉 池上鄉 東河鄉 長濱鄉 太麻里鄉 大武鄉 綠島鄉 海端鄉 延平鄉 金峰鄉 達仁鄉 蘭嶼鄉',
+  澎湖縣:'馬公市 湖西鄉 白沙鄉 西嶼鄉 望安鄉 七美鄉',
+  金門縣:'金城鎮 金湖鎮 金沙鎮 金寧鄉 烈嶼鄉 烏坵鄉',
+  連江縣:'南竿鄉 北竿鄉 莒光鄉 東引鄉',
+};
+const FP_TOWN_OF=Object.entries(FP_TOWNS).flatMap(([c,list])=>list.split(' ').map(x=>[x,c]));
+const FP_LANDMARK={總統府:'臺北市',凱達格蘭:'臺北市',大佳河濱:'臺北市',陽明山:'臺北市',臺北101:'臺北市',美堤河濱:'臺北市',夢時代:'高雄市',駁二:'高雄市',溪頭:'南投縣',日月潭:'南投縣',阿里山:'嘉義縣',墾丁:'屏東縣',太魯閣:'花蓮縣',金城:'金門縣'};
+const FP_OVERSEAS=/日本|韓國|不丹|泰國|越南|柬埔寨|馬來西亞|新加坡|香港|澳門|中國|美國|加拿大|英國|法國|德國|義大利|澳洲|紐西蘭|沖繩|沖縄|東京|大阪|京都|名古屋|北海道|福岡|首爾|釜山|曼谷|清邁|吳哥|峴港|雪梨|柏林|倫敦|波士頓|芝加哥|紐約|巴黎/;
+function fpFindCity(...texts){
+  for(const raw of texts){
+    const s=String(raw||'').replace(/台/g,'臺');
+    if(!s) continue;
+    let best=null;
+    for(const c of FP_COUNTIES){ const i=s.indexOf(c); if(i>=0&&(!best||i<best.i)) best={i,c}; }
+    if(best) return best.c;
+    for(const [k,c] of FP_TOWN_OF){ const i=s.indexOf(k); if(i>=0&&(!best||i<best.i)) best={i,c}; }
+    if(best) return best.c;
+    for(const [k,c] of Object.entries(FP_SHORT)){ const i=s.indexOf(k); if(i>=0&&(!best||i<best.i)) best={i,c}; }
+    if(best) return best.c;
+    for(const [k,c] of Object.entries(FP_LANDMARK)) if(s.includes(k)) return c;
+  }
+  for(const raw of texts){ const m=String(raw||'').match(FP_OVERSEAS); if(m) return m[0]; }
+  return '';
+}
+// 種類：順序有關係（「越野馬拉松」是越野、「鐵人三項」先於「路跑」）；跟 parse.mjs 的 TYPE_RULES 同一份
+const FP_TYPE_RULES=[
+  ['triathlon',/鐵人三項|三鐵|triathlon|ironman|\b226\b|\b113\b|51\.5/i],
+  ['duathlon',/鐵人兩項|鐵人二項|二鐵|duathlon/i],
+  ['cycling',/自行車|單車|騎行|陪騎|公路車|登山車|自由車|gravel|cycling|bicycle|\bbike\b|\bmtb\b/i],
+  ['swimming',/游泳|泳渡|公開水域|open\s*water|\bswim/i],
+  ['trail_running',/越野|山徑|trail|古道|天梯|トレイル/i],
+  ['ultra_marathon',/超馬|超級馬拉松|ultra|ウルトラ/i],
+  ['obstacle_race',/障礙賽|obstacle|spartan/i],
+  ['other',/健走|健行|步道|登山|walk|hiking/i],
+  ['road_running',/馬拉松|路跑|夜跑|慢跑|跑|run|marathon|マラソン|\d{3,5}\s*公尺/i],
+];
+function fpDetectType(s){ for(const [ty,re] of FP_TYPE_RULES) if(re.test(s||'')) return ty; return ''; }
+// 距離：42.195K、21KM半馬組、45公里、5000公尺；沒寫數字的「全馬」「半馬」照標準距離；不到 0.5 公里的是趣味組不算
+function fpParseDistances(texts){
+  const out=[];
+  for(const raw of texts||[]){
+    const s=String(raw||'');
+    let found=false;
+    for(const m of s.matchAll(/(\d+(?:\.\d+)?)\s*\.?\s*(?:k(?:m)?|公里)(?![a-z])/gi)){ out.push(+m[1]); found=true; }
+    for(const m of s.matchAll(/(\d{3,5})\s*(?:公尺|m)(?![a-z])/gi)){ out.push(+m[1]/1000); found=true; }
+    if(!found){
+      if(/全馬|全程馬拉松|全程組/.test(s)) out.push(42.195);
+      if(/半馬|半程馬拉松|半程組/.test(s)) out.push(21.0975);
+    }
+  }
+  return [...new Set(out.filter(x=>x>=0.5&&x<=1000).map(x=>Math.round(x*10000)/10000))].sort((a,b)=>b-a);
+}
+function fpDistLabel(km,swim){
+  if(swim&&km<10) return Math.round(km*1000)+'m';
+  return (Math.abs(km-42.195)<0.001?'42.195':String(Math.round(km*10)/10))+'K';
+}
+const FP_BULLET='^[\\s•・·\\-*▶►■□◆◇●○※★☆▍|｜➤>]*';
+// 另一個標籤開頭的行：「標籤」換行「內容」時，下一行如果也是標籤就不是內容；組別往下讀幾行時讀到這種就停
+const FP_KNOWN_LABEL=/^[\s•・·\-*▶►■□◆◇●○※★☆▍|｜➤>]*(?:主辦|承辦|協辦|指導|贊助|活動|比賽|賽事|競賽|大會|報名|集合|起跑|地點|日期|時間|會場|費用|名額|聯絡|備註|注意|交通|獎勵|獎項|退費|保險|物資|紀念品|完賽|組別|項目|距離|開催|会場|申込|エントリー|種目)[一-鿿぀-ヿ]{0,6}\s*[:：︰]?\s*$|^[\s•・·\-*▶►■□◆◇●○※★☆▍|｜➤>]*(?:主辦|承辦|協辦|指導|贊助|聯絡|備註|注意|交通|獎勵|獎項|退費|保險|物資|紀念品)[一-鿿]{0,6}\s*[:：︰]/;
+function fpLabelled(rawLines,specific,generic){
+  const res=[];
+  const scan=re=>{
+    for(let i=0;i<rawLines.length;i++){
+      const m=rawLines[i].match(re);
+      if(!m) continue;
+      let v=(m[1]||'').replace(/\s+/g,' ').trim();
+      if(!v&&i+1<rawLines.length&&!FP_KNOWN_LABEL.test(rawLines[i+1])) v=rawLines[i+1].replace(/\s+/g,' ').trim();
+      if(v) res.push({v,i});
+    }
+  };
+  // 明確的標籤（活動地點、比賽日期）後面可以直接接內容；短的（地點、日期、距離）一定要有冒號、tab 或自己一行，
+  // 不然「距離捷運站 500 公尺」會被當成組別、「日期待公布」會被當成比賽日期
+  if(specific) scan(new RegExp(FP_BULLET+'(?:'+specific+')\\s*[:：︰]?\\s*(.*)$','i'));
+  if(generic) scan(new RegExp(FP_BULLET+'(?:'+generic+')\\s*(?:[:：︰\\t]\\s*(.*))?$','i'));
+  return res;
+}
+const FP_NAME_KW=/馬拉松|路跑|越野|鐵人|超馬|半馬|全馬|三鐵|二鐵|泳渡|游泳|自行車|單車|健走|健行|接力|挑戰賽|錦標賽|公路賽|登山賽|[盃杯]|賽|marathon|\brun\b|running|trail|race|ride|swim|ultra|ironman|triathlon|マラソン|ラン|トレイル|ウルトラ/i;
+const FP_NAME_YEAR=/^(?:20\d{2}|1[0-4]\d)\s*年?|^第\s*[0-9一二三四五六七八九十百]+\s*屆/;
+const FP_NAME_BAD=/^(?:首頁|會員|登入|登出|註冊|搜尋|選單|menu|home|login|sign\s*in|sign\s*up|search|top|回首頁|回上一頁|上一頁|下一頁|分享|share|facebook|line|instagram|youtube|copyright|©|版權|隱私|服務條款|聯絡我們|常見問題|faq|客服|購物車|我的帳戶)|^(?:近期|熱門|最新|推薦|全部|所有|其他|更多|相關|精選|年度)?\s*(?:賽事|活動|比賽|報名)\s*(?:列表|資訊|簡章|規程|日程|介紹|公告|成績|報名|專區|行事曆|總覽|一覽|查詢)?$|^(?:活動|比賽|賽事|競賽|大會|報名)(?:日期|時間|地點|名稱|組別|項目|資訊|簡章|規程|須知|辦法|費用|方式|流程|說明|特色)|立即報名|我要報名|線上報名|報名去|報名表|報名費|報名須知|報名方式|報名流程|行事曆|一覽表|排行|成績查詢|報名查詢|訂單|繳費/i;
+const FP_SITE_PART=/運動筆記|筆記報名|一起報名|全統|伊貝特|跑寶島|報名系統|報名網|活動簡章|最新消息|官方網站|官網|首頁|活動報名|線上報名|irunner|joinnow|ctrun|eventpal|lohas|bao-?ming/i;
+const FP_NOT_VENUE=/簡章|內文|請洽|洽詢|詳見|待公[布告]|另行公告|未定|將於|近日|稍後|敬請期待|\bTB[AD]\b/i;
+const FP_NOT_RACE_DATE=/報名|截止|繳費|退費|更新|公告|發[布佈]|抽籤|公布|寄送|領物|開放|截至|期限|退款|轉讓|異動|優惠|早鳥|出生|生日|成績|紀錄|記錄|版權|copyright|©/i;
+function fpCleanName(s){
+  let n=String(s||'').replace(/\s+/g,' ').trim();
+  const br=n.match(/[【\[]([^】\]]{3,60})[】\]]/);                 // 【2026 田中馬拉松】報名開始 → 括號裡那段
+  if(br&&FP_NAME_KW.test(br[1])) n=br[1];
+  // 「2026 田中馬拉松｜運動筆記」「… - 筆記報名 - 活動簡章」：去掉網站名稱、頁面名稱那幾段，剩下的接起來
+  // （「高雄 - 5000公尺挑戰賽」兩段都是名稱，不能只留有「賽」的那段）
+  const parts=n.split(/\s*[|｜]\s*|\s+[-–—]\s+/).filter(Boolean);
+  if(parts.length>1){ const keep=parts.filter(p=>!FP_SITE_PART.test(p)); n=(keep.length?keep:parts.slice(0,1)).join(' '); }
+  n=n.replace(/(?:線上|活動|賽事)?(?:報名(?:系統|網|頁|資訊|開始|開跑|中)?|簡章|官方網站|官網)$/,'').replace(/[\s:：\-–—|｜]+$/,'').trim();
+  return n;
+}
+function fpCleanVenue(v){
+  let s=String(v||'').replace(/\s+/g,' ').trim();
+  s=s.replace(/\s*[（(]?\s*(?:google\s*map|地圖|導航|點我|\(map\))[\s\S]*$/i,'').replace(/^[：:︰\-–—]+/,'').trim();
+  if(s.length<2) return '';
+  if(FP_NOT_VENUE.test(s)) return '';
+  if(/^(?:與|及|和|、|交通|資訊|介紹|說明|地圖|周邊|示意)/.test(s)) return '';   // 「活動地點與交通」這種標題
+  if(/^\d{4}\s*[年/.\-]/.test(s)) return '';
+  return s.length>80?s.slice(0,80):s;
+}
+function extractPastedRaceDetails(raw,today){
+  today=today||todayISO();
+  let text=String(raw||'').replace(/\r\n?/g,'\n').replace(/[ 　​]/g,' ');
+  if(text.length>40000) text=text.slice(0,40000);     // 整頁貼進來也只看前面：賽事資料都在上面
+  const rawLines=text.split('\n').map(l=>l.replace(/ {2,}/g,' ').trim()).filter(Boolean);   // 先留著 tab：表格複製下來是「標籤<tab>內容」
+  const flat=rawLines.join(' ').replace(/\s+/g,' ');
+  const out={name:'',raceDate:'',regOpen:'',regClose:'',venue:'',city:'',country:'',distances:[],distanceKm:null,sportType:'',found:[]};
+  // ① 報名期間
+  for(const m of flat.matchAll(FP_REG_TIGHT)){
+    const r=fpRegFromMatch(m);
+    if(!r) continue;
+    if(!out.regOpen||r.regOpen<out.regOpen) out.regOpen=r.regOpen;
+    if(!out.regClose||r.regClose>out.regClose) out.regClose=r.regClose;
+  }
+  if(!out.regOpen){ const m=flat.match(FP_REG_LOOSE), r=m&&fpRegFromMatch(m); if(r){ out.regOpen=r.regOpen; out.regClose=r.regClose; } }
+  // ② 比賽日期：有標籤的（活動日期、比賽日期、鳴槍時間…）
+  const DATE_SPEC='(?:比賽|賽事|活動|競賽|大會|鳴槍|開跑|起跑|舉辦|舉行)\\s*(?:日期|時間|日)|開催日時?|大会日程?|開催日程|(?:race|event)\\s*date';
+  for(const x of fpLabelled(rawLines,DATE_SPEC,'日期|時間|date|日時')){ const d=fpDateIn(x.v,today); if(d){ out.raceDate=d; break; } }
+  // ③ 只寫了截止日的報名
+  if(!out.regClose){
+    const m=flat.match(FP_REG_CLOSE);
+    if(m) out.regClose=m[1]?(fpYmd(m[1],m[2],m[3])||''):((out.raceDate?fpYearBefore(m[2],m[3],out.raceDate):fpYearFromToday(m[2],m[3],today))||'');
+  }
+  // ④ 沒有標籤的比賽日期：不在「報名、截止、公告…」後面的日期；報名期間的頭尾不算，有截止日的話取截止日之後的第一個。
+  //   「前面」只看同一行、上一個日期之後的字：「公告日期：2026/10/01 2026/12/20 鳴槍」的第二個日期不是公告日期
+  if(!out.raceDate){
+    const cands=[], lined=rawLines.join('\n');
+    let lastEnd=0;
+    for(const m of lined.matchAll(/(\d{4})\s*[年/.\-]\s*(\d{1,2})\s*[月/.\-]\s*(\d{1,2})|(?:^|[^\d])(1[0-4]\d)\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})/g)){
+      const d=m[1]?fpYmd(m[1],m[2],m[3]):fpYmd(m[4],m[5],m[6]);
+      const from=Math.max(lastEnd,lined.lastIndexOf('\n',m.index)+1,m.index-16);
+      lastEnd=m.index+m[0].length;
+      if(!d||d===out.regOpen||d===out.regClose) continue;
+      if(FP_NOT_RACE_DATE.test(lined.slice(from,m.index))) continue;
+      cands.push(d);
+    }
+    out.raceDate=(out.regClose&&cands.find(d=>d>out.regClose))||cands[0]||'';
+  }
+  // ⑤ 名稱：有標籤的優先；沒有的話挑最像賽事名稱的那一行（有年份、有「馬拉松／路跑／賽」這類字、越上面越好）
+  let nameLine=-1;
+  let name=fpLabelled(rawLines,'(?:賽事|活動|比賽|競賽|大會)名稱|大会名称?|イベント名|(?:race|event)\\s*name',null)
+    .map(x=>fpCleanName(x.v)).find(v=>v.length>=2&&v.length<=80)||'';
+  if(!name){
+    let best=null;
+    rawLines.slice(0,150).forEach((l0,i)=>{
+      const l=l0.replace(/\s+/g,' ').trim();
+      if(l.length<4||l.length>70||/https?:|www\.|@/.test(l)||FP_NAME_BAD.test(l)) return;
+      if(/^[^:：]{1,10}[:：]/.test(l)) return;           // 「主辦單位：…」這種標籤行
+      if(/\s[>›»]\s|^\S+\s*[>›»]\s*\S+$/.test(l)) return;    // 麵包屑「首頁 > 賽事」
+      if(l.replace(/[\d\s/\-.:：年月日()（）~～至星期週一二三四五六日]/g,'').length<3) return;   // 只有日期時間
+      const c=fpCleanName(l);
+      if(c.length<3) return;
+      let sc=(FP_NAME_KW.test(c)?3:0)+(FP_NAME_YEAR.test(c)||/(?:^|[^\d])20\d{2}(?!\d)/.test(c)?3:0);
+      if(!sc) return;
+      if(/報名|截止|額滿|開放/.test(c)) sc-=2;
+      sc+=Math.max(0,2-i/30);
+      if(!best||sc>best.sc) best={sc,c,i};
+    });
+    if(best&&best.sc>=3){ name=best.c; nameLine=best.i; }
+  }
+  out.name=name;
+  // ⑥ 地點：活動地點、比賽地點、會場…（「詳見簡章」這種不算）；縣市先看地點、再看名稱
+  const VEN_SPEC='(?:活動|比賽|賽事|競賽|大會|舉辦)\\s*(?:地點|場地|會場|地址)|會場地點|集合地點|起跑(?:地點|點|位置)|起終點|開催地|開催場所|会場|venue';
+  for(const x of fpLabelled(rawLines,VEN_SPEC,'地點|會場|場地|location|place')){ const v=fpCleanVenue(x.v); if(v){ out.venue=v; break; } }
+  if(!out.venue&&nameLine>=0){
+    for(let j=nameLine+1;j<Math.min(rawLines.length,nameLine+13);j++){
+      const l=rawLines[j].replace(/\s+/g,' ').trim();
+      if(l.length<2||l.length>40||/[:：]/.test(l)||/主辦|承辦|協辦|指導|贊助|單位|電話|地址|客服|公司|有限|股份|報名|截止|費用|元|組/.test(l)) continue;
+      if(l.includes(name)||name.includes(l)) continue;
+      if(/^\d{4}\s*[年/.\-]/.test(l)) continue;
+      if(fpFindCity(l)){ out.venue=fpCleanVenue(l); break; }
+    }
+  }
+  out.city=fpFindCity(out.venue,name);
+  if(out.city) out.country=guessCountryFromCity(out.city)||'';
+  // ⑦ 組別、距離：組別標籤那一行和下面幾行、短的「○○組」行、名稱本身
+  const cats=[];
+  fpLabelled(rawLines,'(?:競賽|比賽|活動|報名|賽事|參賽)(?:組別|項目|距離|分組)|組別(?:與|及)?距離|種目|部門|(?:race\\s*)?categor(?:y|ies)','組別|項目|距離|分組|distances?').forEach(x=>{
+    cats.push(x.v);
+    for(let j=x.i+1;j<Math.min(rawLines.length,x.i+9);j++){ if(FP_KNOWN_LABEL.test(rawLines[j])) break; cats.push(rawLines[j]); }
+  });
+  rawLines.forEach(l=>{ if(l.length<=40&&/組/.test(l)&&/\d\s*(?:k|km|公里|公尺)|全馬|半馬|全程|半程/i.test(l)) cats.push(l); });
+  const dists=fpParseDistances(cats.concat([name]).flatMap(x=>String(x||'').split(/[、,，/／;；|｜]+/)));
+  if(dists.length===1) out.distanceKm=dists[0];
+  else if(dists.length>1) out.distances=dists.slice(0,8);
+  // ⑧ 種類：先看名稱（馬拉松附設的健走組不能把整場變成健走），名稱看不出來再看組別
+  const ty=fpDetectType(name)||fpDetectType(cats.join(' '));
+  out.sportType=ty||guessSportTypeFromNameAndDistance(name,out.distanceKm)||'';
+  if(out.name) out.found.push('name');
+  if(out.raceDate) out.found.push('date');
+  if(out.regOpen||out.regClose) out.found.push('reg');
+  if(out.venue||out.city) out.found.push('place');
+  if(out.distanceKm!=null||out.distances.length) out.found.push('dist');
+  if(ty) out.found.push('type');
+  return out;
+}
+
+/* ---------- 新增賽事表單 ----------
+   表單上沒有的欄位（報名期間、地點）先記在 createStagedExtras，表單下面列出「建立時也會帶入：…」，按「建立賽事」才寫進去；
+   好幾個組別的話列成按鈕，點一下填進距離（一場只能記一個距離，報哪一組只有使用者知道）。 */
+function createExtrasHtml(){
+  const ex=createStagedExtras;
+  if(!ex) return '';
+  const bits=[];
+  if(ex.regOpen||ex.regClose) bits.push(tv('ui.createExtrasReg','報名期間 {d}',{d:findPer({regOpen:ex.regOpen,regClose:ex.regClose})}));
+  const place=ex.venue&&ex.city&&findNorm(ex.venue).includes(findNorm(ex.city))?ex.venue:[ex.city,ex.venue].filter(Boolean).join(' ');
+  if(place) bits.push(tv('ui.createExtrasPlace','地點 {p}',{p:place}));
+  let html='';
+  if(bits.length) html+=`<p>${escapeHtml(t('ui.createExtrasNote','建立時也會帶入：'))}${escapeHtml(bits.join(t('ui.findDot','・')))} <button type="button" class="btn-text-small" data-action="create-extras-drop">${escapeHtml(t('ui.createExtrasDrop','不要帶入'))}</button></p>`;
+  if(Array.isArray(ex.distances)&&ex.distances.length>1){
+    const sw=(document.getElementById('new-sport')||{}).value==='swimming';
+    html+=`<p class="create-cats">${escapeHtml(t('ui.createCatsHint','這場有好幾個組別，點你報的那一組填進距離：'))}</p><p class="create-cats-row">${ex.distances.map(km=>`<button type="button" class="create-dist-chip" data-action="create-pick-dist" data-km="${km}" aria-pressed="false">${escapeHtml(fpDistLabel(km,sw))}</button>`).join('')}</p>`;
+  }
+  return html;
+}
+function renderCreateExtras(){ const el=document.getElementById('create-extras'); if(el) el.innerHTML=createExtrasHtml(); }
+function createExtrasOf(info,fromFind){
+  const ex={};
+  ['regOpen','regClose','venue','city','country'].forEach(k=>{ if(info[k]) ex[k]=info[k]; });
+  if(Array.isArray(info.distances)&&info.distances.length>1) ex.distances=info.distances.slice(0,8);
+  if(fromFind) ex.fromFind=true;
+  return Object.keys(ex).length?ex:null;
+}
+// 表單已經在畫面上時把資料填進去（新增表單的「帶入」、貼上帶入共用）
+function applyInfoToCreateForm(info){
+  const set=(id,val)=>{ const el=document.getElementById(id); if(el&&val!=null&&val!=='') el.value=val; };
+  set('new-name',info.name);
+  set('new-url',info.officialUrl);
+  set('new-sport',info.sportType);
+  syncCreateDistanceUnit();
+  if(info.distanceKm!=null) set('new-distance',info.sportType==='swimming'?swimMeters(info.distanceKm):info.distanceKm);
+}
+function findRaceToInfo(r){
+  const ds=Array.isArray(r.distances)?r.distances:[];
+  return {name:r.name,raceDate:r.date||'',sportType:findTypeVar(r.type),distanceKm:ds.length===1?ds[0]:null,distances:ds.length>1?ds:[],
+    regOpen:r.regOpen||'',regClose:r.regClose||'',venue:r.venue||'',city:r.city||'',country:(r.city&&guessCountryFromCity(r.city))||'',officialUrl:findSafeUrl(r.url)};
+}
+// 官網欄貼上清單裡有的網址：「清單裡有這一場：○○（運動筆記・11/8（日））［帶入］」；已經加過的給「查看」
+let createUrlFilledId='';
+function syncCreateUrlHint(){
+  const box=document.getElementById('create-url-hint'), inp=document.getElementById('new-url');
+  if(!box||!inp) return;
+  const url=findSafeUrl(inp.value.trim());
+  if(!url){ box.innerHTML=''; return; }
+  if(!findState.feed){
+    // 清單還沒讀過：讀一次（一樣有半小時的快取），讀到了再比；讀不到就不提示，表單照常可以用
+    if(findState.status!=='error') loadFindFeed(false).then(()=>{ if(findState.feed&&document.getElementById('new-url')===inp) syncCreateUrlHint(); });
+    box.innerHTML='';
+    return;
+  }
+  const r=findFeedRaceByUrl(url);
+  if(!r){ box.innerHTML=''; return; }
+  const added=findAddedRace(r);
+  if(added){
+    box.innerHTML=`<span>${escapeHtml(tv('ui.createUrlFeedAdded','已經在「賽事」裡了：{name}',{name:added.name}))}</span> <button type="button" class="btn-text-small" data-action="find-view" data-race="${escapeHtml(added.id)}">${escapeHtml(t('ui.findView','查看'))}</button>`;
+    return;
+  }
+  if(createUrlFilledId===r.id){ box.innerHTML=`<span>${escapeHtml(tv('ui.createUrlFeedDone','✓ 已從清單帶入：{name}',{name:r.name}))}</span>`; return; }
+  const meta=[findSourceName(r.source),r.date?findDateWd(r.date):''].filter(Boolean).join(t('ui.findDot','・'));
+  box.innerHTML=`<span>${escapeHtml(tv('ui.createUrlFeedHint','清單裡有這一場：{name}（{meta}）',{name:r.name,meta}))}</span> <button type="button" class="btn-text-small" data-action="create-fill-feed" data-id="${escapeHtml(r.id)}">${escapeHtml(t('ui.createUrlFeedFill','帶入'))}</button>`;
+}
+function createFillFromFeed(id){
+  const r=findState.feed&&Array.isArray(findState.feed.races)?findState.feed.races.find(x=>x&&x.id===id):null;
+  if(!r) return;
+  const info=findRaceToInfo(r);
+  applyInfoToCreateForm(info);
+  const dateEl=document.getElementById('new-date');
+  if(dateEl&&info.raceDate) dateEl.value=info.raceDate;   // 狀態不用動：日期早於今天時，「建立賽事」那邊本來就會改成已完賽
+  createStagedExtras=createExtrasOf(info,!!(createStagedExtras&&createStagedExtras.fromFind));
+  createUrlFilledId=r.id;
+  renderCreateExtras();
+  syncCreateUrlHint();
+  showToast(t('ui.createUrlFeedFilled','已從清單帶入，確認後按「建立賽事」'));
+  logFeatureUse('create_fill_from_feed');
+}
+document.addEventListener('input',e=>{
+  const id=e.target&&e.target.id;
+  if(id==='new-url'){ createUrlFilledId=''; syncCreateUrlHint(); return; }
+  if(id==='find-paste-text'&&findState.paste){ findState.paste.text=e.target.value; }
+});
+// 貼網址框：貼上就直接比對，不用再按「帶入」（等瀏覽器把字放進框裡再讀）
+document.addEventListener('paste',e=>{
+  const el=e.target;
+  if(!el||el.id!=='find-url') return;
+  setTimeout(()=>{ const v=el.value.trim(); if(v) findPasteSubmit(v,'box'); },0);
+});
+document.addEventListener('submit',e=>{
+  const f=e.target&&e.target.closest?e.target.closest('form[data-find-paste]'):null;
+  if(!f) return;
+  e.preventDefault();
+  const inp=f.querySelector('#find-url');
+  const v=inp?inp.value.trim():'';
+  if(!v){ if(inp) inp.focus(); return; }
+  findPasteSubmit(v,'box');
+});
 document.addEventListener('click',e=>{
   const el=e.target&&e.target.closest?e.target.closest('[data-action^="find-"]'):null;
   if(!el) return;
@@ -21771,6 +22482,18 @@ document.addEventListener('click',e=>{
   }
   if(act==='find-add'){ addFindRace(el.dataset.id); return; }
   if(act==='find-view'){ selectRace(el.dataset.race); return; }
+  if(act==='find-paste-clear'){
+    findState.paste=null; renderFindPaste();
+    const inp=document.getElementById('find-url'); if(inp){ inp.value=''; inp.focus(); }
+    return;
+  }
+  if(act==='find-paste-focus'){
+    const inp=document.getElementById('find-url');
+    if(inp){ inp.scrollIntoView({block:'center'}); inp.focus(); }
+    return;
+  }
+  if(act==='find-paste-text'){ findPasteToCreate(); return; }
+  if(act==='find-paste-urlonly'){ findPasteUrlOnly(); return; }
   if(act==='find-toggle'){
     const id=el.dataset.id;
     findState.open=findState.open===id?null:id;
@@ -22270,6 +22993,7 @@ function renderCreateForm(){
       <label class="field" for="new-name"><span>${t('ui.newRaceName','賽事名稱')}</span><input type="text" id="new-name" placeholder="${t('ui.newRaceNamePlaceholder','如：2026 臺北馬拉松')}"></label>
       <label class="field" for="new-date"><span>${t('ui.newRaceDate','比賽日期')}</span><input type="date" id="new-date" value="${createDefaultDate}"></label>
       <label class="field" for="new-url"><span>${t('ui.newRaceUrl','賽事官方網站')}</span><input type="url" id="new-url" placeholder="https://..."></label>
+      <p class="create-url-hint" id="create-url-hint" aria-live="polite"></p>
       <label class="field" for="new-sport"><span>${t('ui.newRaceSport','賽事種類')}</span><select id="new-sport">${SPORT_OPTIONS.map(o=>`<option value="${o.value}">${t('opt.sport.'+o.value,o.label)}</option>`).join('')}</select></label>
       <label class="field" for="new-status"><span>${t('ui.newRaceStatus','狀態')}</span><select id="new-status">${STATUS_OPTIONS.map(o=>`<option value="${o.value}" ${o.value===createDefaultStatus?'selected':''}>${t('opt.status.'+o.value,o.label)}</option>`).join('')}</select></label>
       <label class="field" for="new-distance"><span>${t('ui.newRaceDistance','距離')}</span>
@@ -22277,6 +23001,7 @@ function renderCreateForm(){
         <datalist id="distance-presets">${DISTANCE_PRESETS.map(d=>`<option value="${d.km}">${escapeHtml(t('preset.distance.'+d.key,d.label))}</option>`).join('')}</datalist>
       </label>
     </div>
+    <div class="create-extras" id="create-extras">${createExtrasHtml()}</div>
     <div class="create-actions">
       <button class="btn-primary" data-action="confirm-create">${t('ui.createRace','建立賽事')}</button>
       <button class="btn-ghost" data-action="cancel-create">${t('ui.cancel','取消')}</button>
@@ -22752,6 +23477,8 @@ window.addEventListener('popstate',()=>{
    ============================================================ */
 let createStagedActivity=null,createStagedActivityError=null;
 let createStagedCover=null,createStagedCoverError=null;
+// 表單上沒有欄位、建立時一起寫進去的資料（v4.17.0）：報名期間、地點、好幾個組別的距離；fromFind＝從找賽事頁的貼網址來的
+let createStagedExtras=null;
 // createDefaultStatus／createDefaultDate：平常「新增賽事」表單的狀態、
 // 日期就是固定預設值（狀態預設「考慮中」、日期空白）；只有全域拖曳
 // 匯入 GPX、又剛好沒有任何賽事可以掛（見 importActivityFile()）這種
@@ -22764,6 +23491,7 @@ function resetCreateStaging(){
   createStagedActivity=null;createStagedActivityError=null;
   createStagedCover=null;createStagedCoverError=null;
   createDefaultStatus='considering';createDefaultDate='';
+  createStagedExtras=null;createUrlFilledId='';
 }
 /* ============================================================
    第一次使用引導：完全沒有賽事資料、而且這台裝置這個瀏覽器也從沒
@@ -22794,26 +23522,27 @@ function startCreate(){resetCreateStaging();pendingRouteRaceId=null;state.creati
    刻意停在表單、不直接建立賽事——名稱與日期是猜的，讓使用者看過一眼
    再按「建立賽事」，跟其他幾種貼上一樣都是「先預覽再落地」。
    日期早於今天時狀態預設帶「已完賽」，省掉最常見的一次修改。 */
-function startCreateFromPaste(info){
+/* v4.17.0：找賽事頁貼網頁文字、只存網址也走這裡。opts.toast／opts.log 換提示和統計名稱；
+   報名期間、地點這些表單上沒有的，記在 createStagedExtras，表單下面會列出來，按「建立賽事」才寫進去。 */
+function startCreateFromPaste(info,opts){
+  opts=opts||{};
   resetCreateStaging();
   if(info.raceDate){
     createDefaultDate=info.raceDate;
     const d=new Date(info.raceDate+'T00:00:00'), today=new Date(todayISO()+'T00:00:00');
     if(!isNaN(d)&&d<today) createDefaultStatus='completed';
   }
+  createStagedExtras=createExtrasOf(info,!!opts.fromFind);
   state.creating=true; state.selectedId=null;
   renderAll(); scrollDetailIntoView();
   // renderAll() 之後表單才存在，這時才填得進去
-  const set=(id,val)=>{ const el=document.getElementById(id); if(el&&val!=null&&val!=='') el.value=val; };
-  set('new-name',info.name);
-  set('new-url',info.officialUrl);
-  set('new-sport',info.sportType);
-  syncCreateDistanceUnit();
-  if(info.distanceKm!=null) set('new-distance',info.sportType==='swimming'?swimMeters(info.distanceKm):info.distanceKm);
+  applyInfoToCreateForm(info);
+  renderCreateExtras();       // 游泳的組別要寫公尺：種類填好之後再畫一次
+  syncCreateUrlHint();
   const nameEl=document.getElementById('new-name');
   if(nameEl){ nameEl.focus(); nameEl.setSelectionRange(nameEl.value.length,nameEl.value.length); }
-  showToast(t('ui.pasteNewRaceFilled','已從剪貼簿帶入賽事資料，確認後按「建立賽事」'));
-  logFeatureUse('paste_new_race');
+  showToast(opts.toast||t('ui.pasteNewRaceFilled','已從剪貼簿帶入賽事資料，確認後按「建立賽事」'));
+  logFeatureUse(opts.log||'paste_new_race');
   dismissFirstUseGlow();
 }
 
@@ -23997,7 +24726,7 @@ function showSaveStatus(kind){
 async function handleDetailChange(e){
   const t=e.target;
   // 新增賽事表單換運動別：游泳的距離改成填公尺（見 syncCreateDistanceUnit）
-  if(t.id==='new-sport'){ syncCreateDistanceUnit(); return; }
+  if(t.id==='new-sport'){ syncCreateDistanceUnit(); if(createStagedExtras&&createStagedExtras.distances) renderCreateExtras(); return; }
   if(t.id==='geo-photo-input'){
     if(currentRace&&t.files&&t.files.length){
       const files=Array.from(t.files);
@@ -24180,6 +24909,26 @@ function handleDetailClick(e){
     return;
   }
   if(e.target.closest('[data-action="cancel-create"]')){state.creating=false;resetCreateStaging();renderAll();return;}
+  // 新增表單：不要帶入報名期間、地點（組別按鈕留著）、點組別填距離、官網欄提示的「帶入」（v4.17.0）
+  if(e.target.closest('[data-action="create-extras-drop"]')){
+    const ex=createStagedExtras||{};
+    createStagedExtras=ex.distances||ex.fromFind?{distances:ex.distances,fromFind:ex.fromFind}:null;
+    renderCreateExtras();
+    const inp=document.getElementById('new-name'); if(inp) inp.focus();
+    return;
+  }
+  const distChip=e.target.closest('[data-action="create-pick-dist"]');
+  if(distChip){
+    const km=parseFloat(distChip.dataset.km), inp=document.getElementById('new-distance');
+    if(inp&&Number.isFinite(km)){
+      syncCreateDistanceUnit();
+      inp.value=inp.dataset.unit==='m'?String(swimMeters(km)):String(km);
+      document.querySelectorAll('.create-dist-chip').forEach(b=>b.setAttribute('aria-pressed',String(b===distChip)));
+    }
+    return;
+  }
+  const fillFeed=e.target.closest('[data-action="create-fill-feed"]');
+  if(fillFeed){ createFillFromFeed(fillFeed.dataset.id); return; }
   if(e.target.closest('[data-action="confirm-create"]')){
     const nameEl=document.getElementById('new-name');
     const name=nameEl.value.trim();
@@ -24204,6 +24953,15 @@ function handleDetailClick(e){
     if(Number.isFinite(distanceKm)&&distanceKm>0) race.route.distanceKm=distanceKm;
     if(createStagedActivity) applyActivitySummaryToRace(race,createStagedActivity.summary);
     if(createStagedCover){ race.coverImage=createStagedCover.dataUrl; race.coverThumb=createStagedCover.thumbDataUrl||''; race.coverImageAspect=createStagedCover.aspect; race.coverImageAccentColor=createStagedCover.accentColor; }
+    // 貼上帶入的報名期間、地點（v4.17.0）：表單下面列過「建立時也會帶入」的那些
+    const ex=createStagedExtras;
+    if(ex){
+      if(ex.regOpen) race.schedule.registrationOpenDate=ex.regOpen;
+      if(ex.regClose) race.schedule.registrationCloseDate=ex.regClose;
+      if(ex.venue) race.location.venueName=ex.venue;
+      if(ex.city){ race.location.city=ex.city; race.location.country=ex.country||guessCountryFromCity(ex.city)||''; }
+      if(ex.fromFind) findState.paste=null;     // 建好了：回到找賽事頁時不用再看到剛剛貼的那一段
+    }
     autoApplyEquipmentTemplate(race);
     state.races.push(race);
     state.selectedId=race.id;state.creating=false;
@@ -26165,6 +26923,7 @@ function helpModalHtml(){
       <ul>
         <li>首頁分成四個分頁：「賽事」是今日一句、「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄；「找賽事」列出報名網站上還沒比的賽事。</li>
         <li><strong>找賽事</strong>（v4.16.0）：運動筆記、全統、一起報名、路協四個網站上還沒比的賽事，每天清晨自動更新一次。預設只列「還能報名」的（報名中、即將開放、還沒公布）；可以搜尋名稱或地點，依報名狀態、種類、地區篩選（下次打開會記得），或改成依報名截止日排。手機上點一場展開，看組別、報名期間（剩幾天）、地點和來源：「前往報名」打開報名網站，「＋ 加入我的賽事」直接新增一場「考慮中」的賽事，名稱、日期、地點、種類、報名期間和報名網址都帶好；筆電上是表格，按鈕在每一列右邊。已經加入的會標「✓ 已加入」。賽事和報名期間是程式從報名網站整理的，報名前請以報名網站的公告為準。</li>
+        <li><strong>貼報名網址帶入</strong>（v4.17.0）：在「找賽事」上面的「找不到想報的？」貼上報名頁的網址（在首頁沒有點任何輸入框時直接貼上也可以：清單裡有、還沒加入的賽事會帶你到這裡）。清單裡有的會直接顯示那一場，按「＋ 加入我的賽事」；清單裡沒有的，因為瀏覽器不讓 App 讀別的網站，請在報名頁全選、複製文字貼上，App 會整理出名稱、日期、地點、報名期間和組別，帶進「新增賽事」讓你確認後再建立，也可以按「只存網址，其他自己填」。「新增賽事」的官網欄貼上清單裡有的網址，也會出現「帶入」。</li>
         <li><strong>訓練頁</strong>（v4.10.0 改版）：「本週」最上面是備戰中的賽事（已報名或抽籤中、已經進入準備期的最近一場：倒數、A／B 目標、賽前第幾週），下面是本週的公里數、跟上週同一段時間比、週目標（賽事頁「訓練計畫」填的週跑量）、每天的長條、本週解讀和近 12 週的里程；「本月」換成每天的長條和近 12 個月；「全部」依年份、月份收合。有兩種以上的運動時，分頁下面可以選要看哪一種，不同運動的公里數不會加在一起。每一筆右邊的鞋款按鈕點了可以換鞋或刪除。</li>
         <li><strong>單次訓練詳細</strong>（v4.11.0）：點一筆訓練打開，看距離、時間、配速、心率、爬升和路線（v4.11.0 起匯入的標出每幾公里的位置；之前匯入的用路線長度推算，繞好幾圈的路線只標起點和終點），再跟過去一年距離相近的同種運動比配速、心率和爬升。還可以打主觀強度（RPE 1–10）、改名稱、寫備註（打字就自動儲存）、換鞋款。刪除後幾秒內可以按「復原」。</li>
         <li><strong>每公里配速與高度</strong>（v4.12.0）：匯入 FIT、GPX、TCX 時多存每公里的時間和高度變化（游泳是每 100 公尺、騎車看速度），單次詳細頁畫成一排長條：比整段平均快的往上、慢的往下，下面是高度剖面，看得出慢的那幾段是不是在爬坡。點長條看那一段的數字，展開「每段的數字」看全部。FIT 檔的時間不含手錶暫停（跟手錶上每公里的時間一樣）；GPX、TCX 沒有暫停的紀錄，停下來的時間也算在那一段。之前匯入的訓練，再匯入一次原始檔就會補上，名稱、備註、主觀強度和鞋款都不會變。</li>
@@ -28141,6 +28900,14 @@ document.addEventListener('paste',async e=>{
       e.preventDefault();
       startCreateFromPaste(newRace.info);
       logFeatureUse('global_paste_new_race');
+      return;
+    }
+    // 報名網址（v4.17.0）：首頁上貼「找賽事」清單裡有的賽事網址，帶去找賽事頁顯示那一場；
+    // 一場賽事都還沒有時貼的網址也帶去（原本完全沒反應）。其他照舊（見 findPasteUrlCandidate）
+    const findUrl=findPasteUrlCandidate(text);
+    if(findUrl){
+      e.preventDefault();
+      routePastedUrlToFind(findUrl);
       return;
     }
     if(!state.races.some(r=>!r.deletedAt)) return;
