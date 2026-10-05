@@ -1,0 +1,82 @@
+# 找賽事清單：每天清晨讀一次報名網站公開的賽事清單，更新 race-feed.json（v4.16.0）
+# 為什麼用排程：App 是純前端、沒有伺服器，瀏覽器也不准直接讀別的網站（CORS），所以每天由 GitHub 先抓好、放在同一個網站。
+# 為什麼最後要呼叫 Pages API：用 GITHUB_TOKEN 推上去的提交不會觸發 GitHub Pages 重新發布（GitHub 刻意的設計，避免無限循環），
+# 不叫它的話，清單要等到下一次有人手動推更新才會上線。
+name: 找賽事清單
+
+on:
+  schedule:
+    - cron: '17 20 * * *'   # 台灣時間每天 04:17（UTC 20:17）。避開整點：GitHub 的排程整點最塞，常常延遲
+  workflow_dispatch:         # Actions 頁面可以手動按「Run workflow」立刻跑一次
+
+permissions:
+  contents: write   # 推 race-feed.json
+  pages: write      # 請 Pages 重新發布
+
+concurrency:
+  group: race-feed
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/race-feed/package-lock.json
+
+      # 賽事頁抓過的幾天內不重抓（對網站客氣、也跑得快）；快取每次存一份新的，下次還原最新那份
+      - name: 還原賽事頁快取
+        uses: actions/cache@v4
+        with:
+          path: tools/race-feed/cache.json
+          key: race-feed-cache-${{ github.run_id }}
+          restore-keys: race-feed-cache-
+
+      - name: 安裝
+        run: npm ci --prefix tools/race-feed --no-audit --no-fund
+
+      # 先用存好的網頁樣本測一次解析程式：程式改壞了就停在這裡，不會把錯的清單發布出去
+      - name: 測試解析程式
+        run: node --test tools/race-feed/test.mjs
+
+      - name: 抓清單
+        run: node tools/race-feed/fetch.mjs
+
+      - name: 有變才提交
+        id: commit
+        run: |
+          if git diff --quiet -- race-feed.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "清單沒有變，不提交"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add race-feed.json
+            git commit -m "找賽事清單：每日更新 $(TZ=Asia/Taipei date +%F)"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 請 GitHub Pages 重新發布
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          code=$(curl -sS -o pages.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds")
+          if [ "$code" = "201" ]; then
+            echo "已請 Pages 重新發布"
+          else
+            echo "::warning title=找賽事清單::請 Pages 重新發布失敗（HTTP ${code}），清單要等下一次有人推更新才會上線"
+            cat pages.json
+          fi
