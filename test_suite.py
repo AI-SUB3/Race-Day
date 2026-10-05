@@ -467,7 +467,7 @@ class Drawers(Group):
         }''')
         # 歷年平均對未來賽事也要抓（原本綁 raceIsHistorical，未來賽事永遠空）
         c['climate_average_fetch_not_gated_to_past'] = page.evaluate('''()=>{
-            const src=String(renderDetail);
+            const src=String(typeof renderDetailBody==='function'?renderDetailBody:renderDetail);   // v4.14.0 起 renderDetail 是包在外面的一層
             // 只看實際的 if 條件那一行——註解裡本來就會提到 raceIsHistorical
             // （說明為什麼拿掉），用前後文字擷取會連註解一起算進去
             const line=src.split(String.fromCharCode(10)).find(l=>
@@ -4903,7 +4903,7 @@ class UxFixes(Group):
             exitCalendarResults(); state.calendarYear=2030; state.calendarMonth=0; renderCalendar();
             const jaEmpty=document.querySelector('.cal-month-empty').textContent;
             setLang('zh'); state.calendarYear=2026; state.calendarMonth=8; renderCalendar();
-            return /^“大阪”: \\d+ races$/.test(en) && /^「大阪」の検索結果：\\d+ 件$/.test(ja) && jaEmpty.includes('今月の大会はありません') && jaEmpty.includes('前の大会'); }""")
+            return /^“大阪”: (1 race|\\d+ races)$/.test(en) && /^「大阪」の検索結果：\\d+ 件$/.test(ja) && jaEmpty.includes('今月の大会はありません') && jaEmpty.includes('前の大会'); }""")
         # 獎牌牆、表格檢視本來就是跨月份的，搜尋時維持原本的畫面
         c['grid_and_table_views_unchanged_by_search'] = page.evaluate("""async()=>{
             state.searchQuery='大阪'; state.viewMode='grid'; renderCalendar(); const g=!document.querySelector('.cal-results');
@@ -5684,9 +5684,10 @@ class V42Flows(Group):
         # ================= ① 記錄成績 =================
         c['prompt_day_after_registered_only'] = page.evaluate("""()=>{
             const card=document.querySelector('#focus-panel-slot .result-prompt');
+            const rd=document.querySelector('#focus-panel-slot .focus-panel.rd-card');
             return !!card && card.querySelector('.result-prompt-title').textContent==='昨天的馬拉松'
               && card.querySelector('.result-prompt-meta').textContent.startsWith('昨天')
-              && card.compareDocumentPosition(document.querySelector('#focus-panel-slot .focus-panel'))&Node.DOCUMENT_POSITION_FOLLOWING; }""")
+              && !!rd && !!(rd.compareDocumentPosition(card)&Node.DOCUMENT_POSITION_FOLLOWING); }""")
         # 每一場所在的月份都翻過去看（v4.5.1 修測試）：原本只看畫面上那個月，月初的頭幾天「昨天」和
         # 「三天前」分在兩個月，只看得到其中一場，測試在每個月的 1–3 號會失敗
         c['list_tag_only_on_awaiting'] = page.evaluate("""()=>{
@@ -6266,11 +6267,12 @@ class V43Flows(Group):
             near.trainingPlan.taperStartDate=addDaysStr(todayISO(),3); renderAll(); await wait(80);
             const off=!document.querySelector('#focus-panel-slot .taper-badge');
             near.trainingPlan.taperStartDate=''; await persist(); renderAll(); return on && off; }""")
+        # 已報名的比賽當天換成深色的比賽日卡（v4.14.0，見 v414）；抽籤中、考慮中的照舊寫「今天」
         c['race_day_says_today'] = self.ev(page, """async()=>{ """ + W + """
-            const keep=near.schedule.raceDate; near.schedule.raceDate=todayISO(); renderAll(); await wait(80);
+            const keep=near.schedule.raceDate; near.schedule.raceDate=todayISO(); near.status='lottery_pending'; renderAll(); await wait(80);
             const b=document.querySelector('#focus-panel-slot .nx-count b');
             const ok=!!b && b.classList.contains('nx-today') && b.textContent==='今天' && !document.querySelector('#focus-panel-slot .nx-count span');
-            near.schedule.raceDate=keep; await persist(); renderAll(); return ok; }""")
+            near.schedule.raceDate=keep; near.status='registered'; await persist(); renderAll(); return ok; }""")
         c['dismiss_hides_card'] = self.ev(page, """async()=>{ """ + W + """
             document.querySelector('#focus-panel-slot [data-action="dismiss-focus-panel"]').click(); await wait(200);
             const gone=!card() && state.focusDismissedId===near.id; renderAll(); await wait(100);
@@ -11287,12 +11289,14 @@ class V413PauseFreeTime(V412Splits):
             const txt=__modalText(); if(!txt.includes('1 筆已經匯入過：補上每公里配速與高度')||txt.includes('時間改成')) bad.push('summary '+txt.slice(0,140));
             __modal().querySelector('[data-action="confirm-training-import"]').click(); await __wait(300);
             const x=trainings.find(r=>r.id==='o4'); if(x.pausedSeconds!==0||x.durationSeconds!==1980||!validPaceSplits(x.paceSplits)) bad.push('v411 '+x.durationSeconds+'/'+x.pausedSeconds);
-            // 手錶寫了計時時間、沒寫計時事件：v4.12.0 匯入的每公里配速不知道暫停，什麼都沒得更新——是重複，不是「已經匯入過：」後面空白
+            // 手錶寫了計時時間、沒寫計時事件：v4.12.0 匯入的每公里配速不知道暫停。v4.13.0 是重複；v4.14.0 起記下「確認沒有暫停」
+            // （時間下面寫著「時間可能含暫停」，記下 0 秒提示才會消失），時間不動、不寫「時間改成」
             const q=__makeFit413({start:new Date('2026-09-16T18:00:00+08:00'),legs:[{sport:1,km:6,pace:330}],events:false,name:'q.fit'}), fq=await parseTrainingFile(q.file);
             if(fq.pausedSeconds!==0||fq.paceSplits.paused!==null) bad.push('q fresh '+fq.pausedSeconds+'/'+fq.paceSplits.paused);
             const y=__asV412(fq,{id:'o6',durationSeconds:1980});
             trainings=[y]; await persistTrainings(); await startTrainingImport([q.file]); await __wait(80);
-            if(trainingImportState.upgrades.length||trainingImportState.dupes.length!==1) bad.push('nothing to update but '+trainingImportState.upgrades.length+' upgrade');
+            const uq=trainingImportState.upgrades;
+            if(uq.length!==1||!uq[0].nopause||uq[0].time||!__modalText().includes('1 筆已經匯入過：確認沒有暫停')||__modalText().includes('時間改成')) bad.push('no events '+__modalText().slice(0,100));
             closeTrainingImportModal();
             if(bad.length) console.log('v413: nopause',bad.join(' | ')); return bad.length===0; }""")
         # 先匯入同一次運動的 GPX、再匯入 FIT：時間換成計時時間，每公里配速也換成 FIT 的（知道暫停在哪），距離、來源不動
@@ -11343,10 +11347,11 @@ class V413PauseFreeTime(V412Splits):
             const big=__tq('.trd-hero .trw-km'); if(!big||!big.nextElementSibling||!big.nextElementSibling.matches('.trd-stat-sub')) bad.push('no-distance sub');
             f.distanceKm=8.5; closeTrainingDetail(true);
             if(bad.length) console.log('v413: detail',bad.join(' | ')); return bad.length===0; }""")
-        # 之前匯入的說明：再匯入一次 FIT 的總時間也會改
-        c['old_record_note_mentions_time'] = self.ev(pg, r"""async()=>{ await __seed411(); openTrainingOverlay(); await __wait(80); await __detail('t1');
+        # 之前匯入的說明：v4.13.0 在每公里配速的舊卡多寫「FIT 檔的總時間也會改成不含暫停」；v4.14.0 起改在時間下面寫（見 v414），
+        # 舊卡回到只講每公里配速與高度
+        c['old_record_note_leaves_time_to_hint'] = self.ev(pg, r"""async()=>{ await __seed411(); openTrainingOverlay(); await __wait(80); await __detail('t1');
             const t=(__tq('.trd-sp-old .trd-sub')||{}).textContent||''; closeTrainingDetail(true);
-            const ok=t.includes('再匯入一次原始檔')&&t.includes('FIT 檔的總時間也會改成不含暫停'); if(!ok) console.log('v413: old',t); return ok; }""")
+            const ok=t.includes('再匯入一次原始檔')&&!t.includes('總時間'); if(!ok) console.log('v413: old',t); return ok; }""")
         ctx.close()
         # ================= 字級、點擊範圍 =================
         rctx, rp = self._tm(browser)
@@ -11444,8 +11449,1171 @@ class V413PauseFreeTime(V412Splits):
               const txt=document.getElementById('help-modal').innerText; if(!txt.includes(key[l])) bad.push(l);
               document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(80); }
             setLang('zh'); await __wait(60); if(bad.length) console.log('v413: help',bad.join(' | ')); return bad.length===0; }""")
-        c['version_is_v4_13_0'] = self.ev(cp, "()=>APP_VERSION==='v4.13.0'")
         cctx.close()
+
+
+TR414_JS = r"""
+// 比賽當天（v4.14.0）的範例：v4 的範例資料裡的「近的比賽」（已報名、台北市、42.195 km）改成今天（或 o.date）、06:30 起跑、
+// 號碼布 A1234、A 目標 3:30:00、打包 3/4（跑鞋還沒打包）、兩個 CP；沒有天氣預報、沒有軌跡。o.en：資料用英文（量翻譯時
+// 不會把中文的賽名、品名算成沒翻的字）
+window.__wait=window.__wait||(ms=>new Promise(s=>setTimeout(s,ms)));
+window.__rdRace=()=>state.races.find(x=>x.name==='近的比賽'||x.name==='Harbor Marathon');
+window.__rdSeed=async function(o){ o=o||{};
+  const r=__rdRace();
+  r.name=o.en?'Harbor Marathon':'近的比賽'; r.location.city=o.en?'Taipei':'台北市';
+  r.status=o.status||'registered'; r.schedule.raceDate=o.date||todayISO(); r.schedule.startTime=o.start==null?'06:30':o.start; r.bibNumber='A1234';
+  r.deletedAt=null; r.coverImage=null;
+  r.goals=[{tier:'A',targetTimeSeconds:hmsToSec('3:30:00'),paceStrategy:''},{tier:'B',targetTimeSeconds:null,paceStrategy:''},{tier:'C',targetTimeSeconds:null,paceStrategy:''}];
+  const names=o.en?['Bib','Chip','Gels x4','Running shoes']:['號碼布','晶片','能量膠 ×4','跑鞋'];
+  r.equipmentChecklist=names.map((n,i)=>({itemName:n,category:'',isPacked:i<3,weightG:null,isConsumable:false,isMandatory:false,notes:'',location:''}));
+  r.climateForecast=Object.assign({},r.climateForecast,{avgTempC:null,rainProbabilityPct:null}); r.liveForecast=null; r.historicalAverageWeather=null; r.route.trackPoints=[];
+  r.checkpoints=[{name:'CP1',distanceKm:10,arrivedAt:null},{name:'CP2',distanceKm:21,arrivedAt:null}];
+  state.focusDismissedId=null; state.selectedId=null; state.creating=false;
+  await persist(); renderAll(); window.scrollTo(0,0); await __wait(60); return r;
+};
+window.__rd=()=>document.querySelector('#focus-panel-slot .rd-card');
+window.__norm=s=>String(s||'').replace(/\s+/g,' ').trim();
+window.__rdText=()=>__norm(__rd()&&__rd().textContent);
+window.__rdCount=()=>{ const v=__rd()&&__rd().querySelector('.rd-count-vis'); return v?__norm(v.textContent):null; };
+window.__bar=()=>document.getElementById('race-day-bar');
+window.__barShown=()=>{ const b=__bar(); return !!b&&!b.hidden&&getComputedStyle(b).display!=='none'&&b.getBoundingClientRect().height>0; };
+window.__barText=()=>__norm(__bar()&&__bar().textContent);
+window.__toHome=async()=>{ for(let i=0;i<12;i++){
+    if(!document.getElementById('fatigue-mode-overlay').hidden){ closeFatigueMode(); await __wait(80); continue; }
+    if(!document.getElementById('global-drawer').hidden){ closeDrawer(); await __wait(300); continue; }
+    if(state.selectedId||state.creating){ goBackFromDetail(); await __wait(350); continue; } break; } };
+window.__openRace=async()=>{ selectRace(__rdRace().id,{scroll:false}); await __wait(300); };
+// 多項運動（游泳、轉換、騎車停 95 秒、轉換、跑步停 25 秒）／沒有暫停的多項運動
+window.__tri414=()=>__makeFit413({start:new Date('2026-09-27T07:00:00+08:00'),legs:[{sport:5,km:1.5,pace:1200},{sport:3,km:0.3,pace:600},{sport:2,km:40,pace:110,pauses:[[12,95]]},{sport:3,km:0.2,pace:600},{sport:1,km:10,pace:320,pauses:[[6,25]]}],name:'tri.fit'});
+window.__tri0414=()=>__makeFit413({start:new Date('2026-09-20T07:00:00+08:00'),legs:[{sport:5,km:1.5,pace:1200},{sport:3,km:0.3,pace:600},{sport:2,km:30,pace:110},{sport:3,km:0.2,pace:600},{sport:1,km:8,pace:320}],name:'tri0.fit'});
+// v4.12.0（或更早）匯入的樣子：時間還是經過時間、不知道暫停多久
+window.__asOld414=(rec,o)=>migrateTraining(Object.assign({},rec,{durationSeconds:rec.durationSeconds+(rec.pausedSeconds||0),pausedSeconds:null},o||{}));
+"""
+
+
+class V414RaceDay(V413PauseFreeTime):
+    """v4.14.0：比賽當天（賽事週期設計稿 ② B、③ B）。已報名、比賽日是今天：首頁的下一場卡換成深色的比賽日卡（起跑倒數、
+    天氣、號碼布、A 目標、打包還差哪一樣、開啟疲勞模式、打開打包清單；深色模式不反白），賽事頁底部固定一條（起跑時間、
+    還有多久、疲勞模式）；簡易版沒有疲勞模式的入口。訓練：FIT 檔匯入、還不知道暫停多久的，時間那一列下面一行提示，
+    點了選原始檔再匯入；再匯入時沒有暫停也記下來（確認沒有暫停），提示才會消失。"""
+
+    ECHO = ('v414:',)
+
+    def _rd(self, browser, viewport=None, touch=True, lang='zh', theme='light', now='2026-10-02T04:45:00', mode='full'):
+        ctx = full_mode_context(browser, viewport=viewport or {'width': 390, 'height': 844}, is_mobile=touch, has_touch=touch,
+                                timezone_id='Asia/Taipei')
+        ctx.add_init_script(V47_CLOCK_JS % now)
+        ctx.add_init_script("try{localStorage.setItem('ui-mode-v1','%s');localStorage.setItem('race-day-first-use-seen-v1','1');"
+                            "localStorage.setItem('theme-pref-v1','%s');localStorage.setItem('lang-pref-v1','%s');}catch(e){}" % (mode, theme, lang))
+        pg = ctx.new_page()
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(APP_URL)
+        pg.wait_for_timeout(900)
+        pg.add_script_tag(content=FIELD_FRAME_JS)
+        pg.add_script_tag(content=WALL_SEED_JS)
+        pg.add_script_tag(content=V47_JS)
+        pg.add_script_tag(content=UX_SEED_JS)
+        pg.add_script_tag(content=TR414_JS)
+        pg.add_style_tag(content='.badge-unbox-overlay{display:none!important} *{transition:none!important;animation:none!important}')
+        pg.evaluate(V4_EXTRA_JS)
+        pg.wait_for_timeout(300)
+        return ctx, pg
+
+    def _tm(self, browser, viewport=None, touch=True, lang='zh', theme='light', now='2026-10-03T09:00:00'):
+        ctx, pg = super()._tm(browser, viewport=viewport, touch=touch, lang=lang, theme=theme, now=now)
+        pg.add_script_tag(content=TR414_JS)
+        return ctx, pg
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        quick = bool(os.environ.get('V414_QUICK'))
+        c['seed_available'] = 'window.__rdSeed' in TR414_JS
+        ctx, pg = self._rd(browser)
+        # ================= 首頁：比賽日卡 =================
+        c['card_replaces_next_card_on_race_day'] = self.ev(pg, r"""async()=>{ const bad=[]; const r=await __rdSeed();
+            const c=__rd(); if(!c){ console.log('v414: card missing'); return false; }
+            if(document.querySelector('#focus-panel-slot .focus-panel-compact')) bad.push('normal card still there');
+            if(c.dataset.id!==r.id) bad.push('id');
+            const t=__rdText();
+            ['今天比賽','暫時隱藏','近的比賽','06:30 起跑 ・ 台北市 ・ 42.2 km','號碼布','A1234','A 目標','3:30:00','打包','3/4','跑鞋還沒打包','開啟疲勞模式','打開打包清單']
+              .forEach(w=>{ if(!t.includes(w)) bad.push('missing '+w); });
+            if(__rdCount()!=='1:45 後起跑') bad.push('count '+__rdCount());
+            const vis=c.querySelector('.rd-count-vis'); if(vis&&vis.getAttribute('aria-hidden')!=='true') bad.push('visual count read aloud');
+            const sr=c.querySelector('.rd-count .sr-only'); if(!sr||sr.textContent!=='還有 1 小時 45 分起跑') bad.push('sr '+(sr&&sr.textContent));
+            const tiles=[...c.querySelectorAll('.rd-tiles .rw-tile')].map(e=>e.dataset.tile).join(','); if(tiles!=='bib,goal,pack') bad.push('tiles '+tiles);
+            if(bad.length) console.log('v414: card',bad.join(' | ')); return bad.length===0; }""")
+        # 只認已報名、今天：抽籤中、考慮中照舊是「今天」的下一場卡；明天照舊；昨天換成「比完了嗎？」；刪掉的沒有；
+        # 同一天還有一場考慮中的排在前面，比賽日卡還是已報名的那一場
+        c['card_only_for_registered_race_today'] = self.ev(pg, r"""async()=>{ const bad=[]; const r=await __rdSeed();
+            const kind=()=>__rd()?'rd':(document.querySelector('#focus-panel-slot .focus-panel-compact')?'normal':'none');
+            for(const st of ['lottery_pending','considering']){ r.status=st; renderAll(); await __wait(40);
+              const b=document.querySelector('#focus-panel-slot .nx-count b.nx-today'); if(kind()!=='normal'||!b||b.textContent!=='今天') bad.push(st+' '+kind()); }
+            r.status='registered'; r.schedule.raceDate=addDaysStr(todayISO(),1); renderAll(); await __wait(40); if(kind()!=='normal') bad.push('tomorrow '+kind());
+            r.schedule.raceDate=addDaysStr(todayISO(),-1); renderAll(); await __wait(40);
+            if(__rd()||!document.querySelector('#focus-panel-slot .result-prompt')) bad.push('yesterday');
+            r.schedule.raceDate=todayISO(); r.deletedAt=new Date().toISOString(); renderAll(); await __wait(40); if(__rd()) bad.push('deleted');
+            r.deletedAt=null;
+            const other=emptyRace('同一天考慮中','road_running','considering',todayISO()); state.races.unshift(other); renderAll(); await __wait(40);
+            if(!__rd()||__rd().dataset.id!==r.id) bad.push('picked '+(__rd()&&__rd().dataset.id));
+            state.races=state.races.filter(x=>x!==other); await __rdSeed();
+            if(bad.length) console.log('v414: only',bad.join(' | ')); return bad.length===0; }""")
+        # 倒數：還沒起跑無條件進位（不會寫 0:00）、起跑那一刻起改成「起跑後」（無條件捨去）；讀螢幕唸「還有 1 小時 45 分起跑」；
+        # 起跑時間「6:30」補成 06:30；沒填、不是時間的放「＋ 填起跑時間」
+        c['countdown_rounding_and_phases'] = self.ev(pg, r"""async()=>{ const bad=[]; const r=await __rdSeed();
+            const at=async iso=>{ __setNow(iso); renderAll(); await __wait(30); return __rdCount(); };
+            for(const [iso,w] of [['2026-10-02T04:45:30','1:45 後起跑'],['2026-10-02T06:29:01','0:01 後起跑'],['2026-10-02T06:30:00','起跑後 0:00'],
+                ['2026-10-02T09:12:59','起跑後 2:42'],['2026-10-02T00:05:00','6:25 後起跑']]){ const g=await at(iso); if(g!==w) bad.push(iso.slice(11)+' '+g); }
+            const sr=async(iso,w)=>{ await at(iso); const e=__rd().querySelector('.sr-only'); if(!e||e.textContent!==w) bad.push('sr '+iso.slice(11)+' '+(e&&e.textContent)); };
+            await sr('2026-10-02T09:12:00','已經起跑 2 小時 42 分'); await sr('2026-10-02T06:00:00','還有 30 分起跑'); await sr('2026-10-02T04:30:00','還有 2 小時起跑');
+            r.schedule.startTime='6:30'; __setNow('2026-10-02T04:45:00'); renderAll(); await __wait(30);
+            if(!__rdText().includes('06:30 起跑 ・')||__rdCount()!=='1:45 後起跑') bad.push('6:30 '+__rdText().slice(0,60));
+            for(const v of ['','25:00','早上']){ r.schedule.startTime=v; renderAll(); await __wait(30);
+              const f=__rd().querySelector('.rd-count-fill');
+              if(!f||__rdCount()!==null) bad.push('nostart '+JSON.stringify(v));
+              else if(f.dataset.action!=='focus-tile'||f.dataset.section!=='schedule'||f.dataset.focusPath!=='schedule.startTime'||__norm(f.textContent)!=='＋ 填起跑時間，就會倒數') bad.push('fill '+JSON.stringify(v));
+              if(__rdText().includes('起跑 ・')) bad.push('meta still has a start '+JSON.stringify(v)); }
+            await __rdSeed();
+            if(bad.length) console.log('v414: count',bad.join(' | ')); return bad.length===0; }""")
+        c['fill_start_button_opens_that_field'] = self.ev(pg, r"""async()=>{ const r=await __rdSeed({start:''});
+            __rd().querySelector('.rd-count-fill').click(); await __wait(450);
+            const el=document.activeElement, ok=state.selectedId===r.id&&!document.getElementById('global-drawer').hidden&&!!el&&!!el.dataset&&el.dataset.path==='schedule.startTime';
+            if(!ok) console.log('v414: fill',state.selectedId,el&&el.dataset&&el.dataset.path);
+            await __toHome(); await __rdSeed(); return ok; }""")
+        # 每分鐘：只換倒數那幾個字（卡片不重畫，焦點留在原地）
+        c['tick_updates_count_in_place'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed(); const card=__rd(), dis=card.querySelector('.rd-dismiss'); dis.focus();
+            __setNow('2026-10-02T05:00:00'); raceDayTick(); await __wait(20);
+            if(__rd()!==card) bad.push('card re-rendered'); if(document.activeElement!==dis) bad.push('focus lost');
+            if(__rdCount()!=='1:30 後起跑') bad.push('count '+__rdCount());
+            __setNow('2026-10-02T06:31:00'); raceDayTick(); await __wait(20); if(__rdCount()!=='起跑後 0:01') bad.push('after '+__rdCount());
+            dis.blur(); __setNow('2026-10-02T04:45:00'); renderAll();
+            if(bad.length) console.log('v414: tick',bad.join(' | ')); return bad.length===0; }""")
+        # 過了午夜：比賽日卡出現（隔天收掉、換成「比完了嗎？」），只重畫最上面那一區，清單不動；沒有比賽日要換的午夜什麼都不動
+        c['midnight_switches_only_the_top_area'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed({date:'2026-10-02'});
+            __setNow('2026-10-01T23:59:50'); renderAll(); await __wait(40);
+            if(__rd()||!document.querySelector('#focus-panel-slot .focus-panel-compact')) bad.push('day before');
+            const list=document.getElementById('calendar').firstElementChild;
+            __setNow('2026-10-02T00:00:20'); raceDayTick(); await __wait(30);
+            if(!__rd()) bad.push('no card after midnight'); if(document.getElementById('calendar').firstElementChild!==list) bad.push('list re-rendered');
+            __setNow('2026-10-02T23:59:50'); renderAll(); await __wait(30);
+            __setNow('2026-10-03T00:00:20'); raceDayTick(); await __wait(30);
+            if(__rd()||!document.querySelector('#focus-panel-slot .result-prompt')) bad.push('next day');
+            __setNow('2026-10-05T23:59:50'); renderAll(); await __wait(30); const top=document.querySelector('#focus-panel-slot').firstElementChild;
+            __setNow('2026-10-06T00:00:20'); raceDayTick(); await __wait(30);
+            if(document.querySelector('#focus-panel-slot').firstElementChild!==top) bad.push('plain midnight re-rendered');
+            __setNow('2026-10-02T04:45:00'); await __rdSeed();
+            if(bad.length) console.log('v414: midnight',bad.join(' | ')); return bad.length===0; }""")
+        # 天氣：沒有預報不寫；手填的寫氣溫和降雨；只有降雨也寫；有軌跡還沒抓即時預報放「抓取預報」（抓取中不能按）；
+        # 抓到了用起跑那個小時的（跟下一場卡第三格同一套）
+        c['weather_on_card'] = self.ev(pg, r"""async()=>{ const bad=[]; const r=await __rdSeed();
+            const wx=()=>{ const w=__rd().querySelector('.rd-wx'); return w?__norm(w.textContent):null; };
+            if(wx()!==null||__rd().querySelector('.rd-wx-fetch')) bad.push('nothing yet '+wx());
+            r.climateForecast.avgTempC=21; r.climateForecast.rainProbabilityPct=30; renderAll(); await __wait(30); if(wx()!=='21°C 降雨 30%') bad.push('manual '+wx());
+            r.climateForecast.avgTempC=null; renderAll(); await __wait(30); if(wx()!=='降雨 30%') bad.push('rain only '+wx());
+            r.route.trackPoints=[{lat:25.03,lon:121.56,ele:10},{lat:25.04,lon:121.57,ele:12}]; renderAll(); await __wait(30);
+            const f=__rd().querySelector('.rd-wx-fetch'); if(!f||f.dataset.action!=='fetch-live-weather'||__norm(f.textContent)!=='抓取預報'||wx()!==null) bad.push('fetch');
+            weatherFetchingRaceId=r.id; renderAll(); await __wait(30); const f2=__rd().querySelector('.rd-wx-fetch'); if(!f2||!f2.disabled||__norm(f2.textContent)!=='抓取中…') bad.push('busy');
+            weatherFetchingRaceId=null;
+            r.liveForecast={fetchedAt:new Date().toISOString(),times:['2026-10-02T05:00','2026-10-02T06:00','2026-10-02T07:00'],temp:[19.6,22.4,24],precipProb:[10,40,60],
+              feelsLike:[19,22,24],humidity:[80,78,75],windSpeed:[5,6,7],windDirection:[90,90,90],gust:[10,12,14]};
+            renderAll(); await __wait(30); if(wx()!=='22°C 降雨 40%') bad.push('live '+wx());
+            await __rdSeed();
+            if(bad.length) console.log('v414: wx',bad.join(' | ')); return bad.length===0; }""")
+        # 打包：還差一樣寫是哪一樣、差好幾樣寫幾樣、品名空白也寫幾樣；全部打包好打勾、不放「打開打包清單」；沒有清單寫「＋ 清單」
+        c['pack_tile_states'] = self.ev(pg, r"""async()=>{ const bad=[]; const r=await __rdSeed();
+            const p=()=>__rd().querySelector('.rw-tile[data-tile="pack"]'), sub=()=>__rd().querySelector('.rd-sub');
+            const note=()=>{ const n=p().querySelector('.rd-tile-note'); return n?n.textContent:null; };
+            if(note()!=='跑鞋還沒打包'||!sub()) bad.push('one left '+note());
+            r.equipmentChecklist[2].isPacked=false; renderAll(); await __wait(30);
+            if(note()!=='還差 2 樣'||p().querySelector('.rw-tile-value').textContent!=='2/4') bad.push('two left '+note());
+            r.equipmentChecklist.forEach(i=>i.isPacked=true); renderAll(); await __wait(30);
+            if(note()!==null||sub()||!p().classList.contains('is-done')||p().querySelector('.rw-tile-label').textContent!=='打包 ✓'||p().querySelector('.rw-tile-value').textContent!=='4/4') bad.push('all packed');
+            r.equipmentChecklist=[]; renderAll(); await __wait(30);
+            if(!p().classList.contains('is-empty')||p().querySelector('.rw-tile-value').textContent!=='＋ 清單'||!sub()) bad.push('no list');
+            r.equipmentChecklist=[{itemName:'  ',category:'',isPacked:false,weightG:null,isConsumable:false,isMandatory:false,notes:'',location:''}]; renderAll(); await __wait(30);
+            if(note()!=='還差 1 樣') bad.push('blank name '+note());
+            await __rdSeed();
+            if(bad.length) console.log('v414: pack',bad.join(' | ')); return bad.length===0; }""")
+        # 每一格、每一顆按鈕打開對的地方；「暫時隱藏」收起來
+        c['tiles_and_buttons_open_the_right_place'] = self.ev(pg, r"""async()=>{ const bad=[]; const r=await __rdSeed();
+            const click=async sel=>{ __rd().querySelector(sel).click(); await __wait(450); };
+            const drawer=()=>!document.getElementById('global-drawer').hidden;
+            await click('.rw-tile[data-tile="bib"]'); if(state.selectedId!==r.id||!drawer()) bad.push('bib'); await __toHome();
+            await click('.rw-tile[data-tile="goal"]'); if(state.selectedId!==r.id||!drawer()) bad.push('goal'); await __toHome();
+            await click('.rw-tile[data-tile="pack"]'); if(state.selectedId!==r.id||!drawer()||equipmentViewMode!=='pack') bad.push('pack tile'); await __toHome();
+            await click('.rd-sub'); if(state.selectedId!==r.id||!drawer()||equipmentViewMode!=='pack') bad.push('pack button'); await __toHome();
+            await click('.rd-main'); if(state.selectedId!==r.id||drawer()) bad.push('name'); await __toHome();
+            await click('.rd-dismiss'); if(__rd()||state.focusDismissedId!==r.id) bad.push('dismiss');
+            state.focusDismissedId=null; renderAll(); await __wait(40); if(!__rd()) bad.push('not back');
+            if(bad.length) console.log('v414: tiles',bad.join(' | ')); return bad.length===0; }""")
+        # 「開啟疲勞模式」：打開那一場、疲勞模式寫的是它的 CP；結束後停在賽事頁；返回鍵先關疲勞模式；記一筆是從卡上開的
+        c['card_button_opens_fatigue_mode_for_that_race'] = self.ev(pg, r"""async()=>{ const bad=[]; const r=await __rdSeed();
+            const logs=[], real=window.logFeatureUse; window.logFeatureUse=id=>logs.push(id);
+            const ov=document.getElementById('fatigue-mode-overlay');
+            __rd().querySelector('.rd-go').click(); await __wait(300);
+            if(state.selectedId!==r.id||currentRace!==r) bad.push('race not opened');
+            if(ov.hidden||!fatigueModeActive||!ov.textContent.includes('CP1')) bad.push('fatigue '+__norm(ov.textContent).slice(0,40));
+            if(!logs.includes('open_fatigue_mode')||!logs.includes('open_fatigue_mode_card')) bad.push('logs '+logs.join(','));
+            ov.querySelector('[data-action="exit-fatigue-mode"]').click(); await __wait(120);
+            if(!ov.hidden||state.selectedId!==r.id) bad.push('exit');
+            await __toHome(); __rd().querySelector('.rd-go').click(); await __wait(300);
+            history.back(); await __wait(400);
+            if(!ov.hidden||state.selectedId!==r.id) bad.push('back key '+ov.hidden+' '+state.selectedId);
+            window.logFeatureUse=real; await __toHome();
+            if(bad.length) console.log('v414: go',bad.join(' | ')); return bad.length===0; }""")
+        # 深色模式不反白：底色一樣是深的，多一層金色光和金色框
+        c['dark_mode_keeps_the_dark_card'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed();
+            const lum=c=>{ const m=(c.match(/[\d.]+/g)||[]).map(Number); const v=m.slice(0,3).map(x=>{ x/=255; return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4); }); return 0.2126*v[0]+0.7152*v[1]+0.0722*v[2]; };
+            for(const th of ['light','dark']){ applyTheme(th); await __wait(80); const cs=getComputedStyle(__rd());
+              if(lum(cs.backgroundColor)>0.05) bad.push(th+' bg '+cs.backgroundColor);
+              if(th==='dark'&&(!/gradient/.test(cs.backgroundImage)||cs.borderTopColor.replace(/\s/g,'')!=='rgb(217,177,92)')) bad.push('dark frame '+cs.borderTopColor); }
+            applyTheme('light'); await __wait(60);
+            if(bad.length) console.log('v414: dark',bad.join(' | ')); return bad.length===0; }""")
+        c['card_text_contrast'] = self.ev(pg, r"""async()=>{ const bad=[]; const r=await __rdSeed(); r.climateForecast.avgTempC=21; r.climateForecast.rainProbabilityPct=30; renderAll(); await __wait(30);
+            for(const th of ['light','dark']){ applyTheme(th); await __wait(100); const c=__rd();
+              [...c.querySelectorAll('.rd-label,.rd-dismiss,.rd-name,.rd-meta,.rd-count-vis span,.rd-wx b,.rd-wx span,.rw-tile-label,.rw-tile-value,.rd-tile-note,.rd-go span,.rd-sub')]
+                .forEach(e=>{ const cr=__textCr(e); if(cr<4.5) bad.push(th+' '+e.className+' '+cr.toFixed(2)); });
+              const big=c.querySelector('.rd-count-vis b'); if(__textCr(big)<3) bad.push(th+' countdown '+__textCr(big).toFixed(2));
+              r.schedule.startTime=''; renderAll(); await __wait(30); const f=__rd().querySelector('.rd-count-fill'); if(__textCr(f)<4.5) bad.push(th+' fill '+__textCr(f).toFixed(2));
+              r.schedule.startTime='06:30'; renderAll(); await __wait(30); }
+            applyTheme('light'); await __wait(60); await __rdSeed();
+            if(bad.length) console.log('v414: contrast',bad.join(' | ')); return bad.length===0; }""")
+        # 手機清單：還有上一場在問「比完了嗎？」的時候，比賽日卡照樣放、排在前面
+        c['phone_list_keeps_card_above_result_prompt'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed();
+            const y=emptyRace('上週的路跑','road_running','registered',addDaysStr(todayISO(),-5)); state.races.push(y); await persist(); renderAll(); await __wait(60);
+            const slot=document.getElementById('focus-panel-slot'), rd=slot.querySelector('.rd-card'), pr=slot.querySelector('.result-prompt');
+            if(currentCalendarView()!=='list') bad.push('view '+currentCalendarView());
+            if(!rd||!pr) bad.push('card '+!!rd+' prompt '+!!pr);
+            else if(!(rd.compareDocumentPosition(pr)&Node.DOCUMENT_POSITION_FOLLOWING)) bad.push('prompt first');
+            state.races=state.races.filter(x=>x!==y); await __rdSeed();
+            if(bad.length) console.log('v414: prompt',bad.join(' | ')); return bad.length===0; }""")
+        # ================= 賽事頁底部那一條 =================
+        c['bar_on_race_day_race_page'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed(); await __openRace();
+            if(!__barShown()){ console.log('v414: no bar'); await __toHome(); return false; }
+            const b=__bar(); if(__barText()!=='今天 06:30 起跑 還有 1 小時 45 分 疲勞模式 ›') bad.push('text '+__barText());
+            if(b.getAttribute('role')!=='region'||b.getAttribute('aria-label')!=='今天比賽') bad.push('landmark');
+            const go=b.querySelector('.rdb-go'); if(!go||go.dataset.action!=='open-fatigue-mode'||go.tagName!=='BUTTON') bad.push('button');
+            if(getComputedStyle(document.getElementById('btn-new-fab')).display!=='none') bad.push('fab shown');
+            window.scrollTo(0,document.documentElement.scrollHeight); await __wait(80);
+            const foot=document.querySelector('.app-footer').getBoundingClientRect(), br=b.getBoundingClientRect();
+            if(foot.bottom>br.top+1) bad.push('footer under the bar '+Math.round(foot.bottom)+'/'+Math.round(br.top));
+            if(br.left<11||br.right>innerWidth-11||br.bottom>innerHeight) bad.push('rect '+[br.left,br.right,br.bottom].map(Math.round));
+            await __toHome(); if(__barShown()) bad.push('bar on home');
+            if(getComputedStyle(document.getElementById('btn-new-fab')).display==='none') bad.push('fab not back');
+            if(bad.length) console.log('v414: bar',bad.join(' | ')); return bad.length===0; }""")
+        c['bar_only_on_that_race_today'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed();
+            const other=state.races.find(x=>x.name==='遠的比賽'); selectRace(other.id,{scroll:false}); await __wait(250); if(__barShown()) bad.push('other race'); await __toHome();
+            for(const [k,fn] of [['tomorrow',r=>{ r.schedule.raceDate=addDaysStr(todayISO(),1); }],['lottery',r=>{ r.status='lottery_pending'; }],['completed',r=>{ r.status='completed'; }]]){
+              const r=await __rdSeed(); fn(r); await persist(); await __openRace(); if(__barShown()) bad.push(k); await __toHome(); }
+            // 改成已完賽：馬上收掉
+            await __rdSeed(); await __openRace(); if(!__barShown()) bad.push('no bar before status change');
+            await setRaceStatusFromUi(currentRace,'completed'); await __wait(250); if(__barShown()) bad.push('still there after completed');
+            await __toHome(); await __rdSeed(); await __openRace();
+            startCreate(); await __wait(250); if(__barShown()) bad.push('create form'); await __toHome();
+            if(bad.length) console.log('v414: baronly',bad.join(' | ')); return bad.length===0; }""")
+        c['bar_button_opens_fatigue_mode'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed(); await __openRace();
+            const logs=[], real=window.logFeatureUse; window.logFeatureUse=id=>logs.push(id);
+            __bar().querySelector('.rdb-go').click(); await __wait(250);
+            if(document.getElementById('fatigue-mode-overlay').hidden) bad.push('not opened');
+            if(!logs.includes('open_fatigue_mode')||!logs.includes('open_fatigue_mode_bar')) bad.push('logs '+logs.join(','));
+            closeFatigueMode(); logs.length=0;
+            document.querySelector('#dh-more-menu [data-action="open-fatigue-mode"]').click(); await __wait(250);
+            if(document.getElementById('fatigue-mode-overlay').hidden||logs.join(',')!=='open_fatigue_mode') bad.push('menu logs '+logs.join(','));
+            window.logFeatureUse=real; closeFatigueMode(); await __toHome();
+            if(bad.length) console.log('v414: bargo',bad.join(' | ')); return bad.length===0; }""")
+        # 每分鐘換字（按鈕不換，鍵盤焦點留著）；整點寫「2 小時」、不到一小時寫「30 分」；起跑後；沒填起跑時間
+        c['bar_text_updates_and_keeps_focus'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed(); await __openRace();
+            const go=__bar().querySelector('.rdb-go'); go.focus();
+            __setNow('2026-10-02T05:00:00'); raceDayTick(); await __wait(20);
+            if(__barText()!=='今天 06:30 起跑 還有 1 小時 30 分 疲勞模式 ›') bad.push('text '+__barText());
+            if(document.activeElement!==go||__bar().querySelector('.rdb-go')!==go) bad.push('focus');
+            __setNow('2026-10-02T06:00:00'); raceDayTick(); if(!__barText().includes('還有 30 分 疲')) bad.push('30 '+__barText());
+            __setNow('2026-10-02T04:30:00'); raceDayTick(); if(!__barText().includes('還有 2 小時 疲')) bad.push('2h '+__barText());
+            __setNow('2026-10-02T07:05:00'); raceDayTick(); if(!__barText().startsWith('06:30 起跑 起跑後 35 分')) bad.push('after '+__barText());
+            go.blur(); currentRace.schedule.startTime=''; renderDetail(); if(!__barText().startsWith('今天比賽 起跑時間還沒填')) bad.push('nostart '+__barText());
+            __setNow('2026-10-02T04:45:00'); await __toHome(); await __rdSeed();
+            if(bad.length) console.log('v414: bartext',bad.join(' | ')); return bad.length===0; }""")
+        # 開著賽事頁過了午夜：底部那一條出現，頁首的倒數跟著變成「就是今天」
+        c['bar_midnight_updates_race_page'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed({date:'2026-10-02'}); __setNow('2026-10-01T23:59:50'); await __openRace(); renderDetail(); await __wait(30);
+            if(__barShown()) bad.push('bar the day before');
+            const lab=()=>__norm((document.querySelector('#detail .progress-label')||{}).textContent);
+            const before=lab();
+            __setNow('2026-10-02T00:00:20'); raceDayTick(); await __wait(40);
+            if(!__barShown()) bad.push('no bar after midnight'); if(lab()!=='就是今天'||before==='就是今天') bad.push('header '+before+' → '+lab());
+            __setNow('2026-10-02T04:45:00'); await __toHome(); await __rdSeed();
+            if(bad.length) console.log('v414: barmid',bad.join(' | ')); return bad.length===0; }""")
+        c['bar_lifts_toasts_above_it'] = self.ev(pg, r"""async()=>{ await __rdSeed(); await __openRace(); showToast('測試提示'); await __wait(40);
+            const t=[...document.querySelectorAll('.foreground-toast')].pop(), tr=t.getBoundingClientRect(), br=__bar().getBoundingClientRect();
+            const ok=tr.bottom<=br.top+1; t.remove(); if(!ok) console.log('v414: toast',tr.bottom,br.top); await __toHome(); return ok; }""")
+        try:
+            self.ev(pg, "async()=>{ await __rdSeed(); await __openRace(); }")
+            pg.emulate_media(media='print')
+            c['bar_not_printed'] = self.ev(pg, "()=>getComputedStyle(__bar()).display==='none'")
+            pg.emulate_media(media='screen')
+            self.ev(pg, "async()=>{ await __toHome(); }")
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠ print', exc)
+            c['bar_not_printed'] = False
+        c['bar_contrast'] = self.ev(pg, r"""async()=>{ const bad=[]; await __rdSeed(); await __openRace();
+            for(const th of ['light','dark']){ applyTheme(th); await __wait(100);
+              [...__bar().querySelectorAll('.rdb-text b,.rdb-text span,.rdb-go')].forEach(e=>{ const cr=__textCr(e); if(cr<4.5) bad.push(th+' '+e.className+' '+cr.toFixed(2)); }); }
+            applyTheme('light'); await __wait(60); await __toHome();
+            if(bad.length) console.log('v414: barcr',bad.join(' | ')); return bad.length===0; }""")
+        # 比賽日當天打開 App（冷啟動）：卡片出現、沒有錯誤。另開一個乾淨的分頁、資料先放進本機儲存——不在跑了二十幾項的
+        # 這一頁上重新整理（那樣偶爾讀不回資料，原因跟 App 無關，查不出來的測試雜訊）
+        data = self.ev(pg, "async()=>{ await __rdSeed(); await persist(); return localStorage.getItem('races-v1'); }")
+        if isinstance(data, str) and data:
+            rctx = full_mode_context(browser, viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True, timezone_id='Asia/Taipei')
+            rctx.add_init_script(V47_CLOCK_JS % '2026-10-02T04:45:00')
+            rctx.add_init_script("try{ if(!localStorage.getItem('races-v1')) localStorage.setItem('races-v1',%s); }catch(e){}" % json.dumps(data))
+            rp = rctx.new_page()
+            r_err = []
+            rp.on('pageerror', lambda e: r_err.append(str(e)))
+            rp.on('console', self._echo)
+            rp.goto(APP_URL)
+            rp.wait_for_timeout(900)
+            got = self.ev(rp, """async()=>{ for(let i=0;i<150;i++){ if(document.querySelector('#focus-panel-slot .rd-card')) return true; await new Promise(s=>setTimeout(s,100)); }
+                console.log('v414: cold start no card',state.races.length,(document.getElementById('focus-panel-slot')||{}).innerHTML.slice(0,120)); return false; }""")
+            c['cold_start_on_race_day_shows_card'] = bool(got) and not r_err
+            if not c['cold_start_on_race_day_shows_card']:
+                print('    v414: cold start', got, r_err[:3])
+            rctx.close()
+        else:
+            c['cold_start_on_race_day_shows_card'] = False
+        ctx.close()
+        # ================= 簡易版 =================
+        sctx, sp = self._rd(browser, mode='simple')
+        c['simple_mode_card_without_fatigue_and_no_bar'] = self.ev(sp, r"""async()=>{ const bad=[]; const r=await __rdSeed();
+            if(!isSimpleMode()) bad.push('not simple'); if(!__rd()){ console.log('v414: simple no card'); return false; }
+            if(__rd().querySelector('.rd-go')) bad.push('fatigue button'); if(!__rd().querySelector('.rd-sub')) bad.push('no packing button');
+            await __openRace(); if(__barShown()) bad.push('bar'); if(document.querySelector('#dh-more-menu [data-action="open-fatigue-mode"]')) bad.push('menu item');
+            await __toHome(); r.equipmentChecklist.forEach(i=>i.isPacked=true); renderAll(); await __wait(30);
+            if(__rd().querySelector('.rd-btns')) bad.push('empty button row');
+            await __rdSeed();
+            if(bad.length) console.log('v414: simple',bad.join(' | ')); return bad.length===0; }""")
+        sctx.close()
+        # ================= 版面：手機各寬度 × 三語 × 三種字級、筆電 =================
+        FIT_RD = r"""async()=>{ const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(60);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); const tag=lang+' '+fs; await __rdSeed({en:lang!=='zh'});
+                const c=__rd(), q=c.getBoundingClientRect();
+                if(document.documentElement.scrollWidth>innerWidth) bad.push(tag+' hscroll');
+                [...c.querySelectorAll('*')].forEach(e=>{ const r=e.getBoundingClientRect(); if(r.width>0&&(r.right>q.right+0.5||r.left<q.left-0.5)) bad.push(tag+' outside '+(e.className||e.tagName)); });
+                [...c.querySelectorAll('.rw-tile-value,.rw-tile-label,.rd-label,.rd-go span,.rd-sub,.rd-count-vis b')].forEach(e=>{ if(e.scrollWidth>e.clientWidth+1) bad.push(tag+' cut '+e.className); });
+                // 「暫時隱藏」用 ::after 撐大點擊範圍（scrollWidth 會比較寬），量字本身有沒有在卡片裡、有沒有折行
+                const dz=c.querySelector('.rd-dismiss'), rg=document.createRange(); rg.selectNodeContents(dz); const rr=rg.getBoundingClientRect();
+                if(rr.right>q.right+0.5||rg.getClientRects().length>1) bad.push(tag+' dismiss text');
+                if(c.querySelector('.rd-go').getBoundingClientRect().height>56) bad.push(tag+' fatigue button wraps');
+                if(c.querySelector('.rd-sub').getBoundingClientRect().height>50) bad.push(tag+' packing button wraps');
+                await __openRace(); const b=__bar(), br=b.getBoundingClientRect();
+                if(!__barShown()||br.left<11||br.right>innerWidth-11||br.bottom>innerHeight) bad.push(tag+' bar rect');
+                if(b.querySelector('.rdb-go').getBoundingClientRect().height>48) bad.push(tag+' bar button wraps');
+                [...b.querySelectorAll('.rdb-text b,.rdb-text span')].forEach(e=>{ if(e.scrollWidth>e.clientWidth+1) bad.push(tag+' bar text cut'); });
+                if(br.height>innerHeight*0.2) bad.push(tag+' bar too tall '+Math.round(br.height));
+                // 窄手機＋字級大：日文、英文排成兩層（按鈕在字下面），中文照舊一排
+                const tb=b.querySelector('.rdb-text').getBoundingClientRect(), gb=b.querySelector('.rdb-go').getBoundingClientRect();
+                const stacked=gb.top>=tb.bottom-1, wantStack=innerWidth<=380&&fs==='large'&&lang!=='zh';
+                if(stacked!==wantStack) bad.push(tag+' stacked '+stacked);
+                // 捲到最下面：版本號那一行在這條上面（字級大、英文兩行時這條比較高）
+                window.scrollTo(0,document.documentElement.scrollHeight); await __wait(40);
+                const fb=document.querySelector('.app-footer').getBoundingClientRect().bottom, bt=__bar().getBoundingClientRect().top;
+                if(fb>bt+1) bad.push(tag+' footer under the bar '+Math.round(fb)+'/'+Math.round(bt));
+                await __toHome(); } }
+            setLang('zh'); applyFontScale('medium'); await __rdSeed();
+            if(bad.length) console.log('v414: fit '+innerWidth,[...new Set(bad)].slice(0,8).join(' | ')); return bad.length===0; }"""
+        for w in (() if quick else (320, 360, 390)):
+            fctx, fp = self._rd(browser, viewport={'width': w, 'height': 760})
+            c[f'fits_{w}_three_languages_three_font_sizes'] = self.ev(fp, FIT_RD)
+            fctx.close()
+        # 筆電、平板：左邊名稱和倒數、右邊三格和按鈕；放得下兩顆按鈕並排，日文大字放不下就換行（按鈕裡的字不折行）
+        lctx, lp = self._rd(browser, viewport={'width': 1280, 'height': 900}, touch=False)
+        c['laptop_two_columns'] = self.ev(lp, r"""async()=>{ const bad=[];
+            for(const w of [1280]){ await __rdSeed(); const c=__rd(), L=c.querySelector('.rd-left').getBoundingClientRect(), R=c.querySelector('.rd-right').getBoundingClientRect();
+              if(!(R.left>=L.right)||Math.abs((L.top+L.bottom)/2-(R.top+R.bottom)/2)>40) bad.push('columns');
+              const go=c.querySelector('.rd-go').getBoundingClientRect(), sub=c.querySelector('.rd-sub').getBoundingClientRect();
+              if(Math.abs(go.top-sub.top)>1||go.width<=sub.width) bad.push('buttons not side by side');
+              const dq=document.querySelector('#focus-panel-slot .dq-card'); if(!dq||dq.getBoundingClientRect().left<R.right) bad.push('quote not beside'); }
+            setLang('ja'); applyFontScale('large'); await __rdSeed({en:true}); const c=__rd();
+            [c.querySelector('.rd-go'),c.querySelector('.rd-sub')].forEach(b=>{ if(b.getBoundingClientRect().height>60) bad.push('ja large wraps '+b.className); });
+            setLang('zh'); applyFontScale('medium'); await __rdSeed();
+            if(bad.length) console.log('v414: laptop',bad.join(' | ')); return bad.length===0; }""")
+        # 不是比賽日：「比完了嗎？」照舊在下一場卡上面（v4.2 的順序）；比賽日才換比賽日卡排第一
+        c['prompt_above_next_card_except_on_race_day'] = self.ev(lp, r"""async()=>{ const bad=[]; const r=await __rdSeed({date:addDaysStr(todayISO(),2)});
+            const y=emptyRace('上週的路跑','road_running','registered',addDaysStr(todayISO(),-5)); state.races.push(y); await persist(); renderAll(); await __wait(60);
+            const slot=document.getElementById('focus-panel-slot'), first=(a,b)=>!!a&&!!b&&!!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING);
+            if(!first(slot.querySelector('.result-prompt'),slot.querySelector('.focus-panel-compact'))) bad.push('normal day order');
+            r.schedule.raceDate=todayISO(); renderAll(); await __wait(60);
+            if(!first(slot.querySelector('.rd-card'),slot.querySelector('.result-prompt'))) bad.push('race day order');
+            state.races=state.races.filter(x=>x!==y); await __rdSeed();
+            if(bad.length) console.log('v414: order',bad.join(' | ')); return bad.length===0; }""")
+        lctx.close()
+        # ================= 日文、英文沒有中文 =================
+        lang_bad = []
+        for lang in (() if quick else ('ja', 'en')):
+            jctx, jp = self._rd(browser, lang=lang)
+            got = self.ev(jp, r"""async(lang)=>{ const out=[];
+                const ZH=['今天比賽','起跑','暫時隱藏','還沒打包','還差','開啟疲勞模式','打開打包清單','疲勞模式','還有','填起跑時間','小時','號碼布','打包','降雨','抓取預報'];
+                const bad=(where,t)=>{ (lang==='en'?[...new Set(t.match(/[一-鿿]+/g)||[])]:ZH.filter(w=>t.includes(w))).forEach(w=>out.push(where+': '+w)); };
+                const r=await __rdSeed({en:true}); bad('card',__rdText());
+                r.climateForecast.avgTempC=21; r.climateForecast.rainProbabilityPct=30; r.equipmentChecklist[2].isPacked=false; renderAll(); await __wait(30); bad('card 2',__rdText());
+                r.route.trackPoints=[{lat:25.03,lon:121.56,ele:10},{lat:25.04,lon:121.57,ele:12}]; renderAll(); await __wait(30); bad('fetch',__rdText()); r.route.trackPoints=[];
+                bad('sr',__rd().querySelector('.sr-only').textContent);
+                r.schedule.startTime=''; renderAll(); await __wait(30); bad('nostart',__rdText());
+                await __openRace(); bad('bar nostart',__barText()+' '+__bar().getAttribute('aria-label')); await __toHome();
+                r.schedule.startTime='06:30'; __setNow('2026-10-02T09:10:00'); renderAll(); await __wait(30); bad('after',__rdText()+' '+__rd().querySelector('.sr-only').textContent);
+                await __openRace(); bad('bar after',__barText()); await __toHome();
+                __setNow('2026-10-02T04:45:00'); await __rdSeed({en:true}); await __openRace(); bad('bar',__barText());
+                __setNow('2026-10-02T06:00:00'); raceDayTick(); bad('bar 30 min',__barText()); __setNow('2026-10-02T04:30:00'); raceDayTick(); bad('bar 2 h',__barText());
+                __setNow('2026-10-02T04:45:00'); await __toHome();
+                return out; }""", lang)
+            if not isinstance(got, list):
+                lang_bad.append(lang + ' crashed')
+            elif got:
+                lang_bad.append(lang + ' ' + '; '.join(got[:8]))
+            jctx.close()
+        if lang_bad:
+            print('    v414: untranslated', lang_bad)
+        if not quick:
+            c['race_day_ja_en_translated'] = not lang_bad
+        # ================= 訓練：時間下面的提示 =================
+        tctx, tp = self._tm(browser)
+        c['pause_hint_under_the_time_row'] = self.ev(tp, r"""async()=>{ const bad=[]; await __seed413(); openTrainingOverlay(); await __wait(120);
+            const rec=await parseTrainingFile(__tri414().file); trainings.push(__asOld414(rec,{id:'m12'})); await persistTrainings(); refreshTrainingOverlay();
+            await __detail('m12'); const h=__tq('.trd-hero .trd-pause-hint');
+            if(!h){ console.log('v414: hint missing'); closeTrainingDetail(true); return false; }
+            if(__norm(h.textContent.replace('›',''))!=='時間可能含暫停，再匯入一次原始檔就會跟手錶一樣') bad.push('text '+h.textContent);
+            if(h.tagName!=='BUTTON'||h.dataset.action!=='training-detail-reimport') bad.push('not the reimport button');
+            const cell=l=>__tqa('.trd-stat').find(s=>s.querySelector('span').textContent===l);
+            const tr=cell('時間').getBoundingClientRect(), hr=h.getBoundingClientRect(), st=__tq('.trd-stats').getBoundingClientRect();
+            if(hr.top<tr.bottom-1||hr.top>tr.bottom+16) bad.push('not under the time row '+Math.round(tr.bottom)+'/'+Math.round(hr.top));
+            if(Math.abs(hr.left-st.left)>1||Math.abs(hr.right-st.right)>1) bad.push('not full width');
+            const hrc=cell('平均心率'); if(!hrc||Math.abs(hrc.getBoundingClientRect().top-tr.top)>1) bad.push('heart rate not beside the time');
+            // 點擊範圍：字只有一行時也要 44px（換成很短的字量，不受字型寬度影響）
+            const keepTxt=h.firstChild.textContent; h.firstChild.textContent='短'; if(h.getBoundingClientRect().height<44) bad.push('tap target '+h.getBoundingClientRect().height); h.firstChild.textContent=keepTxt;
+            // 放不下一行時，中文只在「，」後面換行（不會只剩最後一個字、或把「一次」拆開）
+            const tn=h.firstChild, tops=[]; for(let k=0;k<tn.length;k++){ const rg=document.createRange(); rg.setStart(tn,k); rg.setEnd(tn,k+1); tops.push(Math.round(rg.getBoundingClientRect().top)); }
+            const brk=tops.findIndex((tp,k)=>k>0&&tp>tops[k-1]+2); if(brk>0&&tn.data[brk-1]!=='，') bad.push('breaks after '+tn.data.slice(Math.max(0,brk-2),brk));
+            const input=document.getElementById('training-file-input'); let n=0; input.click=()=>{ n++; }; h.click(); delete input.click; if(n!==1) bad.push('picker '+n);
+            closeTrainingDetail(true);
+            if(bad.length) console.log('v414: hint',bad.join(' | ')); return bad.length===0; }""")
+        c['pause_hint_only_when_reimport_can_fix_it'] = self.ev(tp, r"""async()=>{ const bad=[]; await __seed413(); openTrainingOverlay(); await __wait(120);
+            const f=trainings.find(x=>x.id==='f13');
+            const check=async(mut,want,tag)=>{ const keep={source:f.source,pausedSeconds:f.pausedSeconds,durationSeconds:f.durationSeconds};
+              Object.assign(f,mut); await __detail('t1'); await __detail('f13'); const has=!!__tq('.trd-pause-hint'); if(has!==want) bad.push(tag+' '+has); Object.assign(f,keep); };
+            await check({},false,'known 90'); await check({pausedSeconds:0},false,'known 0'); await check({pausedSeconds:null},true,'fit unknown');
+            await check({pausedSeconds:null,source:'gpx'},false,'gpx'); await check({pausedSeconds:null,source:'tcx'},false,'tcx');
+            await check({pausedSeconds:null,source:''},false,'no source'); await check({pausedSeconds:null,durationSeconds:null},false,'no time');
+            // 沒有距離：接在大數字（時間）下面
+            const keep=f.distanceKm; f.pausedSeconds=null; f.distanceKm=null; await __detail('t1'); await __detail('f13');
+            const big=__tq('.trd-hero .trw-km'); if(!big||!big.nextElementSibling||!big.nextElementSibling.matches('.trd-pause-hint')) bad.push('no distance');
+            f.distanceKm=keep; f.pausedSeconds=90; closeTrainingDetail(true);
+            if(bad.length) console.log('v414: hintwhen',bad.join(' | ')); return bad.length===0; }""")
+        # 每公里配速的舊卡不再寫時間那件事（改在時間下面寫），兩個提示同時在
+        c['old_splits_card_leaves_time_to_the_hint'] = self.ev(tp, r"""async()=>{ await __seed413(); openTrainingOverlay(); await __wait(120);
+            const rec=await parseTrainingFile(__run413('2026-09-12T06:00:00+08:00','o.fit').file); trainings.push(__asV411(rec,{id:'o411'})); await persistTrainings();
+            await __detail('o411'); const t=(__tq('.trd-sp-old .trd-sub')||{}).textContent||'', hint=!!__tq('.trd-pause-hint'); closeTrainingDetail(true);
+            const ok=t.includes('再匯入一次原始檔')&&!t.includes('總時間')&&!t.includes('暫停')&&hint; if(!ok) console.log('v414: old',hint,t); return ok; }""")
+        # 照提示再匯入、這次的檔案說沒有暫停：「確認沒有暫停」、更新 1 筆、記下 0 秒（時間、名稱、備註、主觀強度不動），提示不見；再一次是重複
+        c['reimport_confirms_no_pause_and_hint_goes'] = self.ev(tp, r"""async()=>{ const bad=[];
+            const q=__tri0414(), r0=await parseTrainingFile(q.file);
+            if(r0.pausedSeconds!==0||r0.sport!=='multisport') bad.push('fresh '+r0.pausedSeconds+' '+r0.sport);
+            trainings=[__asOld414(r0,{id:'m0',name:'三鐵練習',note:'很熱',rpe:7})]; await persistTrainings();
+            await startTrainingImport([q.file]); await __wait(100);
+            const u=trainingImportState.upgrades; if(u.length!==1||!u[0].nopause||u[0].time||u[0].data) bad.push('kind '+JSON.stringify(u.map(x=>[x.data,x.time,x.nopause])));
+            if(!__modalText().includes('1 筆已經匯入過：確認沒有暫停')) bad.push('summary '+__modalText().slice(0,120));
+            const go=__modal().querySelector('[data-action="confirm-training-import"]'); if(go.textContent.trim()!=='更新 1 筆') bad.push('button '+go.textContent.trim());
+            go.click(); await __wait(300); if(__lastToast()!=='已更新 1 筆') bad.push('toast '+__lastToast());
+            const x=trainings.find(r=>r.id==='m0'); if(x.pausedSeconds!==0||x.durationSeconds!==r0.durationSeconds||x.name!=='三鐵練習'||x.note!=='很熱'||x.rpe!==7) bad.push('record '+JSON.stringify([x.pausedSeconds,x.durationSeconds,x.name,x.note,x.rpe]));
+            await loadTrainings(); if((trainings.find(r=>r.id==='m0')||{}).pausedSeconds!==0) bad.push('not saved');
+            openTrainingOverlay(); await __wait(80); await __detail('m0'); if(__tq('.trd-pause-hint')) bad.push('hint still there'); closeTrainingDetail(true);
+            await startTrainingImport([q.file]); await __wait(100); if(trainingImportState.upgrades.length||trainingImportState.dupes.length!==1) bad.push('second time not a dupe'); closeTrainingImportModal();
+            if(bad.length) console.log('v414: nopause',bad.join(' | ')); return bad.length===0; }""")
+        # 只有 FIT 匯入的才記：GPX 匯入的（時間剛好一樣）照舊是重複；已經知道 0 秒的也是重複
+        c['no_pause_confirmation_only_for_fit_records'] = self.ev(tp, r"""async()=>{ const bad=[];
+            const {file}=__makeFit413({start:new Date('2026-09-16T06:00:00+08:00'),legs:[{sport:1,km:6,pace:330}],name:'g.fit'}), pts=parseFitPoints(await file.arrayBuffer());
+            // GPX 也有心率（v4.15.0 起 FIT 帶來 GPX 沒有的每公里心率也算要更新，那是另一種，v415 另外測）
+            const gpx='<?xml version="1.0"?><gpx version="1.1" creator="t" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><trk><name>Morning Run</name><type>running</type><trkseg>'
+              +pts.map(p=>'<trkpt lat="'+p.lat.toFixed(7)+'" lon="'+p.lon.toFixed(7)+'"><ele>20</ele><time>'+p.time.toISOString()+'</time><extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>150</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions></trkpt>').join('')+'</trkseg></trk></gpx>';
+            const g=await parseTrainingFile(new File([gpx],'g.gpx')); g.id='g1';
+            if(g.durationSeconds!==1980||g.source!=='gpx') bad.push('gpx '+g.durationSeconds+' '+g.source);
+            trainings=[g]; await persistTrainings(); await startTrainingImport([file]); await __wait(100);
+            if(trainingImportState.upgrades.length||trainingImportState.dupes.length!==1) bad.push('gpx record '+trainingImportState.upgrades.length+'/'+trainingImportState.dupes.length);
+            closeTrainingImportModal();
+            const f=await parseTrainingFile(file); f.id='k1'; trainings=[f]; await persistTrainings(); await startTrainingImport([file]); await __wait(100);
+            if(trainingImportState.upgrades.length||trainingImportState.dupes.length!==1) bad.push('known zero'); closeTrainingImportModal();
+            if(bad.length) console.log('v414: fitonly',bad.join(' | ')); return bad.length===0; }""")
+        # 一次選好幾個、三種都有：各自寫幾筆
+        c['mixed_batch_counts_three_kinds'] = self.ev(tp, r"""async()=>{ const bad=[];
+            const A=__run413('2026-09-18T06:00:00+08:00','a3.fit'), B=__run413('2026-09-19T06:00:00+08:00','b3.fit',{timerAdjust:[3]}), C=__tri0414();
+            const ra=await parseTrainingFile(A.file), rb=await parseTrainingFile(B.file), rc=await parseTrainingFile(C.file);
+            trainings=[__asV411(ra,{id:'xA'}),__asV412(rb,{id:'xB'}),__asOld414(rc,{id:'xC'})]; await persistTrainings();
+            await startTrainingImport([A.file,B.file,C.file]); await __wait(120);
+            const txt=__modalText(); if(!txt.includes('3 筆已經匯入過：1 筆補上每公里配速與高度、2 筆時間改成不含暫停、1 筆確認沒有暫停')) bad.push('summary '+txt.slice(0,160));
+            const go=__modal().querySelector('[data-action="confirm-training-import"]'); if(go.textContent.trim()!=='更新 3 筆') bad.push('button '+go.textContent.trim());
+            go.click(); await __wait(300); if(__lastToast()!=='已更新 3 筆') bad.push('toast '+__lastToast());
+            if(trainings.find(r=>r.id==='xC').pausedSeconds!==0||trainings.find(r=>r.id==='xB').durationSeconds!==2553) bad.push('data');
+            // 兩種（時間改成、確認沒有暫停）各一筆：一樣各自寫幾筆，不然看起來像兩筆都兩種
+            trainings=[__asV412(rb,{id:'yB'}),__asOld414(rc,{id:'yC'})]; await persistTrainings();
+            await startTrainingImport([B.file,C.file]); await __wait(120);
+            if(!__modalText().includes('2 筆已經匯入過：1 筆時間改成不含暫停、1 筆確認沒有暫停')) bad.push('two kinds '+__modalText().slice(0,140));
+            closeTrainingImportModal();
+            if(bad.length) console.log('v414: mixed',bad.join(' | ')); return bad.length===0; }""")
+        # 兩台裝置各匯入一次（一台舊版、一台新版）：留下來的那筆也記下 0 秒
+        c['two_devices_merge_keeps_zero_pause'] = self.ev(tp, r"""async()=>{ const r0=await parseTrainingFile(__tri0414().file);
+            const a=__asOld414(r0,{id:'dA',importedAt:'2026-09-21T00:00:00.000Z',updatedAt:'2026-09-21T00:00:00.000Z'});
+            const b=migrateTraining(Object.assign({},r0,{id:'dB',importedAt:'2026-09-22T00:00:00.000Z',updatedAt:'2026-09-22T00:00:00.000Z'}));
+            trainings=[a]; const n=mergeTrainings([b]); const win=trainings.find(x=>x.id==='dA'), lose=trainings.find(x=>x.id==='dB');
+            const ok=n===1&&win.pausedSeconds===0&&win.durationSeconds===r0.durationSeconds&&!!lose.deletedAt; if(!ok) console.log('v414: merge',n,win.pausedSeconds,!!lose.deletedAt); return ok; }""")
+        c['hint_type_scale_and_contrast'] = self.ev(tp, r"""async()=>{ const bad=[]; await __seed413(); openTrainingOverlay(); await __wait(120);
+            const f=trainings.find(x=>x.id==='f13'); f.pausedSeconds=null;
+            for(const [fs,k] of [['small',0.9],['medium',1],['large',1.15]]){ applyFontScale(fs); await __detail('t1'); await __detail('f13');
+              const e=__tq('.trd-pause-hint'); if(!e||Math.abs(__px(e)-13.5*k)>0.3) bad.push(fs+' '+(e&&__px(e))); }
+            applyFontScale('medium');
+            for(const th of ['light','dark']){ applyTheme(th); await __wait(100); await __detail('t1'); await __detail('f13');
+              const e=__tq('.trd-pause-hint'); if(!e||__textCr(e)<4.5) bad.push(th+' '+(e&&__textCr(e).toFixed(2))); }
+            applyTheme('light'); await __wait(60); f.pausedSeconds=90; closeTrainingDetail(true);
+            if(bad.length) console.log('v414: hinttype',bad.join(' | ')); return bad.length===0; }""")
+        tctx.close()
+        HINT_FIT = r"""async()=>{ const bad=[];
+            for(const lang of ['zh','ja','en']){ setLang(lang); await __wait(60);
+              for(const fs of ['small','medium','large']){ applyFontScale(fs); await __seed413(); openTrainingOverlay(); await __wait(80);
+                const rec=await parseTrainingFile(__tri414().file); trainings.push(__asOld414(rec,{id:'m12'})); const tag=lang+' '+fs;
+                await __detail('m12'); const d=__dt(), h=__tq('.trd-pause-hint'), card=__tq('.trd-hero');
+                if(d.scrollWidth>d.clientWidth) bad.push(tag+' hscroll');
+                if(!h) bad.push(tag+' no hint'); else { const r=h.getBoundingClientRect(), cr=card.getBoundingClientRect();
+                  if(r.left<cr.left-1||r.right>cr.right+1) bad.push(tag+' outside'); if(h.scrollWidth>h.clientWidth+1) bad.push(tag+' cut'); }
+                closeTrainingDetail(true); } }
+            setLang('zh'); applyFontScale('medium'); closeTrainingOverlay();
+            if(bad.length) console.log('v414: hintfit '+innerWidth,[...new Set(bad)].slice(0,8).join(' | ')); return bad.length===0; }"""
+        for w in (() if quick else (320, 390)):
+            hctx, hp = self._tm(browser, viewport={'width': w, 'height': 800})
+            c[f'hint_fits_{w}_three_languages_three_font_sizes'] = self.ev(hp, HINT_FIT)
+            hctx.close()
+        tl_bad = []
+        for lang in (() if quick else ('ja', 'en')):
+            jctx, jp = self._tm(browser, lang=lang)
+            got = self.ev(jp, r"""async(lang)=>{ const out=[];
+                const ZH=['時間可能含暫停','再匯入','原始檔','確認沒有暫停','筆已經匯入過','已更新'];
+                const bad=(where,t)=>{ (lang==='en'?[...new Set(t.match(/[一-鿿]+/g)||[])]:ZH.filter(w=>t.includes(w))).forEach(w=>out.push(where+': '+w)); };
+                const q=__tri0414(), r0=await parseTrainingFile(q.file); trainings=[__asOld414(r0,{id:'m0',name:'Tri'})]; await persistTrainings();
+                openTrainingOverlay(); await __wait(80); await __detail('m0'); const ht=(__tq('.trd-pause-hint')||{}).textContent;
+                if(!ht) out.push('no hint'); else bad('hint',ht); closeTrainingDetail(true);
+                await startTrainingImport([q.file]); await __wait(100); bad('modal',__modal().textContent);
+                if(!__modal().textContent.includes(lang==='ja'?'一時停止なしを確認':'no pauses found')) out.push('no translated no-pause line');
+                __modal().querySelector('[data-action="confirm-training-import"]').click(); await __wait(300); bad('toast',__lastToast());
+                closeTrainingOverlay(); return out; }""", lang)
+            if not isinstance(got, list):
+                tl_bad.append(lang + ' crashed')
+            elif got:
+                tl_bad.append(lang + ' ' + '; '.join(got[:8]))
+            jctx.close()
+        if tl_bad:
+            print('    v414: untranslated (training)', tl_bad)
+        if not quick:
+            c['hint_and_import_ja_en_translated'] = not tl_bad
+        # ================= 說明、版本 =================
+        hctx, hp = self._tm(browser)
+        c['help_mentions_race_day_three_languages'] = self.ev(hp, r"""async()=>{ const bad=[];
+            const key={zh:['比賽當天','開啟疲勞模式','時間可能含暫停'],ja:['レース当日','疲労モードを開く','一時停止が含まれているかもしれません'],en:['Race day','Open Fatigue Mode','may include pauses']};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(80); openHelpModal(); await __wait(150);
+              const txt=document.getElementById('help-modal').innerText; key[l].forEach(k=>{ if(!txt.includes(k)) bad.push(l+' '+k); });
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(80); }
+            setLang('zh'); await __wait(60); if(bad.length) console.log('v414: help',bad.join(' | ')); return bad.length===0; }""")
+        # 版本號的檢查跟著最新的群組走，v4.15.0 起在 v415
+        hctx.close()
+
+
+TR415_JS = r"""
+// v4.15.0：每公里心率、英文單複數、分享圖
+window.__wait=window.__wait||(ms=>new Promise(s=>setTimeout(s,ms)));
+window.__cjk=window.__cjk||/[぀-ヿ㐀-鿿]/;
+// 測試用 FIT（心率可以變）：跟 __makeFit412 同一種格式，多 opt.hr(km)→心率（null＝這一點沒有心率，寫 0xFF），opt.sport、opt.pauses
+window.__makeFit415=function(opt){
+  const FIT_EPOCH=Date.UTC(1989,11,31,0,0,0)/1000, s0=Math.round(opt.start.getTime()/1000)-FIT_EPOCH;
+  const bytes=[]; const u8=v=>bytes.push(v&255), u16=v=>{u8(v);u8(v>>8);}, u32=v=>{u8(v);u8(v>>8);u8(v>>16);u8(v>>24);};
+  const toSc=d=>Math.round(d*Math.pow(2,31)/180);
+  u8(0x40);u8(0);u8(0);u16(20);u8(6);
+  [[253,4,0x86],[0,4,0x85],[1,4,0x85],[78,4,0x86],[3,1,0x02],[5,4,0x86]].forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
+  u8(0x42);u8(0);u8(0);u16(21);u8(3);
+  [[253,4,0x86],[0,1,0x00],[1,1,0x00]].forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
+  const ev=(t,type)=>{ u8(0x02); u32(s0+t); u8(0); u8(type); };
+  let t=0, dist=0, lat=25.03, lon=121.56, gain=0, prevE=null;
+  const stops=(opt.pauses||[]).map(p=>({at:p[0],sec:p[1],done:false})), total=opt.km*1000;
+  const rec=()=>{ const km=dist/1000, e=opt.ele?opt.ele(km):20, h=opt.hr?opt.hr(km):150; if(prevE!=null&&e>prevE) gain+=e-prevE; prevE=e;
+    u8(0x00); u32(s0+Math.round(t)); u32(toSc(lat)>>>0); u32(toSc(lon)>>>0); u32(Math.round((e+500)*5)); u8(h==null?0xFF:Math.round(h)); u32(Math.round(dist*100)); };
+  ev(0,0); rec();
+  while(dist<total-1e-6){
+    const v=1000/opt.pace(dist/1000), step=Math.min(v*(opt.every||2),total-dist);
+    t+=step/v; dist+=step;
+    lat+=step*0.6/111320; lon+=step*0.8/(111320*Math.cos(lat*Math.PI/180));
+    rec();
+    stops.forEach(s=>{ if(!s.done&&dist/1000>=s.at){ s.done=true; ev(Math.round(t),4); t+=s.sec; ev(Math.round(t),0); } });
+  }
+  ev(Math.round(t),4);
+  u8(0x41);u8(0);u8(0);u16(18);u8(8);
+  [[2,4,0x86],[253,4,0x86],[5,1,0x00],[7,4,0x86],[8,4,0x86],[9,4,0x86],[16,1,0x02],[22,2,0x84]].forEach(f=>{u8(f[0]);u8(f[1]);u8(f[2]);});
+  const paused=(opt.pauses||[]).reduce((a,p)=>a+p[1],0);
+  u8(0x01); u32(s0); u32(s0+Math.round(t)); u8(opt.sport||1); u32(Math.round(t*1000)); u32(Math.round((t-paused)*1000)); u32(Math.round(total*100)); u8(opt.avgHr==null?150:opt.avgHr); u16(Math.round(gain));
+  const data=new Uint8Array(bytes), out=new Uint8Array(14+data.length), dv=new DataView(out.buffer);
+  dv.setUint8(0,14); dv.setUint8(1,0x10); dv.setUint16(2,2093,true); dv.setUint32(4,data.length,true);
+  out[8]=46;out[9]=70;out[10]=73;out[11]=84; out.set(data,14);
+  return new File([out],opt.name||'hr.fit',{type:'application/octet-stream'});
+};
+// 10 km、每公里 5 分 20、心率從 142 慢慢升（每公里 +1.2）
+window.__run415=o=>__makeFit415(Object.assign({start:new Date('2026-10-01T06:00:00+08:00'),km:10,pace:()=>320,hr:km=>142+km*1.2,name:'hr.fit'},o||{}));
+// v4.14.0 以前匯入的樣子：每公里配速裡沒有心率
+window.__noHr415=(rec,o)=>{ const sp=Object.assign({},rec.paceSplits); delete sp.hr; return migrateTraining(Object.assign({},rec,{paceSplits:sp},o||{})); };
+// GPX（Garmin 的 TrackPointExtension 心率）、TCX（HeartRateBpm）：給 __mkRun 的點，o.hr(km)
+window.__gpx415=(pts,o)=>{ o=o||{};
+  const body=pts.map(p=>{ const h=o.hr?o.hr(p.dist/1000):null;
+    return '<trkpt lat="'+p.lat.toFixed(7)+'" lon="'+p.lon.toFixed(7)+'"><ele>'+(p.ele==null?20:p.ele).toFixed(1)+'</ele><time>'+p.time.toISOString()+'</time>'
+      +(h==null?'':'<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>'+Math.round(h)+'</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>')+'</trkpt>'; }).join('');
+  return new File(['<?xml version="1.0"?><gpx version="1.1" creator="t" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><trk><name>Morning Run</name><type>running</type><trkseg>'+body+'</trkseg></trk></gpx>'],o.file||'hr.gpx');
+};
+window.__tcx415=(pts,o)=>{ o=o||{};
+  const tp=pts.map(p=>{ const h=o.hr?o.hr(p.dist/1000):null;
+    return '<Trackpoint><Time>'+p.time.toISOString()+'</Time><Position><LatitudeDegrees>'+p.lat.toFixed(7)+'</LatitudeDegrees><LongitudeDegrees>'+p.lon.toFixed(7)+'</LongitudeDegrees></Position><AltitudeMeters>20</AltitudeMeters>'
+      +(h==null?'':'<HeartRateBpm><Value>'+Math.round(h)+'</Value></HeartRateBpm>')+'</Trackpoint>'; }).join('');
+  return new File(['<?xml version="1.0"?><TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Running"><Id>'+pts[0].time.toISOString()+'</Id><Track>'+tp+'</Track></Activity></Activities></TrainingCenterDatabase>'],o.file||'hr.tcx');
+};
+// 照心率漂移的定義另外算一次（不呼叫 App 的函式）：依距離切兩半，1 − (a×t1)÷(b×t2)
+window.__drift415=sp=>{ const segs=sp.secs.map((s,i)=>({d0:i*sp.step,d1:(i+1)*sp.step,t:s,hr:sp.hr[i]}));
+  if(sp.tail) segs.push({d0:sp.secs.length*sp.step,d1:sp.secs.length*sp.step+sp.tail[0],t:sp.tail[1],hr:sp.hr[sp.secs.length]});
+  const D=segs[segs.length-1].d1, mid=D/2, H=[[0,0,0],[0,0,0]];
+  segs.forEach(s=>{ [[0,Math.max(0,Math.min(s.d1,mid)-s.d0)],[1,Math.max(0,s.d1-Math.max(s.d0,mid))]].forEach(([k,len])=>{ if(len<=0) return; const f=len/(s.d1-s.d0), tt=s.t*f;
+    H[k][0]+=tt; if(s.hr!=null){ H[k][1]+=s.hr*tt; H[k][2]+=tt; } }); });
+  const a=H[0][1]/H[0][2], b=H[1][1]/H[1][2]; return {a,b,pct:(1-(a*H[0][0])/(b*H[1][0]))*100};
+};
+window.__fmtPct415=p=>(p>=0.05?'+':p<=-0.05?'−':'')+Math.abs(p).toFixed(1)+'%';
+// 打開一筆訓練的詳細頁、捲到每公里配速
+window.__hrOpen=async x=>{ trainings=[x]; await persistTrainings(); openTrainingOverlay(); await __wait(120); await __detail(x.id); const s=__tq('.trd-splits'); if(s) s.scrollIntoView({block:'start'}); await __wait(60); return s; };
+// 記錄分享圖畫了哪些字（字、位置、字型、寬度）
+window.__canvasLog=async fn=>{ const P=CanvasRenderingContext2D.prototype, orig=P.fillText, log=[];
+  P.fillText=function(txt,x,y){ log.push({txt:String(txt),x,y,font:this.font,align:this.textAlign,w:this.measureText(String(txt)).width}); return orig.apply(this,arguments); };
+  try{ await fn(); } finally{ P.fillText=orig; } return log; };
+"""
+
+
+class V415HeartRatePlurals(V414RaceDay):
+    """v4.15.0：① 沒翻的 10 個字（安全模式的橫幅、公開分享頁的項目名），分享圖上寫死的「公里」「公尺」、名稱壓到 QR、
+    英文字被拆開、數字壓到隔壁欄；② 英文分單複數（{n:race|races}）；③ 訓練匯入時多存每公里的平均心率，單次詳細頁畫成
+    一條心率線、表格多一欄、點長條看得到，前後兩半比心率漂移；之前匯入的再匯入一次就補上。"""
+
+    ECHO = ('v415:',)
+
+    def _tm(self, browser, viewport=None, touch=True, lang='zh', theme='light', now='2026-10-03T09:00:00'):
+        ctx, pg = super()._tm(browser, viewport=viewport, touch=touch, lang=lang, theme=theme, now=now)
+        pg.add_script_tag(content=TR415_JS)
+        return ctx, pg
+
+    def _safe_eval(self, pg, js, arg, tag):
+        # 跑好幾個寬度、語言的迴圈不在 self.ev 裡：頁面拋例外時當成這一輪失敗（回傳一筆說明），後面的項目照跑
+        try:
+            return pg.evaluate(js, arg)
+        except Exception as e:
+            return ['exception ' + tag + ': ' + str(e).splitlines()[0][:120]]
+
+    def body(self, page):
+        c = self.checks
+        browser = page.context.browser
+        quick = bool(os.environ.get('V415_QUICK'))
+        c['seed_available'] = 'window.__makeFit415' in TR415_JS
+        ctx, pg = self._tm(browser)
+        # ================= ① 沒翻的字 =================
+        c['ten_keys_translated_ja_en'] = self.ev(pg, r"""()=>{ const bad=[];
+            const keys=['ui.safeModeOn','ui.safeModeExit','ui.shareFuelLabel','ui.shareShoeLabel','ui.sharePreviewLoading','ui.statAvgHr','ui.statDistance','ui.statElev','ui.statOverallRank','ui.statPace'];
+            keys.forEach(k=>{ if(!(JA[k]||'').trim()) bad.push('ja '+k); if(!(EN[k]||'').trim()) bad.push('en '+k); if(__cjk.test(EN[k]||'')) bad.push('en has cjk '+k); });
+            // 有用到、日文英文卻沒有的字（訓練以外）：一個都不剩（動態組出來的 key 例外）
+            const src=document.documentElement.outerHTML, used=new Set([...src.matchAll(/\b(?:t|tf|tf2|tv)\(\s*'(ui\.[A-Za-z0-9_.]+)'/g)].map(m=>m[1]));
+            const miss=[...used].filter(k=>!k.endsWith('.')&&!k.endsWith('_')&&!/^ui\.trdRpe$/.test(k)&&(!(k in JA)||!(k in EN)));
+            if(miss.length) bad.push('missing '+miss.join(','));
+            if(bad.length) console.log('v415: keys',bad.join(' | ')); return bad.length===0; }""")
+        # 分享圖：距離、爬升的單位跟著語言（原本寫死「公里」「公尺」）；說明文字的分隔號英文用半形
+        c['share_card_units_follow_language'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const r=emptyRace('Harbor Marathon','road_running','completed','2026-12-20'); r.route.distanceKm=42.195; r.route.elevationGainM=180; r.results.chipTimeSeconds=10771;
+            const sw=emptyRace('Lake Swim','swimming','completed','2026-08-01'); sw.route.distanceKm=1.5; sw.results.chipTimeSeconds=1800;
+            const want={zh:['42.195 公里','180 公尺','1500 公尺'],ja:['42.195 km','180 m','1500 m'],en:['42.195 km','180 m','1500 m']};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(40);
+              const v=shareStatsBadges(r,SHARE_SHOW_DEFAULT).map(b=>b[1]), s=shareStatsBadges(sw,SHARE_SHOW_DEFAULT).map(b=>b[1]);
+              if(!v.includes(want[l][0])||!v.includes(want[l][1])||!s.includes(want[l][2])) bad.push(l+' '+v.join('/')+' '+s.join('/'));
+              if(l!=='zh'&&[...v,...s].some(x=>__cjk.test(x))) bad.push(l+' cjk unit');
+              const cap=shareCaptionText(r).split('\n')[2]||''; if(l==='en'?!cap.includes(' · ')||cap.includes('・'):!cap.includes(' ・ ')) bad.push(l+' caption '+cap); }
+            setLang('zh'); await __wait(40); if(bad.length) console.log('v415: share units',bad.join(' | ')); return bad.length===0; }""")
+        # 成績卡的總爬升、海拔剖面、匯入軌跡的預覽：一樣跟著語言
+        c['other_meter_units_follow_language'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const r=emptyRace('Hill Run','trail_running','completed','2026-05-01'); r.route.distanceKm=21; r.route.elevationGainM=950; r.results.chipTimeSeconds=9000;
+            r.route.elevationProfile=[{distanceKm:0,elevationM:100},{distanceKm:10,elevationM:900},{distanceKm:21,elevationM:120}];
+            for(const l of ['ja','en']){ setLang(l); await __wait(40);
+              const card=document.createElement('div'); card.innerHTML=renderResultsDashboard(r); if(!card.textContent.includes('950 m')||card.textContent.includes('公尺')) bad.push(l+' results '+card.textContent.replace(/\s+/g,' ').slice(0,80));
+              const p=document.createElement('div'); p.innerHTML=elevationProfileHtml(r)||''; if(p.textContent&&(p.textContent.includes('公尺')||!/\d+–\d+ m/.test(p.textContent))) bad.push(l+' profile '+p.textContent.replace(/\s+/g,' ').slice(0,60)); }
+            // 程式裡不再有寫死的「 公尺」「 公里」（匯入軌跡的預覽也是同一個寫法）
+            const src=[...document.scripts].map(s=>s.textContent).join('\n'), lit=(src.match(/' 公尺'|' 公里'/g)||[]).length; if(lit) bad.push('literal units '+lit);
+            setLang('zh'); await __wait(40); if(bad.length) console.log('v415: meter units',bad.join(' | ')); return bad.length===0; }""")
+        # 換行：英文字整個一起換、最後一行放到滿才加「…」、只能一行的不會多畫一行、第一行可以另外給寬度
+        c['canvas_wrap_keeps_words_and_ellipsis'] = self.ev(pg, r"""()=>{ const bad=[];
+            const mk=()=>{ const drawn=[]; return {drawn,font:'',textAlign:'left',measureText:s=>({width:Array.from(String(s)).reduce((a,ch)=>a+(/[　-鿿]/.test(ch)?20:10),0)}),fillText(s,x,y){ drawn.push([s,y]); }}; };
+            let c1=mk(); let end=canvasWrapText(c1,'2026 Taipei Marathon Finisher',0,100,160,30,3);
+            const L=c1.drawn.map(d=>d[0]); if(L.join('|')!=='2026 Taipei|Marathon|Finisher') bad.push('words '+L.join('|'));
+            if(end!==160) bad.push('end '+end);
+            c1=mk(); canvasWrapText(c1,'臺北馬拉松 Taipei Marathon 全程組 Finisher Edition',0,0,160,30,2);
+            const L2=c1.drawn.map(d=>d[0]); if(L2.length!==2||!L2[1].endsWith('…')||Array.from(L2[1]).length<6) bad.push('ellipsis '+L2.join('|'));
+            c1=mk(); canvasWrapText(c1,'能量膠 ×4、鹽錠 ×2、香蕉 ×1、運動飲料 ×3',0,0,150,30,1);
+            if(c1.drawn.length!==1||!c1.drawn[0][0].endsWith('…')) bad.push('one line '+JSON.stringify(c1.drawn));
+            c1=mk(); canvasWrapText(c1,'Alpha Beta Gamma Delta',0,0,200,30,3,90);
+            const L3=c1.drawn.map(d=>d[0]); if(L3[0]!=='Alpha'||L3[1]!=='Beta Gamma Delta') bad.push('first width '+L3.join('|'));
+            c1=mk(); canvasWrapText(c1,'https://example.org/averyveryverylongpath',0,0,120,30,4);
+            if(c1.drawn.some(d=>c1.measureText(d[0]).width>120)||c1.drawn.length<3) bad.push('long word '+c1.drawn.map(d=>d[0]).join('|'));
+            c1=mk(); canvasWrapText(c1,'短名',0,50,300,30,2); if(c1.drawn.length!==1||c1.drawn[0][0]!=='短名') bad.push('short');
+            if(bad.length) console.log('v415: wrap',bad.join(' | ')); return bad.length===0; }""")
+        # 分享圖（方形、限時動態）×三種語言：名稱不壓到 QR、英文字不拆開、每一格的字放得進那一欄
+        c['share_card_layout_fits_three_languages'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const r=emptyRace('2026 臺北馬拉松 Taipei Marathon Championship','road_running','completed','2026-12-20');
+            r.route.distanceKm=21.0975; r.route.elevationGainM=1180; r.results.chipTimeSeconds=10771; r.results.overallRank=12345; r.results.isPb=true; r.performanceData.avgHr=162;
+            state.races=[r]; await persist();
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(40);
+              for(const fmt of ['square','story']){ const tag=l+' '+fmt;
+                const log=await __canvasLog(async()=>{ fmt==='story'?await buildShareCanvasStory(r,Object.assign({},SHARE_SHOW_DEFAULT)):await buildShareCanvas(r,{show:SHARE_SHOW_DEFAULT}); });
+                const nameLines=log.filter(e=>/bold (52|60)px/.test(e.font));
+                if(!nameLines.length){ bad.push(tag+' no name'); continue; }
+                // 方形：QR 在右上角 x 760–1000、y 55–295；名稱第一行（基線 300、字高約 46）不能伸進去
+                if(fmt==='square'){ const first=nameLines[0]; if(first.x+first.w>760-4) bad.push(tag+' name under QR '+Math.round(first.x+first.w)); }
+                // 英文字沒有被拆到兩行（行尾的半個字＋下一行開頭的半個字＝名稱裡的一個字）
+                const words=new Set(r.name.split(/\s+/));
+                for(let i=0;i+1<nameLines.length;i++){ const a=(nameLines[i].txt.match(/[A-Za-z0-9]+$/)||[''])[0], b=(nameLines[i+1].txt.match(/^[A-Za-z0-9]+/)||[''])[0];
+                  if(a&&b&&!words.has(a)&&words.has(a+b)) bad.push(tag+' word split '+nameLines[i].txt+'|'+nameLines[i+1].txt); }
+                // 數據：方形四欄（欄寬 230）、限動三欄（306）：標題和數字都要放得進
+                const colW=fmt==='square'?230:306;
+                log.filter(e=>/(^|\s)(24px|2[0-3]px|1[6-9]px)/.test(e.font)&&e.y>400&&e.y<(fmt==='square'?800:1500)&&e.x<1000).forEach(e=>{ if(e.w>colW-20+0.5) bad.push(tag+' label wide '+e.txt+' '+Math.round(e.w)); });
+                log.filter(e=>/bold (3[4-6]|2[2-9]|3[0-3])px "IBM Plex Mono"/.test(e.font)&&e.x<1000).forEach(e=>{ if(e.w>colW-20+0.5) bad.push(tag+' value wide '+e.txt+' '+Math.round(e.w)); });
+                if(l!=='zh'){ const u=log.filter(e=>/公里|公尺/.test(e.txt)); if(u.length) bad.push(tag+' chinese unit '+u[0].txt); } } }
+            setLang('zh'); await __wait(40); if(bad.length) console.log('v415: share layout',bad.join(' | ')); return bad.length===0; }""")
+        c['career_share_preview_loading_translated'] = self.ev(pg, r"""async()=>{ const bad=[];
+            for(const [l,w] of [['ja','プレビューを作成中…'],['en','Generating preview…']]){ setLang(l); await __wait(40); if(t('ui.sharePreviewLoading','產生預覽中…')!==w) bad.push(l); }
+            setLang('zh'); await __wait(40); return bad.length===0; }""")
+        ctx.close()
+        # 公開分享頁：項目名、戰靴補給、分隔號、頁面語言；320／390 × 三種字級放得下
+        snap = r"""{v:1,name:'Harbor City Marathon',raceDate:'2026-12-20',startTime:'06:30',sportType:'road_running',city:'Taipei',country:'Taiwan',
+          results:{chipTimeSeconds:10771,isPb:true,overallRank:128,ageGroupRank:12},
+          route:{distanceKm:42.195,elevationGainM:180,track:Array.from({length:60},(_,i)=>{const a=i/59*Math.PI*2;return [25+Math.sin(a)*0.01,121.5+Math.cos(a)*0.014];})},
+          performance:{avgHr:162},shoeName:'Alphafly 3',fuel:[{item:'Gel',qty:4},{item:'Salt tabs',qty:2}],coverThumb:null,photos:[],og:null}"""
+        pub_bad = []
+        for lang in ('ja', 'en'):
+            for w in ((320, 390) if not quick else (320,)):
+                for fs in ('small', 'medium', 'large'):
+                    pctx = full_mode_context(browser, viewport={'width': w, 'height': 900}, is_mobile=True, has_touch=True)
+                    pctx.add_init_script("try{localStorage.setItem('lang-pref-v1','%s');%s}catch(e){}" % (lang, '' if fs == 'medium' else "localStorage.setItem('font-scale-v1','%s');" % fs))
+                    pctx.add_init_script("window.__cloudOverride={fetchPublicSnapshot:async()=>(%s)};" % snap)
+                    pp = pctx.new_page()
+                    pp.on('pageerror', lambda e: self.errors.append(str(e)))
+                    pp.goto(APP_URL + '?s=v415')
+                    pp.wait_for_timeout(1300)
+                    got = self._safe_eval(pp, r"""(l)=>{ const out=[], cjk=/[぀-ヿ㐀-鿿]/;
+                        const want={ja:['ペース','距離','累積標高','平均心拍数','総合順位'],en:['Pace','Distance','Elevation gain','Avg heart rate','Overall rank']}[l];
+                        const labels=[...document.querySelectorAll('.pubview-stats .small')].map(e=>e.textContent);
+                        if(labels.join('|')!==want.join('|')) out.push('labels '+labels.join('|'));
+                        const gear=(document.querySelector('.pubview-gear')||{}).textContent||'';
+                        const wantGear=l==='en'?'Shoes: Alphafly 3 · Fuel: Gel ×4, Salt tabs ×2':'シューズ：Alphafly 3　補給：Gel ×4・Salt tabs ×2';
+                        if(gear!==wantGear) out.push('gear '+gear);
+                        const meta=document.querySelector('.pubview-meta').textContent; if(l==='en'?!meta.includes(' · ')||meta.includes('・'):!meta.includes(' ・ ')) out.push('meta '+meta);
+                        if(document.documentElement.lang!==l) out.push('lang '+document.documentElement.lang);
+                        if(l==='en'&&cjk.test(document.querySelector('.pubview').innerText)) out.push('cjk in en page');
+                        if(document.documentElement.scrollWidth>innerWidth) out.push('hscroll');
+                        document.querySelectorAll('.pubview-stats *,.pubview-gear,.pubview-meta').forEach(e=>{ if(e.scrollWidth>e.clientWidth+1&&getComputedStyle(e).overflow!=='visible') out.push('cut '+e.className); });
+                        return out; }""", lang, f'{lang} {w} {fs}')
+                    if got:
+                        pub_bad.append(f'{lang} {w} {fs}: ' + '; '.join(got[:4]))
+                    pctx.close()
+        if pub_bad:
+            print('    v415: public page', pub_bad[:6])
+        c['public_page_translated_and_fits'] = not pub_bad
+        # 安全模式的橫幅：三種語言、320px 一行放得下
+        safe_bad = []
+        for lang, want in (('zh', ('安全模式：fx', '離開')), ('ja', ('セーフモード：fx', '解除')), ('en', ('Safe mode: fx', 'Exit'))):
+            sctx = full_mode_context(browser, viewport={'width': 320, 'height': 640}, is_mobile=True, has_touch=True)
+            sctx.add_init_script("try{localStorage.setItem('lang-pref-v1','%s');}catch(e){}" % lang)
+            sp_ = sctx.new_page()
+            sp_.goto(APP_URL + '?safe=fx')
+            sp_.wait_for_timeout(1300)
+            got = self._safe_eval(sp_, """(w)=>{ const e=document.querySelector('.safe-mode-banner'); if(!e) return 'none';
+                const a=e.querySelector('a'), txt=e.textContent.replace(a.textContent,''), r=e.getBoundingClientRect();
+                const lh=parseFloat(getComputedStyle(e).lineHeight)||17;
+                if(txt!==w[0]||a.textContent!==w[1]||a.getAttribute('href')!=='?safe=off') return 'text '+e.textContent;
+                if(r.left<0||r.right>innerWidth) return 'outside';
+                if(r.height>lh*1.6+16+1) return 'wraps '+r.height;
+                return ''; }""", list(want), lang)
+            if got:
+                safe_bad.append(lang + ' ' + (got if isinstance(got, str) else '; '.join(got)))
+            sp_.goto(APP_URL + '?safe=off')
+            sp_.wait_for_timeout(300)
+            sctx.close()
+        if safe_bad:
+            print('    v415: safe mode', safe_bad)
+        c['safe_mode_banner_three_languages_one_line'] = not safe_bad
+
+        # ================= ② 英文單複數 =================
+        ctx, pg = self._tm(browser)
+        c['plural_helper'] = self.ev(pg, r"""()=>{ const bad=[], eq=(a,b,tag)=>{ if(a!==b) bad.push(tag+': '+a); };
+            eq(plural('{n} {n:race|races}',{n:1}),'{n} race','one'); eq(plural('{n:race|races}',{n:0}),'races','zero');
+            eq(plural('{n:race|races}',{n:2}),'races','two'); eq(plural('{n:race|races}',{n:'1'}),'race','string one');
+            eq(plural('{n:race|races}',{n:1.5}),'races','decimal'); eq(plural('{x:a|b}',{n:1}),'{x:a|b}','unknown name stays');
+            eq(plural('{a} {a:shoe|shoes}; {b} {b:has|have}',{a:1,b:3}),'{a} shoe; {b} have','two names');
+            eq(plural('沒有寫法的字 {n} 場',{n:1}),'沒有寫法的字 {n} 場','no pattern');
+            setLang('en'); eq(tf('ui.daysLeft','還有 {n} 天',1),'1 day left','tf'); eq(tf2('ui.heatmapCellCount','{a} 場、{b} 公里',1,'2.0'),'1 race, 2.0 km','tf2');
+            eq(tv('ui.trainingNew','筆新的訓練',{n:1}),'new session','tv'); eq(racesUnit(1),'race','unit'); eq(racesUnit(3),'races','units');
+            setLang('ja'); eq(tf('ui.daysLeft','還有 {n} 天',1),'残り 1 日','ja'); setLang('zh'); eq(tf('ui.daysLeft','還有 {n} 天',1),'還有 1 天','zh'); eq(racesUnit(1),'場','zh unit');
+            if(bad.length) console.log('v415: plural',bad.join(' | ')); return bad.length===0; }""")
+        # 英文字典：沒有「(s)」；每一個有單複數寫法的字，數字 1 跟 2 寫出來不一樣，而且沒有剩下沒換掉的寫法
+        c['en_dictionary_plural_forms_consistent'] = self.ev(pg, r"""()=>{ const bad=[];
+            Object.entries(EN).forEach(([k,v])=>{ if(typeof v!=='string') return;
+              if(/\w\(s\)/.test(v)) bad.push('(s) '+k);
+              const names=[...new Set([...v.matchAll(/\{(\w+):[^{}|]*\|[^{}]*\}/g)].map(m=>m[1]))]; if(!names.length) return;
+              const one={}, two={}; names.forEach(n=>{ one[n]=1; two[n]=2; });
+              const a=plural(v,one), b=plural(v,two);
+              if(/\{\w+:[^{}]*\|/.test(a)||/\{\w+:[^{}]*\|/.test(b)) bad.push('left '+k); if(a===b) bad.push('same '+k); });
+            // 單數寫法裡不能還是複數（1 races、1 files were）
+            const ones=Object.entries(EN).filter(([k,v])=>typeof v==='string'&&/\{\w+:/.test(v)).map(([k,v])=>[k,plural(v,new Proxy({},{has:()=>true,get:()=>1}))]);
+            ones.forEach(([k,s])=>{ if(/\b1 (races|days|files|sessions|weeks|items|photos|legs|fields)\b/.test(s.replace(/\{\w+\}/g,'1'))) bad.push('plural with 1 '+k+' '+s); });
+            if(bad.length) console.log('v415: en dict',bad.join(' | ')); return bad.length===0; }""")
+        # 寫法裡的名字（{n:…}、{c:…}）每一個呼叫的地方都要傳：寫成 {count:race|races} 卻只傳 n，畫面上會剩下原樣的寫法
+        # （上一項只看字典本身，看不出呼叫的地方傳了什麼）。tf 傳 n、tf2 傳 a b、tv 看第三個參數的物件；動態組 key 的兩處另外列
+        c['en_plural_names_passed_by_callers'] = self.ev(pg, r"""()=>{ const bad=[];
+            const src=[...document.scripts].map(s=>s.textContent).join('\n');
+            const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+            const strLit=`'(?:[^'\\\\\\n]|\\\\.)*'|\`(?:[^\`\\\\]|\\\\.)*\`|"(?:[^"\\\\\\n]|\\\\.)*"`;
+            // 動態組 key 的地方：備份匯入的結果（tf(k,f,n)）、行事曆搜尋的結果（fmt 傳 q、f、n）——先確認那兩行還在
+            const dyn={}; let dynOk=true;
+            if(/\]\.filter\(p=>p\[0\]>0\)\.map\(\(\[n,k,f\]\)=>tf\(k,f,n\)\)/.test(src)) ['Races','Trainings','Shoes','Nutrition','Templates','Profile'].forEach(x=>dyn['ui.backupPart'+x]=['n']); else dynOk=false;
+            if(/const fmt=\(key,fallback\)=>tv\(key,fallback,\{q,f:calendarFilterLabel\(f\),n:races\.length\}\)/.test(src)) ['Search','Filter','Both'].forEach(x=>dyn['ui.calResults'+x]=['q','f','n']); else dynOk=false;
+            if(!dynOk) bad.push('dynamic call sites changed');
+            let checked=0;
+            Object.entries(EN).forEach(([k,v])=>{ if(typeof v!=='string') return;
+              const names=[...new Set([...v.matchAll(/\{(\w+):[^{}|]*\|[^{}]*\}/g)].map(m=>m[1]))]; if(!names.length) return;
+              const sites=[];
+              for(const m of src.matchAll(new RegExp(`\\b(tf2?|tv|t)\\(\\s*'${esc(k)}'`,'g'))){
+                const fn=m[1], rest=src.slice(m.index+m[0].length,m.index+m[0].length+400); let allowed;
+                if(fn==='t') allowed=[]; else if(fn==='tf') allowed=['n']; else if(fn==='tf2') allowed=['a','b'];
+                else { const mm=rest.match(new RegExp(`^\\s*,\\s*(?:${strLit}|[^,{}()]+(?:\\([^()]*\\))?)\\s*,\\s*\\{([^{}]*)\\}`));
+                  if(!mm){ bad.push(k+' tv args not readable: '+rest.slice(0,50)); continue; }
+                  allowed=[...mm[1].matchAll(/(?:^|,)\s*(\w+)\s*(?=[:,]|$)/g)].map(x=>x[1]); }
+                sites.push([fn,allowed]); }
+              if(k==='ui.unitRaces'&&/function racesUnit\(n,fallback\)\{ return tv\('ui\.unitRaces',fallback\|\|'場',\{n\}\); \}/.test(src)) sites.push(['racesUnit',['n']]);
+              if(dyn[k]) sites.push(['dynamic',dyn[k]]);
+              if(!sites.length){ bad.push(k+' no call site found'); return; }
+              sites.forEach(([fn,allowed])=>{ checked++; const miss=names.filter(n=>!allowed.includes(n)); if(miss.length) bad.push(k+' '+fn+' does not pass '+miss.join(',')+' (passes '+(allowed.join(',')||'nothing')+')'); }); });
+            if(checked<60) bad.push('only '+checked+' call sites checked');
+            if(bad.length) console.log('v415: plural names',bad.join(' | ')); return bad.length===0; }""")
+        # 實際的畫面：數字是 1 的時候
+        c['en_screens_singular_when_one'] = self.ev(pg, r"""async()=>{ const bad=[], has=(s,w,tag)=>{ if(!String(s).includes(w)) bad.push(tag+': '+String(s).replace(/\s+/g,' ').slice(0,120)); };
+            setLang('en'); await __wait(60);
+            const r=emptyRace('One Day','road_running','registered',addDaysStr(todayISO(),1)); has(countdownLabel(r),'1 day to go','countdown');
+            const p=emptyRace('Past','road_running','registered',addDaysStr(todayISO(),-1)); has(countdownLabel(p),'1 day ago','past');
+            has(adaptiveCountdown(1),'1 day left','adaptive');
+            const keep=lastBackupAt; lastBackupAt=()=>Date.now()-86400000*1.5; has(lastBackupText(),'Last backup: 1 day ago','backup'); lastBackupAt=keep;
+            const tiles=document.createElement('div'); tiles.innerHTML=trTilesHtml([{distanceKm:5,durationSeconds:1500,elevationGainM:0}]); has(tiles.textContent,'1session','tiles');
+            if(tiles.textContent.includes('1sessions')) bad.push('tiles plural');
+            // 匯入視窗：1 筆新的、1 個檔案讀不到
+            trainingImportState={total:2,done:2,fresh:[{date:'2026-10-01',sport:'run',distanceKm:5,durationSeconds:1500}],dupes:[],raceDay:[],failed:[{name:'x.fit',reason:'bad'}],upgrades:[],shoeId:'',includeRaceDay:{}};
+            document.getElementById('training-import-modal').hidden=false; renderTrainingImportModal();
+            const mt=__modalText(); has(mt,'1 new session','import new'); has(mt,'1 file could not be read','import failed'); if(/1 new sessions|1 files/.test(mt)) bad.push('import plural');
+            closeTrainingImportModal();
+            has(tf('ui.dropzoneUnsupportedFiles','x',1),'1 file was an unsupported format and was skipped','dropzone');
+            has(tv('ui.radarMissing','x',{n:'HR load, Stability',c:2}),'HR load, Stability have no data and are shown as 0','radar two');
+            has(tv('ui.radarMissing','x',{n:'Stability',c:1}),'Stability has no data and is shown as 0','radar one');
+            // 份數另外寫在前面的大數字（12 servings…）：這一行從單位開始
+            if(tv('ui.hofFuelServings','x',{n:1,s:1})!=='serving across 1 race') bad.push('fuel one '+tv('ui.hofFuelServings','x',{n:1,s:1}));
+            if(tv('ui.hofFuelServings','x',{n:3,s:12})!=='servings across 3 races') bad.push('fuel many');
+            has(tf2('ui.dashEquipSummary','x',1,0),'1 item','equip'); has(tf('ui.trainingNSessions','x',1),'1 session','sessions');
+            has(tf('ui.trainingUpNoPauseN','x',1),'1 has no pauses','nopause'); has(tf('ui.trainingUpDataN','x',1),'1 gets splits','data');
+            has(tv('ui.trMonthAria','x',{month:'October',n:1,km:'5.0'}),'trained on 1 day','month aria');
+            const rr=emptyRace('Radar','road_running','completed','2026-05-10'); rr.route.distanceKm=10; rr.route.elevationGainM=40; rr.results.chipTimeSeconds=2700; rr.raceDayWeather=Object.assign({},rr.raceDayWeather,{feelsLikeTempC:28});
+            const rad=document.createElement('div'); rad.innerHTML=renderRaceRadarHtml(rr); has(rad.textContent,'have no data and are shown as 0','radar note');
+            // 生涯數據：完賽 1 場（賽事總數 5 場以上才有生涯數據）
+            const rs=[0,1,2,3,4].map(i=>{ const x=emptyRace('R'+i,'road_running',i?'registered':'completed','2026-0'+(i+1)+'-05'); x.route.distanceKm=10; return x; });
+            state.races=rs; await persist(); const cs=document.createElement('div'); cs.innerHTML=renderCareerSummary(); const sfx=[...cs.querySelectorAll('.career-stat-value')].map(e=>e.textContent).join('|');
+            if(!/ race(\||$)/.test(sfx)) bad.push('career '+sfx);
+            // 行事曆搜尋的結果：1 場
+            state.searchQuery='R0'; const cal=document.createElement('div'); cal.innerHTML=calendarResultsHtml(); has(cal.textContent,'1 race','calendar'); state.searchQuery='';
+            setLang('zh'); await __wait(60);
+            has(countdownLabel(r),'倒數 1 天','zh countdown'); has(tf('ui.dropzoneUnsupportedFiles','{n} 個檔案格式不支援，已略過',1),'1 個檔案格式不支援','zh dropzone');
+            if(bad.length) console.log('v415: en screens',bad.join(' | ')); return bad.length===0; }""")
+        c['en_no_leftover_placeholders'] = self.ev(pg, r"""async()=>{ const bad=[], left=/\{\w+(:[^{}]*)?\}/;
+            const look=tag=>{ const m=document.body.innerText.match(left); if(m) bad.push(tag+' '+m[0]); };
+            setLang('en'); await __wait(60);
+            state.races=buildExampleRaces(); await persist(); await __seed412({}); renderAll(); await __wait(150); look('home');
+            state.homeTab='career'; renderAll(); await __wait(150); look('career');
+            openTrainingOverlay(); await __wait(150); look('training week');
+            for(const p of ['month','all']){ document.querySelector('#training-overlay [data-training-period="'+p+'"]').click(); await __wait(120); look('training '+p); }
+            document.querySelector('#training-overlay [data-training-period="week"]').click(); await __wait(80);
+            await __detail('t0'); await __wait(80); look('detail'); closeTrainingDetail(true); closeTrainingOverlay(); await __wait(80);
+            selectRace(state.races[0].id); await __wait(300); document.querySelectorAll('#detail details.section').forEach(d=>d.open=true); await __wait(200); look('race');
+            goBackFromDetail(); await __wait(200); state.homeTab='races';
+            setLang('zh'); await __wait(60); renderAll(); if(bad.length) console.log('v415: leftover',bad.join(' | ')); return bad.length===0; }""")
+        ctx.close()
+
+        # ================= ③ 每公里心率 =================
+        ctx, pg = self._tm(browser)
+        c['fit_stores_per_km_hr'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const x=await parseTrainingFile(__run415()), sp=x.paceSplits;
+            if(!sp||!Array.isArray(sp.hr)) return (console.log('v415: no hr',JSON.stringify(sp&&Object.keys(sp))),false);
+            if(sp.hr.length!==sp.secs.length+(sp.tail?1:0)) bad.push('length '+sp.hr.length);
+            // 每一段：心率 142+1.2×km 在那一公里的平均（±1）
+            sp.hr.forEach((h,i)=>{ const mid=i<sp.secs.length?i+0.5:sp.secs.length+sp.tail[0]/2, want=142+1.2*mid; if(Math.abs(h-want)>1) bad.push('seg '+i+' '+h+' vs '+want.toFixed(1)); });
+            if(!sp.hr.every(Number.isInteger)) bad.push('not integers');
+            if(!validSplitHr(sp)) bad.push('invalid');
+            // 心率固定 150：每一段都是 150
+            const y=await parseTrainingFile(__run415({hr:()=>150,name:'flat.fit'})); if(!y.paceSplits.hr.every(h=>h===150)) bad.push('flat '+y.paceSplits.hr.join(','));
+            if(bad.length) console.log('v415: fit hr',bad.join(' | ')); return bad.length===0; }""")
+        c['gpx_tcx_store_hr_and_no_hr_keeps_old_shape'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const run=__mkRun(__ROUTES.river,8.4,()=>330,km=>20);
+            const g=await parseTrainingFile(__gpx415(run.pts,{hr:km=>140+km*2}));
+            if(!g.paceSplits||!validSplitHr(g.paceSplits)||Math.abs(g.paceSplits.hr[0]-141)>1||Math.abs(g.paceSplits.hr[7]-155)>1) bad.push('gpx '+JSON.stringify(g.paceSplits&&g.paceSplits.hr));
+            const tc=await parseTrainingFile(__tcx415(run.pts,{hr:km=>150}));
+            if(!tc.paceSplits||!validSplitHr(tc.paceSplits)||tc.paceSplits.hr.some(h=>h!==150)) bad.push('tcx '+JSON.stringify(tc.paceSplits&&tc.paceSplits.hr));
+            // 沒有心率的檔案：存的樣子跟 v4.14.0 一樣（沒有 hr 這一格）
+            const n=await parseTrainingFile(__gpx415(run.pts,{}));
+            if(!n.paceSplits||('hr' in n.paceSplits)) bad.push('no hr key '+JSON.stringify(n.paceSplits&&Object.keys(n.paceSplits)));
+            if(bad.length) console.log('v415: gpx/tcx',bad.join(' | ')); return bad.length===0; }""")
+        c['hr_not_stored_for_swim_or_sparse_and_gaps_are_null'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const sw=await parseTrainingFile(__makeFit415({start:new Date('2026-10-01T17:00:00+08:00'),km:1.5,pace:()=>1250,hr:()=>130,sport:5,name:'sw.fit'}));
+            if(!sw.paceSplits||sw.paceSplits.step!==0.1||('hr' in sw.paceSplits)) bad.push('swim '+JSON.stringify(sw.paceSplits&&[sw.paceSplits.step,Object.keys(sw.paceSplits)]));
+            // 只有前 3 公里有心率：一半以上的段沒有 → 不存
+            const a=await parseTrainingFile(__run415({hr:km=>km<3?150:null,name:'a.fit'})); if('hr' in a.paceSplits) bad.push('sparse stored');
+            // 第 6～9 公里斷訊：那三段是 null，其他照存
+            const b=await parseTrainingFile(__run415({hr:km=>km>6&&km<9?null:150,name:'b.fit'})), h=b.paceSplits.hr;
+            if(!h||h[6]!==null||h[7]!==null||h[8]!==null||h[5]!==150||h[9]!==150) bad.push('gap '+JSON.stringify(h));
+            // 多項運動：照舊沒有每公里配速
+            const tri=await parseTrainingFile(__tri414().file); if(tri.paceSplits) bad.push('multisport');
+            if(bad.length) console.log('v415: sparse',bad.join(' | ')); return bad.length===0; }""")
+        # 演算法：跨過分界的那一段照距離比例分；停在原地的秒數算在那一段；沒留最後不滿一段時，超過的那一點點不算
+        c['split_hr_weighting'] = self.ev(pg, r"""()=>{ const bad=[];
+            let r=trainingSplitHr([100,100,200,200],[0,0.5,1.5,2.0],[0,100,300,400],1,[200,200],null);
+            if(JSON.stringify(r)!=='[125,175]') bad.push('cross '+JSON.stringify(r));
+            // 在第 0.5 公里停 60 秒（計時沒停）：算在那一段
+            r=trainingSplitHr([100,100,160,160,160],[0,0.5,0.5,1,2],[0,100,160,260,460],1,[260,200],null);
+            if(JSON.stringify(r)!=='[130,160]') bad.push('standing '+JSON.stringify(r));
+            // 剛好停在分界上：跟每公里的時間一樣，算進下一段（第 1 公里的終點就是分界那一刻）
+            r=trainingSplitHr([100,100,160,160],[0,1,1,2],[0,200,260,460],1,[200,260],null);
+            if(JSON.stringify(r)!=='[100,153]') bad.push('boundary '+JSON.stringify(r));
+            r=trainingSplitHr([100,100,100,220],[0,1,2,2.05],[0,200,400,410],1,[200,200],null);
+            if(JSON.stringify(r)!=='[100,100]') bad.push('leftover '+JSON.stringify(r));
+            r=trainingSplitHr([100,100,100,200],[0,1,2,2.5],[0,200,400,500],1,[200,200],[0.5,100]);
+            if(JSON.stringify(r)!=='[100,100,150]') bad.push('tail '+JSON.stringify(r));
+            // 第一段只有 31% 的時間有心率：null；其他段照算
+            r=trainingSplitHr([150,150,null,null,150,150,150],[0,0.3,0.31,1,1.5,2,3],[0,60,62,200,300,400,600],1,[200,200,200],null);
+            if(JSON.stringify(r)!=='[null,150,150]') bad.push('coverage '+JSON.stringify(r));
+            r=trainingSplitHr([null,null,150,150],[0,1,1.9,2.0],[0,200,380,400],1,[200,200],null);
+            if(JSON.stringify(r)!==JSON.stringify(null)) bad.push('one segment only '+JSON.stringify(r));
+            if(bad.length) console.log('v415: weighting',bad.join(' | ')); return bad.length===0; }""")
+        c['migrate_validates_hr_without_dropping_splits'] = self.ev(pg, r"""()=>{ const bad=[], m=o=>migrateTraining(Object.assign({id:'z',date:'2026-01-01',sport:'run'},o));
+            const ok={step:1,secs:[300,310],tail:[0.4,120],elev:[1,-2,0],paused:0,hr:[140,null,150]};
+            if(JSON.stringify(m({paceSplits:ok}).paceSplits)!==JSON.stringify(ok)) bad.push('valid kept');
+            [[140,150],[140,null,'150'],[140,null,20],[140,null,300],[null,null,null],'x',[140.5,150,151]].forEach((hr,i)=>{
+              const input=Object.assign({},ok,{hr}), x=m({paceSplits:input});
+              if(!x.paceSplits||x.paceSplits.secs.length!==2||('hr' in x.paceSplits)) bad.push('case '+i+' '+JSON.stringify(x.paceSplits));
+              if(input.hr!==hr) bad.push('mutated input '+i); });
+            const round=JSON.parse(JSON.stringify(m({paceSplits:ok})));
+            if(JSON.stringify(migrateTraining(round).paceSplits.hr)!=='[140,null,150]') bad.push('json round trip');
+            const nested=v=>Array.isArray(v)?v.some(x=>Array.isArray(x)||nested(x)):(v&&typeof v==='object'?Object.values(v).some(nested):false);
+            if(nested([m({paceSplits:ok})])) bad.push('nested arrays');
+            if(JSON.stringify(mergeTrainingLists([Object.assign({},m({paceSplits:ok}),{updatedAt:'2026-01-01'})],[]).pop().paceSplits.hr)!=='[140,null,150]') bad.push('merge');
+            if(bad.length) console.log('v415: migrate',bad.join(' | ')); return bad.length===0; }""")
+        # 很長的騎車：每公里一段 180 段，心率加進去還是只有 2KB 多
+        c['long_ride_with_hr_stays_small'] = self.ev(pg, r"""()=>{ const ride=__mkRun(__ROUTES.outback,180,()=>120,km=>20+km);
+            ride.pts.forEach(p=>{ p.hr=Math.round(130+10*Math.sin(p.dist/9000)); });
+            const a=buildTrainingAnalysis(ride.pts,'ride',null), sz=JSON.stringify({paceSplits:a.paceSplits,elevProfile:a.elevProfile}).length;
+            const ok=!!a.paceSplits&&validSplitHr(a.paceSplits)&&a.paceSplits.hr.length===180&&sz<3000; if(!ok) console.log('v415: ride size',sz); return ok; }""")
+        # ---- 再匯入 ----
+        c['reimport_adds_hr_only'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const f=__run415({name:'re.fit'}), fresh=await parseTrainingFile(f);
+            const old=__noHr415(fresh,{id:'h0',name:'晨跑',note:'很熱',rpe:6,shoeId:'sA'}); trainings=[old]; await persistTrainings();
+            await startTrainingImport([f]); await __wait(100);
+            const u=trainingImportState.upgrades; if(u.length!==1||!u[0].hr||u[0].data||u[0].time||u[0].nopause) bad.push('kind '+JSON.stringify(u.map(x=>[x.data,x.hr,x.time,x.nopause])));
+            if(!__modalText().includes('1 筆已經匯入過：補上每公里心率')||__modalText().includes('配速與高度')) bad.push('summary '+__modalText().slice(0,120));
+            const go=__modal().querySelector('[data-action="confirm-training-import"]'); if(go.textContent.trim()!=='更新 1 筆') bad.push('button '+go.textContent.trim());
+            go.click(); await __wait(300);
+            const x=trainings.find(r=>r.id==='h0'); if(!validSplitHr(x.paceSplits)||x.name!=='晨跑'||x.note!=='很熱'||x.rpe!==6||x.shoeId!=='sA') bad.push('after '+JSON.stringify([x.name,x.note,x.rpe,x.shoeId]));
+            const saved=(await loadJson(TRAININGS_KEY,[])).find(r=>r.id==='h0'); if(!saved||!validSplitHr(saved.paceSplits)) bad.push('not saved');
+            await startTrainingImport([f]); await __wait(100); if(trainingImportState.upgrades.length||trainingImportState.dupes.length!==1) bad.push('second time not duplicate');
+            closeTrainingImportModal();
+            if(bad.length) console.log('v415: reimport',bad.join(' | ')); return bad.length===0; }""")
+        c['reimport_hr_counted_with_other_kinds'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const A=__run415({name:'ka.fit',start:new Date('2026-09-20T06:00:00+08:00')}), B=__run415({name:'kb.fit',start:new Date('2026-09-21T06:00:00+08:00')});
+            const ra=await parseTrainingFile(A), rb=await parseTrainingFile(B);
+            trainings=[migrateTraining(Object.assign({},ra,{id:'kA',paceSplits:null,elevProfile:null,kmStep:null,kmMarks:null})),__noHr415(rb,{id:'kB'})]; await persistTrainings();
+            await startTrainingImport([A,B]); await __wait(120);
+            if(!__modalText().includes('2 筆已經匯入過：1 筆補上每公里配速與高度、1 筆補上每公里心率')) bad.push('summary '+__modalText().slice(0,160));
+            closeTrainingImportModal();
+            // 先匯入沒有心率的 GPX、再匯入 FIT（時間、每公里配速都換）：照舊寫「補上每公里配速與高度、時間改成不含暫停」，心率一起補上
+            const f=__run415({name:'gf.fit',start:new Date('2026-09-22T06:00:00+08:00'),pauses:[[4.5,60]]}), pts=parseFitPoints(await f.arrayBuffer());
+            const gpx='<?xml version="1.0"?><gpx version="1.1" creator="t"><trk><name>Run</name><type>running</type><trkseg>'+pts.map(p=>'<trkpt lat="'+p.lat.toFixed(7)+'" lon="'+p.lon.toFixed(7)+'"><ele>20</ele><time>'+p.time.toISOString()+'</time></trkpt>').join('')+'</trkseg></trk></gpx>';
+            const g=await parseTrainingFile(new File([gpx],'g.gpx')); g.id='gG'; trainings=[g]; await persistTrainings();
+            await startTrainingImport([f]); await __wait(100);
+            const txt=__modalText(); if(!txt.includes('1 筆已經匯入過：補上每公里配速與高度、時間改成不含暫停')||txt.includes('心率')) bad.push('gpx2fit '+txt.slice(0,140));
+            __modal().querySelector('[data-action="confirm-training-import"]').click(); await __wait(300);
+            if(!validSplitHr(trainings.find(r=>r.id==='gG').paceSplits)) bad.push('gpx2fit hr');
+            if(bad.length) console.log('v415: kinds',bad.join(' | ')); return bad.length===0; }""")
+        # 不同種的檔：先匯入沒有心率的 GPX、再匯入同一次的 FIT——補上每公里心率（每公里配速換成 FIT 的），原本沒有的平均心率也補上；
+        # 反過來（FIT 匯入的、再匯入有心率的 GPX）不換：GPX 的每公里時間含停下來的時間；本來就有的平均心率不動
+        c['reimport_cross_source_hr'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const gpxOf=(pts,withHr,name)=>new File(['<?xml version="1.0"?><gpx version="1.1" creator="t" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><trk><name>Run</name><type>running</type><trkseg>'
+              +pts.map(p=>'<trkpt lat="'+p.lat.toFixed(7)+'" lon="'+p.lon.toFixed(7)+'"><ele>20</ele><time>'+p.time.toISOString()+'</time>'
+                +(withHr&&p.hr!=null?'<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>'+p.hr+'</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>':'')+'</trkpt>').join('')+'</trkseg></trk></gpx>'],name);
+            // (a) GPX 沒有心率 → FIT
+            const fa=__run415({name:'xa.fit',start:new Date('2026-09-23T06:00:00+08:00'),avgHr:151});
+            const g=await parseTrainingFile(gpxOf(parseFitPoints(await fa.arrayBuffer()),false,'xa.gpx')); g.id='xa'; g.name='河堤';
+            if(g.avgHr!=null||!g.paceSplits||('hr' in g.paceSplits)) bad.push('gpx should have no hr');
+            trainings=[g]; await persistTrainings(); await startTrainingImport([fa]); await __wait(100);
+            const u=trainingImportState.upgrades; if(u.length!==1||!u[0].hr||u[0].data||u[0].time||u[0].nopause) bad.push('a kind '+JSON.stringify(u.map(x=>[x.data,x.hr,x.time,x.nopause])));
+            if(!__modalText().includes('1 筆已經匯入過：補上每公里心率')) bad.push('a summary '+__modalText().slice(0,120));
+            const go=__modal().querySelector('[data-action="confirm-training-import"]'); if(go) go.click(); await __wait(300);
+            const x=trainings.find(r=>r.id==='xa');
+            if(!validSplitHr(x.paceSplits)||x.avgHr!==151||x.name!=='河堤'||x.durationSeconds!==g.durationSeconds) bad.push('a after '+JSON.stringify([validSplitHr(x.paceSplits),x.avgHr,x.name,x.durationSeconds,g.durationSeconds]));
+            await startTrainingImport([fa]); await __wait(100); if(trainingImportState.upgrades.length||trainingImportState.dupes.length!==1) bad.push('a second time not duplicate'); closeTrainingImportModal();
+            // (b) FIT（沒有每公里心率、第 4.5 公里停 60 秒）→ 有心率的 GPX：不換、算重複
+            const mk=()=>__run415({name:'xb.fit',start:new Date('2026-09-24T06:00:00+08:00'),pauses:[[4.5,60]]});
+            const old=__noHr415(await parseTrainingFile(mk()),{id:'xb'}), keep=JSON.stringify(old.paceSplits); trainings=[old]; await persistTrainings();
+            await startTrainingImport([gpxOf(parseFitPoints(await mk().arrayBuffer()),true,'xb.gpx')]); await __wait(100);
+            if(trainingImportState.upgrades.length||trainingImportState.dupes.length!==1) bad.push('b gpx over fit '+trainingImportState.upgrades.length+'/'+trainingImportState.dupes.length);
+            closeTrainingImportModal(); if(JSON.stringify(trainings.find(r=>r.id==='xb').paceSplits)!==keep) bad.push('b splits changed');
+            // (c) 同一個 FIT 再匯入、本來就有平均心率（149，跟檔案的 150 不一樣）：不動
+            const fc=__run415({name:'xc.fit',start:new Date('2026-09-25T06:00:00+08:00')});
+            trainings=[__noHr415(await parseTrainingFile(fc),{id:'xc',avgHr:149})]; await persistTrainings(); await startTrainingImport([fc]); await __wait(100);
+            const go2=__modal().querySelector('[data-action="confirm-training-import"]'); if(go2) go2.click(); await __wait(300);
+            const cx=trainings.find(r=>r.id==='xc'); if(!validSplitHr(cx.paceSplits)||cx.avgHr!==149) bad.push('c avg '+cx.avgHr);
+            if(bad.length) console.log('v415: cross',bad.join(' | ')); return bad.length===0; }""")
+        c['two_devices_merge_adds_hr'] = self.ev(pg, r"""async()=>{ const f=__run415({name:'dd.fit'}), r=await parseTrainingFile(f);
+            const a=__noHr415(r,{id:'dA',importedAt:'2026-09-21T00:00:00.000Z',updatedAt:'2026-09-21T00:00:00.000Z'});
+            const b=migrateTraining(Object.assign({},r,{id:'dB',importedAt:'2026-09-25T00:00:00.000Z',updatedAt:'2026-09-25T00:00:00.000Z'}));
+            trainings=[a,b]; const n=dedupeTrainingsByFingerprint(trainings);
+            const ok=n===1&&!a.deletedAt&&!!b.deletedAt&&validSplitHr(a.paceSplits); if(!ok) console.log('v415: merge',n,!!a.deletedAt,JSON.stringify(a.paceSplits&&a.paceSplits.hr)); return ok; }""")
+        # ---- 單次詳細頁 ----
+        c['detail_hr_line_table_readout'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const x=await parseTrainingFile(__run415({name:'d.fit'})); x.id='hd'; const sp=x.paceSplits;
+            await __hrOpen(x);
+            const strip=__tq('.trd-splits .trd-sp-hr'); if(!strip) return (console.log('v415: no strip'),false);
+            const lo=Math.min(...sp.hr), hi=Math.max(...sp.hr), cap=[...__tqa('.trd-sp-cap')].map(e=>e.textContent);
+            if(!cap.includes('心率 '+lo+'–'+hi+' bpm')) bad.push('caption '+cap.join('|'));
+            const d=strip.querySelector('path.is-line').getAttribute('d'); if((d.match(/M/g)||[]).length!==1) bad.push('path breaks '+d.slice(0,60));
+            // 心率線在配速長條和高度剖面中間
+            const order=[...__tq('.trd-sp-chart').children].map(e=>e.querySelector('.trd-sp-plot')?'pace':e.querySelector('.trd-sp-hr')?'hr':e.querySelector('.trd-sp-elev')?'elev':'');
+            if(order.filter(Boolean).join(',')!=='pace,hr,elev') bad.push('order '+order.join(','));
+            __tq('.trd-sp-more').open=true; await __wait(40);
+            const heads=__tqa('.trd-sp-table th').map(e=>e.textContent); if(heads.join('|')!=='公里|配速|心率|高度（m）') bad.push('heads '+heads.join('|'));
+            const col=__tqa('.trd-sp-table tbody tr').map(tr=>tr.children[2].textContent); if(col.join(',')!==sp.hr.join(',')) bad.push('column '+col.join(','));
+            trdSplitsSelect(3); await __wait(30);
+            const ro=__tq('.trd-sp-readout').textContent; if(!ro.includes('♥'+sp.hr[3])) bad.push('readout '+ro);
+            const ch=__tq('.trd-sp-chart'); if(!ch.getAttribute('aria-valuetext').includes('心率 '+sp.hr[3])) bad.push('spoken '+ch.getAttribute('aria-valuetext'));
+            if(ch.getAttribute('aria-label')!=='每段的配速、心率與高度圖，用左右鍵一段一段看') bad.push('aria '+ch.getAttribute('aria-label'));
+            const bands=__tqa('.trd-sp-band').map(b=>b.style.left); if(bands.length!==2||bands[0]!==bands[1]||!bands[0]) bad.push('bands '+bands.join(','));
+            if(__tq('.trd-sp-hrhint')) bad.push('hint shown although hr exists');
+            closeTrainingDetail(true);
+            if(bad.length) console.log('v415: detail',bad.join(' | ')); return bad.length===0; }""")
+        c['detail_without_hr_unchanged'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const run=__mkRun(__ROUTES.river,8.4,()=>330,km=>20), x=await parseTrainingFile(__gpx415(run.pts,{})); x.id='hn';
+            await __hrOpen(x);
+            if(__tq('.trd-sp-hr')) bad.push('strip'); __tq('.trd-sp-more').open=true; await __wait(30);
+            if(__tqa('.trd-sp-table th').map(e=>e.textContent).join('|')!=='公里|配速|高度（m）') bad.push('heads');
+            trdSplitsSelect(2); if(__tq('.trd-sp-readout').textContent.includes('♥')) bad.push('readout');
+            if(__tq('.trd-sp-chart').getAttribute('aria-label')!=='每段的配速與高度圖，用左右鍵一段一段看') bad.push('aria');
+            if(/心率漂移/.test(__tq('.trd-splits .trd-say').textContent)) bad.push('drift');
+            if(__tq('.trd-sp-hrhint')) bad.push('hint without avg hr');
+            closeTrainingDetail(true); if(bad.length) console.log('v415: no hr',bad.join(' | ')); return bad.length===0; }""")
+        c['grouped_segments_average_hr'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const x=await parseTrainingFile(__makeFit415({start:new Date('2026-10-02T07:00:00+08:00'),km:60,pace:km=>km%2<1?100:140,hr:km=>130+Math.floor(km)%2*20,sport:2,name:'ride.fit'}));
+            x.id='hgr'; x.sport='ride'; const sp=x.paceSplits; if(!sp||sp.secs.length!==60) return (console.log('v415: grouped none',sp&&sp.secs.length),false);
+            await __hrOpen(x); __tq('.trd-sp-more').open=true; await __wait(30);
+            const col=__tqa('.trd-sp-table tbody tr').map(tr=>Number(tr.children[2].textContent)); if(col.length!==30) bad.push('rows '+col.length);
+            for(let i=0;i<30;i++){ const a=sp.hr[2*i], b=sp.hr[2*i+1], ta=sp.secs[2*i], tb=sp.secs[2*i+1], want=Math.round((a*ta+b*tb)/(ta+tb)); if(Math.abs(col[i]-want)>0) { bad.push('row '+i+' '+col[i]+' vs '+want); break; } }
+            closeTrainingDetail(true); if(bad.length) console.log('v415: grouped',bad.join(' | ')); return bad.length===0; }""")
+        # 斷訊的段：表格寫「—」、線斷開
+        c['detail_hr_gap_breaks_line'] = self.ev(pg, r"""async()=>{ const x=await parseTrainingFile(__run415({hr:km=>km>6&&km<9?null:150,name:'gap.fit'})); x.id='hg';
+            await __hrOpen(x); __tq('.trd-sp-more').open=true; await __wait(30);
+            const d=__tq('.trd-sp-hr path').getAttribute('d'), col=__tqa('.trd-sp-table tbody tr').map(tr=>tr.children[2].textContent);
+            const ok=(d.match(/M/g)||[]).length===2&&col[6]==='—'&&col[7]==='—'&&col[8]==='—'&&col[5]==='150';
+            closeTrainingDetail(true); if(!ok) console.log('v415: gap',d.slice(0,80),col.join(',')); return ok; }""")
+        # ---- 心率漂移 ----
+        c['drift_sentence_matches_definition'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const say=async(o,id)=>{ const x=await parseTrainingFile(__run415(Object.assign({name:id+'.fit'},o))); x.id=id; await __hrOpen(x);
+              const e=__tq('.trd-splits .trd-say'), s=e?e.textContent:''; closeTrainingDetail(true); return {s,sp:x.paceSplits}; };
+            // 配速穩定、心率慢慢升：心率漂移跟定義算出來的一樣
+            let r=await say({},'dr0'), dv=__drift415(r.sp);
+            const want='心率漂移 '+__fmtPct415(dv.pct)+'（平均心率前半 '+Math.round(dv.a)+'、後半 '+Math.round(dv.b)+'）。';
+            if(!r.s.includes(want)) bad.push('rising '+r.s+' want '+want);
+            if(dv.pct<3||dv.pct>8) bad.push('rising value '+dv.pct.toFixed(2));
+            if(/只能參考/.test(r.s)) bad.push('rising caveat');
+            // 心率不變：0.0%
+            r=await say({hr:()=>150},'dr1'); if(!r.s.includes('心率漂移 0.0%（平均心率前半 150、後半 150）。')) bad.push('flat '+r.s);
+            // 後半慢下來、心率掉：照算（配速差一成以上加一句只能參考）
+            r=await say({pace:km=>km<5?300:345,hr:km=>km<5?160:150},'dr2'); dv=__drift415(r.sp);
+            if(!r.s.includes('心率漂移 '+__fmtPct415(dv.pct))||!r.s.includes('前後半的配速差很多，只能參考。')) bad.push('uneven '+r.s);
+            // 折返的上坡：前半爬 100 m、後半下 100 m
+            r=await say({ele:km=>km<5?20+km*20:20+(10-km)*20},'dr3'); if(!r.s.includes('前後半的起伏差很多，只能參考。')) bad.push('hilly '+r.s);
+            r=await say({ele:km=>km<5?20+km*20:20+(10-km)*20,pace:km=>km<5?300:345},'dr4'); if(!r.s.includes('前後半的配速和起伏差很多，只能參考。')) bad.push('both '+r.s);
+            // 環狀路線、坡都在後半：第 6～8 公里爬 40 m 又下來，淨爬升兩半都是 0，還是要說只能參考
+            r=await say({ele:km=>km>6&&km<8?20+(km<7?km-6:8-km)*40:20},'dr7'); if(!r.s.includes('前後半的起伏差很多，只能參考。')) bad.push('hill in second half '+r.s);
+            // 一路都是小坡（每 2 公里上 10 m 又下來）：兩半差不多，不算
+            r=await say({ele:km=>20+10*(1-Math.abs((km%2)-1))},'dr8'); if(!/心率漂移/.test(r.s)||/只能參考/.test(r.s)) bad.push('even rolling '+r.s);
+            // 不到 4 段、後半心率有一半以上的時間沒有：不寫
+            r=await say({km:3},'dr5'); if(/心率漂移/.test(r.s)) bad.push('short '+r.s);
+            r=await say({hr:km=>km>6.5&&km<9.5?null:150},'dr6'); if(/心率漂移/.test(r.s)) bad.push('coverage '+r.s);
+            if(bad.length) console.log('v415: drift',bad.join(' | ')); return bad.length===0; }""")
+        # 之前匯入、有平均心率：配速圖下面一行提示，點了選原始檔；沒有平均心率、游泳、沒有來源的不提示
+        c['old_sessions_get_reimport_hint'] = self.ev(pg, r"""async()=>{ const bad=[];
+            const x=await parseTrainingFile(__run415({name:'ho.fit'})), old=__noHr415(x,{id:'ho'});
+            await __hrOpen(old); const h=__tq('.trd-splits .trd-sp-hrhint');
+            if(!h||h.dataset.action!=='training-detail-reimport'||!h.textContent.includes('還沒有每公里心率，再匯入一次原始檔就會補上')) bad.push('hint '+(h&&h.outerHTML.slice(0,120)));
+            else { const b=h.getBoundingClientRect(); if(b.height<44) bad.push('target '+b.height);
+              const inp=document.getElementById('training-file-input')||document.querySelector('input[type="file"][accept*="fit"]'); let picked=false;
+              if(inp){ const k=inp.click; inp.click=()=>{ picked=true; }; h.click(); await __wait(80); inp.click=k; }
+              if(!picked) bad.push('no picker'); }
+            closeTrainingDetail(true);
+            for(const [tag,o] of [['no avg',{avgHr:null}],['no source',{source:''}],['gpx ok',{source:'gpx'}]]){
+              await __hrOpen(Object.assign({},old,o)); const has=!!__tq('.trd-sp-hrhint'); closeTrainingDetail(true);
+              if(has!==(tag==='gpx ok')) bad.push(tag+' '+has); }
+            if(bad.length) console.log('v415: hint',bad.join(' | ')); return bad.length===0; }""")
+        ctx.close()
+        # 字級、對比、深色模式；320／390 × 中日英 × 三種字級放得下
+        fit_bad = []
+        for lang in ('zh', 'ja', 'en'):
+            for theme in (('light', 'dark') if lang == 'zh' else ('light',)):
+                for w in ((320, 390) if not quick else (320,)):
+                    fctx, fp = self._tm(browser, viewport={'width': w, 'height': 900}, lang=lang, theme=theme)
+                    got = self._safe_eval(fp, r"""async([l,th])=>{ const out=[];
+                        const x=await parseTrainingFile(__run415({name:'fit.fit',pace:km=>km<5?300:345,ele:km=>km<5?20+km*20:20+(10-km)*20})); x.id='hf';
+                        for(const fs of ['small','medium','large']){ applyFontScale(fs); await __wait(40); const tag=l+' '+th+' '+fs;
+                          await __hrOpen(x); const card=__tq('.trd-splits'); card.querySelector('.trd-sp-more').open=true; trdSplitsSelect(4); await __wait(40);
+                          if(document.documentElement.scrollWidth>innerWidth) out.push(tag+' hscroll');
+                          card.querySelectorAll('.trd-sp-cap,.trd-sp-readout span,.trd-sp-table td,.trd-sp-table th').forEach(e=>{ if(e.scrollWidth>e.clientWidth+1) out.push(tag+' cut '+e.className+' '+e.textContent); });
+                          const tb=card.querySelector('.trd-sp-table'); if(tb.getBoundingClientRect().right>card.getBoundingClientRect().right+0.5) out.push(tag+' table wider');
+                          const say=card.querySelector('.trd-say').textContent;
+                          const key={zh:'心率漂移',ja:'心拍ドリフト',en:'Heart-rate drift'}[l]; if(!say.includes(key)) out.push(tag+' no drift');
+                          if(l==='en'&&/[぀-ヿ㐀-鿿]/.test(card.innerText)) out.push(tag+' cjk');
+                          if(l==='ja'&&/心率/.test(card.innerText)) out.push(tag+' zh word');
+                          if(fs==='medium'){
+                            const line=card.querySelector('.trd-sp-hr path');
+                            if(!line) out.push(tag+' no hr line'); else { const lc=__cr(__rgba(getComputedStyle(line).stroke),__under(card.querySelector('.trd-sp-hr'))[0]); if(lc<3) out.push(tag+' line contrast '+lc.toFixed(2)); }
+                            const ro=card.querySelector('.trd-sp-ro-hr'); if(!ro) out.push(tag+' no readout hr'); else { const cr=__textCr(ro); if(cr<4.5) out.push(tag+' readout contrast '+cr.toFixed(2)); }
+                            const cap=[...card.querySelectorAll('.trd-sp-cap')][0]; if(__textCr(cap)<4.5) out.push(tag+' caption contrast');
+                            const fz=parseFloat(getComputedStyle(cap).fontSize); if(fz<13) out.push(tag+' caption size '+fz); }
+                          closeTrainingDetail(true); }
+                        applyFontScale('medium'); return out; }""", [lang, theme], f'{lang} {theme} {w}')
+                    if got:
+                        fit_bad.append('; '.join(got[:6]))
+                    fctx.close()
+        if fit_bad:
+            print('    v415: hr fit', fit_bad[:6])
+        c['hr_ui_fits_contrast_three_languages'] = not fit_bad
+        # ================= 說明、版本 =================
+        hctx, hp = self._tm(browser)
+        c['help_mentions_hr_drift_three_languages'] = self.ev(hp, r"""async()=>{ const bad=[];
+            const key={zh:['每公里心率與心率漂移','Pa:HR'],ja:['1kmごとの心拍数と心拍ドリフト','Pa:HR'],en:['Per-km heart rate and drift','Pa:HR']};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(80); openHelpModal(); await __wait(150);
+              const txt=document.getElementById('help-modal').innerText; key[l].forEach(k=>{ if(!txt.includes(k)) bad.push(l+' '+k); });
+              document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(80); }
+            setLang('zh'); await __wait(60); if(bad.length) console.log('v415: help',bad.join(' | ')); return bad.length===0; }""")
+        c['version_is_v4_15_0'] = self.ev(hp, "()=>APP_VERSION==='v4.15.0'")
+        hctx.close()
 
 
 GROUPS = {
@@ -11491,6 +12659,8 @@ GROUPS = {
     'v411':       lambda: V411TrainingDetail('v411'),
     'v412':       lambda: V412Splits('v412'),
     'v413':       lambda: V413PauseFreeTime('v413'),
+    'v414':       lambda: V414RaceDay('v414'),
+    'v415':       lambda: V415HeartRatePlurals('v415'),
 }
 
 
