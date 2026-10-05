@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>隱私權政策與使用條款｜賽事紀錄</title>
+<meta name="description" content="賽事紀錄（My Race）的隱私權政策、Cookie 說明與使用條款。Privacy Policy, cookies and Terms of Use for Race Log (My Race).">
+<link rel="canonical" href="https://ai-sub3.github.io/Race-Day/privacy/">
+<link rel="icon" href="../icons/icon-192.png">
+<meta name="theme-color" content="#2E6B49">
+<script>
+/* 畫面出來之前先決定語言、深淺色、字級，不會先閃一下別的語言。
+   語言的順序：網址的 ?lang=（App 裡的連結都會帶）→ App 存的語言（同一個網域，讀得到）→ 瀏覽器語言。
+   深淺色、字級直接沿用 App 的設定，從 App 點過來看起來是同一個地方。
+   這一頁刻意不載入任何外部資源（字型、程式庫都不用）：講隱私權的頁面本身不該再把訪客送去第三方 */
+(function(){
+  var d=document.documentElement, ok={zh:1,ja:1,en:1}, lang='';
+  var m=location.search.match(/[?&]lang=(zh|ja|en)(?:&|$)/);
+  if(m) lang=m[1];
+  if(!lang){ try{ var s=localStorage.getItem('lang-pref-v1'); if(ok[s]) lang=s; }catch(e){} }
+  if(!lang){
+    var n=String(navigator.language||'').toLowerCase();
+    lang=n.indexOf('ja')===0?'ja':(n.indexOf('zh')===0||!n)?'zh':'en';
+  }
+  d.setAttribute('data-lang',lang);
+  d.setAttribute('lang',lang==='zh'?'zh-Hant':lang);
+  try{
+    var t=localStorage.getItem('theme-pref-v1');
+    if(t!=='light'&&t!=='dark') t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
+    d.setAttribute('data-theme',t);
+    var f=localStorage.getItem('font-scale-v1');
+    if(f==='small'||f==='large') d.setAttribute('data-font',f);
+  }catch(e){
+    if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches) d.setAttribute('data-theme','dark');
+  }
+})();
+</script>
+<style>
+  /* 顏色沿用 App（index.html 的 :root 與 [data-theme="dark"]），對比都過 WCAG AA */
+  :root{
+    --paper:#E6E9E6; --surface:#FAFAF8; --ink:#16231C; --ink-soft:#4B564E; --rule:#D8DAD3;
+    --trail:#2E6B49; --on-trail:#FFFFFF; --stone:#676860; --tint:rgba(46,107,73,0.08);
+    --fs:1; color-scheme:light;
+  }
+  html[data-font="small"]{--fs:0.9;}
+  html[data-font="large"]{--fs:1.15;}
+  html[data-theme="dark"]{
+    --paper:#0D1013; --surface:#1E232A; --ink:#EDEEE9; --ink-soft:#9BA3A0; --rule:#2A3038;
+    /* 深色的綠底配白字只有 3.4:1，選中的語言按鈕改用深色字（5.5:1） */
+    --trail:#4C9A72; --on-trail:#0D1013; --stone:#838A92; --tint:rgba(76,154,114,0.10);
+    color-scheme:dark;
+  }
+  /* 三種語言都在頁面裡，只顯示目前選的那一種。錨點（#cookies 等）放在共用的 section 上，
+     不管哪種語言都跳得到 */
+  html[data-lang="zh"] .l10n:not([lang="zh-Hant"]),
+  html[data-lang="ja"] .l10n:not([lang="ja"]),
+  html[data-lang="en"] .l10n:not([lang="en"]){display:none !important;}
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    font-size:calc(16px*var(--fs));line-height:1.75;
+  }
+  /* 日文用日文字型：同一個漢字，中文字型跟日文字型的字形不一樣 */
+  :lang(ja){font-family:system-ui,-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;}
+  a{color:var(--trail);text-underline-offset:2px;}
+  .wrap{max-width:760px;margin:0 auto;padding:0 16px;}
+
+  .top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--rule);padding-top:env(safe-area-inset-top,0px);}
+  .top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;}
+  .brand{display:inline-flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;font-weight:700;min-width:0;}
+  .brand img{width:26px;height:26px;border-radius:7px;flex:none;}
+  .brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lang{display:flex;flex:none;border:1px solid var(--rule);border-radius:999px;padding:2px;background:var(--surface);}
+  .lang button{
+    font:inherit;font-size:calc(13px*var(--fs));line-height:1.2;border:0;background:none;color:var(--ink-soft);
+    padding:6px 10px;min-height:32px;border-radius:999px;cursor:pointer;white-space:nowrap;
+  }
+  .lang button[aria-pressed="true"]{background:var(--trail);color:var(--on-trail);font-weight:700;}
+  .lang button:focus-visible,.toc a:focus-visible{outline:2px solid var(--trail);outline-offset:2px;}
+
+  h1{font-size:calc(26px*var(--fs));line-height:1.35;margin:28px 0 4px;letter-spacing:0.01em;}
+  .updated{margin:0 0 4px;color:var(--stone);font-size:calc(13px*var(--fs));}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px;}
+  .toc a{
+    display:inline-flex;align-items:center;min-height:36px;padding:4px 14px;border:1px solid var(--rule);border-radius:999px;
+    background:var(--surface);color:var(--ink);text-decoration:none;font-size:calc(14px*var(--fs));
+  }
+  .card{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:20px 18px;margin:16px 0;}
+  .summary{border-left:4px solid var(--trail);}
+  .summary h2{font-size:calc(17px*var(--fs));}
+  section{scroll-margin-top:76px;}
+  h2{font-size:calc(20px*var(--fs));line-height:1.4;margin:0 0 10px;}
+  h2 .num{color:var(--trail);margin-right:8px;font-variant-numeric:tabular-nums;}
+  h3{font-size:calc(16px*var(--fs));line-height:1.5;margin:22px 0 4px;}
+  p{margin:6px 0 10px;}
+  p,li,dd{overflow-wrap:anywhere;}
+  ul{margin:6px 0 10px;padding-left:1.35em;}
+  li{margin:5px 0;}
+  li strong{font-weight:700;}
+  .note{color:var(--stone);font-size:calc(14px*var(--fs));}
+  .refs{font-size:calc(14px*var(--fs));color:var(--ink-soft);}
+  .svc{display:grid;gap:8px;margin:10px 0 12px;}
+  .svc>div{border:1px solid var(--rule);border-radius:10px;padding:10px 12px;background:var(--tint);}
+  .svc dt{font-weight:700;}
+  .svc dd{margin:2px 0 0;color:var(--ink-soft);}
+  .terms li{margin:8px 0;}
+  footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;padding-top:8px;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));color:var(--stone);font-size:calc(13px*var(--fs));}
+  /* 320px 時語言按鈕把站名擠成「Race …」：窄螢幕只留圖示，站名留給讀屏軟體（連結才有名字） */
+  @media (max-width:360px){
+    .brand>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;}
+  }
+  @media (max-width:400px){
+    .lang button{padding:6px 8px;}
+    .card{padding:18px 14px;}
+    h1{font-size:calc(23px*var(--fs));}
+  }
+  @media print{
+    .top,.toc{display:none;}
+    body{background:#fff;color:#000;}
+    .card{border:0;padding:0;}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../icons/icon-192.png" alt=""><span><span class="l10n" lang="zh-Hant">賽事紀錄</span><span class="l10n" lang="ja">レース記録</span><span class="l10n" lang="en">Race Log</span></span></a>
+    <div class="lang" role="group" aria-label="語言 / 言語 / Language">
+      <button type="button" data-set-lang="zh" lang="zh-Hant">繁中</button>
+      <button type="button" data-set-lang="ja" lang="ja">日本語</button>
+      <button type="button" data-set-lang="en" lang="en">English</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <h1>
+    <span class="l10n" lang="zh-Hant">隱私權政策與使用條款</span>
+    <span class="l10n" lang="ja">プライバシーポリシーと利用規約</span>
+    <span class="l10n" lang="en">Privacy Policy &amp; Terms of Use</span>
+  </h1>
+  <p class="updated">
+    <span class="l10n" lang="zh-Hant">最後更新：<time datetime="2026-10-03">2026 年 10 月 3 日</time></span>
+    <span class="l10n" lang="ja">最終更新：<time datetime="2026-10-03">2026年10月3日</time></span>
+    <span class="l10n" lang="en">Last updated: <time datetime="2026-10-03">October 3, 2026</time></span>
+  </p>
+
+  <nav class="toc" aria-label="目次 / Contents">
+    <a href="#privacy"><span class="l10n" lang="zh-Hant">隱私權政策</span><span class="l10n" lang="ja">プライバシーポリシー</span><span class="l10n" lang="en">Privacy</span></a>
+    <a href="#cookies"><span class="l10n" lang="zh-Hant">Cookie 與第三方服務</span><span class="l10n" lang="ja">Cookie と第三者サービス</span><span class="l10n" lang="en">Cookies</span></a>
+    <a href="#terms"><span class="l10n" lang="zh-Hant">使用條款</span><span class="l10n" lang="ja">利用規約</span><span class="l10n" lang="en">Terms</span></a>
+    <a href="#contact"><span class="l10n" lang="zh-Hant">聯絡我們</span><span class="l10n" lang="ja">お問い合わせ</span><span class="l10n" lang="en">Contact</span></a>
+  </nav>
+
+  <!-- ============ 重點摘要 ============ -->
+  <section id="summary" class="card summary">
+    <div class="l10n" lang="zh-Hant">
+      <h2>重點摘要</h2>
+      <ul>
+        <li>不登入也能用：資料只存在你這台裝置的瀏覽器裡，我們看不到。</li>
+        <li>用 Google 帳號登入後，紀錄會存到 Google 的 Firebase，在你的裝置之間同步。只有你本人能讀取和修改；你建立的公開連結，則是任何拿到連結的人都能看。</li>
+        <li>我們不賣資料、不放廣告，本服務自己也不使用第三方的分析或廣告追蹤工具。</li>
+        <li>賽事放了 Spotify 連結時，頁面上的播放器由 Spotify 提供，Spotify 會在你的瀏覽器設定 Cookie。</li>
+        <li>想查詢、更正或刪除資料，請用<a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">意見回饋表單</a>聯絡我們。</li>
+      </ul>
+    </div>
+    <div class="l10n" lang="ja">
+      <h2>要点</h2>
+      <ul>
+        <li>ログインしなくても使えます。その場合、データはこの端末のブラウザの中だけに保存され、私たちが見ることはできません。</li>
+        <li>Google アカウントでログインすると、記録は Google の Firebase に保存され、あなたの端末間で同期されます。読み書きできるのはあなた本人だけです。ただし、あなたが作成した公開リンクは、リンクを知っている人なら誰でも見られます。</li>
+        <li>データの販売や広告の表示は行わず、本サービス自身も第三者のアクセス解析ツールや広告トラッキングを使用していません。</li>
+        <li>レースに Spotify のリンクがある場合、ページ上のプレーヤーは Spotify が提供しており、Spotify があなたのブラウザに Cookie を設定します。</li>
+        <li>データの照会・訂正・削除は、<a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">フィードバックフォーム</a>からご連絡ください。</li>
+      </ul>
+    </div>
+    <div class="l10n" lang="en">
+      <h2>In short</h2>
+      <ul>
+        <li>You can use the app without signing in. Your data then stays only in this device's browser, and we can't see it.</li>
+        <li>When you sign in with Google, your records are stored in Google Firebase and synced across your devices. Only you can read or change them; public links you create can be viewed by anyone who has the link.</li>
+        <li>We don't sell data or show ads, and the Service itself doesn't use third-party analytics or ad-tracking tools.</li>
+        <li>When a race has a Spotify link, the player on the page is provided by Spotify, and Spotify sets cookies in your browser.</li>
+        <li>To access, correct, or delete your data, contact us through the <a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">feedback form</a>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 1. 隱私權政策 ============ -->
+  <section id="privacy" class="card">
+    <div class="l10n" lang="zh-Hant">
+      <h2><span class="num">1</span>隱私權政策</h2>
+      <p>本政策說明「賽事紀錄」（My Race，https://ai-sub3.github.io/Race-Day/，以下稱「本服務」）蒐集哪些資料、怎麼使用和分享。本服務由劉恩龍（LIU EN LUNG，以下稱「我們」）個人經營。我們蒐集和使用你的資料，都依照本政策。</p>
+
+      <h3>1.1 不登入時</h3>
+      <p>你輸入或匯入的賽事、訓練、照片和設定，都只存在這台裝置的瀏覽器裡，不會傳給我們。清除瀏覽器的網站資料或換一台裝置，這些資料就不在了，請定期從「資料管理」匯出備份。</p>
+      <p class="note">不登入時，我們仍會統計功能使用次數（見下方「功能使用次數」）；開啟網站時，你的瀏覽器也會連到字型、地圖、天氣等第三方服務（見第 2 節）。</p>
+
+      <h3>1.2 我們蒐集的資料</h3>
+      <ul>
+        <li><strong>Google 帳號資料</strong>：用 Google 帳號登入時，Firebase Authentication 會提供你的名稱、email、大頭照網址和帳號識別碼，並記錄登入時的 IP 位址和瀏覽器資訊。</li>
+        <li><strong>你的紀錄</strong>：登入後，你在本服務輸入或匯入的內容會同步到雲端，包括賽事的報名、行程（交通、住宿、同行者）、預算、裝備、補給、成績、心得、連結、GPS 軌跡和天氣資料；訓練紀錄；鞋款與補給品資料庫、裝備清單範本和徽章；「個人資訊」裡的心率區間和身體數據；以及你加進賽事的照片。封面照片會先縮小到長邊 760 像素；「空間記憶迴廊」只保存照片的檔名、拍攝時間和照片裡內嵌的小縮圖，再用拍攝時間對到軌跡上的位置，原始照片不會上傳。</li>
+        <li><strong>推播通知</strong>：開啟推播通知時，我們會儲存這台裝置的推播代碼（Firebase Cloud Messaging），用來寄送提醒。</li>
+        <li><strong>公開連結</strong>：你建立公開連結時，我們會另外存一份那場賽事的部分內容：名稱、日期與起跑時間、運動種類、城市和國家、成績（完賽時間、是否 PB、名次）、距離和爬升、簡化過的 GPS 軌跡、平均心率、鞋款、吃了哪些補給、封面縮圖、相片縮圖（含拍攝時間和位置），以及分享用的圖片。任何拿到連結的人都能看到，不需要登入；社群網站產生連結預覽時也會讀取。你可以隨時「撤銷」，撤銷後這份內容會被刪除。</li>
+        <li><strong>功能使用次數</strong>：為了知道哪些功能有人用，我們會統計每個功能被使用的次數。這只是加總的數字，不含帳號、裝置或任何能認出你的資料；沒有登入的訪客也會被計入。</li>
+        <li><strong>意見回饋</strong>：按「意見回饋」時，表單會預先帶入 App 版本、裝置與瀏覽器類型，以及當下的畫面名稱；你在表單填寫的內容會透過 Google 表單送給我們。</li>
+      </ul>
+
+      <h3>1.3 使用目的</h3>
+      <ul>
+        <li>在你的裝置之間同步、備份紀錄</li>
+        <li>計算和顯示統計、圖表、天氣與提醒</li>
+        <li>寄送你開啟的推播通知</li>
+        <li>提供你建立的公開連結</li>
+        <li>了解功能的使用情況、修正問題、改善本服務</li>
+        <li>回覆你的意見和要求</li>
+      </ul>
+      <p>我們不會把你的資料用在廣告或行銷，也不會出售。</p>
+
+      <h3>1.4 誰會接觸到你的資料</h3>
+      <p>除了下列為了提供本服務所必要的情況，我們不會把你的資料提供給其他人：</p>
+      <ul>
+        <li><strong>Google（Firebase）</strong>：存放帳號和雲端資料、寄送推播通知。伺服器可能位於台灣以外的地區。</li>
+        <li><strong>你建立的公開連結</strong>：拿到連結的人。</li>
+        <li><strong>第三方服務</strong>：載入字型、地圖、天氣和播放器時，你的瀏覽器會直接連到這些服務（見第 2 節）。</li>
+        <li>依法律規定，或主管機關依法要求時。</li>
+      </ul>
+
+      <h3>1.5 保存期間</h3>
+      <ul>
+        <li><strong>雲端資料</strong>：保存到你刪除為止。刪除的賽事會先放在頭像選單的「已刪除賽事」30 天，之後自動永久刪除；在那裡選「永久刪除」，會立刻從這台裝置和雲端刪除。</li>
+        <li><strong>公開連結</strong>：保存到你撤銷為止。</li>
+        <li><strong>推播代碼與帳號資料</strong>：保存到你要求刪除帳號資料為止。</li>
+        <li><strong>意見回饋</strong>：存放在 Google 表單的回覆中，用來處理你的意見和改善本服務；你可以要求刪除。</li>
+        <li>Firebase 依它自己的規則保存登入紀錄，例如登入時的 IP 位址會保留幾週。</li>
+        <li>功能使用次數是不含個人資料的加總數字，會持續保存。</li>
+      </ul>
+
+      <h3>1.6 你的權利</h3>
+      <p>依個人資料保護法，你可以：</p>
+      <ul>
+        <li><strong>查詢、閱覽、取得複本</strong>：從 App 的「資料管理」匯出 JSON 或 CSV。</li>
+        <li><strong>補充或更正</strong>：直接在 App 裡編輯。</li>
+        <li><strong>刪除</strong>：刪除單場賽事，或透過<a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">意見回饋表單</a>要求刪除你帳號下的全部雲端資料。</li>
+        <li><strong>停止蒐集、處理或利用</strong>：登出後就不會再同步到雲端；你也可以要求我們停止處理並刪除雲端資料。</li>
+      </ul>
+      <p>不登入也能使用本服務；不過雲端同步、推播通知和公開連結需要登入。</p>
+
+      <h3>1.7 資料安全</h3>
+      <ul>
+        <li>資料傳輸全程使用 HTTPS 加密。</li>
+        <li>雲端資料受 Firebase 安全性規則保護：只有登入的你本人能讀寫自己的資料；公開連結的內容只有建立的人能修改或撤銷。</li>
+        <li>網路傳輸和儲存無法保證絕對安全，請妥善保管你的 Google 帳號。</li>
+      </ul>
+
+      <h3>1.8 政策變更</h3>
+      <p>更新本政策時，我們會修改本頁上方的「最後更新」日期；有重大變更時，會在本服務中另行通知。</p>
+    </div>
+
+    <div class="l10n" lang="ja">
+      <h2><span class="num">1</span>プライバシーポリシー</h2>
+      <p>本ポリシーは、「賽事紀錄」（レース記録／My Race、https://ai-sub3.github.io/Race-Day/、以下「本サービス」）がどのようなデータを収集し、どのように利用・共有するかを説明するものです。本サービスは劉恩龍（LIU EN LUNG、以下「私たち」）が個人で運営しています。私たちによるデータの収集と利用は、すべて本ポリシーに従います。</p>
+
+      <h3>1.1 ログインしない場合</h3>
+      <p>入力・取り込んだレース、トレーニング、写真、設定は、この端末のブラウザの中だけに保存され、私たちに送信されることはありません。ブラウザのサイトデータを消去したり別の端末を使ったりすると、これらのデータは利用できなくなります。「データ管理」から定期的にバックアップを書き出してください。</p>
+      <p class="note">ログインしていない場合でも、機能の利用回数は集計されます（下記「機能の利用回数」）。また、サイトを開くとブラウザがフォント・地図・天気などの第三者サービスに接続します（第2章）。</p>
+
+      <h3>1.2 収集するデータ</h3>
+      <ul>
+        <li><strong>Google アカウント情報</strong>：Google アカウントでログインすると、Firebase Authentication からお名前、メールアドレス、プロフィール写真の URL、アカウント識別子が提供されます。ログイン時の IP アドレスとブラウザ情報も記録されます。</li>
+        <li><strong>あなたの記録</strong>：ログイン後は、本サービスに入力・取り込んだ内容がクラウドに同期されます。レースのエントリー、旅程（交通・宿泊・同行者）、予算、装備、補給、結果、振り返り、リンク、GPS トラック、天気データ、トレーニング記録、シューズと補給食のデータベース、装備リストのテンプレートとバッジ、「個人情報」の心拍ゾーンと身体データ、レースに追加した写真が含まれます。カバー写真は長辺 760 ピクセルに縮小してから保存します。「空間の記憶回廊」には写真のファイル名、撮影日時、写真に埋め込まれた小さなサムネイルだけを保存し、撮影日時からトラック上の位置を割り出します。元の写真はアップロードされません。</li>
+        <li><strong>プッシュ通知</strong>：プッシュ通知をオンにすると、通知を送るためにこの端末のプッシュトークン（Firebase Cloud Messaging）を保存します。</li>
+        <li><strong>公開リンク</strong>：公開リンクを作成すると、そのレースの一部の内容を別に保存します。名称、日付とスタート時刻、競技の種類、都市と国、結果（完走タイム、自己ベストかどうか、順位）、距離と獲得標高、簡略化した GPS トラック、平均心拍数、シューズ、摂った補給、カバーのサムネイル、写真のサムネイル（撮影日時と位置を含む）、シェア用の画像です。リンクを知っている人は誰でもログインせずに閲覧でき、SNS がリンクのプレビューを作るときにも読み込まれます。いつでも「取り消す」ことができ、取り消すとこの内容は削除されます。</li>
+        <li><strong>機能の利用回数</strong>：どの機能が使われているかを知るため、機能ごとの利用回数を集計しています。合計の数値だけで、アカウントや端末など個人を特定できる情報は含みません。ログインしていない訪問者も集計に含まれます。</li>
+        <li><strong>フィードバック</strong>：「フィードバック」を押すと、アプリのバージョン、端末とブラウザの種類、その時の画面名が入力された状態でフォームが開きます。フォームに記入した内容は Google フォームを通じて私たちに届きます。</li>
+      </ul>
+
+      <h3>1.3 利用目的</h3>
+      <ul>
+        <li>端末間での記録の同期とバックアップ</li>
+        <li>統計・グラフ・天気・リマインダーの計算と表示</li>
+        <li>オンにしたプッシュ通知の送信</li>
+        <li>作成した公開リンクの提供</li>
+        <li>機能の利用状況の把握、不具合の修正、本サービスの改善</li>
+        <li>フィードバックやご依頼への対応</li>
+      </ul>
+      <p>あなたのデータを広告やマーケティングに使うことはなく、販売することもありません。</p>
+
+      <h3>1.4 データにアクセスできる人</h3>
+      <p>本サービスの提供に必要な次の場合を除き、あなたのデータを第三者に提供することはありません。</p>
+      <ul>
+        <li><strong>Google（Firebase）</strong>：アカウントとクラウドデータの保存、プッシュ通知の配信。サーバーは台湾以外の地域にある場合があります。</li>
+        <li><strong>あなたが作成した公開リンク</strong>：リンクを知っている人。</li>
+        <li><strong>第三者サービス</strong>：フォント、地図、天気、プレーヤーを読み込むとき、ブラウザがこれらのサービスに直接接続します（第2章）。</li>
+        <li>法令に基づく場合、または当局から法令に基づく要請があった場合。</li>
+      </ul>
+
+      <h3>1.5 保存期間</h3>
+      <ul>
+        <li><strong>クラウドのデータ</strong>：あなたが削除するまで。削除したレースはアイコンメニューの「削除した大会」に30日間残り、その後自動的に完全に削除されます。そこで「完全に削除」を選ぶと、この端末とクラウドからすぐに削除されます。</li>
+        <li><strong>公開リンク</strong>：取り消すまで。</li>
+        <li><strong>プッシュトークンとアカウント情報</strong>：アカウントデータの削除をご依頼いただくまで。</li>
+        <li><strong>フィードバック</strong>：対応と本サービスの改善のため、Google フォームの回答として保存します。削除をご依頼いただけます。</li>
+        <li>Firebase は独自のルールでログイン記録を保存します。たとえばログイン時の IP アドレスは数週間保存されます。</li>
+        <li>機能の利用回数は個人データを含まない合計値で、継続して保存します。</li>
+      </ul>
+
+      <h3>1.6 あなたの権利</h3>
+      <p>台湾の個人情報保護法に基づき、次のことができます。</p>
+      <ul>
+        <li><strong>照会・閲覧・写しの取得</strong>：アプリの「データ管理」から JSON または CSV を書き出せます。</li>
+        <li><strong>補充・訂正</strong>：アプリで直接編集できます。</li>
+        <li><strong>削除</strong>：レースを個別に削除するか、<a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">フィードバックフォーム</a>からアカウントのすべてのクラウドデータの削除をご依頼ください。</li>
+        <li><strong>収集・処理・利用の停止</strong>：ログアウトすると、それ以降はクラウドに同期されません。処理の停止とクラウドデータの削除をご依頼いただくこともできます。</li>
+      </ul>
+      <p>ログインしなくても本サービスは使えますが、クラウド同期、プッシュ通知、公開リンクにはログインが必要です。</p>
+
+      <h3>1.7 セキュリティ</h3>
+      <ul>
+        <li>データの通信はすべて HTTPS で暗号化されています。</li>
+        <li>クラウドのデータは Firebase のセキュリティルールで保護されており、自分のデータを読み書きできるのはログインしたあなた本人だけです。公開リンクの内容を変更・取り消しできるのも、作成した本人だけです。</li>
+        <li>通信や保存の安全性を完全に保証することはできません。Google アカウントは大切に管理してください。</li>
+      </ul>
+
+      <h3>1.8 ポリシーの変更</h3>
+      <p>本ポリシーを更新するときは、このページ上部の「最終更新」日を変更します。重要な変更がある場合は、本サービス内でもお知らせします。</p>
+    </div>
+
+    <div class="l10n" lang="en">
+      <h2><span class="num">1</span>Privacy Policy</h2>
+      <p>This policy explains what data 賽事紀錄 (Race Log / My Race, https://ai-sub3.github.io/Race-Day/, "the Service") collects and how it is used and shared. The Service is run by LIU EN LUNG (劉恩龍, "we", "us") as an individual. We collect and use your data in accordance with this policy.</p>
+
+      <h3>1.1 If you don't sign in</h3>
+      <p>The races, training, photos, and settings you enter or import are stored only in this device's browser and are never sent to us. If you clear your browser's site data or switch devices, that data is gone, so export a backup regularly from Data Management.</p>
+      <p class="note">Even without signing in, feature usage is counted (see "Feature usage counts" below), and your browser connects to third-party services for fonts, maps, weather and more when you open the site (see section 2).</p>
+
+      <h3>1.2 Data we collect</h3>
+      <ul>
+        <li><strong>Google account information</strong>: When you sign in with Google, Firebase Authentication provides your name, email address, profile photo URL, and account identifier, and records the IP address and browser information used to sign in.</li>
+        <li><strong>Your records</strong>: After you sign in, what you enter or import is synced to the cloud, including race registration, travel plans (transport, lodging, companions), budgets, gear, nutrition, results, reviews, links, GPS tracks and weather data; training logs; your shoe and nutrition databases, gear checklist templates and badges; the heart rate zones and body data in Personal Info; and photos you add to races. Cover photos are scaled down to 760 pixels on the long side first. For the Spatial Memory Corridor, we keep only each photo's file name, capture time, and the small thumbnail embedded in the photo, and use the capture time to place it on your track. Original photos are never uploaded.</li>
+        <li><strong>Push notifications</strong>: When you enable push notifications, we store this device's push token (Firebase Cloud Messaging) to send you reminders.</li>
+        <li><strong>Public links</strong>: When you create a public link, we store a separate copy of part of that race: name, date and start time, sport, city and country, results (finish time, whether it was a PB, rankings), distance and elevation gain, a simplified GPS track, average heart rate, shoes, the nutrition you took, the cover thumbnail, photo thumbnails (with capture time and location), and a sharing image. Anyone with the link can view it without signing in, and social networks read it to build link previews. You can Revoke the link at any time, which deletes this copy.</li>
+        <li><strong>Feature usage counts</strong>: To learn which features are used, we count how many times each feature is used. These are totals only and contain no account, device, or other information that identifies you. Visitors who aren't signed in are counted too.</li>
+        <li><strong>Feedback</strong>: When you tap Send feedback, the form opens pre-filled with the app version, your device and browser type, and the name of the current screen. What you write in the form is sent to us through Google Forms.</li>
+      </ul>
+
+      <h3>1.3 How we use data</h3>
+      <ul>
+        <li>To sync and back up your records across your devices</li>
+        <li>To calculate and show statistics, charts, weather, and reminders</li>
+        <li>To send the push notifications you turned on</li>
+        <li>To serve the public links you create</li>
+        <li>To understand how features are used, fix problems, and improve the Service</li>
+        <li>To respond to your feedback and requests</li>
+      </ul>
+      <p>We don't use your data for advertising or marketing, and we don't sell it.</p>
+
+      <h3>1.4 Who can access your data</h3>
+      <p>We don't share your data with anyone except where needed to provide the Service:</p>
+      <ul>
+        <li><strong>Google (Firebase)</strong>: stores account and cloud data and delivers push notifications. Its servers may be located outside Taiwan.</li>
+        <li><strong>Public links you create</strong>: anyone who has the link.</li>
+        <li><strong>Third-party services</strong>: when fonts, maps, weather, or the player load, your browser connects to these services directly (see section 2).</li>
+        <li>When required by law, or by a lawful request from the authorities.</li>
+      </ul>
+
+      <h3>1.5 How long we keep data</h3>
+      <ul>
+        <li><strong>Cloud data</strong>: until you delete it. Deleted races stay under Deleted Races in the avatar menu for 30 days and are then permanently deleted automatically; choosing Delete Permanently there removes them from this device and the cloud right away.</li>
+        <li><strong>Public links</strong>: until you revoke them.</li>
+        <li><strong>Push tokens and account data</strong>: until you ask us to delete your account data.</li>
+        <li><strong>Feedback</strong>: kept as Google Forms responses to handle your feedback and improve the Service; you can ask us to delete it.</li>
+        <li>Firebase keeps sign-in records under its own rules; for example, sign-in IP addresses are kept for a few weeks.</li>
+        <li>Feature usage counts contain no personal data and are kept indefinitely.</li>
+      </ul>
+
+      <h3>1.6 Your rights</h3>
+      <p>Under Taiwan's Personal Data Protection Act, you can:</p>
+      <ul>
+        <li><strong>Access and get a copy</strong>: export JSON or CSV from Data Management in the app.</li>
+        <li><strong>Correct or complete</strong>: edit directly in the app.</li>
+        <li><strong>Delete</strong>: delete individual races, or ask through the <a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">feedback form</a> for all cloud data under your account to be deleted.</li>
+        <li><strong>Stop collection, processing, or use</strong>: after you sign out, nothing more is synced to the cloud; you can also ask us to stop processing and delete your cloud data.</li>
+      </ul>
+      <p>You can use the Service without signing in, but cloud sync, push notifications, and public links require signing in.</p>
+
+      <h3>1.7 Security</h3>
+      <ul>
+        <li>All data is sent over encrypted HTTPS connections.</li>
+        <li>Cloud data is protected by Firebase security rules: only you, when signed in, can read and write your data, and only the person who created a public link can change or revoke it.</li>
+        <li>No transmission or storage method is completely secure, so please keep your Google account safe.</li>
+      </ul>
+
+      <h3>1.8 Changes to this policy</h3>
+      <p>When we update this policy, we change the "Last updated" date at the top of this page. For significant changes, we'll also let you know within the Service.</p>
+    </div>
+  </section>
+
+  <!-- ============ 2. Cookie 與第三方服務 ============ -->
+  <section id="cookies" class="card">
+    <div class="l10n" lang="zh-Hant">
+      <h2><span class="num">2</span>Cookie 與第三方服務</h2>
+
+      <h3>2.1 本服務自己使用的技術</h3>
+      <p>本服務自己不設定 Cookie，而是用瀏覽器的本機儲存保存資料和設定，這些都只存在你的裝置上：</p>
+      <ul>
+        <li><strong>localStorage、sessionStorage</strong>：語言、深淺色、字體大小、簡易版、推播開關、分享設定等偏好。</li>
+        <li><strong>IndexedDB</strong>：你的賽事和訓練資料、同步狀態、地點查詢的快取，以及 Google 登入狀態（由 Firebase 管理）。</li>
+        <li><strong>Cache Storage</strong>：網站檔案、字型和程式庫的離線快取（Service Worker），讓沒有訊號時也打得開。</li>
+      </ul>
+
+      <h3>2.2 第三方 Cookie</h3>
+      <p>我們允許下列第三方在你的瀏覽器設定 Cookie 或使用類似技術，它們可能藉此蒐集你的瀏覽活動資料：</p>
+      <ul>
+        <li><strong>Spotify</strong>：賽事放了 Spotify 連結時，賽事頁會載入 Spotify 提供的播放器（賽事 BGM）。播放器一載入，Spotify 就會在你的瀏覽器設定 Cookie 和類似技術，也可能透過 Google Analytics 蒐集資料；這些資料由 Spotify 依它的隱私權政策處理。沒有 Spotify 連結的賽事、公開連結頁和離線時，都不會載入播放器。</li>
+        <li><strong>Google</strong>：用 Google 帳號登入時，登入視窗會使用 Google 的 Cookie。開啟意見回饋表單或「在 Google 日曆開啟」時，你會前往 Google 的網站，適用 Google 的隱私權政策。</li>
+      </ul>
+      <p class="refs"><a href="https://www.spotify.com/legal/privacy-policy/" target="_blank" rel="noopener noreferrer">Spotify 隱私權政策</a>・<a href="https://www.spotify.com/legal/cookies-policy/" target="_blank" rel="noopener noreferrer">Spotify Cookie 政策</a>・<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google 隱私權政策</a></p>
+
+      <h3>2.3 其他會收到連線資訊的服務</h3>
+      <p>在下列情況，你的瀏覽器會直接連到這些服務，它們會收到你的 IP 位址和瀏覽器資訊。它們怎麼處理這些資訊，請見各自的隱私權政策：</p>
+      <dl class="svc">
+        <div><dt>Google Fonts</dt><dd>開啟網站時，下載字型。</dd></div>
+        <div><dt>Google Firebase</dt><dd>開啟網站時載入程式；登入、同步和統計功能使用次數時傳送資料。（<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Firebase 的隱私與安全</a>）</dd></div>
+        <div><dt>jsDelivr、unpkg</dt><dd>開啟網站、顯示地圖、匯入 Excel 或加入照片時，下載程式庫。（<a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noopener noreferrer">jsDelivr 隱私權政策</a>）</dd></div>
+        <div><dt>OpenStreetMap、OpenTopoMap</dt><dd>顯示地圖時下載地圖圖片，會知道你在看哪一塊地圖。（<a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OpenStreetMap 基金會隱私權政策</a>・<a href="https://opentopomap.org/about" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>）</dd></div>
+        <div><dt>Open-Meteo</dt><dd>抓天氣預報、歷史天氣、海象時，傳送賽事起點座標和日期（取自你匯入的 GPS 軌跡）；「今年的賽事旅程」查地點時，傳送賽事的城市或國家名稱。不包含你的帳號資料。（<a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">Open-Meteo 條款與隱私</a>）</dd></div>
+        <div><dt>Spotify</dt><dd>顯示賽事 BGM 播放器時（見 2.2）。</dd></div>
+      </dl>
+
+      <h3>2.4 管理 Cookie 的方式</h3>
+      <ul>
+        <li>你可以在瀏覽器的設定裡封鎖第三方 Cookie，或刪除已經存在的 Cookie。封鎖後，Spotify 播放器可能無法正常運作。各瀏覽器的設定位置不同，可以在瀏覽器的說明頁搜尋「Cookie」。</li>
+        <li>不想讓 Spotify 設定 Cookie：不要在賽事裡放 Spotify 連結。放其他音樂平台的連結只會顯示成一般連結，不會載入播放器。</li>
+        <li>清除瀏覽器的「網站資料」會一併刪除這台裝置上的紀錄。沒有登入同步的話，紀錄會無法復原，清除前請先匯出備份。</li>
+      </ul>
+    </div>
+
+    <div class="l10n" lang="ja">
+      <h2><span class="num">2</span>Cookie と第三者サービス</h2>
+
+      <h3>2.1 本サービス自身が使う技術</h3>
+      <p>本サービス自身は Cookie を設定しません。データや設定はブラウザのローカルストレージに保存し、あなたの端末の中にだけ残ります。</p>
+      <ul>
+        <li><strong>localStorage・sessionStorage</strong>：言語、ライト／ダーク、文字サイズ、シンプル表示、プッシュ通知のオン／オフ、共有設定などの好み。</li>
+        <li><strong>IndexedDB</strong>：レースとトレーニングのデータ、同期の状態、地名検索のキャッシュ、Google のログイン状態（Firebase が管理）。</li>
+        <li><strong>Cache Storage</strong>：サイトのファイル、フォント、ライブラリのオフライン用コピー（Service Worker）。電波がなくてもサイトを開けるようにするためです。</li>
+      </ul>
+
+      <h3>2.2 第三者の Cookie</h3>
+      <p>私たちは、次の第三者があなたのブラウザに Cookie を設定したり類似の技術を使ったりすることを許可しています。これらの第三者は、それによってあなたの閲覧活動に関するデータを収集することがあります。</p>
+      <ul>
+        <li><strong>Spotify</strong>：レースに Spotify のリンクがあると、レースのページに Spotify が提供するプレーヤー（レースBGM）が読み込まれます。プレーヤーが読み込まれた時点で、Spotify はあなたのブラウザに Cookie や類似の技術を設定し、Google アナリティクスを通じてデータを収集することがあります。これらのデータは Spotify が自社のプライバシーポリシーに従って取り扱います。Spotify のリンクがないレース、公開リンクのページ、オフライン時にはプレーヤーは読み込まれません。</li>
+        <li><strong>Google</strong>：Google アカウントでログインするとき、ログイン画面で Google の Cookie が使われます。フィードバックフォームや「Googleカレンダーで開く」を開くと Google のサイトに移動し、Google のプライバシーポリシーが適用されます。</li>
+      </ul>
+      <p class="refs"><a href="https://www.spotify.com/legal/privacy-policy/" target="_blank" rel="noopener noreferrer">Spotify プライバシーポリシー</a>・<a href="https://www.spotify.com/legal/cookies-policy/" target="_blank" rel="noopener noreferrer">Spotify Cookie ポリシー</a>・<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google プライバシーポリシー</a></p>
+
+      <h3>2.3 接続情報を受け取るその他のサービス</h3>
+      <p>次の場合、ブラウザがこれらのサービスに直接接続し、あなたの IP アドレスとブラウザ情報が送られます。取り扱いについては、各サービスのプライバシーポリシーをご覧ください。</p>
+      <dl class="svc">
+        <div><dt>Google Fonts</dt><dd>サイトを開いたとき、フォントをダウンロードします。</dd></div>
+        <div><dt>Google Firebase</dt><dd>サイトを開いたときにプログラムを読み込み、ログイン・同期・機能の利用回数の集計のときにデータを送ります。（<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Firebase のプライバシーとセキュリティ</a>）</dd></div>
+        <div><dt>jsDelivr・unpkg</dt><dd>サイトを開いたとき、地図の表示、Excel の取り込み、写真の追加のときに、ライブラリをダウンロードします。（<a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noopener noreferrer">jsDelivr プライバシーポリシー</a>）</dd></div>
+        <div><dt>OpenStreetMap・OpenTopoMap</dt><dd>地図を表示するときに地図画像をダウンロードします。どの範囲の地図を見ているかが伝わります。（<a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OpenStreetMap 財団プライバシーポリシー</a>・<a href="https://opentopomap.org/about" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>）</dd></div>
+        <div><dt>Open-Meteo</dt><dd>天気予報、過去の天気、海況を取得するときに、レースのスタート地点の座標と日付（取り込んだ GPS トラックから）を送ります。「今年のレースの旅」で地名を調べるときは、レースの都市名または国名を送ります。アカウント情報は含みません。（<a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">Open-Meteo 利用規約とプライバシー</a>）</dd></div>
+        <div><dt>Spotify</dt><dd>レースBGM のプレーヤーを表示するとき（2.2 参照）。</dd></div>
+      </dl>
+
+      <h3>2.4 Cookie の管理方法</h3>
+      <ul>
+        <li>ブラウザの設定で第三者 Cookie をブロックしたり、保存されている Cookie を削除したりできます。ブロックすると、Spotify のプレーヤーが正しく動作しない場合があります。設定の場所はブラウザによって異なるため、ブラウザのヘルプで「Cookie」を検索してください。</li>
+        <li>Spotify に Cookie を設定させたくない場合は、レースに Spotify のリンクを追加しないでください。ほかの音楽サービスのリンクは通常のリンクとして表示され、プレーヤーは読み込まれません。</li>
+        <li>ブラウザの「サイトデータ」を消去すると、この端末の記録も削除されます。ログインして同期していない場合は復元できないため、消去する前にバックアップを書き出してください。</li>
+      </ul>
+    </div>
+
+    <div class="l10n" lang="en">
+      <h2><span class="num">2</span>Cookies and third-party services</h2>
+
+      <h3>2.1 What the Service itself uses</h3>
+      <p>The Service itself doesn't set cookies. Instead, it uses your browser's local storage for data and settings, which stays on your device:</p>
+      <ul>
+        <li><strong>localStorage and sessionStorage</strong>: preferences such as language, light/dark theme, font size, Simple mode, push notifications on/off, and sharing settings.</li>
+        <li><strong>IndexedDB</strong>: your race and training data, sync status, a cache of place lookups, and your Google sign-in state (managed by Firebase).</li>
+        <li><strong>Cache Storage</strong>: an offline copy of the site's files, fonts, and libraries (Service Worker), so the site opens without a signal.</li>
+      </ul>
+
+      <h3>2.2 Third-party cookies</h3>
+      <p>We allow the third parties below to place cookies or use similar technologies in your browser, which they may use to collect data about your browsing activity:</p>
+      <ul>
+        <li><strong>Spotify</strong>: When a race has a Spotify link, the race page loads a player provided by Spotify (Race BGM). As soon as the player loads, Spotify places cookies and similar technologies in your browser and may collect data through Google Analytics. Spotify handles this data under its own privacy policy. The player isn't loaded for races without a Spotify link, on public link pages, or while you're offline.</li>
+        <li><strong>Google</strong>: Signing in with Google uses Google's cookies in the sign-in window. When you open the feedback form or Open in Google Calendar, you go to Google's sites, where Google's privacy policy applies.</li>
+      </ul>
+      <p class="refs"><a href="https://www.spotify.com/legal/privacy-policy/" target="_blank" rel="noopener noreferrer">Spotify Privacy Policy</a> · <a href="https://www.spotify.com/legal/cookies-policy/" target="_blank" rel="noopener noreferrer">Spotify Cookies Policy</a> · <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a></p>
+
+      <h3>2.3 Other services that receive connection data</h3>
+      <p>In the cases below, your browser connects directly to these services, which receive your IP address and browser information. See each service's privacy policy for how they handle it:</p>
+      <dl class="svc">
+        <div><dt>Google Fonts</dt><dd>When you open the site, to download fonts.</dd></div>
+        <div><dt>Google Firebase</dt><dd>When you open the site, to load its code; when you sign in or sync, and when feature usage is counted. (<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Privacy and Security in Firebase</a>)</dd></div>
+        <div><dt>jsDelivr, unpkg</dt><dd>When you open the site, show a map, import Excel, or add photos, to download code libraries. (<a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noopener noreferrer">jsDelivr Privacy Policy</a>)</dd></div>
+        <div><dt>OpenStreetMap, OpenTopoMap</dt><dd>When a map is shown, to download map images, which reveals the area you're viewing. (<a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OSM Foundation Privacy Policy</a> · <a href="https://opentopomap.org/about" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>)</dd></div>
+        <div><dt>Open-Meteo</dt><dd>When weather forecasts, historical weather, or sea conditions are fetched, the race's start coordinates and date (from the GPS track you imported) are sent; when This year's race travel looks up places, the race's city or country name is sent. No account information is included. (<a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">Open-Meteo Terms &amp; Privacy</a>)</dd></div>
+        <div><dt>Spotify</dt><dd>When the Race BGM player is shown (see 2.2).</dd></div>
+      </dl>
+
+      <h3>2.4 Managing cookies</h3>
+      <ul>
+        <li>You can block third-party cookies or delete existing cookies in your browser settings. If you block them, the Spotify player may not work properly. Where these settings are depends on your browser; search your browser's help pages for "cookies".</li>
+        <li>If you don't want Spotify to set cookies, don't add Spotify links to your races. Links to other music services are shown as plain links and don't load a player.</li>
+        <li>Clearing your browser's "site data" also deletes the records on this device. If you haven't signed in to sync, they can't be recovered, so export a backup first.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 3. 使用條款 ============ -->
+  <section id="terms" class="card">
+    <div class="l10n" lang="zh-Hant">
+      <h2><span class="num">3</span>使用條款</h2>
+      <ol class="terms">
+        <li><strong>接受條款</strong>：使用本服務（包括瀏覽和登入），即表示你同意本使用條款和上面的隱私權政策。不同意的話，請停止使用。</li>
+        <li><strong>服務內容</strong>：本服務是免費提供的個人賽事紀錄工具，目前仍在測試階段。我們可能隨時新增、修改、暫停或終止部分或全部功能。</li>
+        <li><strong>帳號</strong>：你可以用 Google 帳號登入以使用雲端同步。請妥善保管你的帳號；以你的帳號進行的操作，由你負責。</li>
+        <li><strong>你的內容</strong>：你在本服務輸入、匯入的資料和照片，權利仍屬於你。你授權我們在提供本服務所需的範圍內儲存、處理和顯示這些內容，例如同步到你的其他裝置、顯示你建立的公開連結。請只上傳你有權使用的內容；建立公開連結前，請確認內容適合公開。</li>
+        <li><strong>使用規範</strong>：你不得用本服務從事違法行為；不得干擾、攻擊或過度存取本服務，或試圖繞過安全機制；不得冒用他人帳號或存取不屬於你的資料；不得以自動化程式大量存取本服務。</li>
+        <li><strong>第三方服務與內容</strong>：本服務會使用第三方提供的服務和內容，例如 Spotify 播放器、地圖、天氣資料、字型，這些服務適用各自的條款。Spotify 播放器和其中的音樂、封面等內容由 Spotify 提供，相關權利屬於 Spotify 和它的授權人。我們無法保證第三方服務一直可用。</li>
+        <li><strong>智慧財產權</strong>：本服務的程式碼、設計、文件和素材，著作權屬於劉恩龍，保留一切權利。本網站開放作為個人賽事紀錄工具使用；未經書面同意，不得重製、修改或散布。</li>
+        <li><strong>免責聲明</strong>：本服務依「現況」提供。配速、預估成績、天氣、建議等計算和資訊僅供參考，不保證正確或完整。運動有風險，請依自己的身體狀況和賽事規定判斷，必要時諮詢專業人士。資料可能因裝置故障、瀏覽器清除資料或服務異常而遺失，請定期匯出備份。</li>
+        <li><strong>責任限制</strong>：在法律允許的範圍內，我們對因使用或無法使用本服務造成的間接、附帶或衍生損害（包括資料遺失），不負賠償責任。</li>
+        <li><strong>終止</strong>：你可以隨時停止使用本服務，並要求刪除雲端資料。你違反本條款時，我們可以暫停或終止你使用本服務。</li>
+        <li><strong>條款變更</strong>：更新本條款時，我們會修改本頁上方的「最後更新」日期；變更後繼續使用，即表示你同意更新後的條款。</li>
+        <li><strong>準據法</strong>：本條款依中華民國（台灣）法律解釋和適用。</li>
+      </ol>
+    </div>
+
+    <div class="l10n" lang="ja">
+      <h2><span class="num">3</span>利用規約</h2>
+      <ol class="terms">
+        <li><strong>規約への同意</strong>：本サービスを利用（閲覧・ログインを含む）することで、本利用規約と上記のプライバシーポリシーに同意したものとみなされます。同意いただけない場合は、利用を中止してください。</li>
+        <li><strong>サービス内容</strong>：本サービスは無料で提供する個人向けのレース記録ツールで、現在ベータ版です。機能の一部または全部を、いつでも追加・変更・停止・終了することがあります。</li>
+        <li><strong>アカウント</strong>：クラウド同期を使うには Google アカウントでログインします。アカウントは大切に管理してください。あなたのアカウントで行われた操作は、あなたの責任となります。</li>
+        <li><strong>あなたのコンテンツ</strong>：入力・取り込んだデータや写真の権利は、あなたに帰属します。あなたは、本サービスの提供に必要な範囲で（たとえば他の端末への同期や、作成した公開リンクの表示のため）、私たちがそれらを保存・処理・表示することを許諾するものとします。使用する権利を持つコンテンツだけをアップロードし、公開リンクを作成する前に、内容が公開に適しているか確認してください。</li>
+        <li><strong>禁止事項</strong>：本サービスを違法な目的で利用すること、本サービスを妨害・攻撃したり過度な負荷をかけたりすること、セキュリティを回避しようとすること、他人のアカウントを使ったり自分のものではないデータにアクセスしたりすること、自動化されたプログラムで大量にアクセスすることを禁止します。</li>
+        <li><strong>第三者のサービスとコンテンツ</strong>：本サービスは、Spotify のプレーヤー、地図、天気データ、フォントなど第三者が提供するサービスとコンテンツを利用しており、それぞれの規約が適用されます。Spotify のプレーヤーとその中の音楽・アートワークなどのコンテンツは Spotify が提供するもので、権利は Spotify とそのライセンサーに帰属します。第三者のサービスが常に利用できることは保証できません。</li>
+        <li><strong>知的財産権</strong>：本サービスのプログラム、デザイン、文書、素材の著作権は劉恩龍（LIU EN LUNG）に帰属し、すべての権利を留保します。本サイトは個人のレース記録ツールとして利用いただけますが、書面による許可なく複製・改変・頒布することはできません。</li>
+        <li><strong>免責事項</strong>：本サービスは「現状のまま」提供されます。ペース、予想タイム、天気、提案などの計算や情報は参考用であり、正確性や完全性は保証されません。スポーツにはリスクが伴います。ご自身の体調と大会の規則に基づいて判断し、必要に応じて専門家に相談してください。端末の故障、ブラウザデータの消去、サービスの障害などによりデータが失われることがあるため、定期的にバックアップを書き出してください。</li>
+        <li><strong>責任の制限</strong>：法令で認められる範囲で、本サービスの利用または利用できないことによって生じた間接的、付随的、派生的な損害（データの消失を含む）について、私たちは責任を負いません。</li>
+        <li><strong>利用の終了</strong>：あなたはいつでも本サービスの利用をやめ、クラウドデータの削除を依頼できます。本規約に違反した場合、私たちは本サービスの利用を停止または終了させることがあります。</li>
+        <li><strong>規約の変更</strong>：本規約を更新するときは、このページ上部の「最終更新」日を変更します。変更後も本サービスを利用し続けた場合、更新後の規約に同意したものとみなされます。</li>
+        <li><strong>準拠法</strong>：本規約は中華民国（台湾）の法律に準拠します。</li>
+      </ol>
+    </div>
+
+    <div class="l10n" lang="en">
+      <h2><span class="num">3</span>Terms of Use</h2>
+      <ol class="terms">
+        <li><strong>Acceptance</strong>: By using the Service, including browsing and signing in, you agree to these Terms of Use and the Privacy Policy above. If you don't agree, please stop using the Service.</li>
+        <li><strong>The Service</strong>: The Service is a free personal race-logging tool and is still in beta. We may add, change, suspend, or end some or all features at any time.</li>
+        <li><strong>Accounts</strong>: You can sign in with a Google account to use cloud sync. Please keep your account secure; you're responsible for activity under your account.</li>
+        <li><strong>Your content</strong>: You keep the rights to the data and photos you enter or import. You allow us to store, process, and display that content as needed to provide the Service, for example syncing it to your other devices and showing the public links you create. Only upload content you have the right to use, and make sure content is fit to be public before creating a public link.</li>
+        <li><strong>Acceptable use</strong>: You must not use the Service for anything illegal; interfere with, attack, or overload the Service, or try to bypass its security; use someone else's account or access data that isn't yours; or access the Service in bulk with automated programs.</li>
+        <li><strong>Third-party services and content</strong>: The Service uses services and content from third parties, such as the Spotify player, maps, weather data, and fonts, which are subject to their own terms. The Spotify player and the music, artwork, and other content in it are provided by Spotify, and the rights belong to Spotify and its licensors. We can't guarantee that third-party services will always be available.</li>
+        <li><strong>Intellectual property</strong>: Copyright in the Service's code, design, documentation, and materials belongs to LIU EN LUNG (劉恩龍). All rights reserved. The site is open for use as a personal race-logging tool, but it may not be copied, modified, or distributed without written permission.</li>
+        <li><strong>Disclaimer</strong>: The Service is provided "as is." Calculations and information such as pace, predicted times, weather, and suggestions are for reference only and aren't guaranteed to be accurate or complete. Sports involve risk; make your own decisions based on your condition and race rules, and consult a professional when needed. Data can be lost through device failure, cleared browser data, or service problems, so export backups regularly.</li>
+        <li><strong>Limitation of liability</strong>: To the extent permitted by law, we aren't liable for any indirect, incidental, or consequential damages, including data loss, arising from your use of or inability to use the Service.</li>
+        <li><strong>Termination</strong>: You can stop using the Service at any time and ask us to delete your cloud data. If you violate these terms, we may suspend or end your use of the Service.</li>
+        <li><strong>Changes</strong>: When we update these terms, we change the "Last updated" date at the top of this page. By continuing to use the Service after changes, you agree to the updated terms.</li>
+        <li><strong>Governing law</strong>: These terms are governed by the laws of the Republic of China (Taiwan).</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ 4. 聯絡我們 ============ -->
+  <section id="contact" class="card">
+    <div class="l10n" lang="zh-Hant">
+      <h2><span class="num">4</span>聯絡我們</h2>
+      <p>有任何關於隱私權或本條款的問題，或想查詢、更正、刪除你的資料，請透過<a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">意見回饋表單</a>聯絡我們。要求刪除資料時，請寫上你登入用的 Google 帳號 email，方便我們找到你的資料。</p>
+    </div>
+    <div class="l10n" lang="ja">
+      <h2><span class="num">4</span>お問い合わせ</h2>
+      <p>プライバシーや本規約についてのご質問、データの照会・訂正・削除のご依頼は、<a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">フィードバックフォーム</a>からご連絡ください。削除をご依頼の際は、ログインに使っている Google アカウントのメールアドレスをご記入ください。</p>
+    </div>
+    <div class="l10n" lang="en">
+      <h2><span class="num">4</span>Contact us</h2>
+      <p>For any questions about privacy or these terms, or to access, correct, or delete your data, contact us through the <a class="js-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSfuxfXHORQ96fceVn1fPc6RfE6Z7wuquU2Loj4Hor_HKe4rsA/viewform" target="_blank" rel="noopener noreferrer">feedback form</a>. When asking for deletion, include the email address of the Google account you sign in with so we can find your data.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="../"><span class="l10n" lang="zh-Hant">← 回到賽事紀錄</span><span class="l10n" lang="ja">← レース記録に戻る</span><span class="l10n" lang="en">← Back to Race Log</span></a>
+    <span>© 2026 劉恩龍 LIU EN LUNG</span>
+  </div>
+</footer>
+
+<script>
+/* 語言切換：只換這一頁顯示的語言，並把 ?lang= 寫回網址（複製連結給別人也是同一種語言）。
+   刻意不改 App 的語言設定（lang-pref-v1）：看條款時切個語言，不該讓 App 下次也變成那種語言 */
+(function(){
+  var d=document.documentElement;
+  var TITLES={zh:'隱私權政策與使用條款｜賽事紀錄',ja:'プライバシーポリシーと利用規約｜レース記録',en:'Privacy Policy & Terms of Use | Race Log'};
+  var buttons=document.querySelectorAll('[data-set-lang]');
+  function apply(lang,updateUrl){
+    d.setAttribute('data-lang',lang);
+    d.setAttribute('lang',lang==='zh'?'zh-Hant':lang);
+    document.title=TITLES[lang];
+    for(var i=0;i<buttons.length;i++) buttons[i].setAttribute('aria-pressed',buttons[i].getAttribute('data-set-lang')===lang?'true':'false');
+    if(updateUrl&&window.history&&history.replaceState){
+      var q=location.search.replace(/([?&])lang=[^&]*&?/,'$1').replace(/[?&]$/,'');
+      q=(q?q+'&':'?')+'lang='+lang;
+      history.replaceState(null,'',location.pathname+q+location.hash);
+    }
+  }
+  for(var i=0;i<buttons.length;i++){
+    buttons[i].addEventListener('click',function(){ apply(this.getAttribute('data-set-lang'),true); });
+  }
+  apply(d.getAttribute('data-lang')||'zh',false);
+})();
+</script>
+</body>
+</html>
