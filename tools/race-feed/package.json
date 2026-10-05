@@ -1,0 +1,16 @@
+{
+  "name": "race-day-race-feed",
+  "version": "1.0.0",
+  "private": true,
+  "description": "找賽事清單：每天讀一次報名網站公開的賽事清單，整理成 race-feed.json（Race-Day v4.16.0）",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "fetch": "node fetch.mjs",
+    "test": "node --test test.mjs"
+  },
+  "dependencies": {
+    "linkedom": "^0.18.12"
+  }
+}
