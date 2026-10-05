@@ -3080,96 +3080,6 @@ class Offline(Group):
         }''')
         page.emulate_media(reduced_motion='no-preference')
 
-class Climate(Group):
-    """氣候與表現：個人距離曲線、溫度估計值退回、越野校正開關。"""
-
-    SEED = """()=>{
-        state.races=[];
-        state.homeTab='career';   // v4.0：氣候與表現圖在「生涯數據」分頁
-        const add=(name,sport,km,sec,feels,avg,elev,splits)=>{
-          const r=emptyRace(name,sport,'completed','2026-0'+(1+state.races.length%9)+'-1'+(state.races.length%9));
-          r.route.distanceKm=km; r.results.chipTimeSeconds=sec;
-          if(feels!=null) r.raceDayWeather.feelsLikeTempC=feels; if(avg!=null) r.climateForecast.avgTempC=avg;
-          if(elev!=null) r.route.elevationGainM=elev; if(splits) r.splits=splits; state.races.push(r); return r; };
-        add('5K','road_running',5,1230,12,null); add('10K','road_running',10,2580,15,null);
-        add('15K','road_running',15,4020,null,22); add('半馬','road_running',21.1,5700,18,null);
-        add('30K','road_running',30,8700,null,26); add('全馬','road_running',42.195,12400,20,null);
-        add('全馬熱','road_running',42.195,13300,31,null);
-        add('沒溫度','road_running',10,2700,null,null);
-        const sp=(n,base)=>Array.from({length:n},(_,i)=>({distanceKm:1,avgPaceSecPerKm:base+i*40,elevationGainM:20+i*25,elevationLossM:5}));
-        add('越野A','trail_running',25,9500,24,null,1200,sp(8,330)); add('越野B','trail_running',30,11800,28,null,1500,sp(8,360)); add('越野C','trail_running',20,7300,16,null,900,sp(8,300));
-        try{ localStorage.removeItem('climate-include-trail-v1'); }catch(e){}
-        return true;
-    }"""
-
-    def body(self, page):
-        c = self.checks
-        page.evaluate(self.SEED)
-        # 舊規則只有三個經典距離 4 場；新規則 5K/15K/30K 都進來，沒溫度的仍然排除
-        c['all_road_distances_now_count'] = page.evaluate('''()=>{
-            const old=computeClimatePerformancePoints().length;
-            const p=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true});
-            const names=p.map(x=>x.race.name);
-            return old===4 && p.length===7 && names.includes('5K') && names.includes('30K') && !names.includes('沒溫度');
-        }''')
-        # 曲線：k 從六個距離擬合、落在合理範圍；包絡讓所有效率 ≤100 且剛好一場是 100
-        c['distance_curve_fitted_and_enveloped'] = page.evaluate('''()=>{
-            const p=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true});
-            const cv=p.curve;
-            const effs=p.map(x=>x.efficiencyPct);
-            return cv.fitted && cv.k>1.0 && cv.k<1.25 && cv.distinctDistances===6
-                && effs.every(e=>e<=100.0001) && effs.filter(e=>e>99.999).length===1;
-        }''')
-        c['default_k_when_single_distance'] = page.evaluate('''()=>{
-            const keep=state.races; state.races=keep.filter(r=>r.route.distanceKm===42.195);
-            const cv=computePersonalDistanceCurve(); state.races=keep;
-            return cv && !cv.fitted && Math.abs(cv.k-RIEGEL_DEFAULT_K)<1e-9;
-        }''')
-        # 溫度退回：兩場只有氣候平均溫的被標成估計值，圖上畫成空心
-        c['estimated_temp_flagged_and_hollow'] = page.evaluate('''()=>{
-            const p=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true});
-            const est=p.filter(x=>x.tempEstimated).map(x=>x.race.name).sort().join(',');
-            renderCalendar();
-            const hollow=document.querySelectorAll('.climate-chart-svg circle[fill="none"]').length;
-            return est==='15K,30K' && hollow>=2;
-        }''')
-        # 越野：預設關；開了且爬升係數就緒才進來，畫成三角，且效率已校正（比未校正高）
-        c['trail_off_by_default_on_when_toggled'] = page.evaluate('''()=>{
-            const off=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true,includeTrail:false});
-            const on =computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true,includeTrail:true});
-            const trail=on.filter(x=>x.isTrail);
-            const raw=state.races.find(r=>r.name==='越野A');
-            const uncorrected=on.curve.predictSeconds(raw.route.distanceKm)/raw.results.chipTimeSeconds*100;
-            return off.filter(x=>x.isTrail).length===0 && trail.length===3 && trail[0].efficiencyPct>uncorrected;
-        }''')
-        c['trail_toggle_rerenders_with_triangles'] = page.evaluate('''async()=>{
-            const cb=document.querySelector('[data-action="climate-toggle-trail"]');
-            cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true}));
-            await new Promise(s=>setTimeout(s,300));
-            const tri=document.querySelectorAll('.climate-chart-svg path[d^="M"]').length;
-            const text=document.querySelector('.climate-chart-wrap').innerText;
-            return localStorage.getItem('climate-include-trail-v1')==='1' && tri>=3 && /10 場賽事推算/.test(text) && /3 場越野已校正/.test(text);
-        }''')
-        c['trail_excluded_when_gravity_not_ready'] = page.evaluate('''()=>{
-            state.races.forEach(r=>{ if(r.sportType==='trail_running') r.splits=[]; });
-            const on=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true,includeTrail:true});
-            renderCalendar();
-            const note=!!document.querySelector('.climate-trail-notready');
-            return on.filter(x=>x.isTrail).length===0 && note;
-        }''')
-        # 甜蜜點只看效率 ≥98，不是「每個距離的最佳」都算
-        c['sweet_spot_uses_efficiency_not_frontier'] = page.evaluate('''()=>{
-            const p=computeClimatePerformancePoints({allDistances:true,allowEstimatedTemp:true});
-            const band=computeSweetSpotBand(p);
-            const frontier=p.filter(x=>x.isPb).length;
-            return band && band.count<frontier && band.count===p.filter(x=>x.efficiencyPct>=98).length;
-        }''')
-        # EPP 沒有跟著放寬：不傳參數 = 舊規則
-        c['epp_still_strict'] = page.evaluate('''()=>{
-            const p=computeClimatePerformancePoints();
-            return p.length===4 && p.every(x=>!x.tempEstimated && !x.isTrail && x.category);
-        }''')
-
 class PublicLink(Group):
     """公開連結：快照白名單、發佈／撤銷、唯讀頁、XSS。"""
 
@@ -4538,7 +4448,7 @@ class Simple(Group):
             return {radar:q('.race-radar'),qnav:q('.quick-nav a'),logi:q('#section-logistics'),splitsChart:q('.splits-chart-block'),
               splitAna:q('.split-analysis'),elev:q('.elevation-profile'),series:!!document.querySelector('#detail > details.section:not([id])'),
               cp:q('[data-section="checkpoints"]'),weather:q('[data-section="weather"]'),nutri:q('[data-section="nutritionPlan"]'),
-              tplan:q('[data-section="trainingPlan"]'),epp:q('.epp-section'),pacing:q('[data-action="open-pacing-modal"]'),
+              tplan:q('[data-section="trainingPlan"]'),
               spark:q('.spark'),fatigue:q('[data-action="open-fatigue-mode"]'),paste:q('[data-action="open-paste-modal"]'),
               aiPrompt:q('[data-action="copy-report-prompt"]'),shoe:[...document.querySelectorAll('#section-post h3')].some(h=>h.textContent.includes('鞋'))}; }"""
         adv = page.evaluate(ADV)
@@ -4610,7 +4520,7 @@ class Simple(Group):
         c['note_button_switches_to_full_and_everything_returns'] = page.evaluate(mode) is None \
             and page.evaluate("()=>localStorage.getItem('ui-mode-v1')==='full'&&localStorage.getItem('ui-mode-auto-v1')===null&&document.getElementById('btn-mode-toggle').getAttribute('aria-checked')==='false'") \
             and all(adv_full[k] for k in ['radar', 'qnav', 'logi', 'splitsChart', 'elev', 'series', 'cp', 'weather',
-                                          'nutri', 'tplan', 'pacing', 'fatigue', 'paste', 'aiPrompt', 'shoe'])
+                                          'nutri', 'tplan', 'fatigue', 'paste', 'aiPrompt', 'shoe'])
         c['full_mode_drawer_has_all_fields'] = page.evaluate("""async()=>{
             openDrawer('basicInfo'); await new Promise(s=>setTimeout(s,200));
             const n=document.querySelectorAll('#drawer-content [data-path]').length, b=!!document.querySelector('#drawer-content .simple-fields-toggle');
@@ -4632,14 +4542,14 @@ class Simple(Group):
             const back=!!document.querySelector('#calendar .table-view-wrap');
             document.getElementById('cal-table-toggle').click(); await new Promise(s=>setTimeout(s,200));
             return inTable && simpleNoTable && back && state.viewMode!=='table'; }""")
-        # 首頁（五場以上才有生涯區）：簡易版收起榮譽櫃、氣溫與配速圖；留 PB 卡與年度回顧長圖卡
+        # 首頁（五場以上才有生涯區）：簡易版收起榮譽櫃、熱力圖（v4.19.0 以前用氣溫與配速圖測，那張圖暫時拿掉了）；留 PB 卡與年度回顧長圖卡
         c['home_trims_trophy_and_charts'] = page.evaluate("""async()=>{
             const extra=[1,2,3].map(i=>{ const r=emptyRace('馬拉松'+i,'road_running','completed','2023-0'+i+'-10'); r.route.distanceKm=42.195; r.results.chipTimeSeconds=13000+i; return r; });
             state.races.push(...extra); state.selectedId=null; state.homeTab='career'; renderAll(); await new Promise(s=>setTimeout(s,300));
             const q=s=>!!document.querySelector('#calendar '+s);
-            const full=q('.trophy-cabinet-wrap') && q('.climate-chart-wrap') && q('.honor-card') && q('.year-in-review-row');
+            const full=q('.trophy-cabinet-wrap') && q('.heatmap-wrap') && q('.honor-card') && q('.year-in-review-row');
             document.getElementById('btn-mode-toggle').click(); await new Promise(s=>setTimeout(s,300));
-            const simple=!q('.trophy-cabinet-wrap') && !q('.climate-chart-wrap') && q('.honor-card') && q('.year-in-review-row')
+            const simple=!q('.trophy-cabinet-wrap') && !q('.heatmap-wrap') && q('.honor-card') && q('.year-in-review-row')
               && q('[data-action="open-hof"]');
             state.homeTab='races'; renderAll();
             return full && simple && document.documentElement.getAttribute('data-mode')==='simple'; }""")
@@ -7025,11 +6935,11 @@ class V433Fields(Group):
             }
             closeDrawer();
             return {n,nCtl,bad,nPh,phBad,minFill}; }"""
-        # 抽屜以外：首頁搜尋框、新增賽事、個人資料、鞋款、補給品字典、配速、貼上、恢復
+        # 抽屜以外：首頁搜尋框、新增賽事、個人資料、鞋款、補給品字典、貼上、恢復（配速試算 v4.19.0 暫時拿掉）
         MODALS = r"""async()=>{ const wait=ms=>new Promise(s=>setTimeout(s,ms)); const hide=()=>document.querySelectorAll('.modal-overlay').forEach(m=>m.hidden=true);
             const steps=[['home',()=>{ closeDrawer(); state.selectedId=null; renderAll(); }],['create',()=>startCreate()],
               ['profile',()=>{ hide(); state.creating=false; renderAll(); openProfileModal(); }],['shoes',()=>{ hide(); openShoeModal(); }],
-              ['nutrition',()=>{ hide(); openNutritionDictModal(); }],['pacing',()=>{ hide(); selectRace(__rid); openPacingModal(); }],
+              ['nutrition',()=>{ hide(); openNutritionDictModal(); }],
               ['paste',()=>{ hide(); openPasteModal(); }],['recovery',()=>{ hide(); openRecoveryModal(); }]];
             const bad=[], phBad=[]; let n=0;
             for(const [name,fn] of steps){ fn(); await wait(350);
@@ -7068,7 +6978,8 @@ class V433Fields(Group):
         for theme in ('light', 'dark'):
             d, m = res[theme]
             c[f'drawer_fields_framed_{theme}'] = d['n'] >= 120 and d['nCtl'] >= 5 and not d['bad']
-            c[f'other_inputs_framed_{theme}'] = m['n'] >= 25 and not m['bad']
+            # 配速試算的彈窗有 4 格（目標時間、距離、策略、間隔），v4.19.0 暫時拿掉：25 → 21
+            c[f'other_inputs_framed_{theme}'] = m['n'] >= 21 and not m['bad']
         # 深色模式的格子比抽屜深一階：不是只靠框，整格看得出來是「嵌進去」的（淺色是白格子，靠框）
         c['dark_fields_a_step_darker'] = res['dark'][0]['minFill'] >= 1.1
         if res['dark'][0]['minFill'] < 1.1:
@@ -13125,9 +13036,20 @@ class V417PasteUrl(V416FindRaces):
     新增表單的官網欄貼清單裡有的網址會出現「帶入」；首頁直接貼清單裡有、還沒加過的賽事網址，帶去找賽事頁。"""
 
     ECHO = ('v417:',)
+    # v4.18.1 起貼網址區塊平常收成一行字（按了才展開）：v417 的檢查都是在展開的區塊裡測，所以先按開
+    OPEN_PASTE_INIT = "window.__openPaste=async()=>{ const b=document.querySelector('[data-action=\"find-paste-open\"]'); if(b){ b.click(); await new Promise(r=>setTimeout(r,40)); } };"
+
+    def _ctx(self, browser, **kw):
+        kw['init'] = self.OPEN_PASTE_INIT + (kw.get('init') or '')
+        return super()._ctx(browser, **kw)
+
+    def _open_find(self, pg):
+        ok = super()._open_find(pg)
+        self.ev(pg, "async()=>{ await __openPaste(); }")
+        return ok
 
     def _paste_box(self, pg, url, wait=250):
-        return self.ev(pg, """async([u,w])=>{ const i=document.getElementById('find-url'); i.value=u; i.closest('form').requestSubmit(); await __wait(w);
+        return self.ev(pg, """async([u,w])=>{ await __openPaste(); const i=document.getElementById('find-url'); i.value=u; i.closest('form').requestSubmit(); await __wait(w);
             return document.getElementById('find-paste-result').textContent.replace(/\\s+/g,' ').trim(); }""", [url, wait])
 
     def _gpaste(self, pg, text, wait=450):
@@ -13241,10 +13163,11 @@ class V417PasteUrl(V416FindRaces):
 
         # ================= 找賽事頁的貼網址框 =================
         self._open_find(pg)
-        c['paste_row_above_tools'] = self.ev(pg, """()=>{ const f=document.querySelector('form.find-paste'), i=document.getElementById('find-url'), tools=document.querySelector('.find-tools');
-            return !!f && i.type==='url' && f.querySelector('button[type="submit"]').textContent.trim()==='帶入'
-              && f.querySelector('.find-paste-q').textContent.trim()==='找不到想報的？' && i.getAttribute('aria-label')==='貼上報名網址'
-              && !!(f.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING) && document.getElementById('find-paste-result').getAttribute('aria-live')==='polite'; }""")
+        # v4.18.1 起：展開的區塊有自己的標題「貼上報名網址」（label 對到網址框），整塊在搜尋、篩選上面
+        c['paste_row_above_tools'] = self.ev(pg, """()=>{ const f=document.querySelector('form.find-paste'), i=document.getElementById('find-url'), tools=document.querySelector('.find-tools'), panel=document.getElementById('find-paste-panel');
+            return !!f && !!panel && i.type==='url' && f.querySelector('button[type="submit"]').textContent.trim()==='帶入'
+              && document.querySelector('label[for="find-url"]').textContent.trim()==='貼上報名網址'
+              && !!(panel.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING) && document.getElementById('find-paste-result').getAttribute('aria-live')==='polite'; }""")
         txt = self._paste_box(pg, 'https://irunner.biji.co/URGENT/signup?utm_source=line')
         c['paste_match_card'] = self.ev(pg, """()=>{ const card=document.querySelector('#find-paste-result .find-paste-card:not(.is-miss)'); if(!card) return false;
             const go=card.querySelector('[data-action="find-go"]');
@@ -13260,7 +13183,7 @@ class V417PasteUrl(V416FindRaces):
             document.querySelectorAll('.foreground-toast').forEach(x=>x.remove());
             return ok && !card.querySelector('[data-action="find-add"]'); }""")
         # 貼上就比對（不用按「帶入」）
-        c['paste_event_auto_submits'] = self.ev(pg, """async()=>{ const i=document.getElementById('find-url'); i.focus(); i.value='https://www.joinnow.com.tw/about.php?cnt_id=1';
+        c['paste_event_auto_submits'] = self.ev(pg, """async()=>{ await __openPaste(); const i=document.getElementById('find-url'); i.focus(); i.value='https://www.joinnow.com.tw/about.php?cnt_id=1';
             const dt=new DataTransfer(); dt.setData('text',i.value); i.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
             await __wait(250); return (document.querySelector('#find-paste-result .find-paste-name')||{}).textContent==='港都耶誕路跑' && document.activeElement===i; }""")
         c['paste_invalid_message'] = '這不是網址' in (self._paste_box(pg, '我要報名礁溪') or '')
@@ -13306,9 +13229,10 @@ class V417PasteUrl(V416FindRaces):
             const ok=r.schedule.raceDate==='2026-11-08' && r.schedule.registrationOpenDate==='2026-05-01' && r.schedule.registrationCloseDate==='2026-10-30'
               && r.location.venueName==='彰化縣田中鎮景崧文化教育園區' && r.location.city==='彰化縣' && !!r.location.country && r.route.distanceKm===42.195
               && r.officialUrl==='https://www.tianzhong-marathon.tw/2026/' && findState.paste===null && createStagedExtras===null;
-            goBackFromDetail(); await __wait(200); return ok && !document.querySelector('#find-paste-result .find-paste-card') && document.getElementById('find-url').value===''; }""")
+            // v4.18.1 起建好之後收回一行字
+            goBackFromDetail(); await __wait(200); return ok && !document.querySelector('#find-paste-result .find-paste-card') && !document.getElementById('find-url') && !!document.querySelector('[data-action="find-paste-open"]'); }""")
         # 「不要帶入」：報名期間、地點不寫進去，組別按鈕留著
-        c['create_extras_drop'] = self.ev(pg, """async(txt)=>{ const i=document.getElementById('find-url'); i.value='https://www.drop-test.tw/'; i.closest('form').requestSubmit(); await __wait(200);
+        c['create_extras_drop'] = self.ev(pg, """async(txt)=>{ await __openPaste(); const i=document.getElementById('find-url'); i.value='https://www.drop-test.tw/'; i.closest('form').requestSubmit(); await __wait(200);
             const ta=document.getElementById('find-paste-text'); ta.value=txt.replace('田中馬拉松','不帶入測試賽'); ta.dispatchEvent(new Event('input',{bubbles:true}));
             document.querySelector('[data-action="find-paste-text"]').click(); await __wait(300);
             document.querySelector('[data-action="create-extras-drop"]').click(); await __wait(50);
@@ -13316,7 +13240,7 @@ class V417PasteUrl(V416FindRaces):
             document.querySelector('[data-action="confirm-create"]').click(); await __wait(300);
             const r=state.races.find(x=>x.name==='2026 不帶入測試賽'); goBackFromDetail(); await __wait(200);
             return chips===3 && !note && !!r && !r.schedule.registrationOpenDate && !r.schedule.registrationCloseDate && !r.location.venueName && !r.location.city; }""", PASTE417['table'])
-        c['url_only_opens_form'] = self.ev(pg, """async()=>{ const i=document.getElementById('find-url'); i.value='https://www.only-url.tw/race'; i.closest('form').requestSubmit(); await __wait(200);
+        c['url_only_opens_form'] = self.ev(pg, """async()=>{ await __openPaste(); const i=document.getElementById('find-url'); i.value='https://www.only-url.tw/race'; i.closest('form').requestSubmit(); await __wait(200);
             document.querySelector('[data-action="find-paste-urlonly"]').click(); await __wait(300);
             const toast=[...document.querySelectorAll('.foreground-toast,.toast')].map(x=>x.textContent).join(' ');
             const ok=state.creating && document.getElementById('new-url').value==='https://www.only-url.tw/race' && document.getElementById('new-name').value===''
@@ -13327,9 +13251,9 @@ class V417PasteUrl(V416FindRaces):
             chips[1].click(); await __wait(30); const v=document.getElementById('new-distance').value;
             document.querySelector('[data-action="cancel-create"]').click(); await __wait(200); findState.paste=keep; renderCalendar(); await __wait(60);
             return labels==='3000m,1500m' && v==='1500' && document.getElementById('find-paste-text')!=null; }""", PASTE417['swim'])
-        c['paste_clear_button'] = self.ev(pg, """async()=>{ document.querySelector('#find-paste-result [data-action="find-paste-clear"]').click(); await __wait(50);
-            return findState.paste===null && document.getElementById('find-paste-result').innerHTML==='' && document.getElementById('find-url').value===''
-              && document.activeElement.id==='find-url'; }""")
+        # v4.18.1 起 ✕ 在展開區塊的右上角（卡片上沒有了）：清掉、收回一行字，焦點回到那一行
+        c['paste_clear_button'] = self.ev(pg, """async()=>{ await __openPaste(); const x=document.querySelectorAll('#find-paste-panel [data-action="find-paste-clear"]'); if(x.length!==1) return false; x[0].click(); await __wait(50);
+            return findState.paste===null && !findState.pasteOpen && !document.getElementById('find-url') && document.activeElement.dataset.action==='find-paste-open'; }""")
         c['empty_search_offers_paste'] = self.ev(pg, """async()=>{ const q=document.getElementById('find-q'); q.value='清單裡沒有的賽事名'; q.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
             const b=document.querySelector('.find-empty [data-action="find-paste-focus"]'); if(!b) return false; b.click(); await __wait(60);
             const ok=document.activeElement.id==='find-url';
@@ -13341,13 +13265,13 @@ class V417PasteUrl(V416FindRaces):
             document.querySelector('.find-empty [data-action="find-clear"]').click(); await __wait(60); return ok && only; }""")
         # 惡意字串只會是字：網址在引號處截斷、貼的文字名稱進輸入框也只是文字
         c['paste_is_xss_safe'] = self.ev(pg, """async()=>{ window.__pwned=0;
-            const i=document.getElementById('find-url'); i.value='https://example.org/a"><img src=x onerror="window.__pwned=7">'; i.closest('form').requestSubmit(); await __wait(200);
+            await __openPaste(); const i=document.getElementById('find-url'); i.value='https://example.org/a"><img src=x onerror="window.__pwned=7">'; i.closest('form').requestSubmit(); await __wait(200);
             const ta=document.getElementById('find-paste-text'); ta.value='<img src=x onerror="window.__pwned=8">2026 惡意馬拉松\\n比賽日期：2026/12/01'; ta.dispatchEvent(new Event('input',{bubbles:true}));
             document.querySelector('[data-action="find-paste-text"]').click(); await __wait(300);
             const name=document.getElementById('new-name').value; document.querySelector('[data-action="cancel-create"]').click(); await __wait(200);
             findState.paste=null; renderCalendar();
             const f=findState.feed; const bad={id:'x:bad',name:'<img src=x onerror="window.__pwned=9">壞名稱',date:'2026-12-01',url:'https://www.bad-name.tw/',source:'sportsnet',type:'road_running',distances:[],cats:[],also:[]};
-            f.races.push(bad); const i2=document.getElementById('find-url'); i2.value='https://www.bad-name.tw/'; i2.closest('form').requestSubmit(); await __wait(200);
+            f.races.push(bad); await __openPaste(); const i2=document.getElementById('find-url'); i2.value='https://www.bad-name.tw/'; i2.closest('form').requestSubmit(); await __wait(200);
             const shown=(document.querySelector('#find-paste-result .find-paste-name')||{}).textContent||''; f.races.splice(f.races.indexOf(bad),1); findState.paste=null; renderCalendar();
             return !window.__pwned && !document.querySelector('img[src="x"]') && /惡意馬拉松/.test(name) && shown.startsWith('<img'); }""")
 
@@ -13440,7 +13364,7 @@ class V417PasteUrl(V416FindRaces):
         ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True,
                                 init="(()=>{ const of=window.fetch; window.fetch=(u,o)=>String(u).includes('race-feed')?new Promise(r=>setTimeout(r,600)).then(()=>of(u,o)):of(u,o); })();")
         c['paste_while_feed_loading'] = self.ev(pg, """async()=>{ document.querySelector('.home-tab[data-home-tab="find"]').click(); await __wait(30);
-            const loading=findState.status==='loading'; const i=document.getElementById('find-url'); i.value='https://irunner.biji.co/open'; i.closest('form').requestSubmit(); await __wait(60);
+            const loading=findState.status==='loading'; await __openPaste(); const i=document.getElementById('find-url'); i.value='https://irunner.biji.co/open'; i.closest('form').requestSubmit(); await __wait(60);
             const wait=/比對清單中/.test(document.getElementById('find-paste-result').textContent);
             for(let k=0;k<40&&findState.status==='loading';k++) await __wait(50); await __wait(80);
             return loading && wait && (document.querySelector('#find-paste-result .find-paste-name')||{}).textContent==='台北城市測試馬拉松'; }""")
@@ -13463,9 +13387,10 @@ class V417PasteUrl(V416FindRaces):
         # ================= 筆電、三種語言、深色 =================
         ctx, pg, st = self._ctx(self.browser, viewport={'width': 1280, 'height': 900})
         self._open_find(pg)
-        c['wide_paste_row_one_line'] = self.ev(pg, """()=>{ const q=document.querySelector('.find-paste-q').getBoundingClientRect(), i=document.getElementById('find-url').getBoundingClientRect(),
+        # v4.18.1 起：筆電上展開的區塊最寬 760px，網址框和「帶入」同一行
+        c['wide_paste_row_one_line'] = self.ev(pg, """()=>{ const p=document.getElementById('find-paste-panel').getBoundingClientRect(), i=document.getElementById('find-url').getBoundingClientRect(),
               b=document.querySelector('.find-paste button[type="submit"]').getBoundingClientRect();
-            return Math.abs(q.top+q.height/2-(i.top+i.height/2))<4 && Math.abs(i.top-b.top)<2 && q.right<=i.left && i.right<=b.left && i.height>=44 && b.height>=44; }""")
+            return p.width<=761 && Math.abs(i.top-b.top)<2 && i.right<=b.left && i.height>=44 && b.height>=44; }""")
         self._paste_box(pg, 'https://www.sportsnet.org.tw/20270117_web/news.php')
         c['wide_card_readable_width'] = self.ev(pg, """()=>{ const card=document.querySelector('#find-paste-result .find-paste-card'); const w=card.getBoundingClientRect().width;
             return w<=761 && (card.querySelector('.find-paste-name')||{}).textContent==='2027金門馬拉松 KINMEN MARATHON' && /看官網/.test(card.textContent); }""")
@@ -13480,9 +13405,13 @@ class V417PasteUrl(V416FindRaces):
             ['name','date','reg','place','dist','type'].forEach(k=>used.add('ui.pasteField.'+k));
             const miss=[...used].filter(k=>!(k in JA)||!(k in EN)||/[一-鿿]/.test(EN[k]));
             if(miss.length) console.log('v417: keys',miss.join(',')); return used.size>=30 && miss.length===0; }""")
+        # v4.18.1 起：收起來是一行「Can’t find your race? Paste a sign-up link ›」，展開的標題是「Paste a sign-up link」
         c['english_paste_row'] = self.ev(pg, """async()=>{ setLang('en'); await __wait(80);
-            const ok=document.querySelector('.find-paste-q').textContent==='Can\\u2019t find your race?' && document.getElementById('find-url').placeholder==='Paste the sign-up link'
-              && /Can\\u2019t find|Find races/.test(document.body.textContent);
+            const x=document.querySelector('[data-action="find-paste-clear"]'); if(x){ x.click(); await __wait(40); }
+            const link=(document.querySelector('[data-action="find-paste-open"]')||{}).textContent||'';
+            await __openPaste();
+            const ok=link==='Can\\u2019t find your race?Paste a sign-up link\u203a' && document.querySelector('.find-paste-q').textContent==='Paste a sign-up link'
+              && document.querySelector('.find-paste-x').getAttribute('aria-label')==='Close';
             setLang('zh'); await __wait(80); return ok; }""")
         c['help_paste_bullet_three_langs'] = self.ev(pg, r"""async()=>{ const out={};
             const name={zh:'貼報名網址帶入',ja:'申込URLから追加',en:'Add from a sign-up link'};
@@ -13564,7 +13493,8 @@ class V418FindCountries(V416FindRaces):
     def _body(self):
         c = self.checks
         html = open(APP, encoding='utf-8').read()
-        c['version_4_18_0'] = "const APP_VERSION='v4.18.0';" in html
+        mv = re.search(r"const APP_VERSION='v(\d+)\.(\d+)\.(\d+)';", html)
+        c['version_at_least_4_18_0'] = bool(mv) and tuple(int(x) for x in mv.groups()) >= (4, 18, 0)
         repo = os.environ.get('V416_REPO') or os.path.dirname(os.path.abspath(APP))
 
         # ================= 一起交付的清單：八個網站、每一場有國家、地區對得上國家 =================
@@ -13783,6 +13713,496 @@ class V418FindCountries(V416FindRaces):
             if(!out.zh||!out.ja||!out.en) console.log('v418: help',JSON.stringify(out)); return out.zh&&out.ja&&out.en; }""")
         ctx.close()
 
+
+class V4181PasteCollapsed(V416FindRaces):
+    """v4.18.1：找賽事的貼網址框收成一行字（使用者在設計提案裡選的 A）。
+    v4.17.0 的網址框跟下面的搜尋框長得一模一樣，看了會搞混；平常只有一行「找不到想報的？貼報名網址帶入 ›」，
+    按了才展開淡綠色虛線框（連結圖示、深色「帶入」、說明一行），✕ 收回一行字；貼過網址、從首頁貼過來的一定是展開的。"""
+
+    ECHO = ('v4181:',)
+
+    def _body(self):
+        c = self.checks
+        html = open(APP, encoding='utf-8').read()
+        mv = re.search(r"const APP_VERSION='v(\d+)\.(\d+)\.(\d+)';", html)
+        c['version_at_least_4_18_1'] = bool(mv) and tuple(int(x) for x in mv.groups()) >= (4, 18, 1)
+
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        self._open_find(pg)
+        # 平常：一行字（按鈕）、畫面上只有一個輸入框（搜尋），那一行在搜尋上面
+        c['collapsed_by_default_one_input'] = self.ev(pg, r"""()=>{ const b=document.querySelector('[data-action="find-paste-open"]'), tools=document.querySelector('.find-tools');
+            const inputs=[...document.querySelectorAll('.find-wrap input')].filter(i=>i.offsetParent!==null);
+            const ok=!!b && b.tagName==='BUTTON' && b.textContent==='找不到想報的？貼報名網址帶入›' && b.getAttribute('aria-expanded')==='false'
+              && b.getBoundingClientRect().height>=44 && !document.getElementById('find-url') && inputs.length===1 && inputs[0].id==='find-q'
+              && !!(b.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING) && !!b.querySelector('svg') && !findState.pasteOpen;
+            if(!ok) console.log('v4181: collapsed',b&&b.textContent,inputs.length); return ok; }""")
+        # 按了：展開、焦點進網址框；樣子跟搜尋框不一樣（淡綠底、虛線框、連結圖示、深色帶入），還在搜尋上面
+        c['link_opens_distinct_panel'] = self.ev(pg, r"""async()=>{ window.__fu=[]; const orig=window.logFeatureUse; window.logFeatureUse=k=>{ window.__fu.push(k); };
+            document.querySelector('[data-action="find-paste-open"]').click(); await __wait(60); window.logFeatureUse=orig;
+            const panel=document.getElementById('find-paste-panel'), i=document.getElementById('find-url'), search=document.querySelector('.find-search');
+            if(!panel||!i) return false;
+            const ps=getComputedStyle(panel), ss=getComputedStyle(search), sub=panel.querySelector('button[type="submit"]');
+            const ok=document.activeElement===i && document.querySelector('label[for="find-url"]').textContent.trim()==='貼上報名網址'
+              && ps.borderTopStyle==='dashed' && ps.backgroundColor!==ss.backgroundColor && sub.classList.contains('btn-primary') && sub.textContent.trim()==='帶入'
+              && !!panel.querySelector('.find-paste-q svg') && !panel.querySelector('.find-search-ico') && i.placeholder==='https://…'
+              && getComputedStyle(panel.querySelector('.find-paste-hint')).display!=='none' && /清單裡有的直接顯示那一場/.test(panel.textContent)
+              && !!(panel.compareDocumentPosition(document.querySelector('.find-tools'))&Node.DOCUMENT_POSITION_FOLLOWING)
+              && !document.querySelector('[data-action="find-paste-open"]') && findState.pasteOpen===true && window.__fu.includes('find_paste_open');
+            if(!ok) console.log('v4181: panel',ps.borderTopStyle,ps.backgroundColor,ss.backgroundColor,document.activeElement&&document.activeElement.id); return ok; }""")
+        # 打到一半的網址：存檔、同步重畫都還在（展開也還在）；換到別的分頁再回來還是展開的
+        c['open_state_survives_rerender'] = self.ev(pg, r"""async()=>{ const i=document.getElementById('find-url'); i.focus(); i.value='https://half-typed';
+            renderCalendar(); await __wait(60);
+            const same=document.getElementById('find-url')===i && i.value==='https://half-typed' && document.activeElement===i;
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await __wait(120);
+            document.querySelector('.home-tab[data-home-tab="find"]').click(); await __wait(200);
+            const back=!!document.getElementById('find-paste-panel');
+            if(!(same&&back)) console.log('v4181: rerender',same,back); return same && back; }""")
+        # 貼了網址：結果卡片在展開的框裡面，說明那一行收起來；只有一個 ✕（卡片上沒有）
+        c['result_inside_panel_hint_hides'] = self.ev(pg, r"""async()=>{ const i=document.getElementById('find-url'); i.value='https://irunner.biji.co/open'; i.closest('form').requestSubmit(); await __wait(250);
+            const panel=document.getElementById('find-paste-panel');
+            const ok=!!panel.querySelector('#find-paste-result .find-paste-card') && (panel.querySelector('.find-paste-name')||{}).textContent==='台北城市測試馬拉松'
+              && getComputedStyle(panel.querySelector('.find-paste-hint')).display==='none' && panel.querySelectorAll('.find-paste-x').length===1
+              && !panel.querySelector('.find-paste-card .find-paste-x');
+            if(!ok) console.log('v4181: result',panel.textContent.slice(0,120)); return ok; }""")
+        # ✕：清掉、收回一行字，焦點回到那一行
+        c['close_clears_and_refocuses_link'] = self.ev(pg, r"""async()=>{ const x=document.querySelector('#find-paste-panel .find-paste-x'); const lab=x.getAttribute('aria-label'); x.click(); await __wait(60);
+            const b=document.querySelector('[data-action="find-paste-open"]');
+            const ok=lab==='收起' && findState.paste===null && findState.pasteOpen===false && !document.getElementById('find-paste-panel') && !!b && document.activeElement===b;
+            if(!ok) console.log('v4181: close',lab,JSON.stringify(findState.paste),findState.pasteOpen); return ok; }""")
+        # 搜尋找不到時的「貼報名網址帶入」：收著的也會展開、焦點進網址框
+        c['empty_search_button_opens_panel'] = self.ev(pg, r"""async()=>{ const q=document.getElementById('find-q'); q.value='清單裡沒有的賽事'; q.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            const b=document.querySelector('.find-empty [data-action="find-paste-focus"]'); if(!b) return false; b.click(); await __wait(80);
+            const ok=!!document.getElementById('find-paste-panel') && document.activeElement && document.activeElement.id==='find-url';
+            q.value=''; q.dispatchEvent(new Event('input',{bubbles:true})); await __wait(40);
+            document.querySelector('#find-paste-panel .find-paste-x').click(); await __wait(40); return ok; }""")
+        ctx.close()
+
+        # 首頁直接貼清單裡有的網址：帶到找賽事，框是展開的、卡片在裡面、焦點在「＋ 加入我的賽事」
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        self.ev(pg, "async()=>{ await loadFindFeed(true); }")
+        c['global_paste_opens_panel'] = self.ev(pg, r"""async()=>{ if(document.activeElement&&document.activeElement!==document.body) document.activeElement.blur();
+            const dt=new DataTransfer(); dt.setData('text','https://www.ctrun.com.tw/Activity?EventMain_ID=4');
+            document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); await __wait(500);
+            const panel=document.getElementById('find-paste-panel');
+            const ok=state.homeTab==='find' && !!panel && !!panel.querySelector('.find-paste-card') && document.activeElement && document.activeElement.dataset.action==='find-add';
+            if(!ok) console.log('v4181: global',state.homeTab,!!panel); return ok; }""")
+        ctx.close()
+
+        # 手機 320px：展開的框也不會左右捲，按鈕夠大
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 320, 'height': 700}, touch=True)
+        self._open_find(pg)
+        c['phone_320_panel_fits'] = self.ev(pg, r"""async()=>{ document.querySelector('[data-action="find-paste-open"]').click(); await __wait(60);
+            const sub=document.querySelector('.find-paste button[type="submit"]').getBoundingClientRect(), x=document.querySelector('.find-paste-x').getBoundingClientRect();
+            const ok=document.documentElement.scrollWidth<=innerWidth && sub.right<=innerWidth && sub.height>=44 && x.width>=44 && x.height>=44;
+            if(!ok) console.log('v4181: 320',document.documentElement.scrollWidth,sub.right); return ok; }""")
+        ctx.close()
+
+        # 筆電：一行字不拉滿整個寬度、展開的框最寬 760px
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 1280, 'height': 900})
+        self._open_find(pg)
+        c['wide_link_and_panel'] = self.ev(pg, r"""async()=>{ const b=document.querySelector('[data-action="find-paste-open"]'); const w=b.getBoundingClientRect().width;
+            b.click(); await __wait(60); const p=document.getElementById('find-paste-panel').getBoundingClientRect();
+            const ok=w<500 && p.width<=761 && p.width>=500;
+            if(!ok) console.log('v4181: wide',w,p.width); return ok; }""")
+        ctx.close()
+
+        # 日文、英文
+        for lang, link, title, close in (('ja', '見つからないときはURLを貼って追加›', '申込ページのURLを貼り付け', '閉じる'),
+                                         ('en', 'Can’t find your race?Paste a sign-up link›', 'Paste a sign-up link', 'Close')):
+            ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, lang=lang)
+            self._open_find(pg)
+            got = self.ev(pg, r"""async()=>{ const b=document.querySelector('[data-action="find-paste-open"]'); const link=b?b.textContent:''; if(b) b.click(); await __wait(60);
+                const p=document.getElementById('find-paste-panel');
+                return {link, title:(p.querySelector('.find-paste-q')||{}).textContent||'', close:p.querySelector('.find-paste-x').getAttribute('aria-label'),
+                  hint:p.querySelector('.find-paste-hint').textContent, go:p.querySelector('button[type="submit"]').textContent.trim()}; }""") or {}
+            ok = got.get('link') == link and got.get('title') == title and got.get('close') == close and bool(got.get('hint'))
+            if lang == 'en':
+                ok = ok and not re.search(r'[一-鿿]', (got.get('hint') or '') + (got.get('go') or ''))
+            c[f'{lang}_link_and_panel_labels'] = bool(ok)
+            if not ok:
+                print('    v4181:', lang, got)
+            ctx.close()
+
+        # 淺色、深色：一行字、框的標題、說明的字看得清楚
+        for theme in ('light', 'dark'):
+            ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, theme=theme)
+            self._open_find(pg)
+            c[f'contrast_{theme}'] = self.ev(pg, r"""async()=>{
+                const parse=s=>{ let m=s.match(/rgba?\(([^)]+)\)/); if(m){ const p=m[1].split(/[\s,\/]+/).filter(Boolean).map(Number); return [p[0],p[1],p[2],p.length>3?p[3]:1]; }
+                  m=s.match(/color\(srgb ([^)]+)\)/); if(m){ const p=m[1].split(/[\s\/]+/).filter(Boolean).map(Number); return [p[0]*255,p[1]*255,p[2]*255,p.length>3?p[3]:1]; } return null; };
+                const lum=c=>{ const f=v=>{ v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4); }; return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]); };
+                const ratio=(fg,bg)=>{ const a=lum(fg), b=lum(bg); return (Math.max(a,b)+0.05)/(Math.min(a,b)+0.05); };
+                const page=parse(getComputedStyle(document.body).backgroundColor); const bad=[];
+                const b=document.querySelector('[data-action="find-paste-open"]');
+                [b, b.querySelector('.find-paste-link-go')].forEach(e=>{ const r=ratio(parse(getComputedStyle(e).color),page); if(r<4.5) bad.push('link '+r.toFixed(2)); });
+                b.click(); await __wait(60);
+                const p=document.getElementById('find-paste-panel'); const pb=parse(getComputedStyle(p).backgroundColor);
+                const bg=[0,1,2].map(i=>pb[i]*pb[3]+page[i]*(1-pb[3]));
+                [p.querySelector('.find-paste-q'), p.querySelector('.find-paste-hint'), p.querySelector('.find-paste-x')].forEach(e=>{ const r=ratio(parse(getComputedStyle(e).color),bg); if(r<4.5) bad.push(e.className+' '+r.toFixed(2)); });
+                if(bad.length) console.log('v4181: contrast',bad.join(' | ')); return bad.length===0; }""")
+            ctx.close()
+
+        # 翻譯、使用說明
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        c['new_keys_translated'] = self.ev(pg, r"""()=>{ const keys=['ui.findPasteGoLink','ui.findPasteTitle','ui.findPasteHint','ui.findPasteCollapse','ui.findPasteQ','ui.findPasteGo'];
+            const miss=keys.filter(k=>!(k in JA)||!(k in EN)||/[一-鿿]/.test(EN[k]));
+            if(miss.length) console.log('v4181: keys',miss.join(',')); return !miss.length; }""")
+        c['help_mentions_link_three_langs'] = self.ev(pg, r"""async()=>{ const out={};
+            const want={zh:['貼報名網址帶入','v4.18.1','找不到想報的？貼報名網址帶入'],ja:['申込URLから追加','v4.18.1','見つからないときは URLを貼って追加'],en:['Add from a sign-up link','v4.18.1','Can’t find your race? Paste a sign-up link']};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(30); const box=document.createElement('div'); box.innerHTML=helpModalHtml();
+              const li=[...box.querySelectorAll('.help-body li')].map(x=>x.textContent).filter(x=>x.startsWith(want[l][0]));
+              out[l]=li.length===1 && li[0].includes(want[l][1]) && li[0].includes(want[l][2]); }
+            setLang('zh'); await __wait(30);
+            if(!out.zh||!out.ja||!out.en) console.log('v4181: help',JSON.stringify(out)); return out.zh&&out.ja&&out.en; }""")
+        ctx.close()
+
+# v4.18.2：假的雲端多一份「找賽事的篩選」，照 Firestore 的樣子：一份文件、整份寫入。
+# failFetch／failSave 模擬讀不到、寫不進去；fp 記下每一次讀寫（誰、寫了什麼）
+FP_CLOUD_JS = r"""window.__fpCloud=function(prefs){ const c=__makeFakeCloud([],[]);
+  const clone=x=>x==null?null:JSON.parse(JSON.stringify(x));
+  c.findPrefs=clone(prefs); c.fp=[]; c.failFetch=false; c.failSave=false;
+  c.fetchFindPrefs=async uid=>{ c.fp.push(['fetch',uid]); if(c.failFetch) throw new Error('模擬讀取失敗'); return clone(c.findPrefs); };
+  c.saveFindPrefs=async (uid,p)=>{ c.fp.push(['save',uid,clone(p)]); if(c.failSave) throw new Error('模擬寫入失敗'); c.findPrefs=clone(p); };
+  c.logFeatureUse=async()=>{};
+  window.__cloud=c; return c; };
+window.__signIn=async uid=>{ await handleAuthChange({uid:uid||'u1'}); await __wait(200); };
+window.__fpSel=()=>['country','only','type','region','sort'].map(k=>k+'='+findState[k]).join(',');
+window.__fpUi=()=>['country','only','type','region','sort'].map(k=>{ const el=document.getElementById('find-'+k); return k+'='+(el?el.value:'?'); }).join(',');
+window.__fpStored=()=>{ try{ return JSON.parse(localStorage.getItem('race-day-find-prefs-v1')||'null'); }catch(e){ return 'bad'; } };
+window.__fpSaves=()=>window.__cloud.fp.filter(x=>x[0]==='save');
+window.__fpFetches=()=>window.__cloud.fp.filter(x=>x[0]==='fetch');
+window.__fpSet=async(k,v,w)=>{ const s=document.getElementById('find-'+k); s.value=v; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(w==null?80:w); };
+window.__fpIds=()=>[...document.querySelectorAll('.find-line,.find-trow')].map(b=>b.dataset.id).join(',');
+"""
+
+
+class V4182FindPrefsSync(V416FindRaces):
+    """v4.18.2：找賽事的篩選（國家、運動別、報名狀態、地區、排序）在登入雲端同步時跟著 Google 帳號。
+    存在 users/{uid}/meta/findPrefs（自己一份，不跟整份覆寫的 globalLists 擠）；at 是最後一次改的時間，兩邊都有時新的贏；
+    從來沒改過的裝置聽雲端的；v4.18.1 以前記的（沒有 at）當成很久以前改的。登入時、切回 App（隔一分鐘以上）時跟雲端對一次；
+    ?nosync=1 的分頁完全不碰雲端。"""
+
+    ECHO = ('v4182:',)
+
+    def _fp(self, local=None, cloud=None, init='', viewport=None, touch=True, **kw):
+        """開找賽事頁、掛上假的雲端（還沒登入）。local：這台已經記的篩選（照 localStorage 存的樣子）；cloud：雲端那份。"""
+        if local is not None:
+            init += "try{localStorage.setItem('race-day-find-prefs-v1',%s);}catch(e){}" % json.dumps(json.dumps(local, ensure_ascii=False), ensure_ascii=False)
+        ctx, pg, st = self._ctx(self.browser, viewport=viewport or {'width': 390, 'height': 844}, touch=touch,
+                                feed=FIND418_FEED, init=init or None, **kw)
+        pg.add_script_tag(content=FAKE_CLOUD_JS)
+        pg.add_script_tag(content=FP_CLOUD_JS)
+        self.ev(pg, "(p)=>{ __fpCloud(p); }", cloud) if cloud is not None else self.ev(pg, "()=>{ __fpCloud(null); }")
+        self._open_find(pg)
+        return ctx, pg
+
+    def _body(self):
+        c = self.checks
+        html = open(APP, encoding='utf-8').read()
+        repo = os.environ.get('V416_REPO') or os.path.dirname(os.path.abspath(APP))
+        mv = re.search(r"const APP_VERSION='v(\d+)\.(\d+)\.(\d+)';", html)
+        c['version_at_least_4_18_2'] = bool(mv) and tuple(int(x) for x in mv.groups()) >= (4, 18, 2)
+
+        # ================= 一台裝置：沒登入只記在本機；登入後送上去、連換幾個只送一次 =================
+        ctx, pg = self._fp()
+        c['signed_out_change_saved_locally_only'] = self.ev(pg, r"""async()=>{ await __fpSet('country','jp',1100);
+            const st=__fpStored();
+            const ok=!!st && st.country==='jp' && typeof st.at==='string' && /^2026-10-05T01:0\d:\d\d\.\d{3}Z$/.test(st.at) && findPrefsAt===st.at && window.__cloud.fp.length===0;
+            if(!ok) console.log('v4182: signed out',JSON.stringify(st),JSON.stringify(window.__cloud.fp)); return ok; }""")
+        # 登入：雲端還沒有，這台改過的送上去（只送篩選五項和時間，不送搜尋的字、展開哪一場）
+        c['signin_pushes_when_cloud_empty'] = self.ev(pg, r"""async()=>{ const at=findPrefsAt; findState.q='不該送上去'; await __signIn('u1'); findState.q=''; renderFindResults(); await __wait(30);
+            const f=__fpFetches(), s=__fpSaves(), p=s.length?s[0][2]:{};
+            const ok=f.length===1 && f[0][1]==='u1' && s.length===1 && s[0][1]==='u1' && p.country==='jp' && p.at===at
+              && JSON.stringify(Object.keys(p).sort())===JSON.stringify(['at','country','only','region','sort','type']);
+            if(!ok) console.log('v4182: signin push',JSON.stringify(window.__cloud.fp)); return ok; }""")
+        # 登入後連換三個選單：0.8 秒內不送，最後只送一次（三項都在裡面）；鞋款那份整包覆寫的清單不會被叫到
+        c['changes_debounced_into_one_push'] = self.ev(pg, r"""async()=>{ const cl=window.__cloud; await __wait(1000);   // 登入流程排的鞋款同步先跑完，才分得出是誰叫的
+            cl.fp.length=0; const gl0=cl.log.filter(x=>x[0]==='syncGlobalLists').length;
+            await __fpSet('region','kanto',120); await __fpSet('type','road',120); await __fpSet('sort','deadline',120);
+            const early=__fpSaves().length;
+            await __wait(1000);
+            const s=__fpSaves(), p=s.length?s[0][2]:{};
+            const ok=early===0 && s.length===1 && p.country==='jp' && p.region==='kanto' && p.type==='road' && p.sort==='deadline' && p.only==='can'
+              && p.at===findPrefsAt && p.at===__fpStored().at && cl.log.filter(x=>x[0]==='syncGlobalLists').length===gl0;
+            if(!ok) console.log('v4182: debounce',early,JSON.stringify(s),findPrefsAt,__fpStored().at,gl0,cl.log.filter(x=>x[0]==='syncGlobalLists').length); return ok; }""")
+        # 「清除篩選」也算改：送上去的是預設值
+        c['clear_filters_pushes_defaults'] = self.ev(pg, r"""async()=>{ await __fpSet('type','swim',1000);      // 日本沒有游泳：清單空了才有「清除篩選」
+            window.__cloud.fp.length=0; const b=document.querySelector('[data-action="find-clear"]'); if(!b) return false; b.click(); await __wait(1000);
+            const s=__fpSaves(), p=s.length?s[s.length-1][2]:{};
+            const ok=s.length===1 && p.country==='tw' && p.type==='all' && p.region==='all' && p.only==='can' && p.sort==='deadline';
+            if(!ok) console.log('v4182: clear',JSON.stringify(s)); return ok; }""")
+        # 雲端寫不進去：本機照樣記住，畫面不出錯
+        n_err = len(self.errors)
+        ok_ = self.ev(pg, r"""async()=>{ window.__cloud.failSave=true; await __fpSet('only','all',1100);
+            const ok=__fpSaves().length>=1 && __fpStored().only==='all' && findState.only==='all' && document.getElementById('find-only').value==='all';
+            window.__cloud.failSave=false; return ok; }""")
+        c['save_failure_isolated'] = bool(ok_) and len(self.errors) == n_err
+        # 切回 App：一分鐘內不重讀；隔一分鐘以上再讀，別台剛改的套上來（選單、膠囊、清單都換）
+        c['resume_pulls_after_a_minute'] = self.ev(pg, r"""async()=>{ const cl=window.__cloud; cl.fp.length=0;
+            cl.findPrefs={country:'jp',only:'all',type:'bike',region:'kinki',sort:'date',at:'2026-10-05T03:00:00.000Z'};   // 別台剛改的
+            document.querySelector('.find-line').click(); await __wait(60); const opened=findState.open;                  // 展開著一場
+            document.dispatchEvent(new Event('visibilitychange')); await __wait(150);
+            const early=__fpFetches().length;
+            __setNowMs(Date.now()+61000);
+            document.dispatchEvent(new Event('visibilitychange')); await __wait(250);
+            const pill=document.getElementById('find-region').closest('.find-sel').querySelector('.find-sel-txt').textContent;
+            const ok=early===0 && !!opened && findState.open===null && !document.querySelector('.find-row.is-exp') && __fpFetches().length===1 && __fpSel()==='country=jp,only=all,type=bike,region=kinki,sort=date'
+              && __fpUi()===__fpSel() && pill==='近畿' && __fpIds()==='jp:kinki' && __fpStored().at==='2026-10-05T03:00:00.000Z' && __fpSaves().length===0;
+            if(!ok) console.log('v4182: resume',early,__fpFetches().length,__fpSel(),__fpUi(),__fpIds(),pill); return ok; }""")
+        ctx.close()
+
+        # ================= 換裝置：雲端比較新的套上來；這台比較新的留著、送上去 =================
+        ctx, pg = self._fp(local={'country': 'tw', 'only': 'can', 'type': 'all', 'region': 'all', 'sort': 'date', 'at': '2026-10-04T12:00:00.000Z'},
+                           cloud={'country': 'jp', 'only': 'all', 'type': 'road', 'region': 'kanto', 'sort': 'deadline', 'at': '2026-10-05T00:30:00.000Z'})
+        # 登入前正在搜尋：套上雲端的篩選以後，搜尋框還是同一個、焦點和打的字都在
+        c['cloud_newer_applied_on_signin'] = self.ev(pg, r"""async()=>{
+            const q=document.getElementById('find-q'); q.focus(); q.value='湾岸'; q.dispatchEvent(new Event('input',{bubbles:true})); await __wait(60);
+            await __signIn('u1');
+            const pill=k=>document.getElementById('find-'+k).closest('.find-sel').querySelector('.find-sel-txt').textContent;
+            const st=__fpStored();
+            const ok=__fpSel()==='country=jp,only=all,type=road,region=kanto,sort=deadline' && __fpUi()===__fpSel()
+              && pill('country')==='日本' && pill('region')==='關東' && __fpIds()==='jp:kanto'
+              && document.getElementById('find-q')===q && document.activeElement===q && q.value==='湾岸'
+              && st.at==='2026-10-05T00:30:00.000Z' && st.country==='jp' && st.region==='kanto' && __fpSaves().length===0;
+            if(!ok) console.log('v4182: cloud newer',__fpSel(),__fpUi(),__fpIds(),document.activeElement&&document.activeElement.id,JSON.stringify(st)); return ok; }""")
+        ctx.close()
+        ctx, pg = self._fp(local={'country': 'jp', 'only': 'all', 'type': 'bike', 'region': 'kinki', 'sort': 'date', 'at': '2026-10-05T00:40:00.000Z'},
+                           cloud={'country': 'tw', 'only': 'can', 'type': 'trail', 'region': 'south', 'sort': 'deadline', 'at': '2026-10-05T00:30:00.000Z'})
+        c['local_newer_kept_and_pushed'] = self.ev(pg, r"""async()=>{ await __signIn('u1');
+            const s=__fpSaves(), p=s.length?s[0][2]:{};
+            const ok=__fpSel()==='country=jp,only=all,type=bike,region=kinki,sort=date' && s.length===1 && p.country==='jp' && p.region==='kinki' && p.type==='bike'
+              && p.at==='2026-10-05T00:40:00.000Z' && window.__cloud.findPrefs.at==='2026-10-05T00:40:00.000Z';
+            if(!ok) console.log('v4182: local newer',__fpSel(),JSON.stringify(s)); return ok; }""")
+        ctx.close()
+        # 從來沒改過篩選的裝置：雲端那份再舊也照用（不送預設值上去蓋掉）
+        ctx, pg = self._fp(cloud={'country': 'jp', 'only': 'all', 'type': 'road', 'region': 'kanto', 'sort': 'date', 'at': '2026-10-01T00:00:00.000Z'})
+        c['fresh_device_adopts_cloud'] = self.ev(pg, r"""async()=>{ const before=findPrefsAt+'|'+__fpSel(); await __signIn('u1');
+            const ok=before==='|country=tw,only=can,type=all,region=all,sort=date' && __fpSel()==='country=jp,only=all,type=road,region=kanto,sort=date'
+              && __fpSaves().length===0 && findPrefsAt==='2026-10-01T00:00:00.000Z' && __fpIds()==='jp:kanto';
+            if(!ok) console.log('v4182: fresh',before,__fpSel(),JSON.stringify(window.__cloud.fp)); return ok; }""")
+        ctx.close()
+
+        # ================= v4.18.1 以前記的（沒有時間） =================
+        # 雲端還沒有：送上去（時間寫 1970，之後哪一台真的改了都比它新）
+        ctx, pg = self._fp(local={'country': 'jp', 'only': 'all', 'type': 'trail', 'region': 'kanto', 'sort': 'date'})
+        c['old_prefs_pushed_when_cloud_empty'] = self.ev(pg, r"""async()=>{ await __signIn('u1'); const s=__fpSaves(), p=s.length?s[0][2]:{};
+            const ok=findPrefsAt==='1970-01-01T00:00:00.000Z' && s.length===1 && p.country==='jp' && p.type==='trail' && p.region==='kanto'
+              && p.at==='1970-01-01T00:00:00.000Z' && __fpSel()==='country=jp,only=all,type=trail,region=kanto,sort=date';
+            if(!ok) console.log('v4182: old push',findPrefsAt,JSON.stringify(s)); return ok; }""")
+        ctx.close()
+        # 兩台都是舊的：分不出哪台新，各自留著（不互相蓋掉、也不送）
+        ctx, pg = self._fp(local={'country': 'other', 'only': 'all', 'type': 'all', 'region': 'all', 'sort': 'date'},
+                           cloud={'country': 'jp', 'only': 'all', 'type': 'trail', 'region': 'kanto', 'sort': 'date', 'at': '1970-01-01T00:00:00.000Z'})
+        two_old = self.ev(pg, r"""async()=>{ await __signIn('u1'); return __fpSel()==='country=other,only=all,type=all,region=all,sort=date' && __fpSaves().length===0; }""")
+        ctx.close()
+        # 舊的碰到別台真的改過的：聽雲端的
+        ctx, pg = self._fp(local={'country': 'other', 'only': 'all', 'type': 'all', 'region': 'all', 'sort': 'date'},
+                           cloud={'country': 'tw', 'only': 'can', 'type': 'trail', 'region': 'south', 'sort': 'date', 'at': '2026-10-02T00:00:00.000Z'})
+        old_vs_real = self.ev(pg, r"""async()=>{ await __signIn('u1'); return __fpSel()==='country=tw,only=can,type=trail,region=south,sort=date' && __fpSaves().length===0 && __fpIds()==='tw:trail'; }""")
+        ctx.close()
+        c['old_prefs_vs_cloud'] = bool(two_old) and bool(old_vs_real)
+        if not c['old_prefs_vs_cloud']:
+            print('    v4182: old prefs', two_old, old_vs_real)
+
+        # ================= 雲端那份不照單全收：地區要是那個國家的、舊寫法轉換、認不得的值不套、比較舊的不套 =================
+        ctx, pg = self._fp()
+        c['cloud_prefs_validated_and_migrated'] = self.ev(pg, r"""async()=>{ await __signIn('u1'); const cl=window.__cloud; const out=[];
+            const pull=async p=>{ cl.findPrefs=p; await pullFindPrefs('u1'); await __wait(30); out.push(__fpSel()); };
+            await pull({country:'tw',only:'open',type:'trail',region:'kanto',sort:'date',at:'2026-10-05T02:00:00.000Z'});    // 關東不是臺灣的：地區回到全部
+            await pull({only:'all',type:'ultra',region:'overseas',sort:'deadline',at:'2026-10-05T02:10:00.000Z'});             // v4.18.0 以前的寫法
+            await pull({country:'mars',only:'bogus',type:'x',region:'y',sort:'z',at:'2026-10-05T02:20:00.000Z'});             // 認不得的值：保留這台的
+            const atNow=findPrefsAt;
+            await pull({country:'jp',only:'all',type:'all',region:'kinki',sort:'date',at:'2026-10-05T02:15:00.000Z'});         // 比這台舊：不套用、改送這台的上去
+            const ok=out[0]==='country=tw,only=open,type=trail,region=all,sort=date'
+              && out[1]==='country=all,only=all,type=road,region=all,sort=deadline'
+              && out[2]==='country=all,only=all,type=road,region=all,sort=deadline' && atNow==='2026-10-05T02:20:00.000Z'
+              && out[3]===out[2] && findPrefsAt==='2026-10-05T02:20:00.000Z' && cl.findPrefs.at==='2026-10-05T02:20:00.000Z' && cl.findPrefs.type==='road';
+            if(!ok) console.log('v4182: validate',JSON.stringify(out),atNow,findPrefsAt); return ok; }""")
+        ctx.close()
+
+        # ================= 讀不到雲端：其他資料照常同步；?nosync=1 的分頁完全不碰；沒登入切回來也不讀 =================
+        ctx, pg = self._fp(cloud={'country': 'jp', 'only': 'all', 'type': 'road', 'region': 'kanto', 'sort': 'date', 'at': '2026-10-05T00:30:00.000Z'})
+        n_err = len(self.errors)
+        ok_ = self.ev(pg, r"""async()=>{ window.__cloud.failFetch=true; const before=__fpSel(); await __signIn('u1');
+            const log=window.__cloud.log.map(x=>x[0]);
+            const ok=__fpFetches().length===1 && __fpSel()===before && log.includes('syncGlobalLists') && log.includes('fetchTrainings');
+            if(!ok) console.log('v4182: fetch fail',before,__fpSel(),JSON.stringify(log)); return ok; }""")
+        c['fetch_failure_isolated'] = bool(ok_) and len(self.errors) == n_err
+        ctx.close()
+        ctx, pg = self._fp(init="try{sessionStorage.setItem('no-sync','1');}catch(e){}",
+                           cloud={'country': 'jp', 'only': 'all', 'type': 'road', 'region': 'kanto', 'sort': 'date', 'at': '2026-10-05T00:30:00.000Z'})
+        c['nosync_tab_never_touches_cloud'] = self.ev(pg, r"""async()=>{ await __signIn('u1'); await __fpSet('country','other',1100);
+            await pullFindPrefs('u1'); __setNowMs(Date.now()+61000); document.dispatchEvent(new Event('visibilitychange')); await __wait(150);
+            const ok=window.__cloud.fp.length===0 && __fpStored().country==='other' && findState.country==='other';
+            if(!ok) console.log('v4182: nosync',JSON.stringify(window.__cloud.fp)); return ok; }""")
+        ctx.close()
+        ctx, pg = self._fp(cloud={'country': 'jp', 'only': 'all', 'type': 'road', 'region': 'kanto', 'sort': 'date', 'at': '2026-10-05T00:30:00.000Z'})
+        c['resume_waits_for_signin'] = self.ev(pg, r"""async()=>{ __setNowMs(Date.now()+61000); document.dispatchEvent(new Event('visibilitychange')); await __wait(150);
+            const out=window.__cloud.fp.length;
+            state.user={uid:'u1'};      // 登入流程剛開始（賽事還在合併），還沒輪到篩選
+            __setNowMs(Date.now()+61000); document.dispatchEvent(new Event('visibilitychange')); await __wait(150);
+            const ok=out===0 && window.__cloud.fp.length===0 && findState.country==='tw'; state.user=null;
+            if(!ok) console.log('v4182: resume before signin',out,JSON.stringify(window.__cloud.fp)); return ok; }""")
+        ctx.close()
+
+        # ================= 兩台：手機改了，筆電登入就一樣；筆電再改，手機切回來就跟著換 =================
+        ctxA, A = self._fp()                                                     # 手機（從來沒改過）
+        self.ev(A, "async()=>{ await __signIn('u1'); await __fpSet('country','jp'); await __fpSet('region','kanto',1000); }")
+        shared = self.ev(A, "()=>window.__cloud.findPrefs")
+        ctxB, B = self._fp(viewport={'width': 1280, 'height': 900}, touch=False, cloud=shared or None,
+                           local={'country': 'tw', 'only': 'can', 'type': 'trail', 'region': 'south', 'sort': 'date', 'at': '2026-10-04T08:00:00.000Z'})
+        b_after = self.ev(B, "async()=>{ await __signIn('u1'); return __fpSel()+'|'+__fpUi()+'|'+__fpIds(); }")
+        # 筆電兩分鐘後改地區（時鐘往前撥，兩台的時間才分得出先後）
+        self.ev(B, "async()=>{ __setNowMs(Date.now()+120000); await __fpSet('region','kinki',1000); }")
+        shared2 = self.ev(B, "()=>window.__cloud.findPrefs")
+        a_after = self.ev(A, r"""async(p)=>{ window.__cloud.findPrefs=p; __setNowMs(Date.now()+180000); document.dispatchEvent(new Event('visibilitychange')); await __wait(250);
+            return __fpSel()+'|'+__fpUi()+'|'+__fpIds(); }""", shared2 or {})
+        wb = 'country=jp,only=can,type=all,region=kanto,sort=date'
+        wa = 'country=jp,only=can,type=all,region=kinki,sort=date'
+        c['two_devices_follow_latest'] = (b_after == f'{wb}|{wb}|jp:kanto' and a_after == f'{wa}|{wa}|jp:kinki'
+                                          and bool(shared) and bool(shared2) and (shared2 or {}).get('at', '') > (shared or {}).get('at', 'z'))
+        if not c['two_devices_follow_latest']:
+            print('    v4182: two devices', b_after, '|', a_after, shared, shared2)
+        ctxB.close()
+        ctxA.close()
+
+        # ================= 雲端那一份、安全性規則、使用說明、隱私權政策 =================
+        rules = open(os.path.join(repo, 'firestore.rules'), encoding='utf-8').read()
+        c['separate_cloud_doc_rules_cover'] = (
+            bool(re.search(r"async fetchFindPrefs\(uid\)\{\s*const snap=await getDoc\(doc\(db,'users',uid,'meta','findPrefs'\)\);\s*return snap\.exists\(\)\?snap\.data\(\):null;", html))
+            and bool(re.search(r"async saveFindPrefs\(uid,prefs\)\{\s*await setDoc\(doc\(db,'users',uid,'meta','findPrefs'\),prefs\);", html))
+            and bool(re.search(r"match /users/\{uid\}/meta/\{docId\}\s*\{\s*allow read, write: if request\.auth != null && request\.auth\.uid == uid;\s*\}", rules))
+            and html.count("'meta','findPrefs'") == 2)
+        ctx, pg = self._fp()
+        c['help_mentions_account_sync_three_langs'] = self.ev(pg, r"""async()=>{ const out={};
+            const name={zh:'找賽事',ja:'大会を探す',en:'Find races'},
+              need={zh:['v4.18.2','Google 帳號','最後改的為準'],ja:['v4.18.2','Google アカウント','最後に変えたほうが残ります'],en:['v4.18.2','Google account','the latest wins']};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(30); const box=document.createElement('div'); box.innerHTML=helpModalHtml();
+              const li=[...box.querySelectorAll('.help-body li')].map(x=>x.textContent).filter(x=>x.startsWith(name[l]));
+              out[l]=li.length===1 && need[l].every(w=>li[0].includes(w)); }
+            setLang('zh'); await __wait(30);
+            if(!out.zh||!out.ja||!out.en) console.log('v4182: help',JSON.stringify(out)); return out.zh&&out.ja&&out.en; }""")
+        ctx.close()
+        priv = open(os.path.join(repo, 'privacy', 'index.html'), encoding='utf-8').read()
+        c['privacy_lists_find_filters_three_langs'] = ('「找賽事」的篩選設定（國家、運動別、報名狀態、地區、排序）' in priv
+            and '「大会を探す」の絞り込み設定（国、種目、受付状況、地域、並べ替え）' in priv
+            and 'your Find races filters (country, sport, registration status, region, sort)' in priv)
+
+
+class V419Parked(Group):
+    """v4.19.0：暫時拿掉三個功能（使用者說使用率不高、不好用）——賽事頁的環境折損預測（EPP）、生涯數據的氣候與表現散佈圖、
+    配速試算與手環產生器。程式碼、翻譯、說明、測試搬到 PARKED.md；賽事資料不動；應援指南卡共用的配速公式留著。"""
+
+    KEYS = ["ui.climateChartLegendEstimated", "ui.climateChartLegendOther", "ui.climateChartLegendPb", "ui.climateChartLegendTrail", "ui.climateChartSlope", "ui.climateChartSweetSpot", "ui.climateChartSweetSpotLabel", "ui.climateChartTitle", "ui.climateChartWeakR2", "ui.climateChartXAxis", "ui.climateChartYAxisCurve", "ui.climateCountEstimated", "ui.climateCountTrail", "ui.climateCurveDefault", "ui.climateCurveFitted", "ui.climateFrontierTip", "ui.climateIncludeTrail", "ui.climateTempEstimatedTip", "ui.climateTrailNotReady", "ui.climateTrailTip", "ui.downloadWristband", "ui.eppAdoptGoal", "ui.eppBarActual", "ui.eppBarBaseline", "ui.eppBarGravity", "ui.eppBarOther", "ui.eppBarPredicted", "ui.eppBarThermal", "ui.eppDisclaimer", "ui.eppGravityPending", "ui.eppGravityReady", "ui.eppHideSegments", "ui.eppNotReadyHint", "ui.eppPredictedLabel", "ui.eppSegArrival", "ui.eppSegElevation", "ui.eppSegPace", "ui.eppSegRange", "ui.eppSegmentsNeedProfile", "ui.eppShowSegments", "ui.eppThermalPending", "ui.eppThermalReady", "ui.eppTitle", "ui.pacingCalc", "ui.pacingCalcTitle", "ui.pacingDistance", "ui.pacingDistanceCol", "ui.pacingEven", "ui.pacingEvery1", "ui.pacingEvery10", "ui.pacingEvery5", "ui.pacingHint", "ui.pacingInterval", "ui.pacingInvalid", "ui.pacingNegative", "ui.pacingPositive", "ui.pacingStrategy", "ui.pacingTargetTime", "ui.pacingTimeCol", "ui.wristbandFilename", "ui.wristbandTitle", "ui.climateChartYAxis"]
+
+    def body(self, page):
+        c = self.checks
+        html = open(APP, encoding='utf-8').read()
+        repo = os.environ.get('V416_REPO') or os.path.dirname(os.path.abspath(APP))
+        c['version_4_19_0'] = "const APP_VERSION='v4.19.0';" in html
+        wait = "const wait=ms=>new Promise(s=>setTimeout(s,ms));"
+        page.add_script_tag(content=SIMPLE_SEED_JS)
+        # 簡易版的範例三場，再加三場 2023 年的全馬（生涯區、熱力圖要有東西）；越野開關記成打開過（舊使用者的瀏覽器裡還留著）
+        page.evaluate("""async()=>{ await __simpleSeed();
+            [1,2,3].forEach(i=>{ const r=emptyRace('馬拉松'+i,'road_running','completed','2023-0'+i+'-10'); r.route.distanceKm=42.195; r.results.chipTimeSeconds=13000+i; r.raceDayWeather.feelsLikeTempC=14+i*5; state.races.push(r); });
+            try{ localStorage.setItem('climate-include-trail-v1','1'); }catch(e){}
+            await persist(); renderAll(); }""")
+        # 賽事頁（完整版）：「裝備、補給與戰略」裡沒有 EPP、沒有配速試算的按鈕；目標卡後面直接接裝備
+        c['race_page_no_epp_no_pacing_tool'] = page.evaluate("""async()=>{ """ + wait + """
+            selectRace('rich',{scroll:false}); await wait(400);
+            const prep=document.getElementById('section-prep'); if(!prep) return false; prep.open=true; await wait(60);
+            const goals=prep.querySelector('[data-section="goals"]'), equip=prep.querySelector('[data-section="equipment"]');
+            const txt=document.getElementById('detail').textContent;
+            const ok=document.documentElement.getAttribute('data-mode')!=='simple' && !document.querySelector('#detail .epp-section')
+              && !document.querySelector('[data-action="open-pacing-modal"]') && !document.querySelector('[data-action="epp-adopt-goal"]')
+              && !/環境折損|AI 預測完賽|配速試算|手環/.test(txt) && !!goals && !!equip
+              && !!(goals.compareDocumentPosition(equip)&Node.DOCUMENT_POSITION_FOLLOWING);
+            if(!ok) console.log('v419: race page',!!goals,!!equip); return ok; }""")
+        # 生涯數據：沒有氣候與表現散佈圖；旁邊的熱力圖、榮譽櫃照常
+        c['career_no_climate_chart_neighbors_kept'] = page.evaluate("""async()=>{ """ + wait + """
+            if(state.selectedId){ history.back(); await wait(450); }     // 照使用者的走法離開賽事頁，再點「生涯數據」
+            document.querySelector('.home-tab[data-home-tab="career"]').click(); await wait(350);
+            const cal=document.getElementById('calendar');
+            return !cal.querySelector('.climate-chart-wrap') && !cal.querySelector('[data-action="climate-toggle-trail"]')
+              && !/氣候與表現|最佳作戰溫度|效率基準/.test(cal.textContent) && !!cal.querySelector('.heatmap-wrap') && !!cal.querySelector('.trophy-cabinet-wrap'); }""")
+        # 程式碼真的拿掉了（不是只藏起來）：函式、彈窗容器都不在
+        c['code_and_modal_removed'] = page.evaluate("""()=>['computeClimatePerformancePoints','computeRaceWaterfall','computeThermalCoefficient','computeGravityCoefficient',
+            'computeSegmentPredictions','eppSectionHtml','climatePerformanceChartSvg','computePacingRows','openPacingModal','buildWristbandCanvas',
+            'downloadWristbandImage','linearRegression','computePersonalDistanceCurve'].every(n=>typeof window[n]==='undefined')
+            && !document.getElementById('pacing-modal') && !document.querySelector('.pacing-inputs')""")
+        # 應援指南卡：CP 的預計通過時間還是用同一個配速公式（06:00 起跑、目標 3:30:00，半程 21.0975 km → 07:45）
+        c['crew_guide_eta_keeps_pace_formula'] = page.evaluate("""()=>{
+            const r=emptyRace('應援測試','road_running','registered','2026-12-20'); r.route.distanceKm=42.195; r.schedule.startTime='06:00';
+            r.goals.find(g=>g.tier==='A').targetTimeSeconds=12600;
+            r.checkpoints=[Object.assign(LIST_META.checkpoints.factory(),{name:'半程',distanceKm:21.0975}),Object.assign(LIST_META.checkpoints.factory(),{name:'35K',distanceKm:35})];
+            const g=computeCrewGuideCheckpoints(r);
+            const ok=g.hasEta && g.checkpoints[0].eta.label==='07:45' && g.checkpoints[1].eta.label==='08:54'
+              && Math.round(pacingTimeAtDistance(12600,42.195,'even',21.0975))===6300;
+            if(!ok) console.log('v419: crew',JSON.stringify(g.checkpoints.map(x=>x.eta))); return ok; }""")
+        # 翻譯：62 個只有這三個功能用的 key 日文英文都拿掉；賽事頁「歷年平均」那幾個（名字也是 climate 開頭）留著
+        c['removed_keys_gone_shared_kept'] = page.evaluate("""(keys)=>{
+            const bad=keys.filter(k=>(k in JA)||(k in EN));
+            const keep=['ui.climateAvgLabel','ui.climateAvgBasis','ui.climateAvgSamples','ui.climateAvgYearsOnly','ui.close','ui.unnamedRace','ui.shareImageSuffix'].filter(k=>!(k in JA)||!(k in EN));
+            if(bad.length||keep.length) console.log('v419: keys',bad.join(','),keep.join(',')); return keys.length===62 && !bad.length && !keep.length; }""", self.KEYS)
+        # 使用說明（中、日、英）：「裝備補給與戰略」那一條不再提配速試算和手環
+        c['help_gear_line_without_pacing_tool'] = page.evaluate("""async()=>{ """ + wait + """ const out={};
+            const name={zh:'裝備補給與戰略',ja:'装備・補給・戦略',en:'Gear, Nutrition & Strategy'};
+            const bad={zh:/配速試算|手環/,ja:/ペース計算|リストバンド/,en:/pace calculator|wristband/i};
+            const end={zh:'補給時程規劃。',ja:'補給計画。',en:'starter templates) and a nutrition schedule.'};
+            for(const l of ['zh','ja','en']){ setLang(l); await wait(30); const box=document.createElement('div'); box.innerHTML=helpModalHtml();
+              const li=[...box.querySelectorAll('.help-body li')].map(x=>x.textContent).filter(x=>x.startsWith(name[l]));
+              out[l]=li.length===1 && !bad[l].test(li[0]) && li[0].includes(end[l]); }
+            setLang('zh'); await wait(30);
+            if(!out.zh||!out.ja||!out.en) console.log('v419: help',JSON.stringify(out)); return out.zh&&out.ja&&out.en; }""")
+        # 返回鍵、Esc 的清單拿掉了配速試算的彈窗：其他彈窗照樣關得掉
+        c['esc_and_back_still_close_layers'] = page.evaluate("""async()=>{ """ + wait + """
+            selectRace('rich',{scroll:false}); await wait(350);
+            openHelpModal(); await wait(200); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await wait(250);
+            const esc=document.getElementById('help-modal').hidden;
+            openHelpModal(); await wait(250); history.back(); await wait(450);
+            const back=document.getElementById('help-modal').hidden && state.selectedId==='rich';
+            return esc && back; }""")
+        # 簡易版也走一遍（賽事頁、生涯數據），什麼都不會炸
+        c['simple_mode_pages_render'] = page.evaluate("""async()=>{ """ + wait + """
+            if(state.selectedId){ history.back(); await wait(450); }
+            document.getElementById('btn-mode-toggle').click(); await wait(300);
+            const simple=document.documentElement.getAttribute('data-mode')==='simple';
+            selectRace('rich',{scroll:false}); await wait(300); const a=!!document.querySelector('#detail [data-section="goals"]') && !document.querySelector('#detail .epp-section');
+            history.back(); await wait(450);
+            document.querySelector('.home-tab[data-home-tab="career"]').click(); await wait(350);
+            const b=!!document.querySelector('#calendar .honor-card') && !document.querySelector('#calendar .climate-chart-wrap');
+            document.getElementById('btn-mode-toggle').click(); await wait(300);
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await wait(200);
+            const ok=simple && a && b && document.documentElement.getAttribute('data-mode')!=='simple';
+            if(!ok) console.log('v419: simple',simple,a,b); return ok; }""")
+        # PARKED.md：三個功能的程式碼、CSS、翻譯、說明、測試都在，JS 可以直接貼回去（語法檢查過）
+        import subprocess, tempfile
+        pk_path = os.path.join(repo, 'PARKED.md')
+        pk = open(pk_path, encoding='utf-8').read() if os.path.exists(pk_path) else ''
+        fns = ['computePersonalDistanceCurve', 'computeClimatePerformancePoints', 'linearRegression', 'computeSweetSpotBand',
+               'computeThermalCoefficient', 'computeGravityCoefficient', 'computeEppBaselinePace', 'elevationAtDistance',
+               'pickSegmentLengthKm', 'computeSegmentPredictions', 'computeRaceWaterfall', 'signedDurationLabel', 'eppWaterfallChartSvg',
+               'eppCoefficientBlockHtml', 'eppSegmentTableHtml', 'eppSectionHtml', 'climateIncludeTrail', 'climatePerformanceChartSvg',
+               'computePacingRows', 'pacingTableHtml', 'pacingModalHtml', 'openPacingModal', 'buildWristbandCanvas', 'downloadWristbandImage']
+        missing = [f for f in fns if ('function ' + f + '(') not in pk]
+        missing += [k for k in self.KEYS if ("'" + k + "':") not in pk]
+        missing += [x for x in ('class Climate(Group):', '.epp-section{', '.climate-chart-wrap{', '.pacing-inputs{', 'id="pacing-modal"',
+                                'data-action="epp-adopt-goal"', 'open-pacing-modal', 'climate-include-trail-v1') if x not in pk]
+        blocks = re.findall(r'```js\n(.*?)```', pk, re.S)
+        ok_js = False
+        if blocks:
+            with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False, encoding='utf-8') as f:
+                f.write('\n'.join(blocks))
+            r = subprocess.run(['node', '--check', f.name], capture_output=True, text=True)
+            ok_js = r.returncode == 0
+            if not ok_js:
+                print('    v419: parked js', r.stderr[-300:])
+            os.unlink(f.name)
+        c['parked_doc_complete_and_valid_js'] = bool(pk) and not missing and ok_js and len(blocks) >= 3
+        if missing:
+            print('    v419: parked missing', missing[:8])
+
+
 GROUPS = {
     'core':       lambda: Core('core'),
     'drawers':    lambda: Drawers('drawers'),
@@ -13796,7 +14216,6 @@ GROUPS = {
     'share':      lambda: Share('share'),
     'share_touch':lambda: ShareTouch(),
     'offline':    lambda: Offline(),
-    'climate':    lambda: Climate('climate'),
     'publink':    lambda: PublicLink('publink'),
     'pubview':    lambda: PublicView('pubview'),
     'paste':      lambda: PasteReport('paste'),
@@ -13831,6 +14250,9 @@ GROUPS = {
     'v416':       lambda: V416FindRaces('v416'),
     'v417':       lambda: V417PasteUrl('v417'),
     'v418':       lambda: V418FindCountries('v418'),
+    'v4181':      lambda: V4181PasteCollapsed('v4181'),
+    'v4182':      lambda: V4182FindPrefsSync('v4182'),
+    'v419':       lambda: V419Parked('v419'),
 }
 
 
