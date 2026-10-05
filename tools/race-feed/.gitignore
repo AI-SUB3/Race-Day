@@ -1,0 +1,3 @@
+# 找賽事的抓資料程式：套件和賽事頁快取不放進 repo（排程每次自己 npm ci，快取存在 GitHub Actions 的 cache）
+node_modules/
+cache.json
