@@ -2517,10 +2517,117 @@
   @media (max-width:640px){
     .home-tabs{margin:-4px -18px 14px;padding:0 10px;}
     .home-tab{flex:1;padding:10px 6px 12px;}
+    /* 四個分頁（v4.16.0）：窄手機上日文、英文可能擠不下（「トレーニング」「大会を探す」），
+       分頁列改成可以左右滑、不縮字；目前的分頁會捲進畫面（syncHomeChrome） */
+    .home-tabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;}
+    .home-tabs::-webkit-scrollbar{display:none;}
+    .home-tab{flex:1 0 auto;margin-bottom:0;}
   }
   /* 生涯數據分頁沒有月曆：搜尋篩選列和「下一場」焦點卡都收起來 */
   body[data-home-tab="career"] #focus-panel-slot,
   body[data-home-tab="career"] .topbar-row2{display:none!important;}
+
+  /* ==== 找賽事（v4.16.0）：首頁第四個分頁。手機一場兩行、點開看詳情；筆電（≥900px）五欄表格 ==== */
+  body[data-home-tab="find"] #focus-panel-slot,
+  body[data-home-tab="find"] .topbar-row2,
+  body[data-home-tab="find"] #btn-new-fab{display:none!important;}
+  /* 「剩 3 天」的紅字：--flag 在淺色底上只有 4.4:1，小字要深一階（深色模式 --flag 本來就夠亮） */
+  /* 綠字（報名中、選了篩選）同理：--trail 疊在淡綠底上只有 4.3:1（深色模式 3.9:1），淺色深一階、深色亮一階 */
+  .find-wrap{--find-urgent:#9C3A19;--find-on:#24573A;color:var(--ink);font-size:calc(15px*var(--fs,1));padding-bottom:48px;}
+  [data-theme="dark"] .find-wrap{--find-urgent:var(--flag);--find-on:#7CC49E;}
+  .find-head h2{font-size:calc(20px*var(--fs,1));margin:2px 0 4px;font-weight:700;}
+  .find-src{margin:0 0 2px;color:var(--ink-soft);font-size:calc(13px*var(--fs,1));line-height:1.6;}
+  .find-src a{color:inherit;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--stone) 55%,transparent);text-underline-offset:2px;}
+  .find-src a:hover{text-decoration-color:currentColor;}
+  .find-note{margin:0 0 8px;color:var(--stone);font-size:calc(12px*var(--fs,1));line-height:1.55;}
+  .find-warn{margin:6px 0 8px;padding:8px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--flag) 35%,var(--rule));
+    background:color-mix(in srgb,var(--flag) 8%,var(--surface));color:var(--ink);font-size:calc(13px*var(--fs,1));line-height:1.55;}
+  .find-tools{display:flex;flex-direction:column;gap:8px;margin:10px 0 2px;}
+  .find-wrap.is-wide .find-tools{flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap;}
+  .find-search{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;box-sizing:border-box;
+    border:1px solid var(--rule);border-radius:10px;background:var(--surface);}
+  .find-wrap.is-wide .find-search{width:300px;flex:none;}
+  .find-search:focus-within{border-color:var(--trail);box-shadow:0 0 0 1px var(--trail);}
+  .find-search-ico{color:var(--stone);font-size:calc(17px*var(--fs,1));line-height:1;}
+  .find-search input{flex:1;min-width:0;min-height:42px;border:none;background:none;outline:none;font:inherit;font-size:calc(15px*var(--fs,1));color:var(--ink);}
+  .find-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  /* 篩選選單：畫面上是自己畫的膠囊（只寫「種類」「地區」，手機上三顆排得下一行），上面疊一個透明的原生選單——
+     點下去是系統的選單（手機是滾輪），選項裡有各自的場數；讀螢幕軟體讀的也是原生選單 */
+  .find-sel{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 30px 0 14px;box-sizing:border-box;
+    border:1px solid var(--rule);border-radius:999px;background:var(--surface);color:var(--ink);
+    font-size:calc(14px*var(--fs,1));font-weight:600;white-space:nowrap;cursor:pointer;}
+  .find-sel::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--stone);font-size:calc(12px*var(--fs,1));pointer-events:none;}
+  .find-sel select{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;font-size:16px;}
+  .find-sel:has(select:focus-visible){outline:2px solid var(--trail);outline-offset:2px;}
+  .find-sel.is-on{background:color-mix(in srgb,var(--trail) 13%,var(--surface));border-color:color-mix(in srgb,var(--trail) 50%,var(--rule));color:var(--find-on);}
+  .find-sel.is-on::after{color:var(--find-on);}
+  .find-countbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 0;}
+  .find-count{margin:0;color:var(--stone);font-size:calc(13px*var(--fs,1));}
+  .find-sort{border-color:transparent;background:none;color:var(--ink-soft);font-weight:500;padding-left:8px;}
+  .find-loading{margin:28px 0;color:var(--stone);text-align:center;}
+  .find-empty{margin:24px 0;padding:22px 16px;text-align:center;border:1px dashed var(--rule);border-radius:12px;color:var(--ink-soft);}
+  .find-empty p{margin:0 0 12px;}
+  .find-empty .btn-ghost{min-height:44px;padding:0 16px;border-radius:10px;}
+  .find-month h3{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 0;padding:0 0 6px;border-bottom:2px solid var(--rule);
+    font-size:calc(14px*var(--fs,1));font-weight:700;color:var(--ink-soft);}
+  .find-month h3 span{font-weight:500;color:var(--stone);font-size:calc(13px*var(--fs,1));}
+  .find-list{list-style:none;margin:0;padding:0;}
+  .find-row{border-bottom:1px solid color-mix(in srgb,var(--rule) 70%,transparent);}
+  .find-line{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:10px;align-items:start;width:100%;min-height:44px;padding:11px 0;
+    border:none;background:none;text-align:left;font:inherit;color:inherit;cursor:pointer;}
+  .find-line:focus-visible{outline:2px solid var(--trail);outline-offset:2px;border-radius:8px;}
+  .find-date{display:flex;flex-direction:column;line-height:1.25;}
+  .find-date b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:calc(15px*var(--fs,1));font-weight:600;}
+  .find-date span{color:var(--stone);font-size:calc(12px*var(--fs,1));}
+  .find-main{display:block;min-width:0;}
+  .find-name{font-size:calc(16px*var(--fs,1));font-weight:700;line-height:1.35;overflow-wrap:anywhere;}
+  .find-added-tag{display:inline-block;margin-left:6px;color:var(--find-on);font-weight:700;font-size:calc(12px*var(--fs,1));white-space:nowrap;}
+  .find-meta{display:block;margin-top:3px;color:var(--ink-soft);font-size:calc(13px*var(--fs,1));line-height:1.45;}
+  .find-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 6px 1px 0;vertical-align:middle;}
+  .find-reg{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;}
+  .find-pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:calc(12px*var(--fs,1));font-weight:700;line-height:1.6;white-space:nowrap;}
+  .find-pill.k-open{background:color-mix(in srgb,var(--trail) 14%,transparent);color:var(--find-on);}
+  .find-pill.k-urgent{background:color-mix(in srgb,var(--flag) 14%,transparent);color:var(--find-urgent);}
+  .find-pill.k-soon{background:color-mix(in srgb,var(--contour) 13%,transparent);color:var(--contour);}
+  .find-pill.k-closed{background:color-mix(in srgb,var(--stone) 12%,transparent);color:var(--ink-soft);}
+  .find-pill.k-unknown{border:1px dashed var(--stone);color:var(--ink-soft);padding:1px 8px;}
+  .find-per{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--stone);font-size:calc(12px*var(--fs,1));white-space:nowrap;}
+  .find-row.is-closed .find-name,.find-row.is-closed .find-date b{color:var(--stone);}
+  .find-row.is-exp{margin:0 -12px;padding:0 12px;border-radius:12px;background:var(--surface);box-shadow:0 0 0 1px var(--rule);border-bottom-color:transparent;}
+  .find-detail{padding:0 0 14px 60px;}
+  @media (max-width:380px){ .find-detail{padding-left:0;} }
+  .find-detail dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;margin:0 0 12px;font-size:calc(14px*var(--fs,1));}
+  .find-detail dt{color:var(--stone);white-space:nowrap;}
+  .find-detail dd{margin:0;overflow-wrap:anywhere;}
+  .find-act{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .find-act .btn-primary,.find-act .btn-ghost{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;box-sizing:border-box;
+    border-radius:10px;font-size:calc(14px*var(--fs,1));text-decoration:none;}
+  .find-added{color:var(--find-on);font-weight:700;font-size:calc(14px*var(--fs,1));}
+  /* 筆電：五欄表格（賽事日期／地點／名稱／種類與距離／報名期間）＋右邊的按鈕 */
+  .find-tbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:calc(14px*var(--fs,1));}
+  .find-tbl thead th{text-align:left;padding:9px 10px;border-bottom:2px solid var(--rule);color:var(--stone);font-weight:600;font-size:calc(12px*var(--fs,1));letter-spacing:.03em;white-space:nowrap;}
+  .find-tbl td{padding:10px;border-bottom:1px solid color-mix(in srgb,var(--rule) 70%,transparent);vertical-align:middle;}
+  .find-tbl .mono{white-space:nowrap;}
+  .find-tbl .find-sub{display:block;margin-top:2px;color:var(--stone);font-size:calc(12px*var(--fs,1));font-weight:400;}
+  .find-tbl .find-tplace{max-width:220px;}
+  /* 地點常常很長（含地址）：表格裡最多兩行，完整的在展開那一列 */
+  .find-tbl .find-tplace .find-sub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .find-trow{cursor:pointer;}
+  .find-trow:hover td{background:color-mix(in srgb,var(--surface) 75%,transparent);}
+  .find-trow.is-exp td{background:var(--surface);border-bottom-color:transparent;}
+  .find-trow.is-closed td,.find-trow.is-closed .find-name-btn{color:var(--stone);}
+  .find-name-btn{padding:0;border:none;background:none;font:inherit;font-weight:700;color:var(--ink);text-align:left;cursor:pointer;line-height:1.35;}
+  .find-name-btn:hover{text-decoration:underline;text-underline-offset:2px;}
+  .find-name-btn:focus-visible{outline:2px solid var(--trail);outline-offset:2px;border-radius:4px;}
+  .find-mrow th{padding:16px 10px 6px;border-bottom:1px solid var(--rule);text-align:left;font-weight:700;color:var(--ink-soft);font-size:calc(14px*var(--fs,1));}
+  .find-mrow th span{margin-left:10px;font-weight:500;color:var(--stone);font-size:calc(12px*var(--fs,1));}
+  .find-tact{text-align:right;white-space:nowrap;}
+  .find-tact .btn-ghost{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;margin-left:6px;box-sizing:border-box;border-radius:8px;font-size:calc(13px*var(--fs,1));text-decoration:none;}
+  .find-added-btn{min-height:36px;margin-left:6px;padding:0 8px;border:none;background:none;font:inherit;font-size:calc(13px*var(--fs,1));font-weight:700;color:var(--find-on);cursor:pointer;}
+  .find-added-btn:hover{text-decoration:underline;}
+  .find-tdetail td{background:var(--surface);padding:0 10px 14px;}
+  .find-tdetail .find-detail{padding:0;}
+  .find-tdetail dl{margin:0;grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);}
   /* 第一次打開、還沒有任何賽事：搜尋篩選列不需要，只留歡迎卡 */
   body.is-first-run:not(.viewing-detail) .topbar-row2{display:none!important;}
   .welcome-card{
@@ -3803,6 +3910,8 @@
       <button type="button" class="home-tab" data-home-tab="races" aria-current="page" data-i18n="ui.tabRaces">賽事</button>
       <button type="button" class="home-tab" data-home-tab="career" data-i18n="ui.tabCareer">生涯數據</button>
       <button type="button" id="btn-training" class="home-tab home-tab-training" data-i18n="ui.trainingShort">訓練</button>
+      <!-- 找賽事（v4.16.0）：報名網站上還沒比的賽事，每天清晨更新的清單（race-feed.json） -->
+      <button type="button" class="home-tab" data-home-tab="find" data-i18n="ui.tabFind">找賽事</button>
     </nav>
     <section id="focus-panel-slot"></section>
     <div class="topbar-row2">
@@ -5222,7 +5331,7 @@ const state={races:[],selectedId:null,creating:false,filterStatus:'all',searchQu
   // 手機和電腦的檢視分開記：電腦的 viewMode 是月曆／完賽牆／表格，手機預設清單。
   homeTab:'races',phoneView:'list'};
 let currentRace=null;
-const APP_VERSION='v4.15.0';
+const APP_VERSION='v4.16.0';
 
 /* ============================================================
    多語系（i18n）
@@ -5308,6 +5417,23 @@ const JA={
   'ui.simpleHidNutritionSchedule':'補給スケジュール {n} 件','ui.simpleHidTraining':'トレーニング計画','ui.simpleHidLogistics':'予算と旅程','ui.simpleHidShoe':'レースシューズ',
   // v4.0
   'ui.tabRaces':'大会','ui.tabCareer':'キャリア','ui.homeTabsLabel':'ホームのタブ',
+  'ui.tabFind':'大会を探す','ui.findSourcesLabel':'情報元：','ui.findDaily':'・毎朝チェック','ui.findUpdated':'（リスト更新：{d}）',
+  'ui.findNote':'大会情報と受付期間は申込サイトから自動で集めたものです。申し込む前に申込サイトの案内を確認してください。',
+  'ui.findStaleWarn':'リストが{n}日間更新されていません。受付状況が変わっている可能性があります。','ui.findSourceFail':'{names}は今回取得できなかったため、前回のデータを表示しています。',
+  'ui.findSearchLabel':'大会を検索','ui.findSearchPh':'大会名・場所で検索','ui.findOnlyLabel':'受付状況','ui.findTypeLabel':'種目','ui.findRegionLabel':'地域','ui.findSortLabel':'並べ替え',
+  'ui.findOnly.can':'申込可能','ui.findOnly.open':'受付中','ui.findOnly.soon':'まもなく受付','ui.findOnly.closed':'締切・定員到達','ui.findOnly.all':'すべての状況',
+  'ui.findType.all':'すべての種目','ui.findType.road':'ロード','ui.findType.trail':'トレイル','ui.findType.ultra':'ウルトラ','ui.findType.tri':'トライアスロン','ui.findType.bike':'自転車','ui.findType.swim':'水泳','ui.findType.other':'その他',
+  'ui.findRegion.all':'すべての地域','ui.findRegion.north':'北部','ui.findRegion.central':'中部','ui.findRegion.south':'南部','ui.findRegion.east':'東部','ui.findRegion.islands':'離島','ui.findRegion.overseas':'海外',
+  'ui.findSort.date':'開催日順','ui.findSort.deadline':'締切順','ui.findOptCount':'{label}（{n}）','ui.findCount':'{n}件','ui.findMonthCount':'{n}件',
+  'ui.findStOpen':'受付中','ui.findStLeft':'あと{n}日','ui.findStToday':'今日締切','ui.findStSoon':'{d} 受付開始','ui.findStSoonNoDate':'まもなく受付','ui.findStClosed':'締切','ui.findStFull':'定員到達','ui.findStCancelled':'延期・中止','ui.findStUnknown':'公式で確認',
+  'ui.findPerUntil':'〜{d}','ui.findPerFrom':'{d}〜','ui.findPerCloseLong':'{d} 締切','ui.findPerOpenLong':'{d} 受付開始','ui.findPerNoneLong':'未発表（大会サイトで確認してください）',
+  'ui.findDateWd':'{md}（{d}）','ui.findWeekday':'{d}曜','ui.findDot':'・','ui.findDistSep':'／','ui.findDateTbd':'日程未定',
+  'ui.findCats':'種目','ui.findRegPeriod':'受付期間','ui.findPlace':'会場','ui.findSource':'情報元',
+  'ui.findGo':'申込ページへ ↗','ui.findGoShort':'申込 ↗','ui.findGoSite':'大会サイト ↗','ui.findGoSiteShort':'公式 ↗','ui.findGoSource':'{name}を見る ↗',
+  'ui.findAdd':'＋ 自分の大会に追加','ui.findAddShort':'＋ 追加','ui.findAddedTag':'✓ 追加済み','ui.findInMine':'✓「大会」に追加済み','ui.findView':'見る','ui.findAddedToast':'「大会」に追加しました：{name}（検討中）',
+  'ui.findColDate':'開催日','ui.findColPlace':'場所','ui.findColName':'大会名','ui.findColKind':'種目と距離','ui.findColReg':'受付期間','ui.findColAct':'申込と追加',
+  'ui.findEmpty':'条件に合う大会はありません。','ui.findClear':'絞り込みを解除','ui.findLoading':'大会リストを読み込み中…','ui.findError':'リストを読み込めませんでした。オフラインか、サイトが更新中の可能性があります。','ui.findRetry':'再試行',
+  
   'ui.viewList':'リスト','ui.viewCalendar':'カレンダー','ui.viewPhotoWall':'完走ウォール','ui.viewSegLabel':'表示方法',
   'ui.listRecent':'最近の大会','ui.listSeeAllHistory':'過去の記録をすべて見る（{n} 件）›',
   'ui.menuDisplay':'表示','ui.menuFontSize':'文字サイズ','ui.menuDarkMode':'ダークモード','ui.menuLanguage':'言語',
@@ -5687,9 +5813,10 @@ const JA={
   'ui.recoveryOverwriteEmpty':'同期の上書き履歴はありません',
   'ui.helpVersionLine':'バージョン {n} ・ より詳しい使い方やクラウド同期／プッシュ通知の設定手順はリポジトリの USAGE.md をご覧ください',
   'ui.helpBodyHtml':`
-      <h3>ホーム：大会／キャリア／トレーニング</h3>
+      <h3>ホーム：大会／キャリア／トレーニング／大会を探す</h3>
       <ul>
-        <li>ホームは3つのタブに分かれています。「大会」は今日の名言、「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。</li>
+        <li>ホームは4つのタブに分かれています。「大会」は今日の名言、「次の大会」カード、検索・絞り込み、カレンダー。「キャリア」はフルマラソン自己ベスト、年ごとの完走数、累積獲得標高、ヒートマップ、トロフィー棚（5件以上記録すると表示）で、「キャリア総括を開く」で全体を振り返れます。「トレーニング」はトレーニング記録を開きます。「大会を探す」は申込サイトに載っている、これから開催される大会の一覧です。</li>
+        <li><strong>大会を探す</strong>（v4.16.0）：運動筆記、全統、一起報名、路跑協会（路協）の4サイトに載っている、これから開催される大会を毎朝自動で更新します。最初は「申込可能」（受付中・まもなく受付・未発表）だけを表示。大会名や場所で検索、受付状況・種目・地域で絞り込み（次回も覚えています）、締切順への並べ替えができます。スマホでは大会をタップすると種目、受付期間（あと何日）、会場、情報元が開き、「申込ページへ」で申込サイトを開き、「＋ 自分の大会に追加」で「検討中」の大会を作成します（大会名、日付、場所、種目、受付期間、申込URLを入力済み）。パソコンでは表で表示し、各行の右にボタンがあります。追加済みの大会には「✓ 追加済み」と表示されます。大会情報と受付期間は申込サイトから自動で集めたものなので、申し込む前に申込サイトの案内を確認してください。</li>
         <li><strong>トレーニング画面</strong>（v4.10.0 で刷新）：「今週」のいちばん上は準備中の大会（エントリー済みまたは抽選待ちで、準備期間に入った直近の大会：カウントダウン、A／B 目標、レースまで第何週）。その下に今週の距離、先週の同じ時点との比較、週間目標（大会画面の「トレーニング計画」の週間走行距離）、日ごとの棒グラフ、今週のまとめ、直近12週の距離が並びます。「今月」は日ごとの棒グラフと直近12か月、「すべて」は年・月ごとにたたんで表示します。種目が2つ以上あるときはタブの下で種目を選べ、種目の違う距離は合計しません。各記録の右にあるシューズのボタンから、シューズの変更や削除ができます。</li>
         <li><strong>トレーニングの詳細</strong>（v4.11.0）：記録をタップすると開き、距離、タイム、ペース、心拍、獲得標高とコースが見られます（v4.11.0 以降に取り込んだものは数 km ごとの位置を表示。それ以前のものはコースの長さから推定し、何周もするコースはスタートとゴールだけ）。過去1年の距離が近い同じ種目と、ペース・心拍・獲得標高を比べます。主観的運動強度（RPE 1–10）、名前、メモ（入力すると自動で保存）、シューズも設定できます。削除した直後は「元に戻す」で戻せます。</li>
         <li><strong>1kmごとのペースと高度</strong>（v4.12.0）：FIT・GPX・TCX を取り込むときに1kmごとのタイムと高度の変化も保存します（スイムは100mごと、バイクは速度）。詳細画面ではバーで表示し、全体の平均より速い区間は上へ、遅い区間は下へ伸びます。その下が高度のグラフで、遅かった区間が上り坂だったかどうかが分かります。バーをタップするとその区間の数字が出て、「区間ごとの数字」を開くと全部見られます。FIT ファイルのタイムは時計を一時停止していた分を含みません（時計の1kmごとのタイムと同じ）。GPX・TCX には一時停止の記録がないため、止まっていた分もその区間に含まれます。以前に取り込んだトレーニングは、元のファイルをもう一度取り込むと追加されます。名前・メモ・主観的運動強度・シューズは変わりません。</li>
@@ -5998,6 +6125,23 @@ const EN={
   'ui.simpleHidNutritionSchedule':'{n} fueling {n:item|items}','ui.simpleHidTraining':'training plan','ui.simpleHidLogistics':'budget & travel','ui.simpleHidShoe':'race shoes',
   // v4.0
   'ui.tabRaces':'Races','ui.tabCareer':'Career','ui.homeTabsLabel':'Home sections',
+  'ui.tabFind':'Find races','ui.findSourcesLabel':'Sources: ','ui.findDaily':' · checked every morning','ui.findUpdated':' (list updated {d})',
+  'ui.findNote':'Races and registration dates are collected automatically from the sign-up sites — check the site before you register.',
+  'ui.findStaleWarn':'The list hasn\u2019t changed for {n} days, so registration status may be out of date.','ui.findSourceFail':'Couldn\u2019t fetch {names} this time — showing the previous data.',
+  'ui.findSearchLabel':'Search races','ui.findSearchPh':'Search by name or place','ui.findOnlyLabel':'Registration status','ui.findTypeLabel':'Type','ui.findRegionLabel':'Region','ui.findSortLabel':'Sort',
+  'ui.findOnly.can':'Can still enter','ui.findOnly.open':'Open now','ui.findOnly.soon':'Opening soon','ui.findOnly.closed':'Closed or full','ui.findOnly.all':'Any status',
+  'ui.findType.all':'All types','ui.findType.road':'Road','ui.findType.trail':'Trail','ui.findType.ultra':'Ultra','ui.findType.tri':'Tri & duathlon','ui.findType.bike':'Cycling','ui.findType.swim':'Swim','ui.findType.other':'Other',
+  'ui.findRegion.all':'All regions','ui.findRegion.north':'North','ui.findRegion.central':'Central','ui.findRegion.south':'South','ui.findRegion.east':'East','ui.findRegion.islands':'Islands','ui.findRegion.overseas':'Overseas',
+  'ui.findSort.date':'By race date','ui.findSort.deadline':'By deadline','ui.findOptCount':'{label} ({n})','ui.findCount':'{n} {n:race|races}','ui.findMonthCount':'{n} {n:race|races}',
+  'ui.findStOpen':'Open','ui.findStLeft':'{n} {n:day|days} left','ui.findStToday':'Closes today','ui.findStSoon':'Opens {d}','ui.findStSoonNoDate':'Opening soon','ui.findStClosed':'Closed','ui.findStFull':'Full','ui.findStCancelled':'Postponed/cancelled','ui.findStUnknown':'Check site',
+  'ui.findPerUntil':'until {d}','ui.findPerFrom':'from {d}','ui.findPerCloseLong':'closes {d}','ui.findPerOpenLong':'opens {d}','ui.findPerNoneLong':'Not announced yet — check the race site',
+  'ui.findDateWd':'{md} ({d})','ui.findWeekday':'{d}','ui.findDot':' · ','ui.findDistSep':' / ','ui.findDateTbd':'Date TBA',
+  'ui.findCats':'Categories','ui.findRegPeriod':'Registration','ui.findPlace':'Venue','ui.findSource':'Source',
+  'ui.findGo':'Register ↗','ui.findGoShort':'Register ↗','ui.findGoSite':'Race site ↗','ui.findGoSiteShort':'Site ↗','ui.findGoSource':'Open {name} ↗',
+  'ui.findAdd':'＋ Add to my races','ui.findAddShort':'＋ Add','ui.findAddedTag':'✓ Added','ui.findInMine':'✓ In your races','ui.findView':'View','ui.findAddedToast':'Added to Races: {name} (considering)',
+  'ui.findColDate':'Date','ui.findColPlace':'Place','ui.findColName':'Race','ui.findColKind':'Type & distance','ui.findColReg':'Registration','ui.findColAct':'Register and add',
+  'ui.findEmpty':'No races match.','ui.findClear':'Clear filters','ui.findLoading':'Loading races…','ui.findError':'Couldn\u2019t load the list. You may be offline, or the site is updating.','ui.findRetry':'Try again',
+  
   'ui.viewList':'List','ui.viewCalendar':'Calendar','ui.viewPhotoWall':'Finisher wall','ui.viewSegLabel':'View',
   'ui.listRecent':'Recent races','ui.listSeeAllHistory':'See all {n} past races ›',
   'ui.menuDisplay':'Display','ui.menuFontSize':'Text size','ui.menuDarkMode':'Dark mode','ui.menuLanguage':'Language',
@@ -6365,9 +6509,10 @@ const EN={
   'ui.recoveryOverwriteEmpty':'No sync overwrite history',
   'ui.helpVersionLine':'Version {n} ・ For the full guide and cloud-sync/push-notification setup steps, see USAGE.md in the repo',
   'ui.helpBodyHtml':`
-      <h3>Home: Races / Career / Training</h3>
+      <h3>Home: Races / Career / Training / Find races</h3>
       <ul>
-        <li>The home page has three tabs. “Races” holds the quote of the day, the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log.</li>
+        <li>The home page has four tabs. “Races” holds the quote of the day, the next-race card, search and filters, and the calendar. “Career” shows your marathon PB, races finished per year, total elevation, the heatmap and the trophy cabinet (once you have 5+ races) — “Open career review” shows the full review. “Training” opens your training log. “Find races” lists upcoming races from the sign-up sites.</li>
+        <li><strong>Find races</strong> (v4.16.0): upcoming races from four Taiwanese sites (iRunner, CTRUN, JoinNow and the Chinese Taipei Road Running Association), refreshed automatically every morning. It starts with “Can still enter” (open now, opening soon, or not announced yet). Search by name or place, filter by registration status, type and region (remembered next time), or sort by deadline. On a phone, tap a race to see its categories, registration period (days left), venue and source; “Register” opens the sign-up site and “＋ Add to my races” creates a “considering” race with the name, date, place, type, registration dates and sign-up link filled in. On a laptop it is a table with the buttons at the right of each row. Races you have already added show “✓ Added”. Race details and registration dates are collected automatically, so check the sign-up site before you register.</li>
         <li><strong>Training page</strong> (redesigned in v4.10.0): at the top of “Week” is the race you are preparing for (the nearest registered or lottery-pending race whose prep period has started: countdown, A/B goals, weeks to go). Below it: this week’s distance, a comparison with the same days last week, your weekly goal (the weekly mileage in the race’s “Training Plan”), daily bars, a short summary and the last 12 weeks. “Month” shows daily bars and the last 12 months; “All” groups sessions by year and month. If you log more than one sport, pick one under the tabs, so distances from different sports are never added together. Tap the shoe button on a session to change the shoes or delete it.</li>
         <li><strong>Session details</strong> (v4.11.0): tap a session to see its distance, time, pace, heart rate, elevation gain and route (sessions imported from v4.11.0 on show a marker every few kilometres; older ones are estimated from the route length, and routes that loop several times show only the start and finish), plus how its pace, heart rate and climbing compare with similar-distance sessions of the same sport from the past year. You can also rate perceived exertion (RPE 1–10), rename it, add notes (saved as you type) and change the shoes. Right after deleting, tap “Undo” to bring it back.</li>
         <li><strong>Splits and elevation</strong> (v4.12.0): importing a FIT, GPX or TCX file now also saves the time and elevation change for every kilometre (every 100 m for swims; speed for rides). Session details show them as bars: splits faster than your average for the whole session go up, slower ones go down, with the elevation profile underneath so you can see whether the slow ones were climbs. Tap a bar to see that split, or open “All splits” for the full table. Times from FIT files leave out the time the watch was paused (matching your watch’s own splits); GPX and TCX files don’t record pauses, so time spent stopped counts towards that split. For sessions imported earlier, import the original file again to add them; the name, notes, RPE and shoes stay as they are.</li>
@@ -21132,12 +21277,20 @@ function resultsListShowing(){ const v=currentCalendarView(); return v==='calend
 function hasAnyRace(){ return state.races.some(r=>!r.deletedAt); }
 // 分頁列、檢視切換、body 上給 CSS 用的標記——每次重畫首頁都同步一次
 function syncHomeChrome(){
-  const tab=state.homeTab==='career'?'career':'races';
+  const tab=isHomeTab(state.homeTab)?state.homeTab:'races';
   document.body.dataset.homeTab=tab;
   document.body.classList.toggle('is-first-run',!hasAnyRace());
   document.querySelectorAll('.home-tab[data-home-tab]').forEach(b=>{
     if(b.dataset.homeTab===tab) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
   });
+  // 窄手機上分頁列可以左右滑（v4.16.0）：目前的分頁要在畫面裡，不然切到「找賽事」看不到自己在哪一頁
+  const tabNav=document.querySelector('.home-tabs');
+  const cur=tabNav&&tabNav.querySelector('.home-tab[aria-current="page"]');
+  if(cur&&tabNav.scrollWidth>tabNav.clientWidth+1){
+    const a=cur.getBoundingClientRect(), n=tabNav.getBoundingClientRect();
+    if(a.right>n.right) tabNav.scrollLeft+=a.right-n.right+8;
+    else if(a.left<n.left) tabNav.scrollLeft-=n.left-a.left+8;
+  }
   const calNav=document.querySelector('.cal-nav');
   if(calNav){ calNav.dataset.phoneView=state.phoneView; calNav.dataset.view=currentCalendarView(); }
   document.querySelectorAll('.view-seg [data-phone-view]').forEach(b=>{
@@ -21148,14 +21301,18 @@ function syncHomeChrome(){
   const tableToggleBtn=document.getElementById('cal-table-toggle');
   if(tableToggleBtn) tableToggleBtn.classList.toggle('active',state.viewMode==='table');
 }
+// 首頁的分頁：賽事、生涯數據、找賽事（v4.16.0）。「訓練」是打開全螢幕頁的按鈕，不在這裡。
+// 用函式不用常數：函式宣告會提前，載入途中哪裡先畫了首頁也不會撞到「常數還沒定義」
+function isHomeTab(tab){ return tab==='races'||tab==='career'||tab==='find'; }
 function setHomeTab(tab){
-  tab=tab==='career'?'career':'races';
+  tab=isHomeTab(tab)?tab:'races';
   if(state.homeTab===tab) return;
   state.homeTab=tab;
-  // 生涯數據有自己的網址（v4.1.0）：返回鍵回到「賽事」、重新整理留在原地
+  // 生涯數據、找賽事有自己的網址（v4.1.0、v4.16.0）：返回鍵回到「賽事」、重新整理留在原地
   syncRouteWithState();
   renderCalendar();
   if(tab==='career') logFeatureUse('open_career_tab');
+  if(tab==='find') logFeatureUse('open_find_tab');
 }
 function setPhoneView(view){
   view=['list','calendar','grid'].includes(view)?view:'list';
@@ -21208,6 +21365,441 @@ function phoneListHtml(){
   parts.push(calendarUndatedHtml(races,false,true));
   return `<div class="cal-phone-list">${parts.join('')}</div>`;
 }
+/* ============================================================
+   找賽事（v4.16.0）：首頁第四個分頁，列出報名網站上還沒比的賽事
+   資料是 race-feed.json：GitHub 每天清晨照 robots.txt 讀運動筆記、全統、一起報名、路協公開的清單整理好的
+   （程式在 tools/race-feed/、排程在 .github/workflows/race-feed.yml），跟 App 放在同一個網站。
+   為什麼不讓 App 直接讀那些網站：瀏覽器不准一個網站讀另一個網站的內容（CORS），我們也沒有伺服器。
+   報名狀態在這裡用「今天」重新算：清單幾天沒更新，「剩 3 天」也不會一直停在那裡。
+   ============================================================ */
+const FIND_FEED_URL='race-feed.json';
+const FIND_PREF_KEY='race-day-find-prefs-v1';
+const FIND_SOURCES={
+  irunner:{zh:'運動筆記',en:'iRunner',home:'https://irunner.biji.co/list'},
+  ctrun:{zh:'全統',en:'CTRUN',home:'https://www.ctrun.com.tw/'},
+  joinnow:{zh:'一起報名',en:'JoinNow',home:'https://www.joinnow.com.tw/'},
+  sportsnet:{zh:'路協',en:'CTRRA',home:'https://www.sportsnet.org.tw/schedule.php'},
+};
+// 種類篩選把相近的合成一類（三鐵＋二鐵、障礙賽＋其他），選單才不會太長
+const FIND_TYPES=[
+  {id:'road',types:['road_running'],zh:'路跑'},
+  {id:'trail',types:['trail_running'],zh:'越野'},
+  {id:'ultra',types:['ultra_marathon'],zh:'超馬'},
+  {id:'tri',types:['triathlon','duathlon'],zh:'鐵人'},
+  {id:'bike',types:['cycling'],zh:'自行車'},
+  {id:'swim',types:['swimming'],zh:'游泳'},
+  {id:'other',types:['obstacle_race','other'],zh:'其他'},
+];
+const FIND_REGIONS=[{id:'north',zh:'北部'},{id:'central',zh:'中部'},{id:'south',zh:'南部'},{id:'east',zh:'東部'},{id:'islands',zh:'離島'},{id:'overseas',zh:'海外'}];
+// 報名狀態。預設「還能報名」：報名中、即將開放、還沒公布的都留著，已截止和額滿先收起來
+const FIND_ONLY=[
+  {id:'can',zh:'還能報名',keep:k=>k==='open'||k==='urgent'||k==='soon'||k==='unknown'},
+  {id:'open',zh:'報名中',keep:k=>k==='open'||k==='urgent'},
+  {id:'soon',zh:'即將開放',keep:k=>k==='soon'},
+  {id:'closed',zh:'已截止、額滿',keep:k=>k==='closed'||k==='full'||k==='cancelled'},
+  {id:'all',zh:'全部狀態',keep:()=>true},
+];
+const FIND_DEFAULTS={only:'can',type:'all',region:'all',sort:'date'};
+const findState={feed:null,status:'idle',error:'',loadedAt:0,q:'',only:'can',type:'all',region:'all',sort:'date',open:null};
+// 篩選記在這台裝置上（下次打開還是「北部」「越野」）；搜尋的字不記
+try{
+  const p=JSON.parse(localStorage.getItem(FIND_PREF_KEY)||'{}')||{};
+  if(FIND_ONLY.some(o=>o.id===p.only)) findState.only=p.only;
+  if(p.type==='all'||FIND_TYPES.some(o=>o.id===p.type)) findState.type=p.type;
+  if(p.region==='all'||FIND_REGIONS.some(o=>o.id===p.region)) findState.region=p.region;
+  if(p.sort==='date'||p.sort==='deadline') findState.sort=p.sort;
+}catch(e){}
+function saveFindPrefs(){
+  try{ localStorage.setItem(FIND_PREF_KEY,JSON.stringify({only:findState.only,type:findState.type,region:findState.region,sort:findState.sort})); }catch(e){}
+}
+const FIND_WIDE_MQ=window.matchMedia?window.matchMedia('(min-width:900px)'):null;
+function findWide(){ return !!(FIND_WIDE_MQ&&FIND_WIDE_MQ.matches); }
+function findSourceName(id){ const x=FIND_SOURCES[id]; return x?(currentLang==='en'?x.en:x.zh):String(id||''); }
+// 清單是我們自己整理的，連結還是只放行 http(s)：哪天資料被塞了 javascript: 之類的網址也不會變成可以點的連結
+function findSafeUrl(u){ return /^https?:\/\//i.test(String(u||''))?String(u):''; }
+function findDays(a,b){
+  const ms=x=>Date.UTC(+x.slice(0,4),+x.slice(5,7)-1,+x.slice(8,10));
+  return Math.round((ms(b)-ms(a))/86400000);
+}
+function findMD(iso){ return (+iso.slice(5,7))+'/'+(+iso.slice(8,10)); }
+function findWd(iso){ return weekdayLabels()[new Date(iso+'T12:00:00Z').getUTCDay()]; }
+function findDateWd(iso){ return tv('ui.findDateWd','{md}（{d}）',{md:findMD(iso),d:findWd(iso)}); }
+function findDomId(id){ return 'find-d-'+String(id).replace(/[^A-Za-z0-9_-]/g,'_'); }
+function findTypeVar(type){ return SPORT_OPTIONS.some(o=>o.value===type)?type:'other'; }
+function findNorm(x){ return String(x||'').toLowerCase().replace(/台/g,'臺').replace(/\s+/g,''); }
+/* 報名狀態：open 報名中、urgent 剩 7 天內、soon 還沒開放、closed 已截止、full 額滿、cancelled 延期或停辦、unknown 還沒公布。
+   網站上寫的狀態（siteState）是清單更新那天的；日期是死的，所以「截止日已經過了」一律算已截止 */
+function findStatus(r,today){
+  if(r.siteState==='cancelled') return {k:'cancelled'};
+  if(r.siteState==='full') return {k:'full'};
+  if(r.regClose&&r.regClose<today) return {k:'closed'};
+  if(r.siteState==='closed') return {k:'closed'};
+  const left=r.regClose?findDays(today,r.regClose):null;
+  if(r.siteState==='open'||(r.regOpen&&r.regOpen<=today&&r.regClose)) return {k:left!=null&&left<=7?'urgent':'open',left};
+  if(r.regOpen&&r.regOpen>today) return {k:'soon'};
+  return {k:'unknown'};
+}
+function findLeftText(left){ return left===0?t('ui.findStToday','今天截止'):tv('ui.findStLeft','剩 {n} 天',{n:left}); }
+function findPill(x){
+  const s=x.s, r=x.r;
+  if(s.k==='open') return t('ui.findStOpen','報名中');
+  if(s.k==='urgent') return findLeftText(s.left);
+  if(s.k==='soon') return r.regOpen?tv('ui.findStSoon','{d} 開放',{d:findMD(r.regOpen)}):t('ui.findStSoonNoDate','即將開放');
+  if(s.k==='closed') return t('ui.findStClosed','已截止');
+  if(s.k==='full') return t('ui.findStFull','額滿');
+  if(s.k==='cancelled') return t('ui.findStCancelled','延期／停辦');
+  return t('ui.findStUnknown','看官網');
+}
+function findPillHtml(x){
+  const k=x.s.k==='full'||x.s.k==='cancelled'?'closed':x.s.k;
+  return `<span class="find-pill k-${k}">${escapeHtml(findPill(x))}</span>`;
+}
+function findPer(r){
+  if(r.regOpen&&r.regClose) return findMD(r.regOpen)+'–'+findMD(r.regClose);
+  if(r.regClose) return tv('ui.findPerUntil','～{d}',{d:findMD(r.regClose)});
+  if(r.regOpen) return tv('ui.findPerFrom','{d} 起',{d:findMD(r.regOpen)});
+  return '';
+}
+function findPerLong(x){
+  const r=x.r, s=x.s;
+  let out;
+  if(r.regOpen&&r.regClose) out=findDateWd(r.regOpen)+' – '+findDateWd(r.regClose);
+  else if(r.regClose) out=tv('ui.findPerCloseLong','{d} 截止',{d:findDateWd(r.regClose)});
+  else if(r.regOpen) out=tv('ui.findPerOpenLong','{d} 開始報名',{d:findDateWd(r.regOpen)});
+  else return t('ui.findPerNoneLong','還沒公布，請看賽事網站');
+  if((s.k==='open'||s.k==='urgent')&&s.left!=null) out+=t('ui.findDot','・')+findLeftText(s.left);
+  return out;
+}
+// 距離：42.195K、21.1K、10K；游泳寫公尺（App 裡游泳一律用公尺，v4.6.0）。最多列 4 個
+function findDistText(r){
+  const ds=Array.isArray(r.distances)?r.distances:[];
+  const one=d=>r.type==='swimming'&&d<10?Math.round(d*1000)+'m':(Math.abs(d-42.195)<0.001?'42.195':String(Math.round(d*10)/10))+'K';
+  return ds.slice(0,4).map(one).join(t('ui.findDistSep','／'))+(ds.length>4?'…':'');
+}
+function findKind(r){ return [sportLabel(findTypeVar(r.type)),findDistText(r)].filter(Boolean).join(' '); }
+function findNameKey(x){
+  return String(x||'').toLowerCase().replace(/台/g,'臺').replace(/20\d\d年?|1\d\d年|第\s*[一二三四五六七八九十百\d]+\s*屆/g,'').replace(/[\s\p{P}\p{S}]/gu,'');
+}
+// 這一場是不是已經在「賽事」裡：報名網址一樣，或同一天、名稱相近
+function findAddedRace(r){
+  const urls=[findSafeUrl(r.url)].concat((r.also||[]).map(a=>findSafeUrl(a&&a.url))).filter(Boolean);
+  const key=findNameKey(r.name);
+  return state.races.find(x=>{
+    if(x.deletedAt) return false;
+    if(x.officialUrl&&urls.includes(x.officialUrl)) return true;
+    if(!r.date||!x.schedule||x.schedule.raceDate!==r.date) return false;
+    const k=findNameKey(x.name);
+    return k.length>=4&&key.length>=4&&(k.includes(key)||key.includes(k));
+  })||null;
+}
+async function loadFindFeed(force){
+  if(findState.status==='loading') return;
+  // 半小時內讀過就用手上的：清單一天只更新一次
+  if(!force&&findState.feed&&Date.now()-findState.loadedAt<30*60*1000) return;
+  if(!force&&findState.status==='error') return;    // 讀不到時等使用者按「再試一次」，不要每次重畫都重抓
+  findState.status='loading'; findState.error='';
+  if(force&&state.homeTab==='find'&&!findState.feed) renderCalendar();
+  try{
+    const res=await fetch(FIND_FEED_URL,{cache:'no-cache'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const j=await res.json();
+    if(!j||!Array.isArray(j.races)) throw new Error('bad feed');
+    findState.feed=j; findState.loadedAt=Date.now(); findState.status='ok';
+  }catch(err){
+    findState.error=String(err&&err.message||err);
+    findState.status=findState.feed?'ok':'error';
+    console.warn('找賽事清單讀不到',err);
+  }
+  if(state.homeTab==='find'&&!state.selectedId&&!state.creating) renderCalendar();
+}
+// 清單裡還沒比完的每一場，先算好狀態和搜尋用的字
+function findItems(){
+  const f=findState.feed;
+  if(!f||!Array.isArray(f.races)) return [];
+  const today=todayISO(), out=[];
+  for(const r of f.races){
+    if(!r||!r.name||!r.id) continue;
+    const d=r.date||(r.month?r.month+'-28':'');
+    if(!d||(r.dateEnd||d)<today) continue;     // 清單幾天沒更新時，已經比完的不列
+    out.push({r,s:findStatus(r,today),hay:findNorm([r.name,r.city,r.venue,(r.cats||[]).join(' ')].join(' '))});
+  }
+  return out;
+}
+// skip：算某個篩選選單裡的數字時，不套用它自己
+function findMatch(x,skip){
+  const q=findNorm(findState.q);
+  if(q&&!x.hay.includes(q)) return false;
+  if(skip!=='only'){ const o=FIND_ONLY.find(o=>o.id===findState.only)||FIND_ONLY[0]; if(!o.keep(x.s.k)) return false; }
+  if(skip!=='type'&&findState.type!=='all'){ const o=FIND_TYPES.find(o=>o.id===findState.type); if(o&&!o.types.includes(x.r.type)) return false; }
+  if(skip!=='region'&&findState.region!=='all'&&x.r.region!==findState.region) return false;
+  return true;
+}
+function findSorted(list){
+  const dateKey=x=>x.r.date||((x.r.month||'9999-12')+'-99');
+  const byDate=(a,b)=>dateKey(a).localeCompare(dateKey(b))||a.r.name.localeCompare(b.r.name,'zh-Hant');
+  if(findState.sort!=='deadline') return list.slice().sort(byDate);
+  // 依報名截止：報名中的照截止日、再來是還沒開放的照開放日，其他照比賽日期
+  const k=x=>(x.s.k==='open'||x.s.k==='urgent')&&x.r.regClose?'0'+x.r.regClose:(x.s.k==='soon'&&x.r.regOpen?'1'+x.r.regOpen:'2');
+  return list.slice().sort((a,b)=>k(a).localeCompare(k(b))||byDate(a,b));
+}
+function findFiltersActive(){ return !!findState.q||['only','type','region'].some(k=>findState[k]!==FIND_DEFAULTS[k]); }
+function findCountText(n){ return tv('ui.findCount','共 {n} 場',{n}); }
+function findOptionLists(items){
+  const cnt=(skip,pred)=>items.filter(x=>findMatch(x,skip)&&pred(x)).length;
+  const lab=(label,n)=>tv('ui.findOptCount','{label}（{n}）',{label,n});
+  // 數量 0 的種類、地區不列（目前選著的例外），選單短一點
+  const keep=(list,key)=>list.filter(o=>o.v==='all'||o.n>0||o.v===findState[key]);
+  return {
+    only:FIND_ONLY.map(o=>({v:o.id,t:lab(t('ui.findOnly.'+o.id,o.zh),cnt('only',x=>o.keep(x.s.k)))})),
+    type:keep([{v:'all',n:1,t:t('ui.findType.all','全部種類')}].concat(FIND_TYPES.map(o=>{ const n=cnt('type',x=>o.types.includes(x.r.type)); return {v:o.id,n,t:lab(t('ui.findType.'+o.id,o.zh),n)}; })),'type'),
+    region:keep([{v:'all',n:1,t:t('ui.findRegion.all','全部地區')}].concat(FIND_REGIONS.map(o=>{ const n=cnt('region',x=>x.r.region===o.id); return {v:o.id,n,t:lab(t('ui.findRegion.'+o.id,o.zh),n)}; })),'region'),
+    sort:[{v:'date',t:t('ui.findSort.date','依比賽日期')},{v:'deadline',t:t('ui.findSort.deadline','依報名截止')}],
+  };
+}
+function findOptionsHtml(list,cur){ return list.map(o=>`<option value="${escapeHtml(o.v)}"${o.v===cur?' selected':''}>${escapeHtml(o.t)}</option>`).join(''); }
+const FIND_SEL_LABEL={only:['ui.findOnlyLabel','報名狀態'],type:['ui.findTypeLabel','種類'],region:['ui.findRegionLabel','地區'],sort:['ui.findSortLabel','排序']};
+// 膠囊上的字：沒篩的時候只寫「種類」「地區」，選了就寫選的那一個；狀態、排序寫目前的選項（不帶場數）
+function findSelText(key){
+  const v=findState[key];
+  if(key==='only'){ const o=FIND_ONLY.find(o=>o.id===v)||FIND_ONLY[0]; return t('ui.findOnly.'+o.id,o.zh); }
+  if(key==='sort') return v==='deadline'?t('ui.findSort.deadline','依報名截止'):t('ui.findSort.date','依比賽日期');
+  if(v==='all') return t(FIND_SEL_LABEL[key][0],FIND_SEL_LABEL[key][1]);
+  const o=(key==='type'?FIND_TYPES:FIND_REGIONS).find(o=>o.id===v);
+  const pre=key==='type'?'ui.findType.':'ui.findRegion.';
+  return o?t(pre+o.id,o.zh):v;
+}
+function findSelHtml(key,lists){
+  const on=key!=='sort'&&findState[key]!=='all';
+  return `<label class="find-sel${key==='sort'?' find-sort':''}${on?' is-on':''}"><span class="find-sel-txt" aria-hidden="true">${escapeHtml(findSelText(key))}</span><select id="find-${key}" aria-label="${escapeHtml(t(FIND_SEL_LABEL[key][0],FIND_SEL_LABEL[key][1]))}">${findOptionsHtml(lists[key],findState[key])}</select></label>`;
+}
+function findToolsHtml(items){
+  const lists=findOptionLists(items);
+  return `<div class="find-tools">
+    <label class="find-search"><span class="find-search-ico" aria-hidden="true">⌕</span><span class="sr-only">${escapeHtml(t('ui.findSearchLabel','搜尋賽事'))}</span><input type="search" id="find-q" value="${escapeHtml(findState.q)}" placeholder="${escapeHtml(t('ui.findSearchPh','搜尋賽事名稱、地點'))}" autocomplete="off" enterkeyhint="search"></label>
+    <div class="find-filters">${findSelHtml('only',lists)}${findSelHtml('type',lists)}${findSelHtml('region',lists)}</div>
+  </div>`;
+}
+// 篩選選單換值之後：只換選項的字和數字，不重畫選單本身（鍵盤操作的焦點才不會跑掉）
+function refreshFindControls(items){
+  const lists=findOptionLists(items);
+  ['only','type','region','sort'].forEach(key=>{
+    const el=document.getElementById('find-'+key);
+    if(!el) return;
+    el.innerHTML=findOptionsHtml(lists[key],findState[key]);
+    el.value=findState[key];
+    const wrap=el.closest('.find-sel');
+    if(!wrap) return;
+    if(key!=='sort') wrap.classList.toggle('is-on',findState[key]!=='all');
+    const txt=wrap.querySelector('.find-sel-txt');
+    if(txt) txt.textContent=findSelText(key);
+  });
+}
+function findHeadHtml(){
+  const f=findState.feed;
+  const sep=t('ui.listSep','、');
+  const links=Object.keys(FIND_SOURCES).map(id=>`<a href="${FIND_SOURCES[id].home}" target="_blank" rel="noopener">${escapeHtml(findSourceName(id))}</a>`).join(escapeHtml(sep));
+  let upd='';
+  const warns=[];
+  if(f&&f.updatedAt){
+    const d=new Date(f.updatedAt);
+    if(!isNaN(d)){
+      upd=tv('ui.findUpdated','（清單更新於 {d}）',{d:(d.getMonth()+1)+'/'+d.getDate()});
+      // updatedAt 是「內容最後一次有變」：每個週末都有賽事比完、清單一定會變，超過 8 天沒變多半是排程停了
+      const age=Math.floor((Date.now()-d.getTime())/86400000);
+      if(age>=8) warns.push(tv('ui.findStaleWarn','清單已經 {n} 天沒有更新，報名狀態可能有變。',{n:age}));
+    }
+  }
+  const failed=f&&Array.isArray(f.sources)?f.sources.filter(x=>x&&x.ok===false&&x.stale):[];
+  if(failed.length) warns.push(tv('ui.findSourceFail','{names}這次沒抓到，先顯示上次的資料。',{names:failed.map(x=>findSourceName(x.id)).join(sep)}));
+  return `<div class="find-head"><h2>${escapeHtml(t('ui.tabFind','找賽事'))}</h2>
+    <p class="find-src">${escapeHtml(t('ui.findSourcesLabel','資料來源：'))}${links}${escapeHtml(t('ui.findDaily','・每天清晨檢查'))}${escapeHtml(upd)}</p>
+    <p class="find-note">${escapeHtml(t('ui.findNote','賽事和報名期間由程式從報名網站整理，報名前請以報名網站的公告為準。'))}</p>
+    ${warns.map(w=>`<p class="find-warn">${escapeHtml(w)}</p>`).join('')}</div>`;
+}
+function findGroups(shown){
+  if(findState.sort!=='date') return [{k:null,rows:shown}];
+  const g=[];
+  shown.forEach(x=>{ const k=(x.r.date||x.r.month||'').slice(0,7); let last=g[g.length-1]; if(!last||last.k!==k){ last={k,rows:[]}; g.push(last); } last.rows.push(x); });
+  return g;
+}
+function findMonthTitle(k){ return k&&/^\d{4}-\d{2}$/.test(k)?monthLabel(+k.slice(0,4),+k.slice(5,7)-1):''; }
+function findMonthCount(n){ return tv('ui.findMonthCount','{n} 場',{n}); }
+function findGoHtml(r,short,cls){
+  const url=findSafeUrl(r.url);
+  if(url){
+    const label=r.urlKind==='site'?(short?t('ui.findGoSiteShort','官網 ↗'):t('ui.findGoSite','賽事官網 ↗')):(short?t('ui.findGoShort','報名 ↗'):t('ui.findGo','前往報名 ↗'));
+    return `<a class="${cls}" href="${escapeHtml(url)}" target="_blank" rel="noopener" data-action="find-go">${escapeHtml(label)}</a>`;
+  }
+  // 路協表上有些場次沒有連結：給那一年的行事曆
+  const src=FIND_SOURCES[r.source];
+  if(!src) return '';
+  const home=r.source==='sportsnet'&&r.date?src.home+'?schedule_year='+r.date.slice(0,4):src.home;
+  return `<a class="btn-ghost" href="${escapeHtml(home)}" target="_blank" rel="noopener" data-action="find-go">${escapeHtml(tv('ui.findGoSource','看{name} ↗',{name:findSourceName(r.source)}))}</a>`;
+}
+function findDetailHtml(x,added,domId,withActions){
+  const r=x.r, sep=t('ui.listSep','、');
+  const cats=(r.cats||[]).length?r.cats.join(sep):findDistText(r);
+  const place=r.venue&&r.city&&findNorm(r.venue).includes(findNorm(r.city))?r.venue:[r.city,r.venue].filter(Boolean).join(' ');
+  const srcNames=[r.source].concat((r.also||[]).map(a=>a&&a.source)).map(findSourceName).filter((v,i,a)=>v&&a.indexOf(v)===i).join(sep);
+  const row=(k,label,v)=>v?`<dt>${escapeHtml(t(k,label))}</dt><dd>${escapeHtml(v)}</dd>`:'';
+  const add=added
+    ?`<span class="find-added">${escapeHtml(t('ui.findInMine','✓ 已在「賽事」'))}</span><button type="button" class="btn-ghost" data-action="find-view" data-race="${escapeHtml(added.id)}">${escapeHtml(t('ui.findView','查看'))}</button>`
+    :`<button type="button" class="btn-ghost" data-action="find-add" data-id="${escapeHtml(r.id)}">${escapeHtml(t('ui.findAdd','＋ 加入我的賽事'))}</button>`;
+  return `<div class="find-detail"${domId?` id="${domId}"`:''}><dl>
+      ${row('ui.findCats','組別',cats)}${row('ui.findRegPeriod','報名期間',findPerLong(x))}${row('ui.findPlace','地點',place)}${row('ui.findSource','來源',srcNames)}
+    </dl>${withActions?`<div class="find-act">${findGoHtml(r,false,'btn-primary')}${add}</div>`:''}</div>`;
+}
+// 手機：每場兩行（日期｜名稱、縣市・種類距離｜報名狀態），點一下展開
+function findRowHtml(x){
+  const r=x.r, s=x.s, open=findState.open===r.id, added=findAddedRace(r), dc=findDomId(r.id);
+  const closed=s.k==='closed'||s.k==='full'||s.k==='cancelled';
+  const date=r.date
+    ?`<b>${escapeHtml(findMD(r.date))}</b><span>${escapeHtml(r.dateEnd?findWd(r.date)+'–'+findWd(r.dateEnd):tv('ui.findWeekday','週{d}',{d:findWd(r.date)}))}</span>`
+    :`<b>—</b><span>${escapeHtml(t('ui.findDateTbd','日期未定'))}</span>`;
+  const kind=findKind(r);
+  const meta=r.city?r.city+t('ui.findDot','・')+kind:kind;
+  const per=findPer(r);
+  return `<li class="find-row${open?' is-exp':''}${closed?' is-closed':''}">
+    <button type="button" class="find-line" data-action="find-toggle" data-id="${escapeHtml(r.id)}" aria-expanded="${open}"${open?` aria-controls="${dc}"`:''}>
+      <span class="find-date">${date}</span>
+      <span class="find-main"><span class="find-name">${escapeHtml(r.name)}</span>${added?`<span class="find-added-tag">${escapeHtml(t('ui.findAddedTag','✓ 已加入'))}</span>`:''}<span class="find-meta"><span class="find-dot" style="background:var(--sport-${findTypeVar(r.type)})"></span>${escapeHtml(meta)}</span></span>
+      <span class="find-reg">${findPillHtml(x)}${per?`<span class="find-per">${escapeHtml(per)}</span>`:''}</span>
+    </button>${open?findDetailHtml(x,added,dc,true):''}</li>`;
+}
+function findListHtml(shown){
+  return findGroups(shown).map(g=>`<section class="find-month">${g.k?`<h3>${escapeHtml(findMonthTitle(g.k))}<span>${escapeHtml(findMonthCount(g.rows.length))}</span></h3>`:''}<ul class="find-list">${g.rows.map(findRowHtml).join('')}</ul></section>`).join('');
+}
+// 筆電：五欄表格，欄位照使用者定的順序；按鈕在每一列右邊，點名稱或整列展開看組別、報名期間、地點
+function findTrHtml(x){
+  const r=x.r, s=x.s, open=findState.open===r.id, added=findAddedRace(r), dc=findDomId(r.id);
+  const closed=s.k==='closed'||s.k==='full'||s.k==='cancelled';
+  const date=r.date?findDateWd(r.date)+(r.dateEnd?'–'+findMD(r.dateEnd):''):t('ui.findDateTbd','日期未定');
+  const per=findPer(r);
+  const add=added
+    ?`<button type="button" class="find-added-btn" data-action="find-view" data-race="${escapeHtml(added.id)}" title="${escapeHtml(t('ui.findView','查看'))}">${escapeHtml(t('ui.findAddedTag','✓ 已加入'))}</button>`
+    :`<button type="button" class="btn-ghost" data-action="find-add" data-id="${escapeHtml(r.id)}">${escapeHtml(t('ui.findAddShort','＋ 加入'))}</button>`;
+  return `<tr class="find-trow${closed?' is-closed':''}${open?' is-exp':''}" data-action="find-toggle" data-id="${escapeHtml(r.id)}">
+      <td class="mono">${escapeHtml(date)}</td>
+      <td class="find-tplace">${escapeHtml(r.city||'—')}${r.venue?`<span class="find-sub" title="${escapeHtml(r.venue)}">${escapeHtml(r.venue)}</span>`:''}</td>
+      <td><button type="button" class="find-name-btn" data-action="find-toggle" data-id="${escapeHtml(r.id)}" aria-expanded="${open}"${open?` aria-controls="${dc}"`:''}>${escapeHtml(r.name)}</button><span class="find-sub">${escapeHtml(findSourceName(r.source))}</span></td>
+      <td><span class="find-dot" style="background:var(--sport-${findTypeVar(r.type)})"></span>${escapeHtml(findKind(r))}</td>
+      <td>${per?`<span class="mono">${escapeHtml(per)}</span> `:''}${findPillHtml(x)}</td>
+      <td class="find-tact">${findGoHtml(r,true,'btn-ghost')}${add}</td>
+    </tr>${open?`<tr class="find-tdetail"><td colspan="6">${findDetailHtml(x,added,dc,false)}</td></tr>`:''}`;
+}
+function findTableHtml(shown){
+  const th=(k,label)=>`<th scope="col">${escapeHtml(t(k,label))}</th>`;
+  const rows=findGroups(shown).map(g=>(g.k?`<tr class="find-mrow"><th colspan="6" scope="colgroup">${escapeHtml(findMonthTitle(g.k))}<span>${escapeHtml(findMonthCount(g.rows.length))}</span></th></tr>`:'')+g.rows.map(findTrHtml).join('')).join('');
+  return `<table class="find-tbl"><thead><tr>${th('ui.findColDate','賽事日期')}${th('ui.findColPlace','地點')}${th('ui.findColName','名稱')}${th('ui.findColKind','種類與距離')}${th('ui.findColReg','報名期間')}<th scope="col"><span class="sr-only">${escapeHtml(t('ui.findColAct','報名與加入'))}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function findResultsHtml(shown){
+  if(!shown.length){
+    return `<div class="find-empty"><p>${escapeHtml(t('ui.findEmpty','沒有符合的賽事。'))}</p>${findFiltersActive()?`<button type="button" class="btn-ghost" data-action="find-clear">${escapeHtml(t('ui.findClear','清除篩選'))}</button>`:''}</div>`;
+  }
+  return findWide()?findTableHtml(shown):findListHtml(shown);
+}
+let findRenderedKey='';
+function findTabHtml(){
+  const f=findState.feed;
+  findRenderedKey=findState.loadedAt+'|'+findWide()+'|'+currentLang;
+  if(!f){
+    const body=findState.status==='error'
+      ?`<div class="find-empty"><p>${escapeHtml(t('ui.findError','清單讀不到。可能是沒有網路，或網站剛好在更新。'))}</p><button type="button" class="btn-ghost" data-action="find-retry">${escapeHtml(t('ui.findRetry','再試一次'))}</button></div>`
+      :`<p class="find-loading" role="status">${escapeHtml(t('ui.findLoading','讀取賽事清單中…'))}</p>`;
+    return `<div class="find-wrap">${findHeadHtml()}${body}</div>`;
+  }
+  const items=findItems(), shown=findSorted(items.filter(x=>findMatch(x)));
+  return `<div class="find-wrap${findWide()?' is-wide':''}">${findHeadHtml()}${findToolsHtml(items)}
+    <div class="find-countbar"><p class="find-count" id="find-count" role="status">${escapeHtml(findCountText(shown.length))}</p>${findSelHtml('sort',findOptionLists(items))}</div>
+    <div id="find-results">${findResultsHtml(shown)}</div></div>`;
+}
+// 打字、換篩選時只重畫清單那一塊：搜尋框不會失去焦點、手機鍵盤也不會收起來
+function renderFindResults(){
+  const box=document.getElementById('find-results');
+  if(!box){ renderCalendar(); return; }
+  const items=findItems(), shown=findSorted(items.filter(x=>findMatch(x)));
+  box.innerHTML=findResultsHtml(shown);
+  const c=document.getElementById('find-count');
+  if(c) c.textContent=findCountText(shown.length);
+  refreshFindControls(items);
+}
+function renderFindTab(){
+  // 雲端同步、存檔都會叫 renderCalendar：清單沒換、版面沒變的話只重畫清單，打到一半的搜尋字不會被清掉
+  const key=findState.loadedAt+'|'+findWide()+'|'+currentLang;
+  if(findState.feed&&document.getElementById('find-results')&&key===findRenderedKey) renderFindResults();
+  else calendarEl.innerHTML=findTabHtml();
+  loadFindFeed(false);
+}
+// ＋ 加入我的賽事：新增一場「考慮中」的賽事，清單上有的都帶好（名稱、日期、地點、種類、報名期間、報名網址；只有一個距離時也帶距離）
+function addFindRace(id){
+  const r=findState.feed&&findState.feed.races.find(x=>x&&x.id===id);
+  if(!r) return;
+  const dup=findAddedRace(r);
+  if(dup){ selectRace(dup.id); return; }
+  const race=emptyRace(r.name,findTypeVar(r.type),'considering',r.date||'');
+  race.schedule.registrationOpenDate=r.regOpen||'';
+  race.schedule.registrationCloseDate=r.regClose||'';
+  race.location.venueName=r.venue||'';
+  race.location.city=r.city||'';
+  race.location.country=(r.city&&guessCountryFromCity(r.city))||'';
+  const url=findSafeUrl(r.url);
+  if(url) race.officialUrl=url;
+  if(Array.isArray(r.distances)&&r.distances.length===1) race.route.distanceKm=r.distances[0];
+  applySmartDefaults(race,'name');
+  state.races.push(race);
+  persist();
+  renderCalendar();
+  const v=document.querySelector(`[data-action="find-view"][data-race="${race.id}"]`);
+  if(v) v.focus();
+  const el=document.createElement('div');
+  el.className='foreground-toast race-undo-toast';
+  el.innerHTML=`<span>${escapeHtml(tv('ui.findAddedToast','已加入「賽事」：{name}（考慮中）',{name:race.name}))}</span><button type="button" class="btn-text-small race-undo-btn">${escapeHtml(t('ui.findView','查看'))}</button>`;
+  document.body.appendChild(el);
+  const timer=setTimeout(()=>el.remove(),6000);
+  el.querySelector('button').addEventListener('click',()=>{ clearTimeout(timer); el.remove(); selectRace(race.id); });
+  logFeatureUse('find_add_race');
+}
+document.addEventListener('click',e=>{
+  const el=e.target&&e.target.closest?e.target.closest('[data-action^="find-"]'):null;
+  if(!el) return;
+  const act=el.dataset.action;
+  if(act==='find-go'){ logFeatureUse('find_go_register'); return; }   // 連結照常在新分頁打開
+  if(act==='find-retry'){ loadFindFeed(true); return; }
+  if(act==='find-clear'){
+    findState.q=''; Object.assign(findState,{only:FIND_DEFAULTS.only,type:FIND_DEFAULTS.type,region:FIND_DEFAULTS.region}); findState.open=null;
+    saveFindPrefs(); calendarEl.innerHTML=findTabHtml(); return;
+  }
+  if(act==='find-add'){ addFindRace(el.dataset.id); return; }
+  if(act==='find-view'){ selectRace(el.dataset.race); return; }
+  if(act==='find-toggle'){
+    const id=el.dataset.id;
+    findState.open=findState.open===id?null:id;
+    renderFindResults();
+    // 重畫後按鈕是新的：用鍵盤操作的人焦點要留在同一場
+    if(el.tagName==='BUTTON'){
+      const again=[...document.querySelectorAll('button[data-action="find-toggle"]')].find(b=>b.dataset.id===id);
+      if(again) again.focus();
+    }
+  }
+});
+document.addEventListener('input',e=>{
+  if(!e.target||e.target.id!=='find-q') return;
+  findState.q=e.target.value; findState.open=null;
+  renderFindResults();
+});
+document.addEventListener('change',e=>{
+  const id=e.target&&e.target.id;
+  if(!['find-only','find-type','find-region','find-sort'].includes(id)) return;
+  findState[id.slice(5)]=e.target.value; findState.open=null;
+  saveFindPrefs();
+  renderFindResults();
+});
+// 跨過 900px（筆電視窗拉窄、平板轉向）：表格和兩行清單互換
+if(FIND_WIDE_MQ){
+  const onFindWide=()=>{ if(state.homeTab==='find'&&document.getElementById('calendar')&&!state.selectedId&&!state.creating) renderCalendar(); };
+  if(FIND_WIDE_MQ.addEventListener) FIND_WIDE_MQ.addEventListener('change',onFindWide);
+  else if(FIND_WIDE_MQ.addListener) FIND_WIDE_MQ.addListener(onFindWide);
+}
 function renderCalendar(){
   const y=state.calendarYear,m=state.calendarMonth;
   calLabelEl.textContent=monthLabel(y,m);
@@ -21215,6 +21807,13 @@ function renderCalendar(){
   syncHomeChrome();
   const slot=document.getElementById('focus-panel-slot');
   const calNav=document.querySelector('.cal-nav');
+  // 找賽事（v4.16.0）：跟自己有沒有賽事無關，一場都還沒記也看得到
+  if(state.homeTab==='find'){
+    if(calNav) calNav.classList.remove('is-results');
+    if(slot) slot.innerHTML='';
+    renderFindTab();
+    return;
+  }
   if(!hasAnyRace()||state.homeTab==='career'){
     if(calNav) calNav.classList.remove('is-results');
     if(slot) slot.innerHTML='';
@@ -21910,13 +22509,13 @@ document.addEventListener('click',e=>{
 let routeSyncPaused=false, routeBackPending=false, pendingRouteRaceId=null;
 // 目前這一筆歷史是不是「返回鍵防護」（見後面「返回鍵關最上面那一層」）
 let backGuardActive=false;
-function routeOfState(){ return state.creating?'new':(state.selectedId?'race='+state.selectedId:(state.homeTab==='career'?'career':'')); }
-// 首頁層級的網址：賽事分頁（空字串）、生涯數據分頁
-function isHomeRoute(r){ return r===''||r==='career'; }
+function routeOfState(){ return state.creating?'new':(state.selectedId?'race='+state.selectedId:(state.homeTab==='career'||state.homeTab==='find'?state.homeTab:'')); }
+// 首頁層級的網址：賽事分頁（空字串）、生涯數據分頁、找賽事分頁（v4.16.0）
+function isHomeRoute(r){ return r===''||r==='career'||r==='find'; }
 function routeOfLocation(){
   let h=(location.hash||'').replace(/^#/,'');
   try{ h=decodeURIComponent(h); }catch(e){}
-  if(h==='new'||h==='career') return h;
+  if(h==='new'||h==='career'||h==='find') return h;
   return /^race=./.test(h)?h:'';
 }
 function urlForRoute(route){
@@ -21933,8 +22532,10 @@ function syncRouteWithState(){
   const st=history.state||{};
   try{
     if(isHomeRoute(want)&&isHomeRoute(have)){
-      // 賽事 ⇄ 生涯數據：切過去推一筆；切回來如果那一筆是從「賽事」推的就退一步
-      if(want==='career'){ pushRoute(st,{appNav:true,fromTab:true},want); return; }
+      // 生涯數據 ⇄ 找賽事：換掉這一筆就好，返回鍵一樣回到「賽事」（不然來回切幾次要按好幾次返回）
+      if(want!==''&&have!==''){ replaceRoute({appNav:!!st.appNav,fromTab:!!st.fromTab},want); return; }
+      // 賽事 ⇄ 生涯數據／找賽事：切過去推一筆；切回來如果那一筆是從「賽事」推的就退一步
+      if(want!==''){ pushRoute(st,{appNav:true,fromTab:true},want); return; }
       if(st.appNav&&st.fromTab){ routeBackPending=true; appHistoryBack(); return; }
       replaceRoute({},want);
       return;
@@ -21981,7 +22582,7 @@ function applyRouteFromLocation(){
   }else{
     if(state.creating) resetCreateStaging();
     state.selectedId=null; state.creating=false;
-    state.homeTab=route==='career'?'career':'races';
+    state.homeTab=route==='career'||route==='find'?route:'races';
   }
   return routeOfState()!==before;
 }
@@ -25560,9 +26161,10 @@ function openPasteModal(){
    ============================================================ */
 function helpModalHtml(){
   const zhBody=`
-      <h3>首頁：賽事／生涯數據／訓練</h3>
+      <h3>首頁：賽事／生涯數據／訓練／找賽事</h3>
       <ul>
-        <li>首頁分成三個分頁：「賽事」是今日一句、「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄。</li>
+        <li>首頁分成四個分頁：「賽事」是今日一句、「下一場」焦點卡、搜尋篩選和月曆；「生涯數據」是全馬 PB、每年完賽場次、累計爬升、熱力圖和榮譽櫃（記錄滿 5 場後出現），按「打開生涯回顧」看完整回顧；「訓練」打開訓練紀錄；「找賽事」列出報名網站上還沒比的賽事。</li>
+        <li><strong>找賽事</strong>（v4.16.0）：運動筆記、全統、一起報名、路協四個網站上還沒比的賽事，每天清晨自動更新一次。預設只列「還能報名」的（報名中、即將開放、還沒公布）；可以搜尋名稱或地點，依報名狀態、種類、地區篩選（下次打開會記得），或改成依報名截止日排。手機上點一場展開，看組別、報名期間（剩幾天）、地點和來源：「前往報名」打開報名網站，「＋ 加入我的賽事」直接新增一場「考慮中」的賽事，名稱、日期、地點、種類、報名期間和報名網址都帶好；筆電上是表格，按鈕在每一列右邊。已經加入的會標「✓ 已加入」。賽事和報名期間是程式從報名網站整理的，報名前請以報名網站的公告為準。</li>
         <li><strong>訓練頁</strong>（v4.10.0 改版）：「本週」最上面是備戰中的賽事（已報名或抽籤中、已經進入準備期的最近一場：倒數、A／B 目標、賽前第幾週），下面是本週的公里數、跟上週同一段時間比、週目標（賽事頁「訓練計畫」填的週跑量）、每天的長條、本週解讀和近 12 週的里程；「本月」換成每天的長條和近 12 個月；「全部」依年份、月份收合。有兩種以上的運動時，分頁下面可以選要看哪一種，不同運動的公里數不會加在一起。每一筆右邊的鞋款按鈕點了可以換鞋或刪除。</li>
         <li><strong>單次訓練詳細</strong>（v4.11.0）：點一筆訓練打開，看距離、時間、配速、心率、爬升和路線（v4.11.0 起匯入的標出每幾公里的位置；之前匯入的用路線長度推算，繞好幾圈的路線只標起點和終點），再跟過去一年距離相近的同種運動比配速、心率和爬升。還可以打主觀強度（RPE 1–10）、改名稱、寫備註（打字就自動儲存）、換鞋款。刪除後幾秒內可以按「復原」。</li>
         <li><strong>每公里配速與高度</strong>（v4.12.0）：匯入 FIT、GPX、TCX 時多存每公里的時間和高度變化（游泳是每 100 公尺、騎車看速度），單次詳細頁畫成一排長條：比整段平均快的往上、慢的往下，下面是高度剖面，看得出慢的那幾段是不是在爬坡。點長條看那一段的數字，展開「每段的數字」看全部。FIT 檔的時間不含手錶暫停（跟手錶上每公里的時間一樣）；GPX、TCX 沒有暫停的紀錄，停下來的時間也算在那一段。之前匯入的訓練，再匯入一次原始檔就會補上，名稱、備註、主觀強度和鞋款都不會變。</li>

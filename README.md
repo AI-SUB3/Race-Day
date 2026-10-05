@@ -3,7 +3,7 @@
 一個從報名到終點的個人賽事紀錄網站。純前端、主體是單一 `index.html`（另有一個 `icons/` 圖示資料夾），部署在 GitHub Pages，不需要自架後端伺服器。
 
 - **線上網址**：https://ai-sub3.github.io/Race-Day/
-- **版本**：v4.15.0（[CHANGELOG.md](./CHANGELOG.md)）
+- **版本**：v4.16.0（[CHANGELOG.md](./CHANGELOG.md)）
 - **隱私權政策與使用條款**：https://ai-sub3.github.io/Race-Day/privacy/
 - **詳細操作說明**：[USAGE.md](./USAGE.md)
 - **功能介紹頁**：https://ai-sub3.github.io/Race-Day/about/
@@ -16,7 +16,8 @@
 
 ## 主要功能
 
-- **首頁三個分頁**：「賽事」（今日一句、「下一場」卡、搜尋篩選、月曆）、「生涯數據」（全馬 PB、年度場次、爬升趨勢、熱力圖、榮譽櫃、生涯回顧；長條、熱力圖格子、場次點下去列出那幾場，點 PB 時間打開那一場）、「訓練」
+- **首頁四個分頁**：「賽事」（今日一句、「下一場」卡、搜尋篩選、月曆）、「生涯數據」（全馬 PB、年度場次、爬升趨勢、熱力圖、榮譽櫃、生涯回顧；長條、熱力圖格子、場次點下去列出那幾場，點 PB 時間打開那一場）、「訓練」、「找賽事」
+- **找賽事**（v4.16.0）：運動筆記、全統、一起報名、路協四個網站上還沒比的賽事，GitHub 每天清晨照 robots.txt 自動整理一次（`race-feed.json`）。手機一場兩行、點開看組別和報名期間，筆電五欄表格；依報名狀態（預設「還能報名」）、種類、地區篩選，依比賽日期或報名截止排，搜尋名稱地點；「前往報名」開報名網站，「＋ 加入我的賽事」直接新增一場考慮中的賽事（名稱、日期、地點、種類、報名期間、報名網址都帶好）。報名狀態用今天的日期重算
 - **今日一句**：「賽事」分頁最上面每天一句跑者說過的話（筆電在「下一場」卡右邊、手機在它上面），以當地日期一天換一句；56 句都只收訪談、演講、記者會這類公開說過的話，每一句核對過出處。中文版面先寫中文翻譯、下面附原文，日文、英文版面只顯示那個語言；點開看說話者、情境、出處連結；頭像選單可以關掉。完整清單（含出處與查證沒過的常見名言）另有 Excel 檔
 - **賽事 BGM**：在賽事頁貼上 Spotify 連結（或在多媒體與連結選「賽事 BGM」），賽事名稱下面就會出現 Spotify 官方的播放器；中日文介面複製的連結（`intl-ja`）、電腦版的 Spotify URI 都認得，短網址、離線、其他音樂平台改放連結，改別的欄位時音樂不會斷（Chrome、Edge）。手機瀏覽器只能試聽 30 秒（Spotify 的限制）
 - **隱私權政策與使用條款**（v4.9.0）：獨立頁面 `privacy/`，中日英三種語言，沿用 App 的深淺色與字級、不載入任何外部資源。頭像選單「意見回饋」下面、登入按鈕下面、Spotify 播放器下面（Cookie 說明）、使用說明、公開連結頁的頁尾都有連結；聯絡管道是意見回饋表單
@@ -53,6 +54,7 @@
 
 - 純靜態網頁：一個 `index.html`，內嵌 CSS 與 JavaScript，無建置流程、無框架
 - 儲存：IndexedDB（獨立架站時，經由開源套件 idb-keyval，CDN 連不到時自動退回 `localStorage`）或 Claude 內建 artifact 儲存（預覽環境），Firebase Firestore 為選用的雲端同步層
+- 找賽事的清單（v4.16.0）：GitHub Actions 每天跑 `tools/race-feed/fetch.mjs`（Node 22＋linkedom），結果寫成同一個網站的 `race-feed.json`；App 只讀這個檔，不直接連報名網站（瀏覽器不准跨網站讀，也沒有伺服器）
 - 外部函式庫皆透過 CDN 載入：SheetJS（Excel 解析，v4.5.0 起按「匯入 Excel」才載入，不拖慢開啟）、idb-keyval（IndexedDB 封裝）、Firebase JS SDK（選用）。
   前兩者鎖定確切版本並加上 SRI（`integrity` 雜湊）驗證，CDN 端內容若被竄改，瀏覽器會拒絕執行；兩者載入失敗都有既有的降級路徑（idb-keyval → `localStorage`；SheetJS → 匯入時明確報錯，網路恢復後再按一次就好）
 - GPX/TCX 解析、海拔剖面、配速計算、分享圖／配速手環產生（Canvas）皆為純前端運算，資料不會上傳到任何第三方伺服器
@@ -64,6 +66,7 @@
 1. `index.html`、**`sw.js`**（v3.31.0 起，離線快取）**與 `icons/` 資料夾**放在 repo 根目錄——`sw.js` 必須跟 `index.html` 同一層，少了它網站照常運作但離線打不開
    - `icons/` 從 v3.14.0 起是必要的：網站圖示與「加入主畫面」用的圖片改成獨立檔案（原本以 base64 內嵌，佔了 index.html 的 12.6%），少傳這個資料夾網站仍可使用，但圖示會空白
    - **`privacy/` 資料夾**（v4.9.0 起，裡面只有一個 `index.html`）：隱私權政策與使用條款。App 用相對路徑 `privacy/` 連過去，必須跟 `index.html` 同一層；Spotify 嵌入條款要求網站有這兩份
+   - **找賽事**（v4.16.0 起）：`race-feed.json`（跟 `index.html` 同一層，App 讀這個檔）、`.github/workflows/race-feed.yml`（每天更新它的排程）、`tools/race-feed/`（抓資料的程式：`parse.mjs`、`fetch.mjs`、`test.mjs`、`package.json`、`package-lock.json`、`fixtures/`、`.gitignore`；`node_modules/` 不要放進 repo）。第一次要到 Settings → Actions → General 把 Workflow permissions 改成 Read and write，再到 Actions 頁手動跑一次（步驟見 HANDOFF）
 2. repo 設定 → Pages → Source 選 `Deploy from a branch` → Branch 選 `main` / `/(root)`
 3. 約 1 分鐘後即可在 `https://ai-sub3.github.io/Race-Day/` 存取
 

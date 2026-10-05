@@ -1808,15 +1808,16 @@ class Mobile(Group):
         }''')
         page.set_viewport_size({'width':390,'height':844})
         page.wait_for_timeout(250)
-        # 訓練是首頁的第三個分頁（v4.0），手機上三個分頁平分寬度、都看得到字
+        # 訓練是首頁的第三個分頁（v4.0）；v4.16.0 起後面多一個「找賽事」：390px 的手機上四個分頁排一行、都看得到字
+        # （原本三個平分寬度；四個時照字的寬度分，窄手機放不下可以左右滑，那一種在 v416 測）
         c['training_tab_visible_with_label_on_phone'] = page.evaluate('''()=>{
             selectRace(null);   // 上一個檢查停在賽事頁（賽事頁不顯示首頁分頁）
             const tr=document.getElementById('btn-training');
             const r=tr.getBoundingClientRect();
             const tabs=[...document.querySelectorAll('.home-tabs .home-tab')].map(b=>b.getBoundingClientRect());
             return !!tr.closest('.home-tabs') && !tr.closest('.topbar-actions') && r.width>0 && r.right<=window.innerWidth
-                && tr.textContent.trim()==='訓練' && tabs.length===3 && tabs.every(x=>Math.abs(x.top-r.top)<1)
-                && Math.max(...tabs.map(x=>x.width))-Math.min(...tabs.map(x=>x.width))<2;
+                && tr.textContent.trim()==='訓練' && tabs.length===4 && tabs.every(x=>Math.abs(x.top-r.top)<1)
+                && tabs.every(x=>x.left>=-0.5&&x.right<=window.innerWidth+0.5&&x.width>=44);
         }''')
         # ---- iPhone 分頁崩潰（「重複發生問題」）：觸控裝置不可以有大面積合成效果（v3.88.0） ----
         br = page.context.browser
@@ -4004,7 +4005,8 @@ class FeedbackConfigured(Group):
         c['training_is_home_tab'] = page.evaluate('''()=>{
             const tr=document.getElementById('btn-training');
             const tabs=[...document.querySelectorAll('.home-tabs .home-tab')];
-            return !!tr.closest('.home-tabs') && !tr.closest('#topbar') && tabs[tabs.length-1]===tr
+            // v4.16.0 起第四個是「找賽事」，訓練是第三個
+            return !!tr.closest('.home-tabs') && !tr.closest('#topbar') && tabs[2]===tr && tabs[3]&&tabs[3].dataset.homeTab==='find'
                 && tabs.every(b=>Math.abs(b.getBoundingClientRect().top-tr.getBoundingClientRect().top)<1);
         }''')
         # 頂列只剩三樣：簡易版、＋ 新增賽事、頭像——三種字級都排成一行、垂直置中對齊
@@ -5372,7 +5374,7 @@ class V4Layout(Group):
         sp.wait_for_timeout(900)
         c['new_device_simple_welcome_without_training_tab'] = sp.evaluate("""()=>document.documentElement.getAttribute('data-mode')==='simple'
             && !!document.querySelector('#calendar .welcome-card') && getComputedStyle(document.getElementById('btn-training')).display==='none'
-            && [...document.querySelectorAll('.home-tab')].filter(b=>getComputedStyle(b).display!=='none').length===2
+            && [...document.querySelectorAll('.home-tab')].filter(b=>getComputedStyle(b).display!=='none').map(b=>b.dataset.homeTab).join(',')==='races,career,find'
             && getComputedStyle(document.querySelector('.topbar-row2')).display==='none'""")
         sctx.close()
 
@@ -12612,8 +12614,490 @@ class V415HeartRatePlurals(V414RaceDay):
               const txt=document.getElementById('help-modal').innerText; key[l].forEach(k=>{ if(!txt.includes(k)) bad.push(l+' '+k); });
               document.querySelector('#help-modal [data-action="close-help"]').click(); await __wait(80); }
             setLang('zh'); await __wait(60); if(bad.length) console.log('v415: help',bad.join(' | ')); return bad.length===0; }""")
-        c['version_is_v4_15_0'] = self.ev(hp, "()=>APP_VERSION==='v4.15.0'")
         hctx.close()
+
+
+# 找賽事（v4.16.0）用的假清單：今天固定 2026-10-05（台北），每一種報名狀態各一場
+FIND416_FEED = {
+  "v": 1, "updatedAt": "2026-10-05T04:17:00+08:00",
+  "sources": [
+    {"id": "irunner", "name": "運動筆記", "url": "https://irunner.biji.co/list", "ok": True, "count": 6, "error": None, "stale": False},
+    {"id": "ctrun", "name": "全統運動報名網", "url": "https://www.ctrun.com.tw/", "ok": True, "count": 5, "error": None, "stale": False},
+    {"id": "joinnow", "name": "一起報名", "url": "https://www.joinnow.com.tw/index.php", "ok": True, "count": 3, "error": None, "stale": False},
+    {"id": "sportsnet", "name": "中華民國路跑協會", "url": "https://www.sportsnet.org.tw/schedule.php", "ok": True, "count": 2, "error": None, "stale": False}],
+  "races": [
+    {"id": "irunner:past", "name": "昨天比完的路跑", "date": "2026-10-04", "dateEnd": None, "month": "2026-10", "city": "臺北市", "region": "north", "venue": "", "type": "road_running", "distances": [10], "cats": ["10K"], "regOpen": "2026-08-01", "regClose": "2026-09-20", "siteState": "closed", "url": "https://irunner.biji.co/past", "urlKind": "register", "source": "irunner", "also": []},
+    {"id": "ctrun:today", "name": "高雄 5000公尺挑戰賽", "date": "2026-10-16", "dateEnd": None, "month": "2026-10", "city": "高雄市", "region": "south", "venue": "苓雅運動園區田徑場", "type": "road_running", "distances": [5], "cats": ["5K"], "regOpen": "2026-09-14", "regClose": "2026-10-05", "siteState": "open", "url": "https://www.ctrun.com.tw/Activity?EventMain_ID=1", "urlKind": "register", "source": "ctrun", "also": []},
+    {"id": "irunner:urgent", "name": "礁溪溫泉馬拉松", "date": "2026-12-12", "dateEnd": None, "month": "2026-12", "city": "宜蘭縣", "region": "north", "venue": "宜蘭縣礁溪國小", "type": "road_running", "distances": [42.195, 21.098, 10], "cats": ["全馬", "半馬", "10K"], "regOpen": "2026-06-02", "regClose": "2026-10-08", "siteState": "open", "url": "https://irunner.biji.co/urgent", "urlKind": "register", "source": "irunner", "also": []},
+    {"id": "irunner:open", "name": "台北城市測試馬拉松", "date": "2026-11-22", "dateEnd": None, "month": "2026-11", "city": "臺北市", "region": "north", "venue": "臺北市政府", "type": "road_running", "distances": [42.195, 21.098], "cats": ["42.195K", "21.0975K"], "regOpen": "2026-09-01", "regClose": "2026-10-20", "siteState": "open", "url": "https://irunner.biji.co/open", "urlKind": "register", "source": "irunner", "also": [{"source": "sportsnet", "url": "http://example-marathon.tw/", "urlKind": "site"}]},
+    {"id": "joinnow:soon", "name": "港都耶誕路跑", "date": "2026-12-26", "dateEnd": None, "month": "2026-12", "city": "高雄市", "region": "south", "venue": "棧貳庫廣場", "type": "road_running", "distances": [10, 4], "cats": ["10KM挑戰組", "4KM歡樂組"], "regOpen": "2026-10-12", "regClose": "2026-11-30", "siteState": None, "url": "https://www.joinnow.com.tw/run-step1.php?cnt_id=1", "urlKind": "register", "source": "joinnow", "also": []},
+    {"id": "ctrun:closed", "name": "草鞋墩馬拉松", "date": "2026-10-25", "dateEnd": None, "month": "2026-10", "city": "南投縣", "region": "central", "venue": "九九峰", "type": "road_running", "distances": [42.195], "cats": ["42.195K"], "regOpen": "2026-06-01", "regClose": None, "siteState": "closed", "url": "https://www.ctrun.com.tw/Activity?EventMain_ID=2", "urlKind": "register", "source": "ctrun", "also": []},
+    {"id": "ctrun:full", "name": "寶可夢路跑 台中場", "date": "2026-11-14", "dateEnd": None, "month": "2026-11", "city": "臺中市", "region": "central", "venue": "中央球場", "type": "road_running", "distances": [3.5], "cats": ["3.5K"], "regOpen": None, "regClose": None, "siteState": "full", "url": "https://www.ctrun.com.tw/Activity?EventMain_ID=3", "urlKind": "register", "source": "ctrun", "also": []},
+    {"id": "irunner:cancel", "name": "(停賽)電音夜跑節", "date": "2026-10-31", "dateEnd": None, "month": "2026-10", "city": "新竹縣", "region": "north", "venue": "", "type": "road_running", "distances": [], "cats": [], "regOpen": None, "regClose": None, "siteState": "cancelled", "url": "https://irunner.biji.co/cancel", "urlKind": "register", "source": "irunner", "also": []},
+    {"id": "irunner:stale", "name": "清單沒更新的夜跑", "date": "2026-11-07", "dateEnd": None, "month": "2026-11", "city": "新竹市", "region": "north", "venue": "", "type": "road_running", "distances": [], "cats": [], "regOpen": None, "regClose": "2026-10-01", "siteState": "open", "url": "https://irunner.biji.co/stale", "urlKind": "register", "source": "irunner", "also": []},
+    {"id": "sportsnet:2027-2", "name": "2027金門馬拉松 KINMEN MARATHON", "date": "2027-01-16", "dateEnd": "2027-01-17", "month": "2027-01", "city": "金門縣", "region": "islands", "venue": "金城田徑場", "type": "road_running", "distances": [42, 21, 10, 4], "cats": ["42KM", "21KM", "10KM", "4KM"], "regOpen": None, "regClose": None, "siteState": None, "url": "https://www.sportsnet.org.tw/20270117_web/", "urlKind": "site", "source": "sportsnet", "also": []},
+    {"id": "sportsnet:2027-4", "name": "臺北市舒跑杯路跑賽", "date": "2027-05-09", "dateEnd": None, "month": "2027-05", "city": "臺北市", "region": "north", "venue": "總統府前凱達格蘭大道", "type": "road_running", "distances": [9, 3], "cats": ["9KM", "3KM"], "regOpen": None, "regClose": None, "siteState": None, "url": "", "urlKind": "site", "source": "sportsnet", "also": []},
+    {"id": "irunner:tbd", "name": "高雄山徑越野賽", "date": None, "dateEnd": None, "month": "2027-01", "city": "高雄市", "region": "south", "venue": "", "type": "trail_running", "distances": [], "cats": [], "regOpen": None, "regClose": "2026-10-23", "siteState": "open", "url": "https://irunner.biji.co/tbd", "urlKind": "register", "source": "irunner", "also": []},
+    {"id": "ctrun:bike", "name": "百K單車挑戰 彰化站", "date": "2026-11-29", "dateEnd": None, "month": "2026-11", "city": "彰化縣", "region": "central", "venue": "彰高二號廣場公園", "type": "cycling", "distances": [100], "cats": ["100K"], "regOpen": "2026-09-01", "regClose": "2026-11-10", "siteState": "open", "url": "https://www.ctrun.com.tw/Activity?EventMain_ID=4", "urlKind": "register", "source": "ctrun", "also": []},
+    {"id": "joinnow:swim", "name": "日月潭泳渡測試", "date": "2027-03-14", "dateEnd": None, "month": "2027-03", "city": "南投縣", "region": "central", "venue": "日月潭", "type": "swimming", "distances": [1.5], "cats": ["1500公尺"], "regOpen": "2026-10-01", "regClose": "2027-01-31", "siteState": "open", "url": "https://www.joinnow.com.tw/run-step1.php?cnt_id=2", "urlKind": "register", "source": "joinnow", "also": []},
+    {"id": "joinnow:bad", "name": "<img src=x onerror=\"window.__pwned=1\">惡意名稱", "date": "2027-02-01", "dateEnd": None, "month": "2027-02", "city": "臺南市", "region": "south", "venue": "", "type": "road_running", "distances": [], "cats": [], "regOpen": "2026-10-01", "regClose": "2026-12-31", "siteState": "open", "url": "javascript:window.__pwned=2", "urlKind": "register", "source": "joinnow", "also": []},
+    {"id": "irunner:okinawa", "name": "2027沖繩馬拉松", "date": "2027-02-21", "dateEnd": None, "month": "2027-02", "city": "日本", "region": "overseas", "venue": "", "type": "road_running", "distances": [], "cats": [], "regOpen": "2026-09-10", "regClose": "2026-11-30", "siteState": "open", "url": "https://irunner.biji.co/okinawa", "urlKind": "register", "source": "irunner", "also": []}
+  ]
+}
+
+
+class V416FindRaces(Group):
+    """v4.16.0：首頁第四個分頁「找賽事」。GitHub 每天清晨把運動筆記、全統、一起報名、路協公開的賽事清單整理成
+    race-feed.json；App 讀這個檔，報名狀態用今天的日期重算。手機一場兩行、點開看詳情，筆電五欄表格；
+    篩選（報名狀態、種類、地區）、排序、搜尋；「前往報名」「＋ 加入我的賽事」。抓資料的程式另外有 node 測試。"""
+
+    ECHO = ('v416:',)
+
+    def _echo(self, msg):
+        if msg.text.startswith(self.ECHO):
+            print('   ', msg.text[:300])
+
+    def ev(self, pg, js, arg=None):
+        try:
+            return pg.evaluate(js) if arg is None else pg.evaluate(js, arg)
+        except Exception as exc:                      # noqa: BLE001
+            print('    ⚠', str(exc).split('\n')[0][:200])
+            return False
+
+    def _serve(self):
+        import http.server, socketserver, threading, functools
+
+        class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *a, **k):
+                pass
+        socketserver.TCPServer.allow_reuse_address = True
+        self.srv = socketserver.TCPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=os.path.dirname(os.path.abspath(APP))))
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.base = f'http://127.0.0.1:{self.srv.server_address[1]}/' + os.path.basename(APP)
+
+    def _ctx(self, browser, viewport=None, touch=False, theme='light', lang='zh', now='2026-10-05T09:00:00',
+             feed=None, status=200, seed=True, hash_='', init=None, force_dark=False):
+        """找賽事要用 http 開（fetch race-feed.json）；清單用 route 換成測試用的假資料。"""
+        # 擋掉 Service Worker：清單的請求經過 SW 的話，route 換不到假資料（Playwright 的限制）
+        ctx = full_mode_context(self.browser, viewport=viewport or {'width': 1280, 'height': 900}, is_mobile=touch, has_touch=touch,
+                                color_scheme='dark' if force_dark else 'light', timezone_id='Asia/Taipei', service_workers='block')
+        ctx.add_init_script(V47_CLOCK_JS % now)
+        ctx.add_init_script("try{localStorage.setItem('theme-pref-v1','%s');localStorage.setItem('lang-pref-v1','%s');}catch(e){}" % (theme, lang))
+        if init:
+            ctx.add_init_script(init)
+        state = {'feed': FIND416_FEED if feed is None else feed, 'status': status, 'hits': 0}
+
+        def handle(route):
+            state['hits'] += 1
+            if state['status'] != 200:
+                route.fulfill(status=state['status'], body='oops')
+            else:
+                route.fulfill(status=200, body=json.dumps(state['feed'], ensure_ascii=False),
+                              headers={'Content-Type': 'application/json; charset=utf-8'})
+        ctx.route('**/race-feed.json*', handle)
+        pg = ctx.new_page()
+        if force_dark:
+            cdp = ctx.new_cdp_session(pg)
+            cdp.send('Emulation.setAutoDarkModeOverride', {'enabled': True})
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.on('console', self._echo)
+        pg.goto(self.base + hash_)
+        pg.wait_for_function("()=>typeof state!=='undefined'", timeout=30000)
+        pg.wait_for_timeout(700)
+        pg.add_script_tag(content=FIELD_FRAME_JS)
+        pg.add_script_tag(content=V47_JS)
+        pg.add_style_tag(content='.badge-unbox-overlay{display:none!important} *{transition:none!important;animation:none!important}')
+        if seed:
+            self.ev(pg, """async()=>{ if(!state.races.length){ state.races.push(...buildExampleRaces()); }
+                await persist(); renderAll(); await __wait(150); }""")
+        return ctx, pg, state
+
+    def _open_find(self, pg):
+        return self.ev(pg, """async()=>{ document.querySelector('.home-tab[data-home-tab="find"]').click();
+            for(let i=0;i<60&&!document.getElementById('find-results');i++) await __wait(50); await __wait(80); return !!document.getElementById('find-results'); }""")
+
+    def body(self, page):
+        c = self.checks
+        self.browser = page.context.browser
+        self._serve()
+        try:
+            self._body()
+        finally:
+            self.srv.shutdown()
+
+    def _body(self):
+        c = self.checks
+        quick = bool(os.environ.get('V416_QUICK'))
+        # ================= 版本、檔案 =================
+        html = open(APP, encoding='utf-8').read()
+        c['version_4_16_0'] = "const APP_VERSION='v4.16.0';" in html
+        # V416_REPO：突變測試時 index.html 在別的資料夾，sw.js、排程、抓資料的程式還是看這裡
+        repo = os.environ.get('V416_REPO') or os.path.dirname(os.path.abspath(APP))
+        sw = open(os.path.join(repo, 'sw.js'), encoding='utf-8').read()
+        # 清單網路優先、離線用上次那份；要排在「同源檔快取優先」前面，換版也不刪
+        i_feed, i_same = sw.find('if(isFeed(url))'), sw.find('if(url.origin===self.location.origin){')
+        c['sw_feed_network_first_before_static'] = (0 < i_feed < i_same and 'async function handleFeed' in sw
+            and sw.find('const res=await fetch(request)', sw.find('async function handleFeed')) < sw.find('cache.match(SCOPE_PATH+\'race-feed.json\')')
+            and "n!==FEED_CACHE" in sw)
+        # 排程：每天、可以手動跑、先跑解析測試、有變才提交、提交後請 Pages 重新發布
+        wf_path = os.path.join(repo, '.github', 'workflows', 'race-feed.yml')
+        wf = open(wf_path, encoding='utf-8').read() if os.path.exists(wf_path) else ''
+        c['workflow_daily_tested_commit_if_changed'] = (bool(re.search(r"cron:\s*'17 20 \* \* \*'", wf)) and 'workflow_dispatch' in wf
+            and 'contents: write' in wf and 'pages: write' in wf and 0 <= wf.find('node --test tools/race-feed/test.mjs') < wf.find('node tools/race-feed/fetch.mjs')
+            and 'git diff --quiet -- race-feed.json' in wf and '/pages/builds' in wf and "steps.commit.outputs.changed == 'true'" in wf)
+        # 抓資料的程式：node 測試（用存好的真網頁樣本）全過
+        import subprocess
+        tdir = os.path.join(repo, 'tools', 'race-feed')
+        ok_node = False
+        if os.path.isdir(os.path.join(tdir, 'node_modules')):
+            r = subprocess.run(['node', '--test', 'test.mjs'], cwd=tdir, capture_output=True, text=True, timeout=180)
+            ok_node = r.returncode == 0 and '# fail 0' in r.stdout
+            if not ok_node:
+                print('    v416: node tests', r.stdout[-600:], r.stderr[-300:])
+        else:
+            print('    v416: tools/race-feed/node_modules 不在（先 npm ci），略過 node 測試＝失敗')
+        c['scraper_node_tests_pass'] = ok_node
+        # 一起交付的 race-feed.json：格式對、四個來源、每一場有編號、名稱、來源、http(s) 網址，依日期排好、沒有重複
+        feed_path = os.path.join(repo, 'race-feed.json')
+        bad = []
+        try:
+            f = json.load(open(feed_path, encoding='utf-8'))
+            if f.get('v') != 1: bad.append('v')
+            if sorted(s['id'] for s in f.get('sources', [])) != ['ctrun', 'irunner', 'joinnow', 'sportsnet']: bad.append('sources')
+            races = f.get('races', [])
+            if len(races) < 30: bad.append('few %d' % len(races))
+            ids = [r.get('id') for r in races]
+            if len(set(ids)) != len(ids): bad.append('dup ids')
+            for r in races:
+                if not r.get('name') or r.get('source') not in ('irunner', 'ctrun', 'joinnow', 'sportsnet'): bad.append('field ' + str(r.get('id')))
+                if r.get('url') and not re.match(r'^https?://', r['url']): bad.append('url ' + r['id'])
+                if r.get('type') not in ('road_running', 'trail_running', 'ultra_marathon', 'duathlon', 'triathlon', 'cycling', 'swimming', 'obstacle_race', 'other'): bad.append('type ' + r['id'])
+            keys = [(r.get('date') or (r.get('month', '') + '-99')) for r in races]
+            if keys != sorted(keys): bad.append('order')
+        except Exception as e:                        # noqa: BLE001
+            bad.append('read ' + str(e)[:80])
+        if bad:
+            print('    v416: shipped feed', bad[:6])
+        c['shipped_feed_valid'] = not bad
+
+        # ================= 分頁、網址、返回鍵 =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        c['find_is_fourth_home_tab'] = self.ev(pg, r"""()=>{ const tabs=[...document.querySelectorAll('nav.home-tabs .home-tab')];
+            const last=tabs[3]; return tabs.length===4 && !!last && last.dataset.homeTab==='find' && last.textContent.trim()==='找賽事'; }""")
+        c['open_find_tab'] = bool(self._open_find(pg))
+        c['find_tab_hides_race_chrome'] = self.ev(pg, r"""()=>{ const hid=sel=>{ const e=document.querySelector(sel); return !e||getComputedStyle(e).display==='none'; };
+            const cur=document.querySelector('.home-tab[aria-current="page"]');
+            return document.body.dataset.homeTab==='find' && location.hash==='#find' && cur&&cur.dataset.homeTab==='find'
+              && hid('#focus-panel-slot') && hid('.topbar-row2') && hid('#btn-new-fab') && !!document.querySelector('#calendar .find-wrap'); }""")
+        c['back_from_find_returns_to_races'] = self.ev(pg, r"""async()=>{ history.back(); for(let i=0;i<40&&location.hash;i++) await __wait(50); await __wait(120);
+            return location.hash==='' && state.homeTab==='races' && !document.getElementById('find-results'); }""")
+        # 生涯數據 → 找賽事 → 返回：一步就回到「賽事」（兩個分頁之間換掉那一筆，不疊）
+        c['career_to_find_one_back_step'] = self.ev(pg, r"""async()=>{
+            document.querySelector('.home-tab[data-home-tab="career"]').click(); await __wait(150);
+            document.querySelector('.home-tab[data-home-tab="find"]').click(); await __wait(250);
+            const mid=location.hash; history.back(); for(let i=0;i<40&&location.hash;i++) await __wait(50); await __wait(120);
+            return mid==='#find' && location.hash==='' && state.homeTab==='races'; }""")
+        ctx.close()
+        # 直接開 #find（重新整理、分享網址）：停在找賽事，一場賽事都沒記也看得到
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, seed=False, hash_='#find')
+        c['direct_hash_opens_find_without_races'] = self.ev(pg, r"""async()=>{ for(let i=0;i<60&&!document.getElementById('find-results');i++) await __wait(50);
+            return state.homeTab==='find' && !state.races.filter(r=>!r.deletedAt).length && document.querySelectorAll('.find-row').length>0 && !document.querySelector('.welcome-card'); }""")
+        ctx.close()
+
+        # ================= 清單、報名狀態 =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        self._open_find(pg)
+        js_rows = r"""()=>[...document.querySelectorAll('.find-row')].map(li=>{ const b=li.querySelector('.find-line');
+            return {id:b.dataset.id, pill:(li.querySelector('.find-pill')||{}).textContent||'', per:(li.querySelector('.find-per')||{}).textContent||'',
+              date:li.querySelector('.find-date').textContent.trim(), meta:li.querySelector('.find-meta').textContent.trim(), name:li.querySelector('.find-name').textContent}; })"""
+        rows = self.ev(pg, js_rows) or []
+        ids = [r['id'] for r in rows]
+        # 預設「還能報名」：報名中、剩幾天、即將開放、還沒公布；已截止、額滿、延期、截止日已過的不列；已經比完的永遠不列
+        want = {'ctrun:today', 'irunner:urgent', 'irunner:open', 'joinnow:soon', 'sportsnet:2027-2', 'sportsnet:2027-4', 'irunner:tbd', 'ctrun:bike', 'joinnow:swim', 'joinnow:bad', 'irunner:okinawa'}
+        c['default_can_still_enter'] = set(ids) == want
+        if set(ids) != want:
+            print('    v416: default rows', sorted(set(ids) ^ want))
+        by = {r['id']: r for r in rows}
+        g = lambda k, f: (by.get(k) or {}).get(f, '')
+        c['status_pills_from_today'] = (g('ctrun:today', 'pill') == '今天截止' and g('irunner:urgent', 'pill') == '剩 3 天'
+            and g('irunner:open', 'pill') == '報名中' and g('joinnow:soon', 'pill') == '10/12 開放' and g('sportsnet:2027-2', 'pill') == '看官網')
+        c['period_short_text'] = (g('irunner:open', 'per') == '9/1–10/20' and g('irunner:tbd', 'per') == '～10/23' and g('sportsnet:2027-2', 'per') == '')
+        # 兩行：日期＋星期｜名稱、縣市・種類 距離（全馬寫 42.195K、半馬 21.1K、游泳寫公尺）；多天的寫「六–日」；日期未定
+        c['row_lines_date_kind_distance'] = (g('irunner:open', 'date') == '11/22週日' and g('irunner:open', 'meta') == '臺北市・路跑 42.195K／21.1K'
+            and g('sportsnet:2027-2', 'date') == '1/16六–日' and g('joinnow:swim', 'meta') == '南投縣・游泳 1500m'
+            and g('irunner:tbd', 'date') == '—日期未定')
+        if not c['row_lines_date_kind_distance']:
+            print('    v416: lines', g('irunner:open', 'date'), g('irunner:open', 'meta'), g('sportsnet:2027-2', 'date'), g('joinnow:swim', 'meta'), g('irunner:tbd', 'date'))
+        # 依月份分段，日期未定的排在那個月最後
+        c['grouped_by_month_tbd_last'] = self.ev(pg, r"""()=>{ const secs=[...document.querySelectorAll('.find-month')].map(s=>[s.querySelector('h3').textContent, [...s.querySelectorAll('.find-line')].map(b=>b.dataset.id)]);
+            const jan=secs.find(x=>x[0].startsWith('2027 年 1 月'));
+            const ok=secs.length>=6 && secs[0][0].startsWith('2026 年 10 月') && jan && jan[1][jan[1].length-1]==='irunner:tbd' && /2 場$/.test(jan[0]);
+            if(!ok) console.log('v416: months',JSON.stringify(secs)); return !!ok; }""")
+        # 安全：清單裡的名稱照字顯示、不當成 HTML；javascript: 網址不會變成連結
+        c['unsafe_name_and_url_neutralized'] = self.ev(pg, r"""async()=>{ const b=[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id==='joinnow:bad');
+            if(!b) return false; b.click(); await __wait(80);
+            // 重畫之後是新的元素：重新找
+            const nb=[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id==='joinnow:bad'), li=nb.closest('.find-row');
+            const links=[...li.querySelectorAll('a')].map(a=>a.getAttribute('href'));
+            const ok=!window.__pwned && !li.querySelector('img') && li.querySelector('.find-name').textContent.startsWith('<img')
+              && links.length===1 && links[0]==='https://www.joinnow.com.tw/' && li.querySelector('a').textContent.trim()==='看一起報名 ↗';
+            nb.click(); await __wait(50); if(!ok) console.log('v416: unsafe',JSON.stringify(links),window.__pwned); return ok; }""")
+        # ================= 點開一場 =================
+        c['expand_shows_details_and_links'] = self.ev(pg, r"""async()=>{ const b=[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id==='irunner:open'); b.click(); await __wait(80);
+            const nb=[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id==='irunner:open'); const li=nb.closest('.find-row'), d=li.querySelector('.find-detail');
+            const dl=d?[...d.querySelectorAll('dt')].map(x=>x.textContent+'='+x.nextElementSibling.textContent):[];
+            const go=li.querySelector('a[data-action="find-go"]');
+            const ok=nb.getAttribute('aria-expanded')==='true' && nb.getAttribute('aria-controls')===d.id && document.activeElement===nb
+              && dl.includes('組別=42.195K、21.0975K') && dl.includes('報名期間=9/1（二） – 10/20（二）・剩 15 天') && dl.includes('地點=臺北市政府')
+              && dl.includes('來源=運動筆記、路協') && go && go.getAttribute('href')==='https://irunner.biji.co/open' && go.target==='_blank' && /noopener/.test(go.rel)
+              && go.textContent.trim()==='前往報名 ↗' && !!li.querySelector('[data-action="find-add"]');
+            if(!ok) console.log('v416: expand',JSON.stringify(dl),go&&go.outerHTML); return ok; }""")
+        # 一次只開一場；再點一次收起來
+        c['one_open_at_a_time_toggle'] = self.ev(pg, r"""async()=>{ const q=id=>[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id===id);
+            q('ctrun:bike').click(); await __wait(60); const n1=document.querySelectorAll('.find-detail').length, open1=q('irunner:open').getAttribute('aria-expanded');
+            q('ctrun:bike').click(); await __wait(60); const n2=document.querySelectorAll('.find-detail').length;
+            return n1===1 && open1==='false' && n2===0; }""")
+        # 路協：沒有報名期間、連到賽事官網；表上沒連結的，給那一年的行事曆
+        c['site_kind_links'] = self.ev(pg, r"""async()=>{ const q=id=>[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id===id);
+            q('sportsnet:2027-2').click(); await __wait(60); let a=document.querySelector('.find-detail a[data-action="find-go"]');
+            const t1=a&&a.textContent.trim(), h1=a&&a.getAttribute('href'), per=[...document.querySelectorAll('.find-detail dt')].find(x=>x.textContent==='報名期間').nextElementSibling.textContent;
+            q('sportsnet:2027-4').click(); await __wait(60); a=document.querySelector('.find-detail a[data-action="find-go"]');
+            const t2=a&&a.textContent.trim(), h2=a&&a.getAttribute('href'); q('sportsnet:2027-4').click(); await __wait(40);
+            const ok=t1==='賽事官網 ↗' && h1==='https://www.sportsnet.org.tw/20270117_web/' && per==='還沒公布，請看賽事網站' && t2==='看路協 ↗' && h2==='https://www.sportsnet.org.tw/schedule.php?schedule_year=2027';
+            if(!ok) console.log('v416: site',t1,h1,per,t2,h2); return ok; }""")
+        # ================= ＋ 加入我的賽事 =================
+        c['add_creates_considering_race'] = self.ev(pg, r"""async()=>{ window.__fu=[]; const orig=window.logFeatureUse; window.logFeatureUse=k=>{ window.__fu.push(k); };
+            const q=id=>[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id===id);
+            const n0=state.races.length; q('ctrun:bike').click(); await __wait(60);
+            document.querySelector('.find-detail [data-action="find-add"]').click(); await __wait(200);
+            const r=state.races[state.races.length-1];
+            const toast=[...document.querySelectorAll('.foreground-toast')].map(e=>e.textContent).join('|');
+            const view=document.querySelector('.find-detail [data-action="find-view"]');
+            const ok=state.races.length===n0+1 && r.name==='百K單車挑戰 彰化站' && r.status==='considering' && r.sportType==='cycling'
+              && r.schedule.raceDate==='2026-11-29' && r.schedule.registrationOpenDate==='2026-09-01' && r.schedule.registrationCloseDate==='2026-11-10'
+              && r.location.city==='彰化縣' && r.location.venueName==='彰高二號廣場公園' && r.officialUrl==='https://www.ctrun.com.tw/Activity?EventMain_ID=4'
+              && r.route.distanceKm===100 && toast.includes('已加入「賽事」：百K單車挑戰 彰化站（考慮中）') && view && document.activeElement===view
+              && /✓ 已加入/.test(q('ctrun:bike').textContent) && window.__fu.includes('find_add_race');
+            window.logFeatureUse=orig;
+            if(!ok) console.log('v416: add',JSON.stringify({n:state.races.length-n0,name:r.name,st:r.status,t:r.sportType,d:r.schedule,l:r.location,u:r.officialUrl,km:r.route.distanceKm,toast})); return ok; }""")
+        # 好幾個距離的不帶距離（不知道要報哪一組）；加過的再按不會多一場（打開原本那場）
+        c['multi_distance_no_km_and_no_duplicate'] = self.ev(pg, r"""async()=>{ const q=id=>[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id===id);
+            q('irunner:open').click(); await __wait(60); document.querySelector('.find-detail [data-action="find-add"]').click(); await __wait(150);
+            const r=state.races[state.races.length-1], n1=state.races.length;
+            const ok1=r.name==='台北城市測試馬拉松' && r.route.distanceKm==null && r.location.venueName==='臺北市政府';
+            // 直接叫 addFindRace（例如從另一個分頁）：網址一樣就打開原本那場
+            addFindRace('irunner:open'); await __wait(200);
+            const ok2=state.races.length===n1 && state.selectedId===r.id;
+            goBackFromDetail(); for(let i=0;i<40&&location.hash!=='#find';i++) await __wait(50); await __wait(150);
+            return ok1 && ok2 && location.hash==='#find' && state.homeTab==='find'; }""")
+        # 「查看」打開那場；返回鍵回到找賽事
+        c['view_opens_race_back_to_find'] = self.ev(pg, r"""async()=>{ const q=id=>[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id===id);
+            if(q('ctrun:bike').getAttribute('aria-expanded')!=='true'){ q('ctrun:bike').click(); await __wait(60); }
+            const v=document.querySelector('.find-detail [data-action="find-view"]'); const id=v.dataset.race; v.click(); await __wait(250);
+            const opened=state.selectedId===id && /^#race=/.test(location.hash);
+            history.back(); for(let i=0;i<40&&location.hash!=='#find';i++) await __wait(50); await __wait(150);
+            return opened && location.hash==='#find' && !!document.getElementById('find-results'); }""")
+        # 已經在「賽事」裡的：同一天、名稱相近也算（使用者自己先建的）
+        c['added_detection_by_date_and_name'] = self.ev(pg, r"""async()=>{ const r=emptyRace('2026 礁溪溫泉馬拉松（自己記的）','road_running','registered','2026-12-12'); state.races.push(r); await persist(); renderCalendar(); await __wait(80);
+            const b=[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id==='irunner:urgent'); return /✓ 已加入/.test(b.textContent); }""")
+        # ================= 篩選、排序、搜尋 =================
+        c['filters_counts_and_rows'] = self.ev(pg, r"""async()=>{ const set=(id,v)=>{ const s=document.getElementById(id); s.value=v; s.dispatchEvent(new Event('change',{bubbles:true})); };
+            const ids=()=>[...document.querySelectorAll('.find-line')].map(b=>b.dataset.id).sort().join(',');
+            const optTxt=id=>[...document.getElementById(id).options].map(o=>o.textContent);
+            const before=optTxt('find-only');
+            set('find-only','closed'); await __wait(60); const closed=ids(), pills=[...document.querySelectorAll('.find-pill')].map(p=>p.textContent).sort().join(',');
+            set('find-only','soon'); await __wait(60); const soon=ids();
+            set('find-only','can'); set('find-type','bike'); await __wait(60); const bike=ids();
+            set('find-type','all'); set('find-region','islands'); await __wait(60); const isl=ids(), regTxt=document.querySelector('#find-region').closest('.find-sel').querySelector('.find-sel-txt').textContent;
+            set('find-region','all'); await __wait(60);
+            const ok=before.join('|')==='還能報名（11）|報名中（8）|即將開放（1）|已截止、額滿（4）|全部狀態（15）'
+              && closed==='ctrun:closed,ctrun:full,irunner:cancel,irunner:stale' && pills==='已截止,已截止,延期／停辦,額滿'
+              && soon==='joinnow:soon' && bike==='ctrun:bike' && isl==='sportsnet:2027-2' && regTxt==='離島'
+              && document.getElementById('find-count').textContent==='共 11 場';
+            if(!ok) console.log('v416: filters',before.join('|'),closed,pills,soon,bike,isl,regTxt); return ok; }""")
+        # 數量 0 的種類不列（沒有越野以外的山徑、沒有鐵人）；沒篩的膠囊只寫「種類」「地區」，篩了才變綠
+        c['zero_types_hidden_and_pill_text'] = self.ev(pg, r"""()=>{ const types=[...document.getElementById('find-type').options].map(o=>o.value).join(',');
+            const pill=k=>document.getElementById('find-'+k).closest('.find-sel');
+            return types==='all,road,trail,bike,swim' && pill('type').querySelector('.find-sel-txt').textContent==='種類' && !pill('type').classList.contains('is-on')
+              && pill('only').classList.contains('is-on') && pill('only').querySelector('.find-sel-txt').textContent==='還能報名'; }""")
+        c['sort_by_deadline'] = self.ev(pg, r"""async()=>{ const s=document.getElementById('find-sort'); s.value='deadline'; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(60);
+            const ids=[...document.querySelectorAll('.find-line')].map(b=>b.dataset.id), groups=document.querySelectorAll('.find-month h3').length;
+            s.value='date'; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(60);
+            const want=['ctrun:today','irunner:urgent','irunner:open','irunner:tbd','ctrun:bike','irunner:okinawa','joinnow:bad','joinnow:swim','joinnow:soon'];
+            const ok=JSON.stringify(ids.slice(0,9))===JSON.stringify(want) && groups===0;
+            if(!ok) console.log('v416: sort',ids.join(',')); return ok; }""")
+        # 搜尋：名稱、縣市、地點都找得到，「台」「臺」都算；打字時搜尋框不會被重畫（焦點、游標都在）
+        c['search_name_city_tai_keeps_focus'] = self.ev(pg, r"""async()=>{ const inp=document.getElementById('find-q'); inp.focus();
+            const type=async v=>{ inp.value=v; inp.dispatchEvent(new Event('input',{bubbles:true})); await __wait(40); return [...document.querySelectorAll('.find-line')].map(b=>b.dataset.id).sort().join(','); };
+            const a=await type('台北'), b=await type('金門'), c2=await type('棧貳庫'), d=await type('zzzz');
+            const empty=!!document.querySelector('.find-empty [data-action="find-clear"]');
+            // 存檔、同步都會重畫首頁：打到一半的字要留著
+            await type('高雄'); renderCalendar(); await __wait(40);
+            const same=document.getElementById('find-q')===inp && document.activeElement===inp && inp.value==='高雄';
+            await type('');
+            const ok=a==='irunner:open,sportsnet:2027-4' && b==='sportsnet:2027-2' && c2==='joinnow:soon' && d==='' && empty && same;
+            if(!ok) console.log('v416: search',a,'|',b,'|',c2,'|',d,empty,same); return ok; }""")
+        c['clear_filters_resets'] = self.ev(pg, r"""async()=>{ const s=document.getElementById('find-region'); s.value='overseas'; s.dispatchEvent(new Event('change',{bubbles:true})); await __wait(40);
+            const inp=document.getElementById('find-q'); inp.value='沒有這場'; inp.dispatchEvent(new Event('input',{bubbles:true})); await __wait(40);
+            document.querySelector('[data-action="find-clear"]').click(); await __wait(80);
+            return findState.region==='all' && findState.q==='' && findState.only==='can' && document.querySelectorAll('.find-line').length===11 && document.getElementById('find-q').value===''; }""")
+        # 篩選記在這台裝置上（搜尋字不記）
+        self.ev(pg, r"""async()=>{ const s=document.getElementById('find-region'); s.value='south'; s.dispatchEvent(new Event('change',{bubbles:true}));
+            const inp=document.getElementById('find-q'); inp.value='港都'; inp.dispatchEvent(new Event('input',{bubbles:true})); await __wait(40); }""")
+        pg.reload()
+        pg.wait_for_function("()=>typeof state!=='undefined'", timeout=30000)
+        pg.wait_for_timeout(500)
+        pg.add_script_tag(content=V47_JS)
+        self._open_find(pg)
+        c['filter_prefs_persist_search_not'] = self.ev(pg, r"""()=>findState.region==='south' && findState.q==='' && document.getElementById('find-region').value==='south'
+            && [...document.querySelectorAll('.find-line')].every(b=>['ctrun:today','joinnow:soon','irunner:tbd','joinnow:bad'].includes(b.dataset.id))""")
+        self.ev(pg, r"""()=>{ const s=document.getElementById('find-region'); s.value='all'; s.dispatchEvent(new Event('change',{bubbles:true})); }""")
+        # 手機：每一列、選單、按鈕都至少 44px；320px 也不會左右捲
+        c['phone_targets_44_no_hscroll'] = self.ev(pg, r"""async()=>{ const bad=[];
+            document.querySelectorAll('.find-line,.find-sel,.find-search').forEach(e=>{ if(e.getBoundingClientRect().height<43.5) bad.push(e.className+' '+e.getBoundingClientRect().height); });
+            const b=[...document.querySelectorAll('.find-line')][0]; b.click(); await __wait(60);
+            document.querySelectorAll('.find-act a,.find-act button').forEach(e=>{ if(e.getBoundingClientRect().height<43.5) bad.push(e.textContent+' '+e.getBoundingClientRect().height); });
+            b.click(); await __wait(40);
+            if(document.documentElement.scrollWidth>innerWidth) bad.push('hscroll '+document.documentElement.scrollWidth);
+            if(bad.length) console.log('v416: targets',bad.slice(0,6).join(' | ')); return bad.length===0; }""")
+        ctx.close()
+        for lang in ('ja', 'en'):
+            if quick and lang == 'en':
+                continue
+            ctx, pg, st = self._ctx(self.browser, viewport={'width': 320, 'height': 700}, touch=True, lang=lang)
+            self._open_find(pg)
+            c[f'phone_320_{lang}_tab_visible_no_hscroll'] = self.ev(pg, r"""()=>{ const nav=document.querySelector('.home-tabs'), cur=nav.querySelector('[aria-current="page"]');
+                const a=cur.getBoundingClientRect(), n=nav.getBoundingClientRect();
+                const ok=cur.dataset.homeTab==='find' && a.left>=n.left-1 && a.right<=n.right+1 && document.documentElement.scrollWidth<=innerWidth;
+                if(!ok) console.log('v416: tabs320',JSON.stringify([a.left,a.right,n.left,n.right,document.documentElement.scrollWidth])); return ok; }""")
+            ctx.close()
+
+        # ================= 筆電：表格 =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 1280, 'height': 900})
+        self._open_find(pg)
+        c['laptop_table_columns_in_order'] = self.ev(pg, r"""()=>{ const th=[...document.querySelectorAll('.find-tbl thead th')].map(x=>x.textContent.trim());
+            const ok=JSON.stringify(th.slice(0,5))===JSON.stringify(['賽事日期','地點','名稱','種類與距離','報名期間']) && th.length===6
+              && document.querySelectorAll('.find-tbl .find-mrow').length>=6 && !document.querySelector('.find-row');
+            if(!ok) console.log('v416: th',th.join('|')); return ok; }""")
+        c['laptop_row_buttons'] = self.ev(pg, r"""()=>{ const tr=[...document.querySelectorAll('.find-trow')].find(x=>x.dataset.id==='irunner:open');
+            const tds=[...tr.children].map(td=>td.textContent.replace(/\s+/g,' ').trim());
+            const go=tr.querySelector('a[data-action="find-go"]'), add=tr.querySelector('[data-action="find-add"]');
+            const ok=tds[0]==='11/22（日）' && tds[1]==='臺北市臺北市政府' && tds[2]==='台北城市測試馬拉松運動筆記' && tds[3]==='路跑 42.195K／21.1K' && /^9\/1–10\/20 報名中$/.test(tds[4])
+              && go && go.textContent.trim()==='報名 ↗' && go.getAttribute('href')==='https://irunner.biji.co/open' && add && add.textContent.trim()==='＋ 加入';
+            if(!ok) console.log('v416: tr',JSON.stringify(tds)); return ok; }""")
+        c['laptop_click_row_expands_detail'] = self.ev(pg, r"""async()=>{ const tr=()=>[...document.querySelectorAll('.find-trow')].find(x=>x.dataset.id==='joinnow:soon');
+            tr().children[3].click(); await __wait(60);
+            const d=tr().nextElementSibling, ok1=d&&d.classList.contains('find-tdetail')&&/報名期間10\/12（一） 開始報名|報名期間10\/12（一） – 11\/30（一）/.test(d.textContent.replace(/\s+/g,' '));
+            const btn=tr().querySelector('.find-name-btn'); const ok2=btn.getAttribute('aria-expanded')==='true';
+            // 按「報名 ↗」不會順便展開／收起
+            const n=document.querySelectorAll('.find-tdetail').length; tr().querySelector('a[data-action="find-go"]').addEventListener('click',e=>e.preventDefault(),{once:true});
+            tr().querySelector('a[data-action="find-go"]').click(); await __wait(60);
+            const ok3=document.querySelectorAll('.find-tdetail').length===n;
+            btn.click(); await __wait(60); const ok4=!document.querySelector('.find-tdetail');
+            if(!(ok1&&ok2&&ok3&&ok4)) console.log('v416: trow',ok1,ok2,ok3,ok4,d&&d.textContent); return ok1&&ok2&&ok3&&ok4; }""")
+        # 視窗拉窄到 900 以下換成兩行清單、拉回來又是表格
+        c['resize_switches_table_and_list'] = False
+        try:
+            pg.set_viewport_size({'width': 760, 'height': 900})
+            pg.wait_for_timeout(300)
+            a = self.ev(pg, "()=>!!document.querySelector('.find-row') && !document.querySelector('.find-tbl')")
+            pg.set_viewport_size({'width': 1280, 'height': 900})
+            pg.wait_for_timeout(300)
+            b = self.ev(pg, "()=>!!document.querySelector('.find-tbl') && !document.querySelector('.find-row')")
+            c['resize_switches_table_and_list'] = bool(a and b)
+        except Exception as e:                        # noqa: BLE001
+            print('    v416: resize', str(e)[:120])
+        # 點報名連結記一次使用次數
+        c['go_link_logs_feature'] = self.ev(pg, r"""async()=>{ window.__fu=[]; const orig=window.logFeatureUse; window.logFeatureUse=k=>{ window.__fu.push(k); };
+            const a=document.querySelector('.find-trow a[data-action="find-go"]'); a.addEventListener('click',e=>e.preventDefault(),{once:true}); a.click(); await __wait(30);
+            document.querySelector('.home-tab[data-home-tab="races"]').click(); await __wait(80); document.querySelector('.home-tab[data-home-tab="find"]').click(); await __wait(150);
+            window.logFeatureUse=orig; return window.__fu.includes('find_go_register') && window.__fu.includes('open_find_tab'); }""")
+        ctx.close()
+
+        # ================= 讀不到、清單舊了、某個網站沒抓到 =================
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, status=500)
+        self._open_find(pg)
+        pg.wait_for_timeout(300)
+        err = self.ev(pg, r"""()=>!!document.querySelector('.find-empty [data-action="find-retry"]') && /清單讀不到/.test(document.querySelector('.find-empty').textContent) && !document.querySelector('.find-row')""")
+        hits1 = st['hits']
+        self.ev(pg, "()=>{ renderCalendar(); }")      # 重畫不會一直重抓（等使用者按再試一次）
+        pg.wait_for_timeout(200)
+        no_retry_storm = st['hits'] == hits1
+        st['status'] = 200
+        self.ev(pg, "async()=>{ document.querySelector('[data-action=\"find-retry\"]').click(); for(let i=0;i<40&&!document.querySelector('.find-row');i++) await __wait(50); }")
+        rec = self.ev(pg, "()=>document.querySelectorAll('.find-row').length===11")
+        c['error_then_retry_recovers'] = bool(err and no_retry_storm and rec)
+        if not c['error_then_retry_recovers']:
+            print('    v416: retry', err, no_retry_storm, rec, hits1, st['hits'])
+        ctx.close()
+        old = json.loads(json.dumps(FIND416_FEED))
+        old['updatedAt'] = '2026-09-25T04:17:00+08:00'
+        old['sources'][1].update({'ok': False, 'error': 'HTTP 503', 'stale': True})
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, feed=old)
+        self._open_find(pg)
+        c['stale_and_failed_source_warnings'] = self.ev(pg, r"""()=>{ const w=[...document.querySelectorAll('.find-warn')].map(x=>x.textContent);
+            const src=document.querySelector('.find-src').textContent;
+            const ok=w.length===2 && w[0]==='清單已經 10 天沒有更新，報名狀態可能有變。' && w[1]==='全統這次沒抓到，先顯示上次的資料。' && /（清單更新於 9\/25）$/.test(src);
+            if(!ok) console.log('v416: warn',JSON.stringify(w),src); return ok; }""")
+        ctx.close()
+        # 清單是昨天的、今天截止日到了：狀態跟著今天變（不是停在清單那天）
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, now='2026-10-21T09:00:00')
+        self._open_find(pg)
+        c['status_recomputed_for_later_day'] = self.ev(pg, r"""()=>{ const s=findStatus(findState.feed.races.find(r=>r.id==='irunner:open'),todayISO());
+            const soon=findStatus(findState.feed.races.find(r=>r.id==='joinnow:soon'),todayISO());
+            return todayISO()==='2026-10-21' && s.k==='closed' && soon.k==='open' && !document.querySelector('.find-line[data-id="ctrun:today"]'); }""")
+        ctx.close()
+
+        # ================= 日文、英文 =================
+        for lang, tab, pill, add, cnt in (('ja', '大会を探す', 'あと3日', '＋ 自分の大会に追加', '11件'), ('en', 'Find races', '3 days left', '＋ Add to my races', '11 races')):
+            ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, lang=lang)
+            self._open_find(pg)
+            c[f'{lang}_labels'] = self.ev(pg, r"""async(w)=>{ const [tab,pill,add,cnt,lang]=w;
+                const b=[...document.querySelectorAll('.find-line')].find(x=>x.dataset.id==='irunner:urgent'); b.click(); await __wait(60);
+                const chrome=[...document.querySelectorAll('.find-head h2,.find-sel-txt,.find-count,.find-month h3,.find-pill,.find-per,.find-detail dt,.find-act a,.find-act button,.find-date span')].map(e=>e.textContent).join(' ');
+                const cjkLeak=lang==='en' && /[\u4e00-\u9fff]/.test(chrome);
+                const ok=document.querySelector('.home-tab[data-home-tab="find"]').textContent.trim()===tab && b.textContent.includes(pill)
+                  && document.querySelector('.find-detail [data-action="find-add"]').textContent.trim()===add && document.getElementById('find-count').textContent===cnt && !cjkLeak;
+                if(!ok) console.log('v416: '+lang,chrome.slice(0,300)); return ok; }""", [tab, pill, add, cnt, lang])
+            ctx.close()
+        # 日文、英文：找賽事用到的字都有翻
+        ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True)
+        c['find_keys_translated'] = self.ev(pg, r"""()=>{ const src=document.documentElement.outerHTML;
+            const used=new Set([...src.matchAll(/'(ui\.find[A-Za-z]+(?:\.[a-z]+)?)'/g)].map(m=>m[1]).filter(k=>!k.endsWith('.')));
+            ['north','central','south','east','islands','overseas'].forEach(x=>used.add('ui.findRegion.'+x));
+            ['road','trail','ultra','tri','bike','swim','other'].forEach(x=>used.add('ui.findType.'+x));
+            ['can','open','soon','closed','all'].forEach(x=>used.add('ui.findOnly.'+x));
+            used.add('ui.tabFind');
+            const miss=[...used].filter(k=>!(k in JA)||!(k in EN)||/[\u4e00-\u9fff]/.test(EN[k]));
+            if(miss.length) console.log('v416: keys',miss.join(',')); return used.size>60 && miss.length===0; }""")
+        # 使用說明：三種語言都剛好有一條「找賽事」（v4.16.0），首頁那一條改成四個分頁
+        c['help_mentions_find_three_langs'] = self.ev(pg, r"""async()=>{ const out={};
+            const four={zh:/四個分頁/,ja:/4つのタブ/,en:/four tabs/}, name={zh:'找賽事',ja:'大会を探す',en:'Find races'};
+            for(const l of ['zh','ja','en']){ setLang(l); await __wait(30); const box=document.createElement('div'); box.innerHTML=helpModalHtml();
+              const lis=[...box.querySelectorAll('.help-body li')].map(x=>x.textContent);
+              out[l]={n:lis.filter(x=>/v4\.16\.0/.test(x)&&x.startsWith(name[l])).length, four:lis.some(x=>four[l].test(x)&&x.includes(name[l]))}; }
+            setLang('zh'); await __wait(30);
+            const ok=['zh','ja','en'].every(l=>out[l].n===1&&out[l].four);
+            if(!ok) console.log('v416: help',JSON.stringify(out)); return ok; }""")
+        ctx.close()
+
+        # ================= 深色模式：狀態膠囊的字看得清楚 =================
+        for theme in ('light', 'dark'):
+            ctx, pg, st = self._ctx(self.browser, viewport={'width': 390, 'height': 844}, touch=True, theme=theme)
+            self._open_find(pg)
+            c[f'pill_contrast_{theme}'] = self.ev(pg, r"""()=>{
+                const parse=s=>{ let m=s.match(/rgba?\(([^)]+)\)/); if(m){ const p=m[1].split(/[\s,\/]+/).filter(Boolean).map(Number); return [p[0],p[1],p[2],p.length>3?p[3]:1]; }
+                  m=s.match(/color\(srgb ([^)]+)\)/); if(m){ const p=m[1].split(/[\s\/]+/).filter(Boolean).map(Number); return [p[0]*255,p[1]*255,p[2]*255,p.length>3?p[3]:1]; } return null; };
+                const lum=c=>{ const f=v=>{ v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4); }; return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]); };
+                const page=parse(getComputedStyle(document.body).backgroundColor); const bad=[];
+                // 全部狀態：已截止、額滿、延期的膠囊也要量；種類選「路跑」量篩選膠囊的綠字
+                const o=document.getElementById('find-only'); o.value='all'; o.dispatchEvent(new Event('change',{bubbles:true}));
+                const s=document.getElementById('find-type'); s.value='road'; s.dispatchEvent(new Event('change',{bubbles:true}));
+                document.querySelectorAll('.find-pill,.find-sel.is-on').forEach(p=>{ const cs=getComputedStyle(p), fg=parse(cs.color), bg=parse(cs.backgroundColor)||[0,0,0,0];
+                  const a=bg[3], eff=[0,1,2].map(i=>bg[i]*a+page[i]*(1-a)); const L1=lum(fg), L2=lum(eff); const r=(Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);
+                  if(r<4.5) bad.push(p.className+' '+r.toFixed(2)); });
+                if(bad.length) console.log('v416: contrast',bad.slice(0,5).join(' | ')); return document.querySelectorAll('.find-pill').length>5 && bad.length===0; }""")
+            ctx.close()
 
 
 GROUPS = {
@@ -12661,6 +13145,7 @@ GROUPS = {
     'v413':       lambda: V413PauseFreeTime('v413'),
     'v414':       lambda: V414RaceDay('v414'),
     'v415':       lambda: V415HeartRatePlurals('v415'),
+    'v416':       lambda: V416FindRaces('v416'),
 }
 
 

@@ -10,6 +10,7 @@
 const VERSION=new URL(self.location.href).searchParams.get('v')||'dev';
 const CACHE='race-log-'+VERSION;
 const FONT_CACHE='race-log-fonts';   // 字型跨版本共用，不必每版重抓
+const FEED_CACHE='race-log-feed';    // 找賽事清單（v4.16.0）也跨版本共用：App 換版不必重抓，離線時還有上次那份
 const PRECACHE=[
   './',
   './index.html',
@@ -27,6 +28,13 @@ const PRECACHE=[
   'https://cdn.jsdelivr.net/npm/idb-keyval@6.3.0/dist/umd.js',
 ];
 const NAV_TIMEOUT_MS=3500;
+/* 只有「開 App 本身」的導覽才交給 handleNavigation（v4.9.0）。同一個範圍底下還有 about/、
+   sitemap/、glossary/、privacy/ 這些獨立頁面：以前它們的回應也會被存成 ./index.html，
+   打開過一次隱私權政策，之後離線開 App 就變成那一頁。其他頁面一律不攔、照常走網路 */
+const SCOPE_PATH=new URL('./',self.location.href).pathname;
+function isAppShell(url){
+  return url.origin===self.location.origin&&(url.pathname===SCOPE_PATH||url.pathname===SCOPE_PATH+'index.html');
+}
 
 function corsRequest(url){
   return new Request(url,{mode:'cors',credentials:'omit'});
@@ -50,7 +58,7 @@ self.addEventListener('install',event=>{
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
     const names=await caches.keys();
-    await Promise.all(names.filter(n=>n.startsWith('race-log-')&&n!==CACHE&&n!==FONT_CACHE).map(n=>caches.delete(n)));
+    await Promise.all(names.filter(n=>n.startsWith('race-log-')&&n!==CACHE&&n!==FONT_CACHE&&n!==FEED_CACHE).map(n=>caches.delete(n)));
     await self.clients.claim();
   })());
 });
@@ -112,13 +120,31 @@ async function handleFont(request){
   return hit||(await refresh)||Response.error();
 }
 
+/* 找賽事清單 race-feed.json（v4.16.0）：網路優先，失敗才用快取。
+   為什麼不跟其他同源檔一樣快取優先：清單每天更新，快取優先會一直拿到第一次存的那份。
+   離線時給上次讀到的，「找賽事」分頁照樣能看（報名狀態 App 會用今天的日期重算）。 */
+function isFeed(url){ return url.origin===self.location.origin&&url.pathname===SCOPE_PATH+'race-feed.json'; }
+async function handleFeed(request){
+  const cache=await caches.open(FEED_CACHE);
+  try{
+    const res=await fetch(request);
+    if(res&&res.ok) cache.put(SCOPE_PATH+'race-feed.json',res.clone()).catch(()=>{});
+    return res;
+  }catch(err){
+    const hit=await cache.match(SCOPE_PATH+'race-feed.json');
+    if(hit) return hit;
+    throw err;
+  }
+}
+
 self.addEventListener('fetch',event=>{
   const req=event.request;
   if(req.method!=='GET') return;
   const url=new URL(req.url);
-  if(req.mode==='navigate'){ event.respondWith(handleNavigation(req)); return; }
+  if(req.mode==='navigate'){ if(isAppShell(url)) event.respondWith(handleNavigation(req)); return; }
   if(isCdn(url)){ event.respondWith(handleCdn(req)); return; }
   if(isFont(url)){ event.respondWith(handleFont(req)); return; }
+  if(isFeed(url)){ event.respondWith(handleFeed(req)); return; }
   if(url.origin===self.location.origin){
     // 同源靜態檔（圖示、manifest）：快取優先，沒有才抓
     event.respondWith((async()=>{
