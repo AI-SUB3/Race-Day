@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* 找賽事清單：每天抓一次（v4.16.0）
-   GitHub Actions 每天清晨跑這支（.github/workflows/race-feed.yml）：照 robots.txt 讀 4 個報名網站公開的賽事清單，
+   GitHub Actions 每天清晨跑這支（.github/workflows/race-feed.yml）：照 robots.txt 讀 8 個網站公開的賽事清單（v4.18.0 起多了
+   跑者廣場、超馬協會兩個台灣的行事曆，和 JTB、MSPO 兩個日本的報名網站），
    整理成 race-feed.json，跟 App 放在同一個網站。App 的「找賽事」分頁只讀這個檔案。
 
    為什麼不讓 App 直接去讀那些網站：瀏覽器不准一個網站讀另一個網站的內容（CORS），我們也沒有自己的伺服器；
@@ -28,7 +29,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
 const UA = 'RaceLogFeedBot/1.0 (+https://ai-sub3.github.io/Race-Day/about/)';
 const BOT = 'RaceLogFeedBot';
-const ORDER = ['irunner', 'ctrun', 'joinnow', 'sportsnet'];
+const ORDER = ['irunner', 'ctrun', 'joinnow', 'sportsnet', 'runplaza', 'ctau', 'jtb', 'mspo'];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const days = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
 // 台灣的日期：排程在 UTC 20:17 跑（台灣清晨 4:17），用 UTC 的日期會差一天
@@ -72,6 +73,7 @@ function parseRobots(text) {
     } else {
       lastAgent = false;
       if (cur && (k === 'allow' || k === 'disallow') && v) cur.rules.push({ allow: k === 'allow', path: v });
+      if (cur && k === 'crawl-delay' && +v > 0) cur.delay = +v;   // 超馬協會寫了 Crawl-delay: 10（v4.18.0 起照做）
     }
   }
   return groups;
@@ -80,6 +82,13 @@ function ruleMatches(rule, p) {
   let r = rule; const end = r.endsWith('$'); if (end) r = r.slice(0, -1);
   const re = new RegExp('^' + r.split('*').map(x => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + (end ? '$' : ''));
   return re.test(p);
+}
+// 這個網站要求兩次之間隔幾秒（沒寫是 0）；最多照 60 秒，寫得太誇張的就當作 60
+function robotsDelay(groups, agent) {
+  const a = agent.toLowerCase();
+  let g = groups.filter(x => x.agents.some(n => n !== '*' && a.includes(n)));
+  if (!g.length) g = groups.filter(x => x.agents.includes('*'));
+  return Math.min(60, Math.max(0, ...g.map(x => x.delay || 0)));
 }
 function robotsAllows(groups, agent, p) {
   const a = agent.toLowerCase();
@@ -100,11 +109,11 @@ function decode(buf, ctype) {
   try { return new TextDecoder((cs || 'utf-8').toLowerCase()).decode(buf); } catch { return new TextDecoder('utf-8').decode(buf); }
 }
 function liveGetter(opt) {
-  const last = new Map(), robots = new Map();
+  const last = new Map(), robots = new Map(), hostDelay = new Map();
   let requests = 0;
   async function once(url) {
     const host = new URL(url).host;
-    const wait = (last.get(host) || 0) + opt.delay - Date.now();
+    const wait = (last.get(host) || 0) + Math.max(opt.delay, hostDelay.get(host) || 0) - Date.now();
     if (wait > 0) await sleep(wait);
     last.set(host, Date.now());
     requests++;
@@ -137,6 +146,7 @@ function liveGetter(opt) {
     const u = new URL(url);
     const groups = await robotsFor(u.origin);
     if (groups === null) throw new Error('讀不到 robots.txt，今天先不抓');
+    hostDelay.set(u.host, robotsDelay(groups, BOT) * 1000);
     if (!robotsAllows(groups, BOT, u.pathname + u.search)) throw new Error('robots.txt 不允許 ' + u.pathname);
     const r = await retry(url);
     if (r.status !== 200) throw new Error('HTTP ' + r.status);
@@ -152,6 +162,14 @@ function fixtureName(url) {
   if (u.host === 'www.ctrun.com.tw') { const id = u.searchParams.get('EventMain_ID'); return id ? `ctrun-detail-${id}.html` : 'ctrun-home.html'; }
   if (u.host === 'www.joinnow.com.tw') { const id = u.searchParams.get('cnt_id'); return id ? `joinnow-about-${id}.html` : 'joinnow-index.html'; }
   if (u.host === 'www.sportsnet.org.tw') return `sportsnet-${u.searchParams.get('schedule_year') || 'x'}.html`;
+  if (u.host === 'www.taipeimarathon.org.tw') return 'runplaza-contest.html';
+  if (u.host === 'www.ctau.org.tw') return 'ctau-calendar.html';
+  if (u.host === 'jtbsports.jp') return u.pathname.startsWith('/detail/') ? `jtb-detail-${u.pathname.split('/').filter(Boolean).pop()}.html` : `jtb-list-${u.searchParams.get('pageno') || 1}.html`;
+  if (u.host === 'www.mspo.jp') {
+    const ev = u.pathname.match(/^\/events\/(\d+)/); if (ev) return `mspo-event-${ev[1]}.html`;
+    const cat = u.pathname.split('/').filter(Boolean).pop(); const pg = +u.searchParams.get('paged') || 1;
+    return `mspo-${cat}${pg > 1 ? '-' + pg : ''}.html`;
+  }
   return null;
 }
 function fixtureGetter(dir) {
@@ -184,8 +202,34 @@ const LIST = {
     }
     return out;
   },
+  // 跑者廣場、超馬協會：一頁就是全部（超馬協會要求每次間隔 10 秒，一天只讀這一頁）
+  runplaza: async (get, today) => P.parseRunPlaza(toDoc(await get(P.SOURCES.runplaza.home)), today),
+  ctau: async (get, today) => P.parseCtau(toDoc(await get(P.SOURCES.ctau.home)), today),
+  // JTB：一頁 20 場、最多 10 頁；後面的頁讀不到就停在那裡（前面的照用）
+  jtb: async (get) => {
+    const first = toDoc(await get(P.SOURCES.jtb.home));
+    const out = P.parseJtbList(first);
+    for (let p = 2, n = P.jtbMaxPage(first); p <= n; p++) {
+      try { out.push(...P.parseJtbList(toDoc(await get(P.SOURCES.jtb.home + '&pageno=' + p)))); } catch { break; }
+    }
+    return out;
+  },
+  // MSPO：五個種類各自的清單（一場常常出現在兩個種類裡，用編號去重複）；全部種類都讀不到才算失敗
+  mspo: async (get) => {
+    const out = [], seen = new Set(); let ok = 0, err = null;
+    for (const cat of P.MSPO_CATS) {
+      const url = p => p === 1 ? `https://www.mspo.jp/athletic/${cat}` : `https://www.mspo.jp/athletic/${cat}?ss=1&paged=${p}&athletic=${cat}`;
+      let docs;
+      try { const d1 = toDoc(await get(url(1))); ok++; docs = [d1]; for (let p = 2, n = P.mspoMaxPage(d1); p <= n; p++) { try { docs.push(toDoc(await get(url(p)))); } catch { break; } } }
+      catch (e) { err = e; continue; }
+      for (const d of docs) for (const r of P.parseMspoList(d)) if (!seen.has(r.sid)) { seen.add(r.sid); out.push(r); }
+    }
+    if (!ok) throw err || new Error('五個種類都讀不到');
+    return out;
+  },
 };
-const DETAIL = { irunner: P.parseIrunnerDetail, ctrun: P.parseCtrunDetail, joinnow: P.parseJoinnowDetail, sportsnet: null };
+const DETAIL = { irunner: P.parseIrunnerDetail, ctrun: P.parseCtrunDetail, joinnow: P.parseJoinnowDetail, sportsnet: null,
+  runplaza: null, ctau: null, jtb: P.parseJtbDetail, mspo: P.parseMspoDetail };
 
 // 還沒結束、一年多以內的才需要（跟 buildRaces 留下來的範圍一樣）
 function upcoming(r, today) {
@@ -234,7 +278,7 @@ async function withDetails(src, recs, ctx) {
 function fromPrevFeed(prev, src) {
   return (prev && Array.isArray(prev.races) ? prev.races : []).filter(r => r.source === src).map(r => ({
     source: r.source, sid: String(r.id || '').split(':').slice(1).join(':'), name: r.name, date: r.date, dateEnd: r.dateEnd || null, month: r.month,
-    city: r.city || '', region: r.region || '', venue: r.venue || '', type: r.type || 'other', distances: r.distances || [], cats: r.cats || [],
+    country: r.country || undefined, city: r.city || '', region: r.region || '', venue: r.venue || '', type: r.type || 'other', distances: r.distances || [], cats: r.cats || [],
     regOpen: r.regOpen || null, regClose: r.regClose || null, siteState: r.siteState || null, url: r.url || '', urlKind: r.urlKind || 'register', detailUrl: null,
   }));
 }
@@ -320,7 +364,7 @@ async function run(opt) {
   return { feed, same, okCount };
 }
 
-export { parseRobots, robotsAllows, fixtureName, upcoming, maxAge, stringify, run, parseArgs };
+export { parseRobots, robotsAllows, robotsDelay, fixtureName, upcoming, maxAge, stringify, run, parseArgs };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   let opt;

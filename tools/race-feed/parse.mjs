@@ -1,4 +1,4 @@
-/* 找賽事清單：解析與整理（v4.16.0）
+/* 找賽事清單：解析與整理（v4.16.0；v4.18.0 加跑者廣場、超馬協會、JTB、MSPO 和國家別）
    這支檔案只放純函式：給它網頁的 document，回傳整理好的賽事。不連網、不讀寫檔案。
    為什麼拆成純函式：同一份程式碼在 GitHub Actions（Node＋linkedom）和瀏覽器（DOMParser）都能跑。
    網站改版時，可以直接在那個網站的分頁裡貼上這支檔案試解析，不必等每天的排程跑完才知道壞了沒。
@@ -90,7 +90,9 @@ const TOWNS = {
 const TOWN_OF = /* @__PURE__ */ Object.entries(TOWNS).flatMap(([c, list]) => list.split(' ').map(t => [t, c]));
 // 地點只寫地標的（路協的表常見）：只收很確定的幾個
 const LANDMARK = { 總統府: '臺北市', 凱達格蘭: '臺北市', 大佳河濱: '臺北市', 陽明山: '臺北市', 臺北101: '臺北市', 美堤河濱: '臺北市',
-  夢時代: '高雄市', 駁二: '高雄市', 溪頭: '南投縣', 日月潭: '南投縣', 阿里山: '嘉義縣', 墾丁: '屏東縣', 太魯閣: '花蓮縣', 金城: '金門縣' };
+  夢時代: '高雄市', 駁二: '高雄市', 溪頭: '南投縣', 日月潭: '南投縣', 阿里山: '嘉義縣', 墾丁: '屏東縣', 太魯閣: '花蓮縣', 金城: '金門縣',
+  // 超馬協會每年固定的場地（v4.18.0）：地點只寫「新莊 田徑場」「東吳大學 外雙溪校區」「55K 新店國小」
+  東吳大學: '臺北市', 新莊田徑場: '新北市', 新店國小: '新北市' };
 const OVERSEAS = /日本|韓國|不丹|泰國|越南|柬埔寨|馬來西亞|新加坡|香港|澳門|中國|美國|加拿大|英國|法國|德國|義大利|澳洲|紐西蘭|海外|沖繩|東京|大阪|京都|名古屋|北海道|福岡|首爾|釜山|曼谷|清邁|吳哥|峴港|雪梨|柏林|倫敦|波士頓|芝加哥|紐約|巴黎/;
 const toTai = s => String(s || '').replace(/台/g, '臺');
 function regionOf(city) {
@@ -109,34 +111,86 @@ function findCity(...texts) {
     if (best) return { city: best.c, region: regionOf(best.c) };
     for (const [k, c] of Object.entries(SHORT)) { const i = s.indexOf(k); if (i >= 0 && (!best || i < best.i)) best = { i, c }; }
     if (best) return { city: best.c, region: regionOf(best.c) };
-    for (const [k, c] of Object.entries(LANDMARK)) if (s.includes(k)) return { city: c, region: regionOf(c) };
+    const flat = s.replace(/\s+/g, '');   // 「新莊 田徑場」這種中間斷行的也認得
+    for (const [k, c] of Object.entries(LANDMARK)) if (flat.includes(k)) return { city: c, region: regionOf(c) };
   }
   for (const raw of texts) { const m = String(raw || '').match(OVERSEAS); if (m) return { city: m[0] === '海外' ? '' : m[0], region: 'overseas' }; }
   return { city: '', region: '' };
 }
 
+// ---------------- 日本：都道府縣、地區（v4.18.0） ----------------
+const JP_PREFS = ['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
+  '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'];
+// 地區：北海道・東北／關東／中部（北陸、甲信越、東海）／近畿（含三重）／中國・四國／九州・沖繩
+const JP_REGION_AT = [[0, 'hokkaido-tohoku'], [7, 'kanto'], [14, 'chubu'], [23, 'kinki'], [30, 'chugoku-shikoku'], [39, 'kyushu-okinawa']];
+function jpRegionOf(pref) {
+  const i = JP_PREFS.indexOf(pref);
+  if (i < 0) return '';
+  let r = '';
+  for (const [start, id] of JP_REGION_AT) if (i >= start) r = id;
+  return r;
+}
+// 地點只寫市名的（「(指宿市)」「那覇」）：政令指定都市和常辦比賽的幾個；台灣寫法的「沖繩」也認
+const JP_CITY = { 札幌: '北海道', 仙台: '宮城県', さいたま: '埼玉県', 千葉市: '千葉県', 横浜: '神奈川県', 川崎: '神奈川県', 相模原: '神奈川県', 新潟市: '新潟県',
+  静岡市: '静岡県', 浜松: '静岡県', 名古屋: '愛知県', 京都市: '京都府', 大阪市: '大阪府', 堺: '大阪府', 神戸: '兵庫県', 岡山市: '岡山県', 広島市: '広島県',
+  北九州: '福岡県', 福岡市: '福岡県', 熊本市: '熊本県', 那覇: '沖縄県', 沖繩: '沖縄県', 指宿: '鹿児島県', 富士吉田: '山梨県', 河口湖: '山梨県', 青梅: '東京都',
+  // 每年固定的大會、清單上只寫地名的（v4.18.0 實際資料看到的）：しまなみ海道（今治）、日田、新城、那珂總合公園（那珂川市在福岡，所以寫全名）
+  しまなみ: '愛媛県', 日田: '大分県', 新城市: '愛知県', 那珂総合公園: '茨城県' };
+function findPref(...texts) {
+  for (const raw of texts) {
+    const s = String(raw || '');
+    if (!s) continue;
+    let best = null;
+    for (const p of JP_PREFS) { const i = s.indexOf(p); if (i >= 0 && (!best || i < best.i)) best = { i, p }; }
+    if (best) return { city: best.p, region: jpRegionOf(best.p) };
+    // 沒寫「県」「府」「都」：先比「東京都」再比「京都」，免得東京被認成京都
+    for (const p of JP_PREFS) { const bare = p === '北海道' ? p : p.slice(0, -1); const i = s.indexOf(bare); if (bare.length >= 2 && i >= 0 && (!best || i < best.i)) best = { i, p }; }
+    if (best) return { city: best.p, region: jpRegionOf(best.p) };
+    for (const [k, p] of Object.entries(JP_CITY)) if (s.includes(k)) return { city: p, region: jpRegionOf(p) };
+  }
+  return { city: '', region: '' };
+}
+// 國家：台灣的網站寫在「海外」的，認得出是日本就算日本（沖繩馬拉松、東京馬拉松），其他算其他國家
+const JP_WORDS = /日本|沖繩|沖縄|東京|大阪|京都|名古屋|北海道|福岡|札幌|神戸|横浜|橫濱|那覇|富士山|仙台/;
+function countryOf(r) {
+  if (r.country) return r.country;
+  if (r.region !== 'overseas') return 'tw';
+  return JP_WORDS.test([r.city, r.venue, r.name].join(' ')) || findPref(r.city, r.venue).city ? 'jp' : 'other';
+}
+
 // ---------------- 種類、距離 ----------------
-// App 的 sportType；順序有關係：「越野馬拉松」是越野、「泳渡…路跑」看網站給的類型
+// App 的 sportType；順序有關係：「越野馬拉松」是越野、「垂直馬拉松」是體能挑戰、「泳渡…路跑」看網站給的類型。
+// v4.18.0：體能挑戰（障礙賽、HYROX、垂直馬拉松）排最前面；日文的寫法（JTB、MSPO）；「超鐵」「小鐵人」「鐵人賽」是三鐵
 const TYPE_RULES = [
-  ['triathlon', /鐵人三項|三鐵|triathlon|ironman|\b226\b|\b113\b|51\.5/i],
-  ['duathlon', /鐵人兩項|鐵人二項|二鐵|duathlon/i],
-  ['cycling', /自行車|單車|騎行|陪騎|公路車|登山車|自由車|gravel|cycling|bicycle|\bbike\b|\bmtb\b/i],
-  ['swimming', /游泳|泳渡|公開水域|open\s*water|\bswim/i],
-  ['trail_running', /越野|山徑|trail|古道|天梯/i],
-  ['ultra_marathon', /超馬|超級馬拉松|ultra/i],
-  ['obstacle_race', /障礙賽|obstacle|spartan/i],
-  ['other', /健走|健行|步道|登山|walk|hiking/i],
-  ['road_running', /馬拉松|路跑|夜跑|慢跑|跑|run|marathon|\d{3,5}\s*公尺/i],   // 「5000公尺挑戰賽」也是跑步
+  ['obstacle_race', /障礙賽|obstacle|spartan|斯巴達|hyrox|\bdeka\b|垂直馬拉松|登高賽|爬樓梯|tough\s*mudder|スパルタン|オブスタクル|障害物/i],
+  ['triathlon', /鐵人三項|三鐵|超鐵|超級鐵人|小鐵人|triathlon|ironman|\b226\b|\b113\b|51\.5|70\.3|トライアスロン/i],
+  ['duathlon', /鐵人兩項|鐵人二項|二鐵|duathlon|aquathlon|デュアスロン|アクアスロン|バイク\s*[＆&]\s*ラン|swim\s*[＆&]\s*run|スイム\s*[＆&]\s*ラン/i],   // 「SWIM & RUN」是游泳＋跑步的二項
+  ['triathlon', /鐵人/],   // 「鐵人賽」沒寫幾項的算三鐵（二鐵上面先認了）
+  ['cycling', /自行車|單車|騎行|陪騎|公路車|登山車|自由車|gravel|cycling|bicycle|\bbike\b|\bmtb\b|サイクリング|ヒルクライム|エンデューロ|グランフォンド|自転車|ライド/i],
+  ['swimming', /游泳|泳渡|公開水域|open\s*water|\bswim|オープンウォーター|スイム|遠泳|水泳/i],
+  /* 健走、登山算其他，而且要排在越野前面：「古道健行」是爬山不是越野跑；
+     但名稱裡也有跑步的（「路跑X健走大賽」「慢跑健走嘉年華」「古道越野」）照跑步算 */
+  ['other', /^(?!.*(?:跑|馬拉松|越野|run|marathon|マラソン|トレラン)).*(?:健走|健行|步道|登山|walk|hiking|ウォーク|ウォーキング|ハイキング)/i],
+  ['trail_running', /越野|山徑|trail|古道|天梯|動感亞洲|action\s*asia|トレイル|トレラン/i],   // 動感亞洲辦的都是越野賽
+  ['ultra_marathon', /超馬|超級馬拉松|ultra|ウルトラ/i],
+  ['road_running', /馬拉松|路跑|夜跑|慢跑|跑|run|marathon|\d{3,5}\s*公尺|マラソン|ラン|駅伝|ジョギング/i],   // 「5000公尺挑戰賽」也是跑步
 ];
+const WALK_RE = TYPE_RULES.find(([t]) => t === 'other')[1];
 const SITE_TYPE = { 路跑: 'road_running', 馬拉松: 'road_running', 超級馬拉松: 'ultra_marathon', 越野: 'trail_running', 越野跑: 'trail_running',
   自行車: 'cycling', 單車: 'cycling', 健行: 'other', 健走: 'other', 鐵人三項: 'triathlon', 鐵人兩項: 'duathlon', 游泳: 'swimming' };
-function detectType(name, siteType) {
+function detectType(name, siteType, cats) {
   if (siteType && SITE_TYPE[siteType.trim()]) return SITE_TYPE[siteType.trim()];
   for (const [t, re] of TYPE_RULES) if (re.test(name || '')) return t;
+  // 名稱看不出來、組別寫成「1.5K+40K+10K」：三段是三鐵、兩段是二鐵（v4.18.0，跑者廣場的鐵人賽常常這樣）
+  const legs = Math.max(0, ...(cats || []).map(c => (String(c).match(/[+＋]/g) || []).length + 1));
+  if (legs >= 3) return 'triathlon';
+  if (legs === 2) return 'duathlon';
   return 'other';
 }
-// 不是比賽的活動（講座、訓練營、志工、試乘…）不放進清單
-const NOT_RACE = /講座|訓練營|志工|招募|試乘|籃球|說明會|課程|研習|座談|工作坊|講習/;
+// 不是比賽的活動（講座、訓練營、志工、試乘…）不放進清單；
+// JTB 上的「ストライダー」是 2～5 歲幼兒的滑步車賽，一個月好幾場，會把日本的單車塞滿（v4.18.0）
+const NOT_RACE = /講座|訓練營|志工|招募|試乘|籃球|說明會|課程|研習|座談|工作坊|講習|分享會|ボランティア|講習会|説明会|セミナー|ストライダー|STRIDER/i;
 // 賽事頁的地點欄常常只寫「詳見簡章」「詳細內容請洽內文」：這種不算地點
 const NOT_VENUE = /簡章|內文|請洽|洽詢|詳見|待公[布告]|另行公告|未定/;
 /* 組別文字裡的距離（公里）：42.195K、21KM半馬組、45公里超馬組、5.K（網站打錯）、約12.5KM、5000公尺；
@@ -144,18 +198,33 @@ const NOT_VENUE = /簡章|內文|請洽|洽詢|詳見|待公[布告]|另行公�
 function parseDistances(texts) {
   const out = [];
   for (const raw of texts || []) {
-    const s = String(raw || '');
+    let s = String(raw || '');
     let found = false;
+    // 鐵人的「1.5K+40K+10K」是一組三段，加起來 51.5K 才是這一組的距離（v4.18.0）
+    s = s.replace(/\d+(?:\.\d+)?\s*(?:k(?:m)?|公里)?(?:\s*[+＋]\s*\d+(?:\.\d+)?\s*(?:k(?:m)?|公里)?)+/gi, chain => {
+      out.push((chain.match(/\d+(?:\.\d+)?/g) || []).reduce((a, b) => a + +b, 0)); found = true; return ' ';
+    });
+    for (const m of s.matchAll(/(\d+(?:\.\d+)?)\s*(?:英里|miles?)(?![a-z])/gi)) { out.push(+m[1] * 1.609344); found = true; }   // 超馬的 100 英里
     for (const m of s.matchAll(/(\d+(?:\.\d+)?)\s*\.?\s*(?:k(?:m)?|公里)(?![a-z])/gi)) { out.push(+m[1]); found = true; }
     for (const m of s.matchAll(/(\d{3,5})\s*(?:公尺|m)(?![a-z])/gi)) { out.push(+m[1] / 1000); found = true; }
     if (!found) {
-      if (/全馬|全程馬拉松|全程組/.test(s)) out.push(42.195);
-      if (/半馬|半程馬拉松|半程組/.test(s)) out.push(21.0975);
+      if (/全馬|全程馬拉松|全程組|フルマラソン|^フル$/.test(s)) out.push(42.195);
+      if (/半馬|半程馬拉松|半程組|ハーフマラソン|^ハーフ$/.test(s)) out.push(21.0975);
     }
   }
   return [...new Set(out.filter(x => x >= 0.5 && x <= 1000).map(x => Math.round(x * 1000) / 1000))].sort((a, b) => b - a);
 }
 const cleanName = s => String(s || '').replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim();
+// 一格裡用 <br> 分開的每一行（超馬協會的表格一格塞了系列名、標語、名稱好幾行）
+function linesOf(el) {
+  if (!el) return [];
+  const c = el.cloneNode(true);
+  for (const br of [...c.querySelectorAll('br')]) br.parentNode.replaceChild(el.ownerDocument.createTextNode('\n'), br);
+  return String(c.textContent || '').replace(/\u00a0/g, ' ').split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+// 網站沒有編號的（跑者廣場、超馬協會）：用日期＋名稱算一個短碼，名稱和日期不變就一樣
+function h32(s) { let h = 0x811c9dc5; for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(36); }
+const REG_HOSTS = /bao-ming\.com|lohasnet\.tw|sportaiwan\.com|irunner\.biji\.co|joinnow\.com\.tw|ctrun\.com\.tw|eventpal|focusline|beclass\.com|accupass|kktix|ironman\.com|actionasiaevents|ezsignup|soonnet/i;
 const CANCELLED = /[(（]\s*(停賽|停辦|取消|延期)\s*[)）]/;
 
 // ---------------- 運動筆記（irunner.biji.co/list） ----------------
@@ -354,6 +423,286 @@ function sportsnetYear(doc) {
   return m ? +m[1] : null;
 }
 
+// ---------------- 跑者廣場（taipeimarathon.org.tw/contest.aspx「全國賽會」） ----------------
+/* 一頁的表格 #GridView1，從這個月列到明年 5 月左右，一列一場：td[0] 每個月第一列有「10月」、td[1] 名稱（連到各報名網站：跑寶島、樂活、
+   運動筆記…）、td[3]「10/03 六 05:30」、td[4] 地點、td[5] 每個組別一顆按鈕（「42.195K」「1.5K+40K+10K」）、td[6] 承辦單位、
+   td[7] 報名日期「8月14日 ~ 11月21日」「~ 1月29日」「已截止」。日期沒有年份：從今年開始，月份變小就是跨年了。
+   我們只讀這一頁，不碰它連過去的網站（跑寶島的條款禁止機器人，連結照樣可以給使用者點）。 */
+function parseRunPlaza(doc, today) {
+  const out = [];
+  const t = doc.querySelector('#GridView1');
+  if (!t) return out;
+  const tm = +today.slice(5, 7);
+  let y = +today.slice(0, 4), prevM = null;
+  for (const tr of t.querySelectorAll('tr')) {
+    const c = [...tr.querySelectorAll('td')];
+    if (c.length < 8) continue;
+    const dm = txt(c[3]).match(/(\d{1,2})\s*\/\s*(\d{1,2})(?:\s*[-~～]\s*(?:(\d{1,2})\s*\/\s*)?(\d{1,2}))?/);
+    if (!dm) continue;
+    const m = +dm[1];
+    if (prevM === null) { if (m < tm - 6) y++; } else if (m < prevM) y++;
+    prevM = m;
+    // 有些名稱前後加了 * 當裝飾（「*2026 新竹市…快樂路跑*」），留著會跟別的網站對不上
+    const name = cleanName(txt(c[1])).replace(/^[*＊\s]+|[*＊\s]+$/g, '');
+    if (!name || NOT_RACE.test(name)) continue;
+    const date = ymd(y, dm[1], dm[2]);
+    if (!date) continue;
+    let dateEnd = dm[4] ? ymd(y, dm[3] || dm[1], dm[4]) : null;
+    if (dateEnd && dateEnd < date) dateEnd = ymd(y + 1, dm[3] || dm[1], dm[4]);
+    const cats = [...c[5].querySelectorAll('button')].map(txt).filter(Boolean);
+    const regText = txt(c[7]);
+    let regOpen = null, regClose = null, siteState = null;
+    const rr = regText.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日\s*[~～]\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+    if (rr) {
+      regClose = yearBefore(rr[3], rr[4], date);
+      regOpen = regClose ? yearBefore(rr[1], rr[2], regClose) : null;
+    } else {
+      const rc = regText.match(/[~～]\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+      if (rc) regClose = yearBefore(rc[1], rc[2], date);
+      else {
+        // 「6月22日 ~」：只寫了開始報名、還沒公布截止日（臺北馬拉松這種），開始日要在比賽之前
+        const ro = regText.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日\s*[~～]\s*(?:$|[(（])/);
+        if (ro) regOpen = yearBefore(ro[1], ro[2], date);
+      }
+    }
+    if (/已截止|截止/.test(regText)) siteState = 'closed';
+    if (/額滿/.test(regText)) siteState = 'full';
+    if (/停辦|延期|取消|停賽/.test(regText) || CANCELLED.test(name)) siteState = 'cancelled';
+    const a = c[1].querySelector('a');
+    const href = a ? String(a.getAttribute('href') || '').trim() : '';
+    const url = /^https?:\/\//i.test(href) ? href : '';
+    const venue = txt(c[4]);
+    const loc = findCity(venue, name);
+    /* 跑者廣場是跑步的賽事行事曆：名稱看不出項目（「六堆客庄巡禮走相逐」、被截斷的「…公益路」）但有公里數的，當路跑，超過全馬當超馬；
+       名稱是健走、登山的照樣算其他。猜錯的機會比放在「其他」裡找不到小。 */
+    const distances = parseDistances(cats);
+    let type = detectType(name, null, cats);
+    if (type === 'other' && distances.length && !WALK_RE.test(name)) type = Math.max(...distances) > 42.2 ? 'ultra_marathon' : 'road_running';
+    out.push({ source: 'runplaza', sid: date + '-' + h32(name), name, date, dateEnd, month: date.slice(0, 7), city: loc.city, region: loc.region, venue,
+      type, distances, cats, regOpen, regClose, siteState,
+      url, urlKind: !url || REG_HOSTS.test(url) ? 'register' : 'site', detailUrl: null });
+  }
+  return out;
+}
+
+// ---------------- 中華民國超級馬拉松運動協會（ctau.org.tw 國內賽事行事曆） ----------------
+/* 同一頁好幾張表：最上面一張是今年下半年到明年，下面每張前面一段「2026年」「2025年」。一列一場，四格：活動名稱、日期、地點、里程／限時。
+   名稱那一格是編輯器打的：「2026 CTAU超馬系列賽」「第二站」「跑馬就是這麼簡單（標語）」「2026第14屆 開廣飛跑盃 超級馬拉松」好幾行，
+   名稱從第一個寫了年份的那一行開始；「主辦單位」之後是主辦和備註。日期格「10/10 (六) 09/09前 報名去」：截止日、報名連結都在這格。
+   新聞連結的網址也有日期，但有幾列連到舊的新聞（2027 臺北超馬連到 2025 年的），所以不用。
+   研習、志工、裁判講習、「組隊參加」的國外錦標賽不是一般人能報的比賽，不收。 */
+const CTAU_NOISE = /CTAU\s*超馬系列賽|^第[一二三四五六七八九十\d]+站$|^(?:終極|最終|越野)站$|國家隊|選拔賽|錦標賽|^World|Championships|^Asia|Oceania|^(?:20\d\d\s*)?IAU\b/i;   // 「2027 IAU 24H」是選拔賽的附註
+function ctauName(lines) {
+  const ls = []; let seriesYear = '';
+  for (const raw of lines) {
+    const l = raw.replace(/\s+/g, ' ').trim();
+    if (/^主辦單位/.test(l)) break;
+    if (CTAU_NOISE.test(l)) { const y = l.match(/20\d\d/); if (y && !seriesYear) seriesYear = y[0]; continue; }
+    ls.push(l);
+  }
+  const k = ls.findIndex(l => /20\d\d/.test(l));
+  let name = (k >= 0 ? ls.slice(k) : ls).join(' ').replace(/\s*\d版$/, '').replace(/[(（]認證[)）]/g, '').replace(/\s+/g, ' ').trim();
+  if (name && !/20\d\d/.test(name) && seriesYear) name = seriesYear + ' ' + name;
+  return name;
+}
+function ctauVenue(lines) {
+  const token = /\d+(?:\.\d+)?\s*(?:K|英里|公里|H)\b|\d{1,2}:\d{2}|起跑|終點|限時/i;
+  const keep = lines.filter(l => !token.test(l)).slice(0, 3).join(' ');
+  if (keep) return keep;
+  return (lines[0] || '').replace(/\d+(?:\.\d+)?\s*(?:K|英里|公里)/gi, '').replace(/\s+/g, ' ').trim();
+}
+function parseCtau(doc, today) {
+  const out = [];
+  const tm = +today.slice(5, 7);
+  /* 年份標題：同一頁下面還有 2011～2025 年的舊行事曆，標題是 <h1>2024年</h1>，而且很多表格跟標題不是兄弟（包在好幾層 div 裡）。
+     所以照網頁順序往下看：遇到只寫「20xx年」的元素就記下來，表格用它前面最近的那一個。
+     最上面那張沒有標題的是「今年下半年到明年」，月份往回跳就是跨年；標題是今年以前的整張不看（不然舊賽事會被當成明年的）。 */
+  const yearOf = new Map(); let cur = null;
+  for (const el of doc.querySelectorAll('h1,h2,h3,h4,h5,h6,p,div,strong,b,span,table')) {
+    if (el.tagName === 'TABLE') { if (!yearOf.has(el)) yearOf.set(el, cur); continue; }
+    if (el.querySelector('table')) continue;
+    const m = txt(el).match(/^(20\d\d)\s*年$/);
+    if (m) cur = +m[1];
+  }
+  for (const table of doc.querySelectorAll('table')) {
+    if (!/活動名稱/.test(txt(table.querySelector('tr')))) continue;
+    let y = yearOf.has(table) ? yearOf.get(table) : null;
+    if (y !== null && y < +today.slice(0, 4)) continue;
+    const fixedYear = y !== null;
+    if (!fixedYear) y = +today.slice(0, 4);
+    let prevM = null;
+    for (const tr of table.querySelectorAll('tr')) {
+      const c = [...tr.querySelectorAll('td')];
+      if (c.length < 4 || /活動名稱/.test(txt(c[0]))) continue;
+      const lines = linesOf(c[0]);
+      const dtext = linesOf(c[1]).join(' ');
+      if (NOT_RACE.test(lines.join(' ')) || /參賽|組隊參加/.test(lines.join(' ') + ' ' + dtext)) continue;
+      // 年份有時跟日期寫在一起：「2027 01/23」「2019.01/13」「2017-1/14」
+      const dm = dtext.match(/(?:(20\d\d)\s*[.\-/]?\s*)?(\d{1,2})\s*\/\s*(\d{1,2})(?:\s*[-~～]\s*(?:(\d{1,2})\s*\/\s*)?(\d{1,2}))?/);
+      if (!dm) continue;
+      const m = +dm[2];
+      if (dm[1]) y = +dm[1];
+      else if (!fixedYear) { if (prevM !== null && m < prevM) y++; else if (prevM === null && m < tm - 6) y++; }
+      prevM = m;
+      const date = ymd(y, dm[2], dm[3]);
+      if (!date) continue;
+      let dateEnd = dm[5] ? ymd(y, dm[4] || dm[2], dm[5]) : null;
+      if (dateEnd && dateEnd < date) dateEnd = ymd(y + 1, dm[4] || dm[2], dm[5]);
+      const name = ctauName(lines);
+      if (!name) continue;
+      const dl = dtext.match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*前/);
+      const regClose = dl ? yearBefore(dl[1], dl[2], date) : null;
+      const reg = [...c[1].querySelectorAll('a')].find(a => /報名/.test(txt(a)));
+      // 沒有報名連結的不用新聞連結：有幾列連到舊的新聞（2027 臺北超馬連到 2025 年的），App 會改給「看超馬協會」的行事曆
+      const href = reg ? reg.getAttribute('href') : '';
+      const url = /^https?:\/\//i.test(String(href || '')) ? String(href).trim() : '';
+      const catLines = linesOf(c[3]).filter(l => /\d/.test(l)).slice(0, 8);
+      const distances = parseDistances(catLines);
+      let type = detectType(name);
+      if ((type === 'road_running' || type === 'other') && distances.some(d => d > 42.2)) type = 'ultra_marathon';
+      const venue = ctauVenue(linesOf(c[2]));
+      const loc = findCity(venue, name);
+      out.push({ source: 'ctau', sid: date + '-' + h32(name), name, date, dateEnd, month: date.slice(0, 7), city: loc.city, region: loc.region, venue,
+        type, distances, cats: catLines.slice(0, 6), regOpen: null, regClose, siteState: reg && regClose ? 'open' : null,
+        url, urlKind: reg ? 'register' : 'site', detailUrl: null });
+    }
+  }
+  return out;
+}
+
+// ---------------- JTB Sports Station（jtbsports.jp，日本） ----------------
+/* 清單 list.php 一頁 20 場（li > a[href^=/detail/]），翻頁是 &pageno=2（頁數在 select[name=pageno] 的 data-maxpage）。
+   每場：.title 名稱、「開催日：2027年01月16日(土) - 2027年01月16日(土)」「開催場所：…」、[data-event-type] 種類
+   （running、trail_running、cycling、triathlon、swimming、walking、other；golf、tour、winter_sports 不收）。
+   報名期間在賽事頁 /detail/xxxx：「受付期間」裡每個組別一列「2026年08月01日(土) 00時00分～2026年10月18日(日) 23時59分」。 */
+const JTB_TYPE = { running: 'road_running', trail_running: 'trail_running', cycling: 'cycling', triathlon: 'triathlon', swimming: 'swimming', walking: 'other', other: 'other' };
+const JP_DATE = /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/g;
+const jpDates = s => [...String(s || '').matchAll(JP_DATE)].map(m => ymd(m[1], m[2], m[3])).filter(Boolean);
+// 日文名稱裡寫了「トレイル」「ウルトラ」「デュアスロン」的，比網站分的大類準
+function jpType(name, fallback) {
+  for (const [t, re] of TYPE_RULES) {
+    if (t === 'road_running' || t === 'other') continue;
+    if (re.test(name || '')) return t;
+  }
+  return fallback;
+}
+function cleanJpVenue(s) {
+  let v = String(s || '').replace(/\s*[(（]?〒[\d-]+/, ' ').replace(/TEL[\d-]+/gi, '').replace(/\s+/g, ' ').trim();
+  if (/[)）]$/.test(v) && !/[(（]/.test(v)) v = v.slice(0, -1).trim();   // 郵遞區號那段的括號拿掉了，剩下右括號
+  return v.slice(0, 80);
+}
+const JP_ABROAD = /共和国|海外|ハワイ|ホノルル|グアム|サイパン|パラオ|台湾|台北|韓国|ソウル|タイ|バンコク|ベトナム|シンガポール|マレーシア|オーストラリア|アメリカ|ニューヨーク|ボストン|シカゴ|ロンドン|パリ|ベルリン|フランス|イタリア|ドイツ|スペイン/;
+function parseJtbList(doc, base = 'https://jtbsports.jp/') {
+  const out = [];
+  for (const li of doc.querySelectorAll('li')) {
+    const a = [...li.children].find(x => x.tagName === 'A' && /^\/detail\//.test(String(x.getAttribute('href') || '')));
+    if (!a) continue;
+    const name = cleanName(txt(li.querySelector('.title')) || txt(a));
+    if (!name || NOT_RACE.test(name)) continue;
+    const types = [...li.querySelectorAll('[data-event-type]')].map(x => String(x.getAttribute('data-event-type')));
+    const t0 = types.find(t => JTB_TYPE[t]);
+    if (!t0) continue;                                     // 高爾夫、旅遊、冬季運動
+    const box = li.querySelector('.c-eventlist__contents__date');
+    const ds = jpDates(txt(box));
+    const date = ds[0] || null;
+    const dateEnd = ds[1] && ds[1] !== date ? ds[1] : null;
+    const place = (txt(box).match(/開催場所\s*[:：]\s*(.+)$/) || [])[1] || '';
+    const pref = findPref(place, name);
+    const href = new URL(a.getAttribute('href'), base).href;
+    // JTB 也賣海外的（「パラオ共和国コロール島」）：認不出都道府縣、又寫了外國地名的算其他國家
+    const country = !pref.city && JP_ABROAD.test(place + ' ' + name) ? 'other' : 'jp';
+    out.push({ source: 'jtb', sid: href.split('/').filter(Boolean).pop(), name, date, dateEnd, month: date ? date.slice(0, 7) : null,
+      city: pref.city, region: pref.region, country, venue: cleanJpVenue(place), type: jpType(name, JTB_TYPE[t0]),
+      distances: parseDistances([name]), cats: [], regOpen: null, regClose: null, siteState: null, url: href, urlKind: 'register', detailUrl: href });
+  }
+  return out;
+}
+function jtbMaxPage(doc) {
+  const s = doc.querySelector('select[name="pageno"]');
+  return s ? Math.max(1, Math.min(10, +s.getAttribute('data-maxpage') || 1)) : 1;
+}
+function parseJtbDetail(doc) {
+  const out = {};
+  const cell = label => { for (const th of doc.querySelectorAll('th')) if (txt(th) === label && th.nextElementSibling) return th.nextElementSibling; return null; };
+  const place = txt(cell('開催地'));
+  if (place) out.venue = cleanJpVenue(place);
+  const reg = cell('受付期間');
+  if (reg) {
+    const rows = [...reg.querySelectorAll('td')].map(td => jpDates(txt(td))).filter(d => d.length >= 2);
+    if (!rows.length) { const d = jpDates(txt(reg)); if (d.length >= 2) rows.push(d); }
+    if (rows.length) {
+      out.regOpen = rows.map(d => d[0]).sort()[0];
+      out.regClose = rows.map(d => d[1]).sort().pop();
+    }
+    /* 組別：每一列標題裡的距離（「01【フルマラソン】男子30歳未満」「【10kmマラソン】」「A:約31km【大人】」「【一次】個人:500m」）。
+       【】裡常常是「一次」「2班」「大人」這種梯次、年齡，不是組別，所以只認距離；㎞、全形數字先換成半形 */
+    const tok = [];
+    for (const th of reg.querySelectorAll('th')) {
+      const s = txt(th).normalize('NFKC');
+      for (const m of s.matchAll(/(?:約)?\d+(?:\.\d+)?\s*km(?![a-z])|\d{3,5}\s*m(?![a-z])|フルマラソン|ハーフマラソン/gi)) tok.push(m[0].replace(/\s+/g, '').replace(/^約/, '').toLowerCase());
+    }
+    const cats = [...new Set(tok)];
+    if (cats.length) out.cats = cats.slice(0, 8);
+  }
+  const d = jpDates(txt(cell('開催日')));
+  if (d[0]) out.date = d[0];
+  return out;
+}
+
+// ---------------- MSPO ENTRY（mspo.jp，日本） ----------------
+/* 五個種類的清單頁 /athletic/triathlon、running、swimming、cycling、others，預設列這個月以後的；一頁 20 場、翻頁 ?ss=1&paged=2&athletic=…。
+   表格一列一場：td.date「2026/10/03 (土)」、td.syumoku 種目（可能好幾個）、td.title a（/events/67414）、td.kaisaiti 都道府縣、
+   td.entry「受付終了」或 a.entry_button「エントリー」。報名期間在大會頁的「申込受付期間」。同一場會出現在好幾個種類的清單裡，用編號去重複。 */
+const MSPO_CATS = ['triathlon', 'running', 'swimming', 'cycling', 'others'];
+const MSPO_TYPE = [[/トライアスロン/, 'triathlon'], [/デュアスロン|アクアスロン/, 'duathlon'], [/トレイル/, 'trail_running'], [/ウルトラ/, 'ultra_marathon'],
+  [/オープンウォーター|スイム|スイミング|水泳/, 'swimming'], [/サイクリング|ロードレース|ヒルクライム|エンデューロ|自転車/, 'cycling'],
+  [/マラソン|ランニング|駅伝|リレー|耐久/, 'road_running']];
+function parseMspoList(doc) {
+  const out = [];
+  for (const tr of doc.querySelectorAll('tr')) {
+    const td = tr.querySelector('td.date'), a = tr.querySelector('td.title a');
+    if (!td || !a) continue;
+    const name = cleanName(txt(a));
+    if (!name || NOT_RACE.test(name)) continue;
+    const dm = txt(td).match(/(\d{4})\s*\/\s*(\d{1,2})\s*\/\s*(\d{1,2})/);
+    const date = dm ? ymd(dm[1], dm[2], dm[3]) : null;
+    const types = [...tr.querySelectorAll('td.syumoku a')].map(txt).filter(Boolean);
+    const prefText = txt(tr.querySelector('td.kaisaiti'));
+    const overseas = /海外/.test(prefText);
+    const pref = overseas ? { city: '', region: '' } : findPref(prefText, name);
+    const entry = tr.querySelector('td.entry a');
+    const et = txt(entry), cls = entry ? String(entry.getAttribute('class') || '') : '';
+    let siteState = null;
+    if (/受付終了|締切|終了/.test(et)) siteState = 'closed';
+    else if (/定員/.test(et)) siteState = 'full';
+    else if (/entry_button/.test(cls) || /エントリー/.test(et)) siteState = 'open';
+    const id = (String(a.getAttribute('href') || '').match(/events\/(\d+)/) || [])[1];
+    if (!id) continue;
+    let fb = 'other';
+    for (const [re, t] of MSPO_TYPE) if (types.some(x => re.test(x))) { fb = t; break; }
+    const page = 'https://www.mspo.jp/events/' + id;
+    out.push({ source: 'mspo', sid: id, name, date, dateEnd: null, month: date ? date.slice(0, 7) : null, city: pref.city, region: pref.region,
+      country: overseas ? 'other' : 'jp', venue: '', type: jpType(name, fb), distances: parseDistances([name]), cats: [], regOpen: null, regClose: null,
+      siteState, url: page, urlKind: 'register', detailUrl: page });
+  }
+  return out;
+}
+function mspoMaxPage(doc) {
+  let n = 1;
+  for (const a of doc.querySelectorAll('a[href*="paged="]')) { const m = String(a.getAttribute('href')).match(/paged=(\d+)/); if (m && /athletic=/.test(a.getAttribute('href'))) n = Math.max(n, +m[1]); }
+  return Math.min(5, n);
+}
+function parseMspoDetail(doc) {
+  const out = {};
+  for (const th of doc.querySelectorAll('th')) {
+    if (txt(th) !== '申込受付期間' || !th.nextElementSibling) continue;
+    const d = jpDates(txt(th.nextElementSibling));
+    if (d[0]) out.regOpen = d[0];
+    if (d[1]) out.regClose = d[1];
+  }
+  return out;
+}
+
 // ---------------- 整理：補上賽事頁的資料、合併、排序 ----------------
 function applyDetail(rec, d) {
   if (!d) return rec;
@@ -363,7 +712,8 @@ function applyDetail(rec, d) {
   /* 清單每天都是新的，賽事頁可能是幾天前存的：清單上已經有的報名日期以清單為準（延長報名時清單會先變）。
      只有月日相同的時候才換成賽事頁的（賽事頁有寫年份，清單的年份是推的）。 */
   for (const k of ['regOpen', 'regClose']) if (d[k] && (!r[k] || r[k].slice(5) === d[k].slice(5))) r[k] = d[k];
-  if (!r.city && d.venue && !NOT_VENUE.test(d.venue)) { const loc = findCity(d.venue); if (loc.city) { r.city = loc.city; r.region = loc.region; } }
+  if (!r.city && d.venue && !NOT_VENUE.test(d.venue)) { const loc = r.country === 'jp' ? findPref(d.venue) : findCity(d.venue); if (loc.city) { r.city = loc.city; r.region = loc.region; } }
+  if (Array.isArray(d.cats) && d.cats.length && !(r.cats || []).length) { r.cats = d.cats; const ds = parseDistances(d.cats); if (ds.length) r.distances = ds; }
   return r;
 }
 // 名稱比對用的關鍵字：拿掉年份、屆數、標點、空白，英文小寫
@@ -372,29 +722,70 @@ function nameKey(s) {
     .replace(/[\s\p{P}\p{S}]/gu, '');
 }
 function bigrams(s) { const a = []; for (let i = 0; i < s.length - 1; i++) a.push(s.slice(i, i + 2)); return a; }
+/* 名稱只有一段一樣的（v4.18.0，跑者廣場加進來以後看到的）：「國聚慵懶跑者聚樂部」和「慵懶跑者聚樂部 COZY RUNNER CLUB」、
+   「南投馬11th-草鞋墩馬拉松」和「草鞋墩馬拉松 前進鳥嘴潭、奔向九九峰」。
+   先把大家都有的字（國際、半程、馬拉松、縣市名…）換成分隔記號，剩下的還有連續 3 個字一樣才算；
+   不然同一天的「○○國際半程馬拉松」「新北市○○路跑」都會被當成同一場。兩邊寫了不同縣市（「新竹場」「台南場」）的一定不是同一場。 */
+const PLACE_WORDS = ['臺北', '新北', '基隆', '桃園', '新竹', '宜蘭', '苗栗', '臺中', '彰化', '南投', '雲林', '嘉義', '臺南', '高雄', '屏東', '花蓮', '臺東', '澎湖', '金門', '連江', '馬祖'];
+const GENERIC_WORDS = new RegExp('(?:' + PLACE_WORDS.join('|') + ')[市縣]?|國際|全國|半程|全程|馬拉松|路跑|超級|公益|嘉年華|接力|親子|健走|越野|鐵人|三項|兩項|自行車|單車|挑戰|城市|[盃杯賽場市縣]|run|marathon|race|trail|マラソン|大会|ハーフ|リレー|駅伝', 'g');
+function longestCommon(a, b) {
+  let best = 0; const prev = new Array(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    let diag = 0;
+    for (let j = 1; j <= b.length; j++) {
+      const keep = prev[j];
+      prev[j] = a[i - 1] === b[j - 1] && a[i - 1] !== '|' ? diag + 1 : 0;
+      if (prev[j] > best) best = prev[j];
+      diag = keep;
+    }
+  }
+  return best;
+}
+function placesIn(k) { return PLACE_WORDS.filter(w => k.includes(w)); }
 function sameRace(a, b) {
   if (!a.date || !b.date) return false;
   const near = a.date === b.date || (a.dateEnd && b.date >= a.date && b.date <= a.dateEnd) || (b.dateEnd && a.date >= b.date && a.date <= b.dateEnd);
   if (!near) return false;
+  if (countryOf(a) !== countryOf(b)) return false;      // 臺灣的和日本的不會是同一場（同一天、名稱都有 RUN 也一樣）
   const x = nameKey(a.name), y = nameKey(b.name);
   if (!x || !y) return false;
+  const px = placesIn(x), py = placesIn(y);
+  if (px.length && py.length && !px.some(w => py.includes(w))) return false;
   if (x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x))) return true;
-  const bx = bigrams(x), by = new Set(bigrams(y));
+  /* 其他的比法都用拿掉通用字以後的名稱：「臺南古都國際半程馬拉松」「高雄港都國際半程馬拉松」整段比有七成像，其實只差在「古都」「港都」。
+     ① 一邊是另一邊的一部分（「臺中都會…」和「臺中 MIZUNO 都會…」剩「都會」和「mizuno都會」）
+     ② 剩下的字有六成像　③ 有連續 3 個漢字一樣（片假名、英文不算：「チャレンジ」「city」太常見） */
+  const gx = x.replace(GENERIC_WORDS, '|'), gy = y.replace(GENERIC_WORDS, '|');
+  const cx = gx.replace(/\|/g, ''), cy = gy.replace(/\|/g, '');
+  if (cx.length >= 2 && cy.length >= 2 && (cx.includes(cy) || cy.includes(cx))) return true;
+  const bx = bigrams(cx), by = new Set(bigrams(cy));
   const hit = bx.filter(g => by.has(g)).length;
-  return bx.length + by.size > 0 && (2 * hit) / (bx.length + by.size) >= 0.6;
+  if (bx.length && by.size && (2 * hit) / (bx.length + by.size) >= 0.6) return true;
+  const han = s => s.replace(/[^\p{Script=Han}]/gu, '|');
+  return longestCommon(han(gx), han(gy)) >= 3;
 }
-const RANK = { irunner: 1, ctrun: 1, joinnow: 1, sportsnet: 2 };   // 報名平台優先；路協只有賽事官網、沒有報名期間
+// 報名平台優先（有報名狀態）；路協、跑者廣場、超馬協會是行事曆，排後面、合併時補欄位和連結
+const RANK = { irunner: 1, ctrun: 1, joinnow: 1, jtb: 1, mspo: 1, sportsnet: 2, runplaza: 2, ctau: 2 };
+// 報名網址一樣就是同一場（跑者廣場、超馬協會連到運動筆記、一起報名的那一頁）：網址比對不分 http/https、www、結尾斜線
+const urlKey = u => String(u || '').trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/#.*$/, '').replace(/\/+$/, '');
 function mergeRaces(list) {
   const out = [];
   for (const r of [...list].sort((a, b) => (RANK[a.source] || 9) - (RANK[b.source] || 9))) {
     // 同一個網站上的兩頁不合併：常是同一場的不同組分開報名（例如 3K 已額滿、半馬已截止），各自的狀態不一樣
-    const hit = out.find(x => x.source !== r.source && sameRace(x, r));
+    const hit = out.find(x => x.source !== r.source && (sameRace(x, r) || (r.url && urlKey(x.url) === urlKey(r.url) && (!x.date || !r.date || Math.abs(Date.parse(x.date) - Date.parse(r.date)) <= 864e5))));
     if (!hit) { out.push(Object.assign({}, r, { also: [] })); continue; }
     if (r.url) hit.also.push({ source: r.source, url: r.url, urlKind: r.urlKind });
-    for (const k of ['city', 'region', 'venue', 'regOpen', 'regClose', 'dateEnd']) if (!hit[k] && r[k]) hit[k] = r[k];
+    // 報名網站只寫了月份（「2027富邦人壽高雄馬拉松」）、行事曆有確切日期：用行事曆的
+    if (!hit.date && r.date) { hit.date = r.date; hit.month = r.month; }
+    for (const k of ['city', 'region', 'venue', 'regOpen', 'regClose', 'dateEnd', 'country']) if (!hit[k] && r[k]) hit[k] = r[k];
     if (!hit.distances.length && r.distances.length) { hit.distances = r.distances; hit.cats = r.cats; }
   }
   return out;
+}
+// 台灣的網站列在「海外」的日本賽事（沖繩馬拉松）：地區換成日本的地區，篩「九州・沖繩」也找得到
+function jpFix(r) {
+  if (r.region !== 'overseas' || countryOf(r) !== 'jp') return r.region;
+  return findPref(r.city, r.venue, r.name).region || '';
 }
 // 最後的清單：只留今天以後、一年多以內的；依日期排，沒有日期的排在那個月最後
 function buildRaces(records, today) {
@@ -408,7 +799,7 @@ function buildRaces(records, today) {
   const merged = mergeRaces(keep);
   merged.sort((a, b) => ((a.date || a.month + '-99') < (b.date || b.month + '-99') ? -1 : (a.date || a.month + '-99') > (b.date || b.month + '-99') ? 1 : a.name.localeCompare(b.name, 'zh-Hant')));
   return merged.map(r => ({
-    id: r.source + ':' + r.sid, name: r.name, date: r.date, dateEnd: r.dateEnd || null, month: r.month, city: r.city, region: r.region, venue: r.venue,
+    id: r.source + ':' + r.sid, name: r.name, date: r.date, dateEnd: r.dateEnd || null, month: r.month, country: countryOf(r), city: r.city, region: jpFix(r), venue: r.venue,
     type: r.type, distances: r.distances, cats: r.cats.slice(0, 8), regOpen: r.regOpen, regClose: r.regClose, siteState: r.siteState,
     url: r.url, urlKind: r.urlKind, source: r.source, also: r.also,
   }));
@@ -419,10 +810,15 @@ const SOURCES = {
   ctrun: { name: '全統運動報名網', home: 'https://www.ctrun.com.tw/' },
   joinnow: { name: '一起報名', home: 'https://www.joinnow.com.tw/index.php' },
   sportsnet: { name: '中華民國路跑協會', home: 'https://www.sportsnet.org.tw/schedule.php' },
+  runplaza: { name: '跑者廣場（全國賽會）', home: 'http://www.taipeimarathon.org.tw/contest.aspx' },
+  ctau: { name: '中華民國超級馬拉松運動協會', home: 'https://www.ctau.org.tw/%E8%B3%BD%E4%BA%8B%E8%88%87%E8%A8%93%E7%B7%B4/%E8%B3%BD%E4%BA%8B%E8%A1%8C%E4%BA%8B%E6%9B%86/%E5%9C%8B%E5%85%A7%E8%B3%BD%E4%BA%8B%E8%A1%8C%E4%BA%8B%E6%9B%86/' },
+  jtb: { name: 'JTBスポーツステーション', home: 'https://jtbsports.jp/list.php?orderby=3&accepting=0&keyword=' },
+  mspo: { name: 'MSPO ENTRY', home: 'https://www.mspo.jp/athletic/triathlon' },
 };
 
 export {
   ymd, addDays, yearBefore, yearFromToday, parseFullDate, parseRegRange, findCity, regionOf, detectType, parseDistances, nameKey, sameRace,
   parseIrunnerList, parseIrunnerDetail, parseCtrunHome, parseCtrunDetail, parseJoinnowIndex, parseJoinnowDetail, parseSportsnet, sportsnetYear,
-  applyDetail, mergeRaces, buildRaces, SOURCES, NOT_RACE,
+  parseRunPlaza, parseCtau, ctauName, parseJtbList, jtbMaxPage, parseJtbDetail, parseMspoList, mspoMaxPage, parseMspoDetail, MSPO_CATS,
+  findPref, jpRegionOf, countryOf, applyDetail, mergeRaces, buildRaces, SOURCES, NOT_RACE,
 };
