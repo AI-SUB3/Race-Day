@@ -143,9 +143,9 @@
     <span class="l10n" lang="en">Privacy Policy &amp; Terms of Use</span>
   </h1>
   <p class="updated">
-    <span class="l10n" lang="zh-Hant">最後更新：<time datetime="2026-10-09">2026 年 10 月 9 日</time></span>
-    <span class="l10n" lang="ja">最終更新：<time datetime="2026-10-09">2026年10月9日</time></span>
-    <span class="l10n" lang="en">Last updated: <time datetime="2026-10-09">October 9, 2026</time></span>
+    <span class="l10n" lang="zh-Hant">最後更新：<time datetime="2026-10-12">2026 年 10 月 12 日</time></span>
+    <span class="l10n" lang="ja">最終更新：<time datetime="2026-10-12">2026年10月12日</time></span>
+    <span class="l10n" lang="en">Last updated: <time datetime="2026-10-12">October 12, 2026</time></span>
   </p>
 
   <nav class="toc" aria-label="目次 / Contents">
@@ -194,7 +194,7 @@
 
       <h3>1.1 不登入時</h3>
       <p>你輸入或匯入的賽事、訓練、照片和設定，都只存在這台裝置的瀏覽器裡，不會傳給我們。清除瀏覽器的網站資料或換一台裝置，這些資料就不在了，請定期從「資料管理」匯出備份。</p>
-      <p class="note">不登入時，我們仍會統計功能使用次數（見下方「功能使用次數」）；開啟網站時，你的瀏覽器也會連到字型、地圖、天氣等第三方服務（見第 2 節）。</p>
+      <p class="note">不登入時，我們仍會統計功能使用次數和錯誤次數（見下方「功能使用次數」）；開啟網站時，你的瀏覽器也會連到放網站的 GitHub，以及字型、地圖、天氣等第三方服務（見第 2 節）。</p>
 
       <h3>1.2 我們蒐集的資料</h3>
       <ul>
@@ -202,7 +202,7 @@
         <li><strong>你的紀錄</strong>：登入後，你在本服務輸入或匯入的內容會同步到雲端，包括賽事的報名、行程（交通、住宿、同行者）、預算、裝備、補給、成績、心得、連結、GPS 軌跡和天氣資料；訓練紀錄；鞋款與補給品資料庫、裝備清單範本和徽章；「個人資訊」裡的心率區間和身體數據；「找賽事」的篩選設定（國家、運動別、報名狀態、地區、排序）；以及你加進賽事的照片。封面照片會先縮小到長邊 760 像素；「空間記憶迴廊」只保存照片的檔名、拍攝時間和照片裡內嵌的小縮圖，再用拍攝時間對到軌跡上的位置，原始照片不會上傳。</li>
         <li><strong>推播通知</strong>：開啟推播通知時，我們會儲存這台裝置的推播代碼（Firebase Cloud Messaging），用來寄送提醒。</li>
         <li><strong>公開連結</strong>：你建立公開連結時，我們會另外存一份那場賽事的部分內容：名稱、日期與起跑時間、運動種類、城市和國家、成績（完賽時間、是否 PB、名次）、距離和爬升、簡化過的 GPS 軌跡、平均心率、鞋款、吃了哪些補給、封面縮圖、相片縮圖（含拍攝時間和位置），以及分享用的圖片。任何拿到連結的人都能看到，不需要登入；社群網站產生連結預覽時也會讀取。你可以隨時「撤銷」，撤銷後這份內容會被刪除。</li>
-        <li><strong>功能使用次數</strong>：為了知道哪些功能有人用，我們會統計每個功能被使用的次數。這只是加總的數字，不含帳號、裝置或任何能認出你的資料；沒有登入的訪客也會被計入。</li>
+        <li><strong>功能使用次數</strong>：為了知道哪些功能有人用，我們會統計每個功能被使用的次數。這只是加總的數字，不含帳號、裝置或任何能認出你的資料；沒有登入的訪客也會被計入。App 出錯時，也會用同樣的方式記下錯誤的次數：只記版本、錯誤的種類和發生在程式的哪裡，不記錯誤訊息的內容和你輸入的資料。</li>
         <li><strong>意見回饋</strong>：按「意見回饋」時，表單會預先帶入 App 版本、裝置與瀏覽器類型，以及當下的畫面名稱；你在表單填寫的內容會透過 Google 表單送給我們。</li>
       </ul>
 
@@ -232,7 +232,7 @@
         <li><strong>公開連結</strong>：保存到你撤銷為止。</li>
         <li><strong>意見回饋</strong>：存放在 Google 表單的回覆中，用來處理你的意見和改善本服務。</li>
         <li>Firebase 依它自己的規則保存登入紀錄，例如登入時的 IP 位址會保留幾週。</li>
-        <li>功能使用次數是不含個人資料的加總數字，會持續保存。</li>
+        <li>功能使用次數和錯誤次數是不含個人資料的加總數字，會持續保存。</li>
       </ul>
 
       <h3>1.6 你的權利</h3>
@@ -262,7 +262,7 @@
 
       <h3>1.1 ログインしない場合</h3>
       <p>入力・取り込んだレース、トレーニング、写真、設定は、この端末のブラウザの中だけに保存され、私たちに送信されることはありません。ブラウザのサイトデータを消去したり別の端末を使ったりすると、これらのデータは利用できなくなります。「データ管理」から定期的にバックアップを書き出してください。</p>
-      <p class="note">ログインしていない場合でも、機能の利用回数は集計されます（下記「機能の利用回数」）。また、サイトを開くとブラウザがフォント・地図・天気などの第三者サービスに接続します（第2章）。</p>
+      <p class="note">ログインしていない場合でも、機能の利用回数とエラーの回数は集計されます（下記「機能の利用回数」）。また、サイトを開くとブラウザが、サイトを置いている GitHub や、フォント・地図・天気などの第三者サービスに接続します（第2章）。</p>
 
       <h3>1.2 収集するデータ</h3>
       <ul>
@@ -270,7 +270,7 @@
         <li><strong>あなたの記録</strong>：ログイン後は、本サービスに入力・取り込んだ内容がクラウドに同期されます。レースのエントリー、旅程（交通・宿泊・同行者）、予算、装備、補給、結果、振り返り、リンク、GPS トラック、天気データ、トレーニング記録、シューズと補給食のデータベース、装備リストのテンプレートとバッジ、「個人情報」の心拍ゾーンと身体データ、「大会を探す」の絞り込み設定（国、種目、受付状況、地域、並べ替え）、レースに追加した写真が含まれます。カバー写真は長辺 760 ピクセルに縮小してから保存します。「空間の記憶回廊」には写真のファイル名、撮影日時、写真に埋め込まれた小さなサムネイルだけを保存し、撮影日時からトラック上の位置を割り出します。元の写真はアップロードされません。</li>
         <li><strong>プッシュ通知</strong>：プッシュ通知をオンにすると、通知を送るためにこの端末のプッシュトークン（Firebase Cloud Messaging）を保存します。</li>
         <li><strong>公開リンク</strong>：公開リンクを作成すると、そのレースの一部の内容を別に保存します。名称、日付とスタート時刻、競技の種類、都市と国、結果（完走タイム、自己ベストかどうか、順位）、距離と獲得標高、簡略化した GPS トラック、平均心拍数、シューズ、摂った補給、カバーのサムネイル、写真のサムネイル（撮影日時と位置を含む）、シェア用の画像です。リンクを知っている人は誰でもログインせずに閲覧でき、SNS がリンクのプレビューを作るときにも読み込まれます。いつでも「取り消す」ことができ、取り消すとこの内容は削除されます。</li>
-        <li><strong>機能の利用回数</strong>：どの機能が使われているかを知るため、機能ごとの利用回数を集計しています。合計の数値だけで、アカウントや端末など個人を特定できる情報は含みません。ログインしていない訪問者も集計に含まれます。</li>
+        <li><strong>機能の利用回数</strong>：どの機能が使われているかを知るため、機能ごとの利用回数を集計しています。合計の数値だけで、アカウントや端末など個人を特定できる情報は含みません。ログインしていない訪問者も集計に含まれます。アプリでエラーが起きたときも、同じようにエラーの回数を集計します。記録するのはバージョン、エラーの種類、プログラムのどこで起きたかだけで、エラーメッセージの内容や入力したデータは記録しません。</li>
         <li><strong>フィードバック</strong>：「フィードバック」を押すと、アプリのバージョン、端末とブラウザの種類、その時の画面名が入力された状態でフォームが開きます。フォームに記入した内容は Google フォームを通じて私たちに届きます。</li>
       </ul>
 
@@ -300,7 +300,7 @@
         <li><strong>公開リンク</strong>：取り消すまで。</li>
         <li><strong>フィードバック</strong>：対応と本サービスの改善のため、Google フォームの回答として保存します。</li>
         <li>Firebase は独自のルールでログイン記録を保存します。たとえばログイン時の IP アドレスは数週間保存されます。</li>
-        <li>機能の利用回数は個人データを含まない合計値で、継続して保存します。</li>
+        <li>機能の利用回数とエラーの回数は個人データを含まない合計値で、継続して保存します。</li>
       </ul>
 
       <h3>1.6 あなたの権利</h3>
@@ -330,7 +330,7 @@
 
       <h3>1.1 If you don't sign in</h3>
       <p>The races, training, photos, and settings you enter or import are stored only in this device's browser and are never sent to us. If you clear your browser's site data or switch devices, that data is gone, so export a backup regularly from Data Management.</p>
-      <p class="note">Even without signing in, feature usage is counted (see "Feature usage counts" below), and your browser connects to third-party services for fonts, maps, weather and more when you open the site (see section 2).</p>
+      <p class="note">Even without signing in, feature usage and errors are counted (see "Feature usage counts" below), and when you open the site your browser connects to GitHub, which hosts it, and to third-party services for fonts, maps, weather and more (see section 2).</p>
 
       <h3>1.2 Data we collect</h3>
       <ul>
@@ -338,7 +338,7 @@
         <li><strong>Your records</strong>: After you sign in, what you enter or import is synced to the cloud, including race registration, travel plans (transport, lodging, companions), budgets, gear, nutrition, results, reviews, links, GPS tracks and weather data; training logs; your shoe and nutrition databases, gear checklist templates and badges; the heart rate zones and body data in Personal Info; your Find races filters (country, sport, registration status, region, sort); and photos you add to races. Cover photos are scaled down to 760 pixels on the long side first. For the Spatial Memory Corridor, we keep only each photo's file name, capture time, and the small thumbnail embedded in the photo, and use the capture time to place it on your track. Original photos are never uploaded.</li>
         <li><strong>Push notifications</strong>: When you enable push notifications, we store this device's push token (Firebase Cloud Messaging) to send you reminders.</li>
         <li><strong>Public links</strong>: When you create a public link, we store a separate copy of part of that race: name, date and start time, sport, city and country, results (finish time, whether it was a PB, rankings), distance and elevation gain, a simplified GPS track, average heart rate, shoes, the nutrition you took, the cover thumbnail, photo thumbnails (with capture time and location), and a sharing image. Anyone with the link can view it without signing in, and social networks read it to build link previews. You can Revoke the link at any time, which deletes this copy.</li>
-        <li><strong>Feature usage counts</strong>: To learn which features are used, we count how many times each feature is used. These are totals only and contain no account, device, or other information that identifies you. Visitors who aren't signed in are counted too.</li>
+        <li><strong>Feature usage counts</strong>: To learn which features are used, we count how many times each feature is used. These are totals only and contain no account, device, or other information that identifies you. Visitors who aren't signed in are counted too. When the app hits an error, we count that the same way: only the version, the kind of error, and where in the code it happened — not the error message or anything you entered.</li>
         <li><strong>Feedback</strong>: When you tap Send feedback, the form opens pre-filled with the app version, your device and browser type, and the name of the current screen. What you write in the form is sent to us through Google Forms.</li>
       </ul>
 
@@ -368,7 +368,7 @@
         <li><strong>Public links</strong>: until you revoke them.</li>
         <li><strong>Feedback</strong>: kept as Google Forms responses to handle your feedback and improve the Service.</li>
         <li>Firebase keeps sign-in records under its own rules; for example, sign-in IP addresses are kept for a few weeks.</li>
-        <li>Feature usage counts contain no personal data and are kept indefinitely.</li>
+        <li>Feature usage and error counts contain no personal data and are kept indefinitely.</li>
       </ul>
 
       <h3>1.6 Your rights</h3>
@@ -418,8 +418,9 @@
       <h3>2.3 其他會收到連線資訊的服務</h3>
       <p>在下列情況，你的瀏覽器會直接連到這些服務，它們會收到你的 IP 位址和瀏覽器資訊。它們怎麼處理這些資訊，請見各自的隱私權政策：</p>
       <dl class="svc">
+        <div><dt>GitHub Pages</dt><dd>本服務的網站放在 GitHub Pages：開啟網站時，你的瀏覽器從 GitHub 的伺服器下載網頁，GitHub 會收到你的 IP 位址和瀏覽器資訊。（<a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener noreferrer">GitHub 隱私聲明</a>）</dd></div>
         <div><dt>Google Fonts</dt><dd>開啟網站時，下載字型。</dd></div>
-        <div><dt>Google Firebase</dt><dd>開啟網站時載入程式；登入、同步和統計功能使用次數時傳送資料。（<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Firebase 的隱私與安全</a>）</dd></div>
+        <div><dt>Google Firebase</dt><dd>開啟網站時載入程式；登入、同步和統計功能使用次數、錯誤次數時傳送資料。（<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Firebase 的隱私與安全</a>）</dd></div>
         <div><dt>jsDelivr、unpkg</dt><dd>開啟網站、顯示地圖、匯入 Excel 或加入照片時，下載程式庫。（<a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noopener noreferrer">jsDelivr 隱私權政策</a>）</dd></div>
         <div><dt>OpenStreetMap、OpenTopoMap</dt><dd>顯示地圖時下載地圖圖片，會知道你在看哪一塊地圖。（<a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OpenStreetMap 基金會隱私權政策</a>・<a href="https://opentopomap.org/about" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>）</dd></div>
         <div><dt>Open-Meteo</dt><dd>抓天氣預報、歷史天氣、海象時，傳送賽事起點座標和日期（取自你匯入的 GPS 軌跡）；「今年的賽事旅程」查地點時，傳送賽事的城市或國家名稱。不包含你的帳號資料。（<a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">Open-Meteo 條款與隱私</a>）</dd></div>
@@ -460,8 +461,9 @@
       <h3>2.3 接続情報を受け取るその他のサービス</h3>
       <p>次の場合、ブラウザがこれらのサービスに直接接続し、あなたの IP アドレスとブラウザ情報が送られます。取り扱いについては、各サービスのプライバシーポリシーをご覧ください。</p>
       <dl class="svc">
+        <div><dt>GitHub Pages</dt><dd>本サービスのサイトは GitHub Pages に置いています。サイトを開くと、ブラウザが GitHub のサーバーからページをダウンロードし、GitHub はあなたの IP アドレスとブラウザ情報を受け取ります。（<a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener noreferrer">GitHub プライバシーステートメント</a>）</dd></div>
         <div><dt>Google Fonts</dt><dd>サイトを開いたとき、フォントをダウンロードします。</dd></div>
-        <div><dt>Google Firebase</dt><dd>サイトを開いたときにプログラムを読み込み、ログイン・同期・機能の利用回数の集計のときにデータを送ります。（<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Firebase のプライバシーとセキュリティ</a>）</dd></div>
+        <div><dt>Google Firebase</dt><dd>サイトを開いたときにプログラムを読み込み、ログイン・同期・機能の利用回数やエラーの回数の集計のときにデータを送ります。（<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Firebase のプライバシーとセキュリティ</a>）</dd></div>
         <div><dt>jsDelivr・unpkg</dt><dd>サイトを開いたとき、地図の表示、Excel の取り込み、写真の追加のときに、ライブラリをダウンロードします。（<a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noopener noreferrer">jsDelivr プライバシーポリシー</a>）</dd></div>
         <div><dt>OpenStreetMap・OpenTopoMap</dt><dd>地図を表示するときに地図画像をダウンロードします。どの範囲の地図を見ているかが伝わります。（<a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OpenStreetMap 財団プライバシーポリシー</a>・<a href="https://opentopomap.org/about" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>）</dd></div>
         <div><dt>Open-Meteo</dt><dd>天気予報、過去の天気、海況を取得するときに、レースのスタート地点の座標と日付（取り込んだ GPS トラックから）を送ります。「今年のレースの旅」で地名を調べるときは、レースの都市名または国名を送ります。アカウント情報は含みません。（<a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">Open-Meteo 利用規約とプライバシー</a>）</dd></div>
@@ -502,8 +504,9 @@
       <h3>2.3 Other services that receive connection data</h3>
       <p>In the cases below, your browser connects directly to these services, which receive your IP address and browser information. See each service's privacy policy for how they handle it:</p>
       <dl class="svc">
+        <div><dt>GitHub Pages</dt><dd>The Service's website is hosted on GitHub Pages: when you open the site, your browser downloads the pages from GitHub's servers, and GitHub receives your IP address and browser information. (<a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener noreferrer">GitHub Privacy Statement</a>)</dd></div>
         <div><dt>Google Fonts</dt><dd>When you open the site, to download fonts.</dd></div>
-        <div><dt>Google Firebase</dt><dd>When you open the site, to load its code; when you sign in or sync, and when feature usage is counted. (<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Privacy and Security in Firebase</a>)</dd></div>
+        <div><dt>Google Firebase</dt><dd>When you open the site, to load its code; when you sign in or sync, and when feature usage and errors are counted. (<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Privacy and Security in Firebase</a>)</dd></div>
         <div><dt>jsDelivr, unpkg</dt><dd>When you open the site, show a map, import Excel, or add photos, to download code libraries. (<a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noopener noreferrer">jsDelivr Privacy Policy</a>)</dd></div>
         <div><dt>OpenStreetMap, OpenTopoMap</dt><dd>When a map is shown, to download map images, which reveals the area you're viewing. (<a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OSM Foundation Privacy Policy</a> · <a href="https://opentopomap.org/about" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>)</dd></div>
         <div><dt>Open-Meteo</dt><dd>When weather forecasts, historical weather, or sea conditions are fetched, the race's start coordinates and date (from the GPS track you imported) are sent; when This year's race travel looks up places, the race's city or country name is sent. No account information is included. (<a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">Open-Meteo Terms &amp; Privacy</a>)</dd></div>
@@ -530,6 +533,7 @@
         <li><strong>接受條款</strong>：使用本服務（包括瀏覽和登入），即表示你同意本使用條款和上面的隱私權政策。不同意的話，請停止使用。</li>
         <li><strong>服務內容</strong>：本服務是免費提供的個人賽事紀錄工具，目前仍在測試階段。我們可能隨時新增、修改、暫停或終止部分或全部功能。</li>
         <li><strong>帳號</strong>：你可以用 Google 帳號登入以使用雲端同步。請妥善保管你的帳號；以你的帳號進行的操作，由你負責。</li>
+        <li><strong>未成年人</strong>：如果你未成年，請在法定代理人（例如父母）同意下使用本服務。</li>
         <li><strong>你的內容</strong>：你在本服務輸入、匯入的資料和照片，權利仍屬於你。你授權我們在提供本服務所需的範圍內儲存、處理和顯示這些內容，例如同步到你的其他裝置、顯示你建立的公開連結。請只上傳你有權使用的內容；建立公開連結前，請確認內容適合公開。</li>
         <li><strong>使用規範</strong>：你不得用本服務從事違法行為；不得干擾、攻擊或過度存取本服務，或試圖繞過安全機制；不得冒用他人帳號或存取不屬於你的資料；不得以自動化程式大量存取本服務。</li>
         <li><strong>第三方服務與內容</strong>：本服務會使用第三方提供的服務和內容，例如 Spotify 播放器、地圖、天氣資料、字型，這些服務適用各自的條款。Spotify 播放器和其中的音樂、封面等內容由 Spotify 提供，相關權利屬於 Spotify 和它的授權人。我們無法保證第三方服務一直可用。</li>
@@ -548,6 +552,7 @@
         <li><strong>規約への同意</strong>：本サービスを利用（閲覧・ログインを含む）することで、本利用規約と上記のプライバシーポリシーに同意したものとみなされます。同意いただけない場合は、利用を中止してください。</li>
         <li><strong>サービス内容</strong>：本サービスは無料で提供する個人向けのレース記録ツールで、現在ベータ版です。機能の一部または全部を、いつでも追加・変更・停止・終了することがあります。</li>
         <li><strong>アカウント</strong>：クラウド同期を使うには Google アカウントでログインします。アカウントは大切に管理してください。あなたのアカウントで行われた操作は、あなたの責任となります。</li>
+        <li><strong>未成年の方</strong>：未成年の方は、親権者など法定代理人の同意を得たうえで本サービスをご利用ください。</li>
         <li><strong>あなたのコンテンツ</strong>：入力・取り込んだデータや写真の権利は、あなたに帰属します。あなたは、本サービスの提供に必要な範囲で（たとえば他の端末への同期や、作成した公開リンクの表示のため）、私たちがそれらを保存・処理・表示することを許諾するものとします。使用する権利を持つコンテンツだけをアップロードし、公開リンクを作成する前に、内容が公開に適しているか確認してください。</li>
         <li><strong>禁止事項</strong>：本サービスを違法な目的で利用すること、本サービスを妨害・攻撃したり過度な負荷をかけたりすること、セキュリティを回避しようとすること、他人のアカウントを使ったり自分のものではないデータにアクセスしたりすること、自動化されたプログラムで大量にアクセスすることを禁止します。</li>
         <li><strong>第三者のサービスとコンテンツ</strong>：本サービスは、Spotify のプレーヤー、地図、天気データ、フォントなど第三者が提供するサービスとコンテンツを利用しており、それぞれの規約が適用されます。Spotify のプレーヤーとその中の音楽・アートワークなどのコンテンツは Spotify が提供するもので、権利は Spotify とそのライセンサーに帰属します。第三者のサービスが常に利用できることは保証できません。</li>
@@ -566,6 +571,7 @@
         <li><strong>Acceptance</strong>: By using the Service, including browsing and signing in, you agree to these Terms of Use and the Privacy Policy above. If you don't agree, please stop using the Service.</li>
         <li><strong>The Service</strong>: The Service is a free personal race-logging tool and is still in beta. We may add, change, suspend, or end some or all features at any time.</li>
         <li><strong>Accounts</strong>: You can sign in with a Google account to use cloud sync. Please keep your account secure; you're responsible for activity under your account.</li>
+        <li><strong>Minors</strong>: If you are a minor, please use the Service only with the consent of your parent or legal guardian.</li>
         <li><strong>Your content</strong>: You keep the rights to the data and photos you enter or import. You allow us to store, process, and display that content as needed to provide the Service, for example syncing it to your other devices and showing the public links you create. Only upload content you have the right to use, and make sure content is fit to be public before creating a public link.</li>
         <li><strong>Acceptable use</strong>: You must not use the Service for anything illegal; interfere with, attack, or overload the Service, or try to bypass its security; use someone else's account or access data that isn't yours; or access the Service in bulk with automated programs.</li>
         <li><strong>Third-party services and content</strong>: The Service uses services and content from third parties, such as the Spotify player, maps, weather data, and fonts, which are subject to their own terms. The Spotify player and the music, artwork, and other content in it are provided by Spotify, and the rights belong to Spotify and its licensors. We can't guarantee that third-party services will always be available.</li>

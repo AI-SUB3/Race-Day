@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja" data-lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>レース記録</title>
+<!-- 日文版的網址（v4.28.0）。這一頁只做兩件事：
+     1. 給 LINE、Facebook、X 抓預覽卡：它們不跑程式，只看這裡寫的標題、說明、圖。
+     2. 轉進 App、帶上 ?lang=ja（這次用哪種語言、要不要記下來，規則在 index.html 的 LANG_KEY 那段）。
+     不寫 og:url、canonical：公開連結（ja/?s=…）也經過這一頁，寫了會被當成這一頁本身，分享出去的那一場就不見了。
+     不載入任何外部資源：轉址之前多等一個檔案就多慢一點。 -->
+<meta name="description" content="エントリーからゴールまでの完全な記録：大会カレンダー、記録と自己ベスト、GPS ルート、装備リストと荷造り、トレーニング記録。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="レース記録">
+<meta property="og:title" content="レース記録">
+<meta property="og:description" content="エントリーからゴールまでの完全な記録：大会カレンダー、記録と自己ベスト、GPS ルート、装備リストと荷造り、トレーニング記録。">
+<meta property="og:image" content="https://ai-sub3.github.io/Race-Day/icons/icon-512.png">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2E6B49">
+<script>
+/* 網址後面原本帶的東西一起帶過去：公開連結的 ?s=、安全模式的 ?safe=、#career 這類。
+   路徑用算的（拿掉最後的 ja/）：GitHub Pages 的 /Race-Day/ja/、少了斜線的 /Race-Day/ja、本機測試的 /ja/ 都對得上。
+   用 replace：按返回鍵不會回到這一頁、又被轉一次。 */
+(function(){
+  var q=new URLSearchParams(location.search); q.set('lang','ja');
+  var p=location.pathname.replace(/(^|\/)ja(\/(index\.html)?)?$/,'$1');
+  if(location.protocol==='file:') p+='index.html';
+  location.replace(p+'?'+q.toString()+location.hash);
+})();
+</script>
+<style>
+  /* 只有關掉 JavaScript 的瀏覽器看得到這一頁；顏色跟 App 一樣，對比過 AA */
+  body{margin:0;min-height:100vh;display:grid;place-items:center;font:17px/1.6 system-ui,-apple-system,sans-serif;background:#EEF0EF;color:#1F2A24;}
+  a{color:#2E6B49;font-weight:600;}
+  @media (prefers-color-scheme:dark){ body{background:#151A17;color:#E6EBE7;} a{color:#8FD0A8;} }
+</style>
+</head>
+<body>
+<p><a href="../?lang=ja">レース記録を開く</a></p>
+</body>
+</html>
